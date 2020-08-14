@@ -1,1 +1,3 @@
-# temp
+"""
+riptable tests.
+"""
