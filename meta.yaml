@@ -1,0 +1,94 @@
+package:
+    name: riptide
+    version: "{{ environ.get('BUILD_VERSION', 'DEV') }}"
+
+build:
+    script_env:
+        - BUILD_VERSION
+        - BUILD_IS_PERSONAL
+        - TEAMCITY_VERSION
+        # The latest vc conda has is vc14.
+        # If you need to build with vc15, override CUSTOM_CMAKE_GENERATOR with
+        # "Visual Studio 15 2017 Win64"
+        - CUSTOM_CMAKE_GENERATOR
+        # Override this to e.g. "ClangCL" if you want to use a different toolset with MSVC.
+        - CUSTOM_CMAKE_TOOLSET
+        - CMAKE_BUILD_TYPE
+        - PARALLEL_BUILD
+
+source:
+    - path: ./
+
+requirements:
+    build:
+      - clang # [unix]
+      - clangxx # [unix]
+      # N.B. The libllvm10 10.0.0 h4a3c616_1 from main channel has a bug,
+      #      see https://jira/browse/BACKTEST-1886.
+      #      There seems to be conda bugs such that I have to use the two "=" and
+      #      by pinning libllvm10 clang and clangxx will be from conda-forge too.
+      - libllvm10=10.0.0=he513fc3_1 # [linux]
+      - python
+      - setuptools
+      # Must not use range for numpy's version
+      # Related issue: https://github.com/conda/conda-build/issues/3006
+      - numpy 1.18
+      # For OSX builds, use CMake 3.17 or higher from conda-forge;
+      # CMake 3.14 has issues with FindPython3 on macOS (OSX) which causes it not to be able
+      # to find Python and/or numpy; if you try to force it with hints, riptide_cpp won't link.
+      - cmake >=3.14 # [not osx]
+      - cmake >=3.17 # [osx]
+
+    run:
+      - python
+      - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
+      - scipy
+        # matplotlib 3.0.0 has a critical bug that fails the import on python 3.6.7 and 3.7.1
+        # https://github.com/matplotlib/matplotlib/issues/12601
+      - matplotlib !=3.0.0
+      - pandas >=0.24,<1.1
+      - bottleneck
+      - ansi2html >=1.5.2
+      - numba >=0.44
+      # Explicitly force a run-time dependency on the 'tbb' package.
+      # When present, numpy and numba can make use of it; for whatever reason,
+      # it's an optional dependency on Windows for these packages but required
+      # on Linux. We force the dependency to ensure it's always available
+      # to ensure users get consistent performance.
+      - tbb
+      
+      # For benchmarking / diagnostics
+      - py-cpuinfo
+      
+      # Back-ported type hints
+      - typing_extensions
+      
+      # SIG-internal libraries
+      - sotpath
+      - sighdf5
+
+test:
+    files:
+        # Have to copy the full source tree to let pytest-cov report coverage of riptide codes
+        - Python/core/riptide
+        - coveragerc # [py == 37]
+    requires:
+        - pytest >=5.0.0
+        - pytest-cov >=2.7.1
+        - pytest-xdist >=1.32
+        - teamcity-messages >=1.28
+        - hypothesis >=5.10.0
+        - ipython >=7.6.1
+        - nose >=1.3.7  # nose because ipykernel testing utilities still have nose imports
+
+        # Known issues where ipykernel dies before reply messages.
+        # The following ipykernel and jupyter_console versions are verified to work.
+        # https://github.com/jupyter/jupyter_client/issues/154
+        - ipykernel >=5.1.3
+        - jupyter_console >=6.0.0
+    imports:
+      - riptide
+
+about:
+    home: http://www.sig.com
+    summary: "Riptide Studies Framework at SIG"

@@ -1,2 +1,2 @@
-# riptable
-64bit multithreaded python data analytics tools for numpy arrays and datasets
+# riptide
+High performance, low memory, multithreaded 64-bit python data analytics engine for big data based on numpy arrays.
