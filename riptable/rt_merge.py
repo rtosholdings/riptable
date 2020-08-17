@@ -1,9 +1,8 @@
 ﻿__all__ = ['merge', 'merge2', 'merge_lookup', 'merge_asof',]
 
-from dataclasses import dataclass
 import logging
 import warnings
-from typing import TYPE_CHECKING, Collection, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Collection, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import numpy as np
 import numba as nb
@@ -1077,8 +1076,7 @@ def _build_left_fancyindex(
     return left_fancyindex
 
 
-@dataclass(frozen=True)
-class JoinIndices:
+class JoinIndices(NamedTuple):
     """
     Holds fancy/logical indices into the left and right Datasets constructed by the join implementation,
     along with other relevant data needed to construct the resulting merged Dataset.
