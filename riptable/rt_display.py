@@ -7,7 +7,6 @@ import os
 import numpy as np
 import re # used for new console display, remove when moved
 import warnings
-from ansi2html import Ansi2HTMLConverter
 try:
     from IPython import get_ipython
 except:
@@ -98,7 +97,15 @@ class DisplayString(object):
 
 
 class DisplayText(object):
+    """"
+    Only uses two colors: green and purple   OR  cyan and blue
+    For HTML
 
+    ds = rt.Dataset({'test': rt.arange(10)})
+    schema = {'Description': 'This is a structure', 'Steward': 'Nick'}
+    ds.apply_schema(schema)
+    ds.info()
+    """"
     ESC = '\x1b['
     RESET = '\x1b[00m'
     TITLE_DARK = '1;32m'   # green
@@ -153,6 +160,10 @@ class DisplayText(object):
 
     def _repr_html_(self):
         # creates a dependency on ansi2html
+        from ansi2html import Ansi2HTMLConverter
+        #preamble='<html>\n<head>\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\n<title></title>\n<style type="text/css">\n.ansi2html-content { display: inline; white-space: pre-wrap; word-wrap: break-word; }\n.body_foreground { color: #AAAAAA; }\n.body_background { background-color: #000000; }\n.body_foreground > .bold,.bold > .body_foreground, body.body_foreground > pre > .bold { color: #FFFFFF; font-weight: normal; }\n.inv_foreground { color: #000000; }\n.inv_background { background-color: #AAAAAA; }\n</style>\n</head>\n<body class="body_foreground body_background" style="font-size: normal;" >\n<pre class="ansi2html-content">\n'
+        #postamble = '</pre>\n</body>\n\n</html>\n'
+        #return preamble + self.data + postamble
         return Ansi2HTMLConverter().convert(self.data)
 
 
