@@ -2191,36 +2191,55 @@ class Categorical_Test(unittest.TestCase):
         c = Categorical(codes, d)
         n = c.nunique()
         self.assertEqual(n, 3)
+        self.assertEqual(len(c.unique()), 3)
 
         codes = np.ones(1000, dtype=np.int32)
         c = Categorical(codes, d)
         n = c.nunique()
         self.assertEqual(n, 1)
+        self.assertEqual(len(c.unique()), 1)
 
         codes = arange(5)
         c = Categorical(codes, d)
         n = c.nunique()
         self.assertEqual(n, 5)
+        self.assertEqual(len(c.unique()), 5)
 
         c = Categorical(['a', 'a', 'b', 'c', 'd'], ['a', 'b', 'c', 'd'])
         n = c.nunique()
         self.assertEqual(n, 4)
+        self.assertEqual(len(c.unique()), 4)
 
         c = Categorical(['a', 'a', 'b', 'c', 'd'], ['a', 'b', 'c', 'd'], base_index=0)
         n = c.nunique()
         self.assertEqual(n, 4)
+        self.assertEqual(len(c.unique()), 4)
 
         c = Categorical(['a', 'a', 'b', 'c', 'd'])
         c._fa[2] = 0
         n = c.nunique()
         self.assertEqual(n, 3)
+        self.assertEqual(len(c.unique()), 3)
         self.assertEqual(c.unique_count, 4)
 
         c = Categorical([arange(3), np.array(['a', 'b', 'c'])])
         c._fa[0] = 0
         n = c.nunique()
         self.assertEqual(n, 2)
+        self.assertEqual(len(c.unique()), 2)
         self.assertEqual(c.unique_count, 3)
+
+    def test_unique(self):
+        l = list('xyyz')
+        c, c_sub = rt.Cat(l), rt.Cat(l[:3])
+        assert_array_equal(c.unique(), c.category_array, 'mismatch between unique categories and category array')
+        assert_array_equal(c.unique(), c.category_array.unique(), 'mismatch between unique categories and expanded category array')
+        self.assertEqual(c.nunique(), 3, msg='mismatch in number of unique categories')
+
+        assert_array_equal(c[:3].unique(), c_sub.category_array, 'mismatch between unique categories and category array with sliced categorical')
+        assert_array_equal(c[:3].unique(), c_sub.category_array.unique(), 'mismatch between unique categories and expanded category array with sliced categorical')
+        self.assertEqual(c[:3].nunique(), 2, msg='mismatch in number of unique categories with sliced categorical')
+
 
     def test_scalar_unique(self):
         idx = ones(100)
