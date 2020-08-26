@@ -1054,6 +1054,8 @@ class Categories():
                     if len(new_exists) == 1:
                         return replace_idx+self.base_index, new_exists[0]
                     else:
+                        # must make a copy incase any references
+                        self._list = self._list.copy()
                         self._list[replace_idx] = new_value
                         self._ordered = False
                         self._sorted = False
