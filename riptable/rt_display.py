@@ -97,7 +97,7 @@ class DisplayString(object):
 
 
 class DisplayText(object):
-    """"
+    '''
     Only uses two colors: green and purple   OR  cyan and blue
     For HTML
 
@@ -105,7 +105,7 @@ class DisplayText(object):
     schema = {'Description': 'This is a structure', 'Steward': 'Nick'}
     ds.apply_schema(schema)
     ds.info()
-    """"
+    '''
     ESC = '\x1b['
     RESET = '\x1b[00m'
     TITLE_DARK = '1;32m'   # green
