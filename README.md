@@ -36,7 +36,7 @@ Numpy Users
 ------------
 FastArray is a numpy array, however they can be flipped back and forth with no array copies taking place (it just changes the view).
 ```
-import riptide as rt
+import riptable as rt
 import numpy as np
 a = rt.arange(100)
 numpyarray = a._np
@@ -45,9 +45,9 @@ fastarray = rt.FA(numpyarray)
 
 Pandas Users
 ------------
-Simply drop a pandas DataFrame class into a riptide Dataset and it will be auto converted.
+Simply drop a pandas DataFrame class into a riptable Dataset and it will be auto converted.
 ```
-import riptide as rt
+import riptable as rt
 import numpy as np
 import pandas as pd
 df = pd.DataFrame({'intarray': np.arange(1_000_000), 'floatarray': np.arange(1_000_000.0)})
