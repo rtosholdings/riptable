@@ -1,14 +1,17 @@
 # RipTable
 All in one, high performance 64 bit python analytics engine for numpy arrays with multithreaded support.
 
-Support for Python 3.6, 3.7, 3.8 on 64 bit Windows, Linux, and Mac OS.
+Support for Python 3.6, 3.7, 3.8 on 64 bit Linux, Windows, and Mac OS.
 
 Enhances or replaces numpy, pandas, and includes high speed cross platform SDS file format.
 RipTable can often crunch numbers at 10x the speed of numpy of pandas while using less memory than pandas.  
 
-Maximum Speed is achieved through the use of: **vector instrinsics**: hand rolled loops, using AVX-256 with AVX-512 support coming. **smart threading**: for large arrays, multiple threads are deployed. **recycling**: built in array garbage collection.
+Maximum speed is achieved through the use of: **vector instrinsics**: hand rolled loops, using AVX-256 with AVX-512 support coming. **smart threading**: for large arrays, multiple threads are deployed. **recycling**: built in array garbage collection.
 
-To install "pip install riptable".
+To install 
+```
+pip install riptable
+```
 
 Basic Concepts and Classes
 --------------------------
@@ -27,4 +30,26 @@ Getting Started
 ```
 import riptable as rt
 ds = rt.Dataset({'intarray': rt.arange(1_000_000), 'floatarray': rt.arange(1_000_000.0)})
+```
+
+Numpy Users
+------------
+FastArray is a numpy array, however they can be flipped back and forth with no array copies taking place (it just changes the view).
+```
+import riptide as rt
+import numpy as np
+a = rt.arange(100)
+numpyarray = a._np
+fastarray = rt.FA(numpyarray)
+```
+
+Pandas Users
+------------
+Simply drop a pandas DataFrame class into a riptide Dataset and it will be auto converted.
+```
+import riptide as rt
+import numpy as np
+import pandas as pd
+df = pd.DataFrame({'intarray': np.arange(1_000_000), 'floatarray': np.arange(1_000_000.0)})
+ds = rt.Dataset(df)
 ```
