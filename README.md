@@ -1,10 +1,12 @@
 # RipTable
-High performance, low memory, multithreaded 64-bit python data analytics engine for big data based on numpy arrays.
-
-Enhances or replaces numpy, pandas, and includes high speed cross platform SDS file format.
-RipTable can often crunch numbers at 10x the speed of numpy of pandas.  It uses less memory than pandas.
+All in one, high performance 64 bit python analytics engine for numpy arrays with multithreaded support.
 
 Support for Python 3.6, 3.7, 3.8 on 64 bit Windows, Linux, and Mac OS.
+
+Enhances or replaces numpy, pandas, and includes high speed cross platform SDS file format.
+RipTable can often crunch numbers at 10x the speed of numpy of pandas while using less memory than pandas.  
+
+Maximum Speed is achieved through the use of: **vector instrinsics**: hand rolled loops, using AVX-256 with AVX-512 support coming. **smart threading**: for large arrays, multiple threads are deployed. **recycling**: built in array garbage collection.
 
 To install "pip install riptable".
 
@@ -18,7 +20,7 @@ Basic Concepts and Classes
 
 **Categorical**: replaces both pandas groupby and Categorical class
 
-**SDS**: a new file format which can stack multiple datasets in multiple files with zstd compression, multiple threads and no extra memory copies.  SDS also supports loading and writing datasets to shared memory (with no extra packages).
+**SDS**: a new file format which can stack multiple datasets in multiple files with compression, threads, and no extra memory copies.  SDS also supports loading and writing datasets to shared memory.
 
 Getting Started
 ----------------
