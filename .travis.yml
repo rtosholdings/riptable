@@ -6,7 +6,7 @@ python:
 install:
 - python setup.py develop
 - pip install nose mock
-script: nosetests -x tests/*.py
+script: python runtest.py
 notifications:
     email: true
     on_success: change
