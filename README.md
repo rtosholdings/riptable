@@ -64,6 +64,10 @@ df = pd.DataFrame({'intarray': np.arange(1_000_000), 'floatarray': np.arange(1_0
 ds = rt.Dataset(df)
 ```
 
-How can it perform the same calculations faster?
-------------------------------------------------
-RipTable was written from day one with mulithreading in mind using the riptide_cpp layer to perform most basic arithmetic functions or algorithms.  Many core algorithms have been painstakingly rewritten for multithreading.
+How can RipTable perform the same calculations faster?
+------------------------------------------------------
+RipTable was written from day one to handle large data and mulithreading using the riptide_cpp layer for basic arithmetic functions and algorithms.  Many core algorithms have been painstakingly rewritten for multithreading.
+
+Why doesn't numpy or pandas just pick up the same code?
+-------------------------------------------------------
+numpy does not have a multithreaded layer (we are in discussions with the numpy team to add such a layer), nor is the current numpy designed to use C++ templates.  numpy has no hashing algorithms.  pandas does not have a C++ layer (it uses cython instead) and is also a victim of its own success making early design mistakes difficult to change (such as the block manager and lack of powerful Categoricals).
