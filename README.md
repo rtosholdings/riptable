@@ -4,9 +4,9 @@ All in one, high performance 64 bit python analytics engine for numpy arrays wit
 Support for Python 3.6, 3.7, 3.8 on 64 bit Linux, Windows, and Mac OS.
 
 Enhances or replaces numpy, pandas, and includes high speed cross platform SDS file format.
-RipTable can often crunch numbers at 10x the speed of numpy of pandas while using less memory than pandas.  
+RipTable can often crunch numbers at 10x the speed of numpy or pandas.  
 
-Maximum speed is achieved through the use of: **vector instrinsics**: hand rolled loops, using AVX-256 with AVX-512 support coming. **smart threading**: for large arrays, multiple threads are deployed. **recycling**: built in array garbage collection.
+Maximum speed is achieved through the use of: **vector instrinsics**: hand rolled loops, using AVX-256 with AVX-512 support coming. **smart threading**: for large arrays, multiple threads are deployed. **recycling**: built in array garbage collection.  **hashing** and **parallel sorts**: for core algorithms.
 
 To install 
 ```
@@ -21,7 +21,11 @@ Basic Concepts and Classes
 
 **Struct**: replaces the pandas Series class
 
-**Categorical**: replaces both pandas groupby and Categorical class
+**Categorical**: replaces both pandas groupby and Categorical class.  RipTable has powerful more Categorical classes.
+
+**Date/Time Classes**: DateTimeNano, Date, TimeSpan, and DateSpan are designed more like Java, C++, or C# classes.  Replaces most numpy and pandas date time classes.
+
+**Accum2/AccumTable**: For cross tabulation.
 
 **SDS**: a new file format which can stack multiple datasets in multiple files with compression, threads, and no extra memory copies.  SDS also supports loading and writing datasets to shared memory.
 
@@ -42,6 +46,12 @@ a = rt.arange(100)
 numpyarray = a._np
 fastarray = rt.FA(numpyarray)
 ```
+or directly by changing the view, not how a FastArray is a numpy array
+```
+numpyarray.view(rt.FastArray)
+fastarry.view(np.ndarray)
+ininstance(fastarray, np.ndarray)
+```
 
 Pandas Users
 ------------
@@ -53,3 +63,7 @@ import pandas as pd
 df = pd.DataFrame({'intarray': np.arange(1_000_000), 'floatarray': np.arange(1_000_000.0)})
 ds = rt.Dataset(df)
 ```
+
+How can it perform the same calculations faster?
+------------------------------------------------
+RipTable was written from day one with mulithreading in mind using the riptide_cpp layer to perform most basic arithmetic functions or algorithms.  Many core algorithms have been painstakingly rewritten for multithreading.
