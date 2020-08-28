@@ -1,0 +1,9 @@
+Check or update the version in setup.py
+
+python setup.py sdist bdist_wheel
+
+This will create a file in dist/riptable-version-py3-none-any.whl
+use:
+python -m twine upload dist/* --verbose
+
+to upload
