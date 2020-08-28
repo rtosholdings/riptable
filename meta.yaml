@@ -1,5 +1,5 @@
 package:
-    name: riptide
+    name: riptable
     version: "{{ environ.get('BUILD_VERSION', 'DEV') }}"
 
 build:
@@ -42,35 +42,13 @@ requirements:
     run:
       - python
       - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
-      - scipy
-        # matplotlib 3.0.0 has a critical bug that fails the import on python 3.6.7 and 3.7.1
-        # https://github.com/matplotlib/matplotlib/issues/12601
-      - matplotlib !=3.0.0
       - pandas >=0.24,<1.1
-      - bottleneck
       - ansi2html >=1.5.2
       - numba >=0.44
-      # Explicitly force a run-time dependency on the 'tbb' package.
-      # When present, numpy and numba can make use of it; for whatever reason,
-      # it's an optional dependency on Windows for these packages but required
-      # on Linux. We force the dependency to ensure it's always available
-      # to ensure users get consistent performance.
-      - tbb
-      
-      # For benchmarking / diagnostics
-      - py-cpuinfo
-      
-      # Back-ported type hints
-      - typing_extensions
-      
-      # SIG-internal libraries
-      - sotpath
-      - sighdf5
-
 test:
     files:
         # Have to copy the full source tree to let pytest-cov report coverage of riptide codes
-        - Python/core/riptide
+        - riptable
         - coveragerc # [py == 37]
     requires:
         - pytest >=5.0.0
@@ -87,8 +65,8 @@ test:
         - ipykernel >=5.1.3
         - jupyter_console >=6.0.0
     imports:
-      - riptide
+      - riptable
 
 about:
-    home: http://www.sig.com
-    summary: "Riptide Studies Framework at SIG"
+    home: http://github.com/rtosholdings
+    summary: "Riptable Studies Framework"
