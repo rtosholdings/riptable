@@ -34,10 +34,16 @@ Getting Started
 ```
 import riptable as rt
 ds = rt.Dataset({'intarray': rt.arange(1_000_000), 'floatarray': rt.arange(1_000_000.0)})
+ds
+ds.intarray.sum()
 ```
 How can I trust RipTable calculations?
 --------------------------------------
 RipTable has been in development for 3 years and tested by dozens of quants at a large financial firm.  It has a full suite of testing (see: riptable/tests).  However just like any project, we still disover bugs and improvements.  Please report them using github issues.
+
+How can I contribute?
+---------------------
+RipTable has been public open sourced because it needs more users and contributions to take it to the next level.  The RipTable team is confident the engine is the next generation building block for python data analytics computing.  We need help from reporting bugs, docs, improved functionality, and new functionality.  Please consider a github pull request or email the team.
 
 Numpy Users
 ------------
