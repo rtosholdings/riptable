@@ -4306,7 +4306,6 @@ class Categorical(GroupByOps, FastArray):
         rt_numpy.unique
             ``unique`` doc shows the acceptable positional and keyword arguments.
         """
-        # PERF: detect and only filter when categories are unused
         return unique(self.filter(), *args, **kwargs)
     
 
