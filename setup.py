@@ -8,7 +8,7 @@ import datetime
 import logging
 
 package_name='riptable'
-version_num = '1.0.3'
+version_num = '1.0.5'
 
 class CMakeExtension(Extension):
     def __init__(self, name):
