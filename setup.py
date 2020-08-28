@@ -6,9 +6,11 @@ import sys
 import pathlib
 import datetime
 import logging
+import re
 
 package_name='riptable'
-version_num = '1.0.5'
+with open('riptable/_version.py', 'r') as f:
+    version_num = re.search('\d+\.\d+\.\d+([ab]\d+|)', f.readline()).group()
 
 class CMakeExtension(Extension):
     def __init__(self, name):
