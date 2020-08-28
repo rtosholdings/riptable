@@ -4296,6 +4296,19 @@ class Categorical(GroupByOps, FastArray):
                 tf_string[idx] = "False"
         return "".join(tf_string)
 
+    # ------------------------------------------------------------
+    def unique(self, *args, **kwargs):
+        """
+        Returns the unique elements of this Categorical.
+
+        See Also
+        --------
+        rt_numpy.unique
+            ``unique`` doc shows the acceptable positional and keyword arguments.
+        """
+        return unique(self.filter(), *args, **kwargs)
+    
+
     @property
     def unique_repr(self):
         # get the string only for the Categories' uniques
