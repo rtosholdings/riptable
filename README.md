@@ -15,7 +15,7 @@ pip install riptable
 
 Basic Concepts and Classes
 --------------------------
-**FastArray**: subclasses from a numpy array with builtin multithreaded number crunching.  All scikit routines that expect a numpy array will also accept a FastArray since it is subclassed.  isinstance(fastarray, nd.array) will return True.
+**FastArray**: subclasses from a numpy array with builtin multithreaded number crunching.  All scikit routines that expect a numpy array will also accept a FastArray since it is subclassed.  isinstance(fastarray, np.ndarray) will return True.
 
 **Dataset**: replaces the pandas DataFrame class
 
@@ -70,4 +70,4 @@ RipTable was written from day one to handle large data and mulithreading using t
 
 Why doesn't numpy or pandas just pick up the same code?
 -------------------------------------------------------
-numpy does not have a multithreaded layer (we are in discussions with the numpy team to add such a layer), nor is the current numpy designed to use C++ templates.  numpy has no hashing algorithms.  pandas does not have a C++ layer (it uses cython instead) and is also a victim of its own success making early design mistakes difficult to change (such as the block manager and lack of powerful Categoricals).
+numpy does not have a multithreaded layer (we are in discussions with the numpy team to add such a layer), nor is it designed to use C++ templates or hashing algorithms.  pandas does not have a C++ layer (it uses cython instead) and is a victim of its own success making early design mistakes difficult to change (such as the block manager and lack of powerful Categoricals).
