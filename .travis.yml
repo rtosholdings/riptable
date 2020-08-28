@@ -1,5 +1,8 @@
-dist: bionic
-os: osx
+dist: focal
+os: 
+- linux
+- osx
+- windows
 language: python
 python:
  - "3.6"
