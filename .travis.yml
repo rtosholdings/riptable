@@ -1,4 +1,7 @@
-dist: focal
+dist: 
+- focal
+- bionic
+- xenial
 os: 
 - linux
 - osx
