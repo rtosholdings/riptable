@@ -9,6 +9,8 @@ import logging
 import re
 
 package_name='riptable'
+# N.B. Need to read the file and use regex to get the version number because I can't import riptable
+#      here before pip has chance to know the dependencies and install them.
 with open('riptable/_version.py', 'r') as f:
     version = re.search('\d+\.\d+\.\d+([ab]\d+|)', f.readline()).group()
 
