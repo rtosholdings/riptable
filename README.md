@@ -35,6 +35,9 @@ Getting Started
 import riptable as rt
 ds = rt.Dataset({'intarray': rt.arange(1_000_000), 'floatarray': rt.arange(1_000_000.0)})
 ```
+How can I trust RipTable calculations?
+--------------------------------------
+RipTable has been in development for 3 years and tested by dozens of quants at a large financial firm.  It has a full suite of testing (see: riptable/tests).  However just like any project, we still disover bugs and improvements.  Please report them using github issues.
 
 Numpy Users
 ------------
