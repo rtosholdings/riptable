@@ -4,8 +4,6 @@ dist:
 - xenial
 os: 
 - linux
-- osx
-- windows
 language: python
 python:
  - "3.6"
