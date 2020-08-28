@@ -15,12 +15,14 @@ requirements:
     - riptide_cpp >=1.5,<1.6
     - ansi2html >=1.5.2
     - numba >=0.44
+    - python-dateutil
   run:
     - python
     - {{ pin_compatible('riptide_cpp', min_pin='x.x', max_pin='x.x') }}
     - pandas >=0.24,<1.1
     - ansi2html >=1.5.2
     - numba >=0.44
+    - python-dateutil
 test:
   source_files:
     - riptable
