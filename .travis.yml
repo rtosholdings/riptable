@@ -1,4 +1,5 @@
 dist: bionic
+os: windows
 language: python
 python:
  - "3.6"
