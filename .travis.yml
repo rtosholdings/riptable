@@ -1,5 +1,5 @@
 dist: bionic
-os: windows
+os: osx
 language: python
 python:
  - "3.6"
