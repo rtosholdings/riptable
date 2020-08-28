@@ -55,7 +55,7 @@ a = rt.arange(100)
 numpyarray = a._np
 fastarray = rt.FA(numpyarray)
 ```
-or directly by changing the view, not how a FastArray is a numpy array
+or directly by changing the view, note how a FastArray is a numpy array
 ```
 numpyarray.view(rt.FastArray)
 fastarry.view(np.ndarray)
