@@ -1,2 +1,3 @@
 bluepy
+numpy
 riptable
