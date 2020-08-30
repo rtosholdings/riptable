@@ -344,14 +344,6 @@ riptable.rt\_utils module
    :undoc-members:
    :show-inheritance:
 
-riptable.setup module
----------------------
-
-.. automodule:: riptable.setup
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 
