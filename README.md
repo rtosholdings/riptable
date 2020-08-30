@@ -15,23 +15,23 @@ To install
 pip install riptable
 ```
 
-Documentation: [readthedocs](https://riptable.readthedocs.io/en/latest/index.html)
+Documentation: [readthedocs](https://riptable.readthedocs.io/en/latest/py-modindex.html)
 
 Basic Concepts and Classes
 --------------------------
-**FastArray**: subclasses from a numpy array with builtin multithreaded number crunching.  All scikit routines that expect a numpy array will also accept a FastArray since it is subclassed.  isinstance(fastarray, np.ndarray) will return True.
+**[FastArray](https://riptable.readthedocs.io/en/latest/riptable.html#riptable.rt_fastarray.FastArray)**: subclasses from a numpy array with builtin multithreaded number crunching.  All scikit routines that expect a numpy array will also accept a FastArray since it is subclassed.  isinstance(fastarray, np.ndarray) will return True.
 
 **Dataset**: replaces the pandas DataFrame class and holds equal row length numpy arrays (including > 1 dimension).
 
 **Struct**: replaces the pandas Series class.  A **Struct** is a grab bag collection class that **Dataset** subclasses from.
 
-**Categorical**: replaces both pandas groupby and Categorical class.  RipTable **Categoricals** are multikey, filterable, stackable, archivable, and can chain computations such as apply_reduce loops.  They can do everything groupby can plus more.
+**[Categorical](https://riptable.readthedocs.io/en/latest/riptable.html#module-riptable.rt_categorical)**: replaces both pandas groupby and Categorical class.  RipTable **Categoricals** are multikey, filterable, stackable, archivable, and can chain computations such as apply_reduce loops.  They can do everything groupby can plus more.
 
 **Date/Time Classes**: DateTimeNano, Date, TimeSpan, and DateSpan are designed more like Java, C++, or C# classes.  Replaces most numpy and pandas date time classes.
 
 **Accum2/AccumTable**: For cross tabulation.
 
-**SDS**: a new file format which can stack multiple datasets in multiple files with [zstd](https://github.com/facebook/zstd) compression, threads, and no extra memory copies.  SDS also supports loading and writing datasets to shared memory.
+**[SDS](https://riptable.readthedocs.io/en/latest/riptable.html#riptable.rt_sds.save_sds)**: a new file format which can stack multiple datasets in multiple files with [zstd](https://github.com/facebook/zstd) compression, threads, and no extra memory copies.  SDS also supports loading and writing datasets to shared memory.
 
 Getting Started
 ----------------
