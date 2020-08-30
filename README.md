@@ -13,6 +13,8 @@ To install
 pip install riptable
 ```
 
+Documentation: [readthedocs](https://riptable.readthedocs.io/en/latest/index.html)
+
 Basic Concepts and Classes
 --------------------------
 **FastArray**: subclasses from a numpy array with builtin multithreaded number crunching.  All scikit routines that expect a numpy array will also accept a FastArray since it is subclassed.  isinstance(fastarray, np.ndarray) will return True.
