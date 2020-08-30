@@ -7,3 +7,11 @@ use:
 python -m twine upload dist/* --verbose
 
 to upload
+
+DOCS
+----
+from root directory:
+
+sphinx-apidoc -f -o docs/source riptable
+cd docs
+make html
