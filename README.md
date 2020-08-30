@@ -6,7 +6,7 @@ Support for Python 3.6, 3.7, 3.8 on 64 bit Linux, Windows, and Mac OS.
 Enhances or replaces numpy, pandas, and includes high speed cross platform SDS file format.
 RipTable can often crunch numbers at 10x the speed of numpy or pandas.  
 
-Maximum speed is achieved through the use of: **vector instrinsics**: hand rolled loops, using AVX-256 with AVX-512 support coming. **smart threading**: for large arrays, multiple threads are deployed. **recycling**: built in array garbage collection.  **hashing** and **parallel sorts**: for core algorithms.
+Maximum speed is achieved through the use of: **vector instrinsics**: hand rolled loops, using [AVX-256](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#CPUs_with_AVX2)  with AVX-512 support coming. **smart threading**: for large arrays, multiple threads are deployed. **recycling**: built in array garbage collection.  **[hashing](https://en.wikipedia.org/wiki/Hash_function)** and **parallel sorts**: for core algorithms.
 
 To install 
 ```
@@ -27,7 +27,7 @@ Basic Concepts and Classes
 
 **Accum2/AccumTable**: For cross tabulation.
 
-**SDS**: a new file format which can stack multiple datasets in multiple files with compression, threads, and no extra memory copies.  SDS also supports loading and writing datasets to shared memory.
+**SDS**: a new file format which can stack multiple datasets in multiple files with [zstd](https://github.com/facebook/zstd) compression, threads, and no extra memory copies.  SDS also supports loading and writing datasets to shared memory.
 
 Getting Started
 ----------------
