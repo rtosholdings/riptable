@@ -10,7 +10,8 @@ RipTable can often crunch numbers at 1.5x to 10x the speed of numpy or pandas.
 
 Maximum speed is achieved through the use of **vector instrinsics**: hand rolled loops, using [AVX-256](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#CPUs_with_AVX2)  with AVX-512 support coming; **smart threading**: for large arrays, multiple threads are deployed; **recycling**: built in array garbage collection; **[hashing](https://en.wikipedia.org/wiki/Hash_function)** and **parallel sorts** for core algorithms.
 
-To install 
+Install 
+-------
 ```
 pip install riptable
 ```
@@ -21,7 +22,7 @@ Basic Concepts and Classes
 --------------------------
 **[FastArray](https://riptable.readthedocs.io/en/latest/riptable.html#riptable.rt_fastarray.FastArray)**: subclasses from a numpy array with builtin multithreaded number crunching.  All scikit routines that expect a numpy array will also accept a FastArray since it is subclassed.  isinstance(fastarray, np.ndarray) will return True.
 
-**Dataset**: replaces the pandas DataFrame class and holds equal row length numpy arrays (including > 1 dimension).
+**[Dataset](https://riptable.readthedocs.io/en/latest/riptable.html#module-riptable.rt_dataset)**: replaces the pandas DataFrame class and holds equal row length numpy arrays (including > 1 dimension).
 
 **Struct**: replaces the pandas Series class.  A **Struct** is a grab bag collection class that **Dataset** subclasses from.
 
