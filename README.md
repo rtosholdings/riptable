@@ -1,4 +1,6 @@
-# RipTable ![](docs/riptable_logo.png)
+# RipTable
+![](docs/riptable_logo.PNG)
+
 All in one, high performance 64 bit python analytics engine for numpy arrays with multithreaded support.
 
 Support for Python 3.6, 3.7, 3.8 on 64 bit Linux, Windows, and Mac OS.
