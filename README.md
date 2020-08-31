@@ -8,7 +8,7 @@ Support for Python 3.6, 3.7, 3.8 on 64 bit Linux, Windows, and Mac OS.
 Enhances or replaces numpy, pandas, and includes high speed cross platform SDS file format.
 RipTable can often crunch numbers at 1.5x to 10x the speed of numpy or pandas.  
 
-Maximum speed is achieved through the use of **vector instrinsics**: hand rolled loops, using [AVX-256](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#CPUs_with_AVX2)  with AVX-512 support coming; **smart threading**: for large arrays, multiple threads are deployed; **recycling**: built in array garbage collection; **[hashing](https://en.wikipedia.org/wiki/Hash_function)** and **parallel sorts** for core algorithms.
+Maximum speed is achieved through the use of **[vector instrinsics](https://software.intel.com/sites/landingpage/IntrinsicsGuide/)**: hand rolled loops, using [AVX-256](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#CPUs_with_AVX2)  with [AVX-512](https://en.wikipedia.org/wiki/AVX-512) support coming; **[parallel computing](https://www.drdobbs.com/go-parallel/article/print?articleId=212903586)**: for large arrays, multiple threads are deployed; **[recycling](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science))**: built in array garbage collection; **[hashing](https://en.wikipedia.org/wiki/Hash_function)** and **parallel sorts** for core algorithms.
 
 Install 
 -------
