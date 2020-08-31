@@ -456,70 +456,12 @@ class TestCompleter(unittest.TestCase):
                 5, 10, "from_bytes"
             )
 
-    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
-    def test_omit__names(self):
-        # also happens to test IPCompleter as a configurable
-        ip = get_ipython()
-        ip._hidden_attr = 1
-        ip._x = {}
-        c = ip.Completer
-        ip.ex("ip=get_ipython()")
-        cfg = Config()
-        cfg.IPCompleter.omit__names = 0
-        c.update_config(cfg)
-        with provisionalcompleter():
-            c.use_jedi = False
-            s, matches = c.complete("ip.")
-            nt.assert_in("ip.__str__", matches)
-            nt.assert_in("ip._hidden_attr", matches)
-
-            # c.use_jedi = True
-            # completions = set(c.completions('ip.', 3))
-            # nt.assert_in(Completion(3, 3, '__str__'), completions)
-            # nt.assert_in(Completion(3,3, "_hidden_attr"), completions)
-
-        cfg = Config()
-        cfg.IPCompleter.omit__names = 1
-        c.update_config(cfg)
-        with provisionalcompleter():
-            c.use_jedi = False
-            s, matches = c.complete("ip.")
-            nt.assert_not_in("ip.__str__", matches)
-            # nt.assert_in('ip._hidden_attr', matches)
-
-            # c.use_jedi = True
-            # completions = set(c.completions('ip.', 3))
-            # nt.assert_not_in(Completion(3,3,'__str__'), completions)
-            # nt.assert_in(Completion(3,3, "_hidden_attr"), completions)
-
-        cfg = Config()
-        cfg.IPCompleter.omit__names = 2
-        c.update_config(cfg)
-        with provisionalcompleter():
-            c.use_jedi = False
-            s, matches = c.complete("ip.")
-            nt.assert_not_in("ip.__str__", matches)
-            nt.assert_not_in("ip._hidden_attr", matches)
-
-            # c.use_jedi = True
-            # completions = set(c.completions('ip.', 3))
-            # nt.assert_not_in(Completion(3,3,'__str__'), completions)
-            # nt.assert_not_in(Completion(3,3, "_hidden_attr"), completions)
-
-        with provisionalcompleter():
-            c.use_jedi = False
-            s, matches = c.complete("ip._x.")
-            nt.assert_in("ip._x.keys", matches)
-
-            # c.use_jedi = True
-            # completions = set(c.completions('ip._x.', 6))
-            # nt.assert_in(Completion(6,6, "keys"), completions)
-
-        del ip._hidden_attr
-        del ip._x
+#    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
+#    @pytest.mark.skipif(
+#        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
+#    )
+#    def test_omit__names(self):
+# deleted due to lint failure
 
     @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
     @pytest.mark.skipif(
