@@ -90,8 +90,8 @@ def _monkey_patched__complete(
     if cursor_pos is None:
         cursor_pos = len(line_buffer) if text is None else len(text)
 
-    if self.use_main_ns:
-        self.namespace = __main__.__dict__
+    #if self.use_main_ns:
+    #    self.namespace = __main__.__dict__
 
     # if text is either None or an empty string, rely on the line buffer
     if (not line_buffer) and full_text:
