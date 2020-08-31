@@ -1990,6 +1990,7 @@ class DisplayColumn:
 
         if self._row_break is None:
             idx = get_argmax(self._data)
+            dataslice = self._data.copy()
             dataslice[idx].color = DisplayColumnColors.Groupby
         else:
             dataslicetop = self._data[:self._row_break]
