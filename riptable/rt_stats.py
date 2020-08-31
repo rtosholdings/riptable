@@ -3,7 +3,6 @@ __all__ = ['class_error', 'groupScatter', 'linear_spline', 'lm', 'mae',
 
 import riptable as rt
 import numpy as np
-import matplotlib.pyplot as plt
 from .rt_enum import TypeRegister
 
 from .rt_fastarray import FastArray
