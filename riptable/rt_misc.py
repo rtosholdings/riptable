@@ -176,15 +176,15 @@ def jedi_completions(text, offset):
         # filter output if we are completing for object members
         if offset:
             pre = text[offset-1]
-            if pre == '.':
-                if self.omit__names == 2:
-                    completion_filter = lambda c:not c.name.startswith('_')
-                elif self.omit__names == 1:
-                    completion_filter = lambda c:not (c.name.startswith('__') and c.name.endswith('__'))
-                elif self.omit__names == 0:
-                    completion_filter = lambda x:x
-                else:
-                    raise ValueError("Don't understand self.omit__names == {}".format(self.omit__names))
+#            if pre == '.':
+#                if self.omit__names == 2:
+#                    completion_filter = lambda c:not c.name.startswith('_')
+#                elif self.omit__names == 1:
+#                    completion_filter = lambda c:not (c.name.startswith('__') and c.name.endswith('__'))
+#                elif self.omit__names == 0:
+#                    completion_filter = lambda x:x
+#                else:
+#                    raise ValueError("Don't understand self.omit__names == {}".format(self.omit__names))
 
         import jedi
         interpreter = jedi.Interpreter(
