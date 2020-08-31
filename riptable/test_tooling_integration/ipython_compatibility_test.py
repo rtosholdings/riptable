@@ -463,24 +463,24 @@ class TestCompleter(unittest.TestCase):
 #    def test_omit__names(self):
 # deleted due to lint failure
 
-    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
-    def test_limit_to__all__False_ok(self):
-        """
-        Limit to all is deprecated, once we remove it this test can go away.
-        """
-        ip = get_ipython()
-        c = ip.Completer
-        c.use_jedi = False
-        ip.ex("class D: x=24")
-        ip.ex("d=D()")
-        cfg = Config()
-        cfg.IPCompleter.limit_to__all__ = False
-        c.update_config(cfg)
-        s, matches = c.complete("d.")
-        nt.assert_in("d.x", matches)
+#    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
+#    @pytest.mark.skipif(
+#        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
+#    )
+#    def test_limit_to__all__False_ok(self):
+#        """
+#        Limit to all is deprecated, once we remove it this test can go away.
+#        """
+#        ip = get_ipython()
+#        c = ip.Completer
+#        c.use_jedi = False
+#        ip.ex("class D: x=24")
+#        ip.ex("d=D()")
+#        cfg = Config()
+#        cfg.IPCompleter.limit_to__all__ = False
+#        c.update_config(cfg)
+#        s, matches = c.complete("d.")
+#        nt.assert_in("d.x", matches)
 
     def test_get__all__entries_ok(self):
         class A:
