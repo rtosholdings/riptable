@@ -50,7 +50,7 @@ del TypeRegister
 SharedMemory.check_shared_memory_limit()
 
 # Not fundamental yet of first-rank?
-from .rt_merge import merge, merge_asof
+from .rt_merge import merge, merge2, merge_lookup, merge_asof
 
 # Second-rank?
 from .rt_timers import (
