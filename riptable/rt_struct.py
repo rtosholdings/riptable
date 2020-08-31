@@ -1985,7 +1985,7 @@ class Struct:
                 # might need to copy strided data
                 if item.ndim == 1:
                     if item.strides[0] != item.itemsize:
-                        warnings.warn(f'array named {k} had bad 1d strides')
+                        warnings.warn(f'array named {itemname} had bad 1d strides')
                         item = item.copy()
 
                 itemdict[itemname] = item
