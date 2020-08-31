@@ -65,7 +65,7 @@ class Date_Test(unittest.TestCase):
         yeardays = [46, 365, 158]
         months = [2, 12, 6]
         years = [2016, 2017, 2018]
-        d = Date(['2016-02-15', '2017-12-31', '2018-06-07'])
+        d = Date(["2016-02-15", "2017-12-31", "2018-06-07"])
         self.assertTrue(isinstance(d, Date))
         self.assertTrue(bool(np.all(yeardays == d.day_of_year)))
         self.assertTrue(bool(np.all(months == d.month)))
@@ -75,7 +75,7 @@ class Date_Test(unittest.TestCase):
         yeardays = [46, 365, 158]
         months = [2, 12, 6]
         years = [2016, 2017, 2018]
-        d = Date(['02_15_2016', '12_31_2017', '06_07_2018'], format='%m_%d_%Y')
+        d = Date(["02_15_2016", "12_31_2017", "06_07_2018"], format="%m_%d_%Y")
         self.assertTrue(isinstance(d, Date))
         self.assertTrue(bool(np.all(yeardays == d.day_of_year)))
         self.assertTrue(bool(np.all(months == d.month)))
@@ -85,7 +85,7 @@ class Date_Test(unittest.TestCase):
         yeardays = [46, 365, 158]
         months = [2, 12, 6]
         years = [2016, 2017, 2018]
-        c = Categorical(['2016-02-15', '2017-12-31', '2018-06-07'])
+        c = Categorical(["2016-02-15", "2017-12-31", "2018-06-07"])
         d = Date(c)
         self.assertTrue(isinstance(d, Date))
         self.assertTrue(bool(np.all(yeardays == d.day_of_year)))
@@ -138,11 +138,11 @@ class Date_Test(unittest.TestCase):
         result = d - val
         self.assertTrue(isinstance(result, Date))
 
-        val = DateTimeNano(['1970-01-10'], from_tz='GMT')
+        val = DateTimeNano(["1970-01-10"], from_tz="GMT")
         result = d - val
         self.assertTrue(isinstance(result, TimeSpan))
 
-        val = TimeSpan(1, unit='h')
+        val = TimeSpan(1, unit="h")
         result = d - val
         self.assertTrue(isinstance(result, DateTimeNano))
 
@@ -168,7 +168,7 @@ class Date_Test(unittest.TestCase):
         result = d + val
         self.assertTrue(isinstance(result, Date))
 
-        val = TimeSpan(1, unit='h')
+        val = TimeSpan(1, unit="h")
         result = d + val
         self.assertTrue(isinstance(result, DateTimeNano))
 
@@ -190,11 +190,11 @@ class Date_Test(unittest.TestCase):
         result = d + val
         self.assertTrue(isinstance(result, DateSpan))
 
-        val = DateTimeNano(NANOS_PER_DAY, from_tz='GMT')
+        val = DateTimeNano(NANOS_PER_DAY, from_tz="GMT")
         result = d + val
         self.assertTrue(isinstance(result, DateTimeNano))
 
-        val = TimeSpan(1, unit='h')
+        val = TimeSpan(1, unit="h")
         result = d + val
         self.assertTrue(isinstance(result, TimeSpan))
 
@@ -209,7 +209,7 @@ class Date_Test(unittest.TestCase):
         with self.assertRaises(TypeError):
             d -= val
 
-        val = DateTimeNano(NANOS_PER_DAY, from_tz='GMT')
+        val = DateTimeNano(NANOS_PER_DAY, from_tz="GMT")
         with self.assertRaises(TypeError):
             result = d + val
         with self.assertRaises(TypeError):
@@ -261,48 +261,48 @@ class Date_Test(unittest.TestCase):
         cmp_val = 10
         self.assertTrue((d == cmp_val)[0])
 
-        cmp_val = '1970-01-02'
+        cmp_val = "1970-01-02"
         self.assertTrue((d > cmp_val)[0])
         self.assertTrue((d != cmp_val)[0])
         self.assertTrue((d >= cmp_val)[0])
         self.assertFalse((d < cmp_val)[0])
         self.assertFalse((d == cmp_val)[0])
         self.assertFalse((d <= cmp_val)[0])
-        cmp_val = '1970-01-11'
+        cmp_val = "1970-01-11"
         self.assertTrue((d == cmp_val)[0])
 
-        cmp_val = b'1970-01-02'
+        cmp_val = b"1970-01-02"
         self.assertTrue((d > cmp_val)[0])
         self.assertTrue((d != cmp_val)[0])
         self.assertTrue((d >= cmp_val)[0])
         self.assertFalse((d < cmp_val)[0])
         self.assertFalse((d == cmp_val)[0])
         self.assertFalse((d <= cmp_val)[0])
-        cmp_val = b'1970-01-11'
+        cmp_val = b"1970-01-11"
         self.assertTrue((d == cmp_val)[0])
 
     def test_comparisons_categorical(self):
         d = Date(10)
-        cmp_val = Categorical([b'1970-01-02'])
+        cmp_val = Categorical([b"1970-01-02"])
         self.assertTrue((d > cmp_val)[0])
         self.assertTrue((d != cmp_val)[0])
         self.assertTrue((d >= cmp_val)[0])
         self.assertFalse((d < cmp_val)[0])
         self.assertFalse((d == cmp_val)[0])
         self.assertFalse((d <= cmp_val)[0])
-        cmp_val = Categorical([b'1970-01-11'])
+        cmp_val = Categorical([b"1970-01-11"])
         self.assertTrue((d == cmp_val)[0])
 
     def test_comparisons_nano(self):
         d = Date(10)
-        cmp_val = DateTimeNano('1970-01-02', from_tz='NYC', to_tz='NYC')
+        cmp_val = DateTimeNano("1970-01-02", from_tz="NYC", to_tz="NYC")
         self.assertTrue((d > cmp_val)[0])
         self.assertTrue((d != cmp_val)[0])
         self.assertTrue((d >= cmp_val)[0])
         self.assertFalse((d < cmp_val)[0])
         self.assertFalse((d == cmp_val)[0])
         self.assertFalse((d <= cmp_val)[0])
-        cmp_val = DateTimeNano('1970-01-11', from_tz='NYC', to_tz='NYC')
+        cmp_val = DateTimeNano("1970-01-11", from_tz="NYC", to_tz="NYC")
         self.assertTrue((d == cmp_val)[0])
 
     def test_comparisons_error(self):
@@ -336,14 +336,14 @@ class Date_Test(unittest.TestCase):
 
     def test_comparisons_datespan_nano(self):
         d = DateSpan(10)
-        cmp_val = TimeSpan(24, 'h')
+        cmp_val = TimeSpan(24, "h")
         self.assertTrue((d > cmp_val)[0])
         self.assertTrue((d != cmp_val)[0])
         self.assertTrue((d >= cmp_val)[0])
         self.assertFalse((d < cmp_val)[0])
         self.assertFalse((d == cmp_val)[0])
         self.assertFalse((d <= cmp_val)[0])
-        cmp_val = TimeSpan(240, 'h')
+        cmp_val = TimeSpan(240, "h")
         self.assertTrue((d == cmp_val)[0])
 
     def test_comparisons_datespan_error(self):
@@ -351,9 +351,9 @@ class Date_Test(unittest.TestCase):
         with self.assertRaises(TypeError):
             _ = d < Date(1)
         with self.assertRaises(TypeError):
-            _ = d > DateTimeNano('1970-01-02', from_tz='NYC', to_tz='NYC')
+            _ = d > DateTimeNano("1970-01-02", from_tz="NYC", to_tz="NYC")
         with self.assertRaises(TypeError):
-            _ = d == Categorical(['1970-01-02'])
+            _ = d == Categorical(["1970-01-02"])
 
     def test_year(self):
         arr = full(50, 50) + (arange(50) * 365)
@@ -375,33 +375,33 @@ class Date_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_day_of_week(self):
-        d = Date.range('2019-02-11', '2019-02-18', closed='left')
+        d = Date.range("2019-02-11", "2019-02-18", closed="left")
         result = d.day_of_week
         correct = arange(7)
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_weekend(self):
-        d = Date.range('2019-02-11', '2019-02-18', closed='left')
+        d = Date.range("2019-02-11", "2019-02-18", closed="left")
         result = d.is_weekend
         correct = full(7, False)
         correct[-2:] = True
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_weekday(self):
-        d = Date.range('2019-02-11', '2019-02-18', closed='left')
+        d = Date.range("2019-02-11", "2019-02-18", closed="left")
         result = d.is_weekday
         correct = full(7, True)
         correct[-2:] = False
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_leapyear(self):
-        d = Date.range('1992-06-01', '2031-06-01', step=365)
+        d = Date.range("1992-06-01", "2031-06-01", step=365)
         result = d.is_leapyear
         correct = tile([True, False, False, False], 10)
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_day_of_month(self):
-        d = Date.range('2019-01-01', '2020-01-01', closed='left')
+        d = Date.range("2019-01-01", "2020-01-01", closed="left")
         daynums = []
         for idx, i in enumerate(YDAY_SPLITS[:-1]):
             arr = arange(1, YDAY_SPLITS[idx + 1] - i + 1)
@@ -410,7 +410,7 @@ class Date_Test(unittest.TestCase):
         result = d.day_of_month
         correct = hstack(daynums)
 
-        d_leap = Date.range('2020-01-01', '2021-01-01', closed='left')
+        d_leap = Date.range("2020-01-01", "2021-01-01", closed="left")
         daynums = []
         for idx, i in enumerate(YDAY_SPLITS_LEAP[:-1]):
             arr = arange(1, YDAY_SPLITS_LEAP[idx + 1] - i + 1)
@@ -454,7 +454,7 @@ class Date_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(dtn.isnan())))
 
     def test_min(self):
-        d = Date(['20190201', '20190207', '20191230', '20190101'])
+        d = Date(["20190201", "20190207", "20191230", "20190101"])
         m = d.min()
         self.assertTrue(isinstance(m, Date))
         self.assertTrue(m[0] == d[-1])
@@ -465,7 +465,7 @@ class Date_Test(unittest.TestCase):
         self.assertTrue(m[0] == ds[2])
 
     def test_max(self):
-        d = Date(['20190201', '20190207', '20191230', '20190101'])
+        d = Date(["20190201", "20190207", "20191230", "20190101"])
         m = d.max()
         self.assertTrue(isinstance(m, Date))
         self.assertTrue(m[0] == d[2])
@@ -476,35 +476,33 @@ class Date_Test(unittest.TestCase):
         self.assertTrue(m[0] == ds[-1])
 
     def test_range_closed(self):
-        both = Date(['20190201', '20190202', '20190203', '20190204'])
-        d_both = Date.range('20190201', '20190204')
+        both = Date(["20190201", "20190202", "20190203", "20190204"])
+        d_both = Date.range("20190201", "20190204")
         self.assertTrue(isinstance(d_both, Date))
         self.assertTrue(bool(np.all(both == d_both)))
 
-        d_left = Date.range('20190201', '20190204', closed='left')
+        d_left = Date.range("20190201", "20190204", closed="left")
         self.assertTrue(isinstance(d_left, Date))
         self.assertTrue(bool(np.all(both[:-1] == d_left)))
 
-        d_right = Date.range('20190201', '20190204', closed='right')
+        d_right = Date.range("20190201", "20190204", closed="right")
         self.assertTrue(isinstance(d_right, Date))
         self.assertTrue(bool(np.all(both[1:] == d_right)))
 
         with self.assertRaises(ValueError):
-            d_error = Date.range('20190201', '20190204', closed='garbage')
+            d_error = Date.range("20190201", "20190204", closed="garbage")
         pass
 
     def test_start_of_week(self):
-        d = Date(['20200507', '20200508'])
-        d2 = Date(['20200504', '20200504'])
-        self.assertTrue((d.start_of_week==d2).all())
+        d = Date(["20200507", "20200508"])
+        d2 = Date(["20200504", "20200504"])
+        self.assertTrue((d.start_of_week == d2).all())
 
     def test_start_of_month(self):
-        d = Date(['20200507', '20200508'])
-        d2 = Date(['20200501', '20200501'])
-        self.assertTrue((d.start_of_month==d2).all())
+        d = Date(["20200507", "20200508"])
+        d2 = Date(["20200501", "20200501"])
+        self.assertTrue((d.start_of_month == d2).all())
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

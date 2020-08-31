@@ -10,8 +10,8 @@ from riptable.rt_numpy import ismember, arange
 # TODO: Use pytest.mark.parametrize() here to iterate over the different dtypes
 #       rather than looping over them within the test function.
 def test_ismember_nums():
-    allowed_int = 'bhilqpBHILQP'
-    allowed_float = 'fd'
+    allowed_int = "bhilqpBHILQP"
+    allowed_float = "fd"
     allowed_types = allowed_int + allowed_float
     # allowed_types = 'lqfd'
 
@@ -37,13 +37,13 @@ def test_ismember_nums():
 
     for a in a_nums:
         adt = None
-        if hasattr(a, 'dtype'):
+        if hasattr(a, "dtype"):
             adt = a.dtype
         else:
             adt = type(a)
         for b in b_nums:
             bdt = None
-            if hasattr(b, 'dtype'):
+            if hasattr(b, "dtype"):
                 bdt = b.dtype
             else:
                 bdt = type(b)
@@ -72,7 +72,7 @@ def test_ismember_strings():
     correct_bool = [True, True, False, False, False]
     correct_idx = [0, 1]
 
-    bytes_list_a = ['a', 'b', 'c', 'd', 'e']
+    bytes_list_a = ["a", "b", "c", "d", "e"]
     a_strings = [
         bytes_list_a,
         tuple(bytes_list_a),
@@ -81,7 +81,7 @@ def test_ismember_strings():
     ]
     # np.chararray(bytes_list_a) ]
 
-    bytes_list_b = ['a', 'b']
+    bytes_list_b = ["a", "b"]
     b_strings = [
         bytes_list_b,
         tuple(bytes_list_b),
@@ -90,21 +90,19 @@ def test_ismember_strings():
     ]
     # np.chararray(bytes_list_b) ]
 
-    true_unicode_a = np.array(
-        [u'a\u2082', u'b\u2082', u'c\u2082', u'd\u2082', u'e\u2082']
-    )
-    true_unicode_b = np.array([u'a\u2082', u'b\u2082'])
+    true_unicode_a = np.array(["a\u2082", "b\u2082", "c\u2082", "d\u2082", "e\u2082"])
+    true_unicode_b = np.array(["a\u2082", "b\u2082"])
 
     # valid inputs, conversion happens when necessary
     for a in a_strings:
         adt = None
-        if hasattr(a, 'dtype'):
+        if hasattr(a, "dtype"):
             adt = a.dtype
         else:
             adt = type(a)
         for b in b_strings:
             bdt = None
-            if hasattr(b, 'dtype'):
+            if hasattr(b, "dtype"):
                 bdt = b.dtype
             else:
                 bdt = type(b)
@@ -165,11 +163,11 @@ def test_ismember_categorical():
 
             # string values, both base indices
             c = TypeRegister.Categorical(
-                np.random.choice(['a', 'b', 'c', 'd', 'e', 'f'], 15),
+                np.random.choice(["a", "b", "c", "d", "e", "f"], 15),
                 base_index=b_index_c,
             )
             d = TypeRegister.Categorical(
-                np.random.choice(['a', 'b', 'c'], 10), base_index=b_index_d
+                np.random.choice(["a", "b", "c"], 10), base_index=b_index_d
             )
             cs, ds = c.as_string_array, d.as_string_array
 
@@ -186,10 +184,10 @@ def test_ismember_categorical():
             # codes, string values, both base indices
 
         c = TypeRegister.Categorical(
-            np.random.choice(['a', 'b', 'c', 'd', 'e', 'f'], 15), base_index=b_index_c
+            np.random.choice(["a", "b", "c", "d", "e", "f"], 15), base_index=b_index_c
         )
         d = TypeRegister.Categorical(
-            np.random.choice(['a', 'b', 'c'], 10), ['a', 'b', 'c'], base_index=1
+            np.random.choice(["a", "b", "c"], 10), ["a", "b", "c"], base_index=1
         )
         cs, ds = c.as_string_array, d.as_string_array
         b, f = ismember(c, d)
@@ -202,7 +200,7 @@ def test_ismember_categorical():
         assert_array_equal(b, bs)
         assert_array_equal(int8(f), fs)
 
-    c = Categorical(np.random.choice(['a', 'b', 'c'], 15))
+    c = Categorical(np.random.choice(["a", "b", "c"], 15))
     with pytest.raises(TypeError):
         b, idx = ismember(c, arange(3))
     # TypeRegister.Categorical.TestIsMemberVerbose = True
@@ -221,7 +219,7 @@ class Ismember_Test(unittest.TestCase):
         self.assertFalse(b[-1], False)
         self.assertTrue(bool(np.all(idx[:-1] == tile(FA([0, 1, 2]), 3)[:-1])))
         self.assertTrue(idx.isnan()[-1])
-        f = FastArray(['a', 'b', 'c'])
+        f = FastArray(["a", "b", "c"])
         with pytest.raises(TypeError):
             b, idx = ismember(c, f)
 
@@ -232,11 +230,11 @@ class Ismember_Test(unittest.TestCase):
         self.assertFalse(b[-1], False)
         self.assertTrue(bool(np.all(idx[:-1] == tile(FA([0, 1, 2]), 3)[:-1])))
         self.assertTrue(idx.isnan()[-1])
-        f = FastArray(['a', 'b', 'c'])
+        f = FastArray(["a", "b", "c"])
         with pytest.raises(TypeError):
             b, idx = ismember(c, f)
 
-        c = Categorical([np.random.choice(['a', 'b', 'c'], 10), arange(10)])
+        c = Categorical([np.random.choice(["a", "b", "c"], 10), arange(10)])
         with pytest.raises(TypeError):
             b, idx = ismember(c, f)
 
@@ -277,8 +275,8 @@ def test_ismember_index_casting():
         60_000: np.dtype(np.int32),
     }
     for sz, correct_type in casting_dict.items():
-        a = np.full(sz, b'a').view(FA)
-        b = FA(['a', 'b'])
+        a = np.full(sz, b"a").view(FA)
+        b = FA(["a", "b"])
         _, idx = ismember(b, a)
         assert (
             idx.dtype == correct_type
@@ -296,8 +294,8 @@ def test_ismember_int_edges():
 
 # TODO: RIP-364: This test doesn't have any assertions, so it's currently only checking whether the function excepts. Add assertions to check the ismember output for correctness."
 def test_ismember_diff_itemsize():
-    a = FA([b'b', b'a', b'a', b'Inv', b'c', b'a', b'b'], dtype='S')
-    b = FA([b'a', b'b', b'c'], dtype='S')
+    a = FA([b"b", b"a", b"a", b"Inv", b"c", b"a", b"b"], dtype="S")
+    b = FA([b"a", b"b", b"c"], dtype="S")
     bl, idx = ismember(a, b)
     correctbool = [True, True, True, False, True, True, True]
     correctidx = FA([1, 0, 0, int8.inv, 2, 0, 1], dtype=np.int8)
@@ -314,7 +312,7 @@ def test_ismember_empty():
 def test_ismember_multikey_errors():
     # types didn't match
     a_keys = [FA([1, 2, 3]), FA([1, 2, 3], dtype=np.float32)]
-    b_keys = [FA([1, 2, 3]), FA(['a', 'b', 'c'])]
+    b_keys = [FA([1, 2, 3]), FA(["a", "b", "c"])]
     with pytest.raises(TypeError):
         _, _ = ismember(a_keys, b_keys)
 
@@ -346,8 +344,8 @@ def test_ismember_multikey_non_ndarray():
     correct_bool = [True, True, False]
     correct_idx = FastArray([0, 1, INVALID_DICT[np.dtype(np.int8).num]], dtype=np.int8)
 
-    a_keys = [[1, 2, 3], ['a', 'b', 'c']]
-    b_keys = [[1, 2], ['a', 'b']]
+    a_keys = [[1, 2, 3], ["a", "b", "c"]]
+    b_keys = [[1, 2], ["a", "b"]]
     c, d = ismember(a_keys, b_keys)
     assert_array_equal(
         c, correct_bool, err_msg=f"Incorrect boolean array for keys as lists ismembermk"
@@ -388,10 +386,10 @@ def test_ismember_multikey_non_ndarray():
 # TODO: RIP-364: This test doesn't have any assertions, so it's currently only checking whether the function excepts. Add assertions to check the ismember output for correctness."
 def test_ismember_multikey_unicode():
     a_keys = [
-        np.array([u'a\u2082', u'b\u2082', u'c\u2082', u'd\u2082', u'e\u2082']),
+        np.array(["a\u2082", "b\u2082", "c\u2082", "d\u2082", "e\u2082"]),
         [1, 2, 3, 4, 5],
     ]
-    b_keys = [np.array([u'a\u2082', u'b\u2082']), [1, 2]]
+    b_keys = [np.array(["a\u2082", "b\u2082"]), [1, 2]]
     b, idx = ismember(a_keys, b_keys)
     # with pytest.raises(TypeError):
     #    _, _ = ismember(a_keys, b_keys)
@@ -402,19 +400,19 @@ def test_ismember_align_multikey():
     correct_idx = FastArray([0, 1, 2, int8.inv, int8.inv], dtype=np.int8)
 
     # bytes / unicode both upcast
-    a_keys = [arange(5), FastArray([b'a', b'b', b'c', b'd', b'e'], dtype='S5')]
-    b_keys = [arange(3), FastArray(['a', 'b', 'c'], dtype='U4', unicode=True)]
+    a_keys = [arange(5), FastArray([b"a", b"b", b"c", b"d", b"e"], dtype="S5")]
+    b_keys = [arange(3), FastArray(["a", "b", "c"], dtype="U4", unicode=True)]
     b, idx = ismember(a_keys, b_keys)
     assert_array_equal(b, correct_bool)
     # NOTE: flip to numpy because FastArray is sentinel-aware
     assert_array_equal(idx._np, correct_idx._np)
-    assert a_keys[1].dtype.char == 'S'
+    assert a_keys[1].dtype.char == "S"
 
     # bytes / Categorical unicode
-    a_keys = [arange(5), FastArray(['a', 'b', 'c', 'd', 'e'], dtype='S5')]
+    a_keys = [arange(5), FastArray(["a", "b", "c", "d", "e"], dtype="S5")]
     b_keys = [
         arange(3),
-        Categorical(FastArray(['a', 'b', 'c'], dtype='U4', unicode=True), unicode=True),
+        Categorical(FastArray(["a", "b", "c"], dtype="U4", unicode=True), unicode=True),
     ]
     b, idx = ismember(a_keys, b_keys)
     assert_array_equal(b, correct_bool)
@@ -422,10 +420,10 @@ def test_ismember_align_multikey():
     assert_array_equal(idx._np, correct_idx._np)
 
     # unicode / Categorical
-    a_keys = [arange(5), FastArray(['a', 'b', 'c', 'd', 'e'], dtype='U5', unicode=True)]
+    a_keys = [arange(5), FastArray(["a", "b", "c", "d", "e"], dtype="U5", unicode=True)]
     b_keys = [
         arange(3),
-        Categorical(FastArray(['a', 'b', 'c'], dtype='U4', unicode=True), unicode=True),
+        Categorical(FastArray(["a", "b", "c"], dtype="U4", unicode=True), unicode=True),
     ]
     b, idx = ismember(a_keys, b_keys)
     assert_array_equal(b, correct_bool)
@@ -435,11 +433,11 @@ def test_ismember_align_multikey():
     # different numeric types
     a_keys = [
         arange(5, dtype=np.float64),
-        FastArray(['a', 'b', 'c', 'd', 'e'], dtype='U5', unicode=True),
+        FastArray(["a", "b", "c", "d", "e"], dtype="U5", unicode=True),
     ]
     b_keys = [
         arange(3),
-        Categorical(FastArray(['a', 'b', 'c'], dtype='U4', unicode=True), unicode=True),
+        Categorical(FastArray(["a", "b", "c"], dtype="U4", unicode=True), unicode=True),
     ]
     b, idx = ismember(a_keys, b_keys)
     assert_array_equal(b, correct_bool)
@@ -448,25 +446,25 @@ def test_ismember_align_multikey():
 
     # string / non-string
     a_keys = [
-        arange(5).astype('S'),
-        FastArray(['a', 'b', 'c', 'd', 'e'], dtype='U5', unicode=True),
+        arange(5).astype("S"),
+        FastArray(["a", "b", "c", "d", "e"], dtype="U5", unicode=True),
     ]
     b_keys = [
         arange(3),
-        Categorical(FastArray(['a', 'b', 'c'], dtype='U4', unicode=True), unicode=True),
+        Categorical(FastArray(["a", "b", "c"], dtype="U4", unicode=True), unicode=True),
     ]
     with pytest.raises(TypeError):
         b, idx = ismember(a_keys, b_keys)
 
     # multikey categorical, no expand array
     a_keys = [
-        arange(5).astype('S'),
-        FastArray(['a', 'b', 'c', 'd', 'e'], dtype='U5', unicode=True),
+        arange(5).astype("S"),
+        FastArray(["a", "b", "c", "d", "e"], dtype="U5", unicode=True),
     ]
     b_keys = [
         arange(3),
         Categorical(
-            [FastArray(['a', 'b', 'c'], dtype='U4', unicode=True), arange(3)],
+            [FastArray(["a", "b", "c"], dtype="U4", unicode=True), arange(3)],
             unicode=True,
         ),
     ]
@@ -476,16 +474,16 @@ def test_ismember_align_multikey():
         b, idx = ismember(b_keys, a_keys)
 
     # unsupported object array
-    a_keys = [arange(5).astype('O'), FastArray(['a', 'b', 'c', 'd', 'e'], dtype='S5')]
-    b_keys = [arange(3), FastArray(['a', 'b', 'c'], dtype='U4', unicode=True)]
+    a_keys = [arange(5).astype("O"), FastArray(["a", "b", "c", "d", "e"], dtype="S5")]
+    b_keys = [arange(3), FastArray(["a", "b", "c"], dtype="U4", unicode=True)]
 
     with pytest.raises(TypeError):
         b, idx = ismember(a_keys, b_keys)
 
 
 def test_ismember_categorical_with_invalid():
-    c1 = Categorical(['a', 'b', 'c'])
-    c2 = Categorical(['a', 'b', 'c', 'd', 'c'])
+    c1 = Categorical(["a", "b", "c"])
+    c2 = Categorical(["a", "b", "c", "d", "c"])
     c1[0] = 0
     c2[3] = 0
     # This is a little hacky because it relies on the implementation detail

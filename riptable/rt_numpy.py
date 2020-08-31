@@ -1,19 +1,123 @@
-__all__ = ['get_dtype', 'get_common_dtype', 'asanyarray', 'asarray', 'abs', 'all', 'any', 'arange', 'argsort', 'bincount',
-           'bitcount', 'ceil', 'concatenate', 'crc64', 'cumsum',
-           'diff', 'double', 'empty', 'empty_like', 'searchsorted', '_searchsorted', 'vstack', 'tile',
-           'floor', 'full', 'groupby', 'groupbyhash', 'groupbylex', 'groupbypack', 'int16',
-           'int32', 'int64', 'int8', 'int0', 'uint0', 'bool_', 'bytes_', 'str_', 'isfinite', 'isnotfinite', 'isinf', 'isnotinf', 'ismember', 'isnan', 'isnanorzero', 'isnotnan', 'issorted', 'lexsort', 'logical',
-           'max', 'mean', 'median', 'min', 'multikeyhash', 'nan_to_num', 'nan_to_zero',
-           'nanmax', 'nanmean', 'nanmedian', 'nanmin', 'nanpercentile', 'nanstd', 'nansum',
-           'nanvar', 'ones', 'ones_like', 'percentile', 'putmask', 'reindex_fast', 'reshape', 'round',
-           'single', 'sort', 'sortinplaceindirect', 'std', 'sum', 'transpose',
-           'trunc', 'uint16', 'uint32', 'uint64', 'uint8', 'float32','float64','unique32',
-           'var', 'where', 'zeros', 'zeros_like', 'mask_or', 'mask_and', 'mask_xor', 'mask_andnot',
-           'mask_ori', 'mask_andi', 'mask_xori', 'mask_andnoti',
-           'combine_filter', 'combine_accum1_filter', 'combine_accum2_filter',
-           'putmask', 'bool_to_fancy','interp','interp_extrap', 'minimum','maximum',
-           'hstack', 'makeifirst', 'makeilast', 'makeinext', 'makeiprev', 'combine2keys', 'cat2keys', 'assoc_copy', 'assoc_index',
-           'log','log10', 'absolute']
+__all__ = [
+    "get_dtype",
+    "get_common_dtype",
+    "asanyarray",
+    "asarray",
+    "abs",
+    "all",
+    "any",
+    "arange",
+    "argsort",
+    "bincount",
+    "bitcount",
+    "ceil",
+    "concatenate",
+    "crc64",
+    "cumsum",
+    "diff",
+    "double",
+    "empty",
+    "empty_like",
+    "searchsorted",
+    "_searchsorted",
+    "vstack",
+    "tile",
+    "floor",
+    "full",
+    "groupby",
+    "groupbyhash",
+    "groupbylex",
+    "groupbypack",
+    "int16",
+    "int32",
+    "int64",
+    "int8",
+    "int0",
+    "uint0",
+    "bool_",
+    "bytes_",
+    "str_",
+    "isfinite",
+    "isnotfinite",
+    "isinf",
+    "isnotinf",
+    "ismember",
+    "isnan",
+    "isnanorzero",
+    "isnotnan",
+    "issorted",
+    "lexsort",
+    "logical",
+    "max",
+    "mean",
+    "median",
+    "min",
+    "multikeyhash",
+    "nan_to_num",
+    "nan_to_zero",
+    "nanmax",
+    "nanmean",
+    "nanmedian",
+    "nanmin",
+    "nanpercentile",
+    "nanstd",
+    "nansum",
+    "nanvar",
+    "ones",
+    "ones_like",
+    "percentile",
+    "putmask",
+    "reindex_fast",
+    "reshape",
+    "round",
+    "single",
+    "sort",
+    "sortinplaceindirect",
+    "std",
+    "sum",
+    "transpose",
+    "trunc",
+    "uint16",
+    "uint32",
+    "uint64",
+    "uint8",
+    "float32",
+    "float64",
+    "unique32",
+    "var",
+    "where",
+    "zeros",
+    "zeros_like",
+    "mask_or",
+    "mask_and",
+    "mask_xor",
+    "mask_andnot",
+    "mask_ori",
+    "mask_andi",
+    "mask_xori",
+    "mask_andnoti",
+    "combine_filter",
+    "combine_accum1_filter",
+    "combine_accum2_filter",
+    "putmask",
+    "bool_to_fancy",
+    "interp",
+    "interp_extrap",
+    "minimum",
+    "maximum",
+    "hstack",
+    "makeifirst",
+    "makeilast",
+    "makeinext",
+    "makeiprev",
+    "combine2keys",
+    "cat2keys",
+    "assoc_copy",
+    "assoc_index",
+    "log",
+    "log10",
+    "absolute",
+]
 
 import sys
 import builtins
@@ -25,13 +129,20 @@ from enum import IntEnum
 
 import riptide_cpp as rc
 from riptide_cpp import LedgerFunction
-from .rt_enum import INVALID_DICT, TypeRegister, REDUCE_FUNCTIONS, MATH_OPERATION, NumpyCharTypes, CategoryMode
+from .rt_enum import (
+    INVALID_DICT,
+    TypeRegister,
+    REDUCE_FUNCTIONS,
+    MATH_OPERATION,
+    NumpyCharTypes,
+    CategoryMode,
+)
 
 
 if TYPE_CHECKING:
     from .rt_categorical import Categorical
 
-#--------------------------------------------------------------
+# --------------------------------------------------------------
 def get_dtype(val):
     """
     Return the dtype of an array, list, or builtin int, float, bool, str, bytes.
@@ -73,23 +184,26 @@ def get_dtype(val):
         # check first if it has a dtype
         final = val.dtype
     except:
-        if isinstance(val,bool):
+        if isinstance(val, bool):
             final = np.dtype(np.bool)
 
         elif isinstance(val, int):
             val = abs(val)
-            if val <= (2**32-1): final=np.dtype(np.int32)
-            elif val <= (2**64-1): final=np.dtype(np.int64)
-            else: final=np.dtype(np.float64)
+            if val <= (2 ** 32 - 1):
+                final = np.dtype(np.int32)
+            elif val <= (2 ** 64 - 1):
+                final = np.dtype(np.int64)
+            else:
+                final = np.dtype(np.float64)
 
-        elif isinstance(val,float):
+        elif isinstance(val, float):
             final = np.dtype(np.float64)
 
         elif isinstance(val, str):
-            final = np.dtype('U'+str(len(val)))
+            final = np.dtype("U" + str(len(val)))
 
         elif isinstance(val, bytes):
-            final = np.dtype('S'+str(len(val)))
+            final = np.dtype("S" + str(len(val)))
 
         else:
             temp = np.asanyarray(val)
@@ -97,7 +211,8 @@ def get_dtype(val):
 
     return final
 
-#--------------------------------------------------------------
+
+# --------------------------------------------------------------
 def get_common_dtype(x, y) -> np.dtype:
     """
     Return the dtype of two arrays, or two scalars, or a scalar and an array.
@@ -142,7 +257,7 @@ def get_common_dtype(x, y) -> np.dtype:
 
     # NOTE: find_common_type has a bug where int32 num 7 gets flipped to int32 num 5.
     if type1.num != type2.num:
-        common = np.find_common_type([type1,type2],[])
+        common = np.find_common_type([type1, type2], [])
     else:
         # for strings and unicode, pick the larger itemsize
         if type1.itemsize >= type2.itemsize:
@@ -150,26 +265,26 @@ def get_common_dtype(x, y) -> np.dtype:
         else:
             common = type2
 
-    if common.char != 'O':
+    if common.char != "O":
         return common
 
-    #situation where we have a string but find_common_type flips to object too easily
-    if type1.char in 'SU':
+    # situation where we have a string but find_common_type flips to object too easily
+    if type1.char in "SU":
         # get itemsize
-        itemsize1=type1.itemsize
-        if type1.char == 'U':
-            itemsize1 = itemsize1 //4
-        if type2.char in 'SU':
-            itemsize2=type2.itemsize
-            if type2.char == 'U':
-                itemsize2 = itemsize2 //4
+        itemsize1 = type1.itemsize
+        if type1.char == "U":
+            itemsize1 = itemsize1 // 4
+        if type2.char in "SU":
+            itemsize2 = type2.itemsize
+            if type2.char == "U":
+                itemsize2 = itemsize2 // 4
 
             # get the max of the two strings
-            maxsize = str(max(itemsize1,itemsize2))
-            if type1.char == 'U' or type2.char == 'U':
-                common = np.dtype('U'+maxsize)
+            maxsize = str(max(itemsize1, itemsize2))
+            if type1.char == "U" or type2.char == "U":
+                common = np.dtype("U" + maxsize)
             else:
-                common = np.dtype('S'+maxsize)
+                common = np.dtype("S" + maxsize)
 
         # 13 is long double
         # 14,15,16 CFLOAT, CDOUBLE, CLONGDOUBLE
@@ -179,38 +294,39 @@ def get_common_dtype(x, y) -> np.dtype:
         elif type2.num <= 13:
             # handle case where we have an int/float/bool and a string
             if type2.num <= 10:
-                maxsize = str(max(itemsize1,16))
+                maxsize = str(max(itemsize1, 16))
             else:
-                maxsize = str(max(itemsize1,32))
+                maxsize = str(max(itemsize1, 32))
 
-            if type1.char == 'U':
-                common = np.dtype('U'+maxsize)
+            if type1.char == "U":
+                common = np.dtype("U" + maxsize)
             else:
-                common = np.dtype('S'+maxsize)
+                common = np.dtype("S" + maxsize)
 
-    elif type2.char in 'SU':
+    elif type2.char in "SU":
         if type1.num <= 13:
             # handle case where we have an int/float/bool and a string
             # get itemsize
-            itemsize2=type2.itemsize
-            if type2.char == 'U':
-                itemsize2 = itemsize2 //4
+            itemsize2 = type2.itemsize
+            if type2.char == "U":
+                itemsize2 = itemsize2 // 4
 
             if type1.num <= 10:
-                maxsize = str(max(itemsize2,16))
+                maxsize = str(max(itemsize2, 16))
             else:
-                maxsize = str(max(itemsize2,32))
+                maxsize = str(max(itemsize2, 32))
 
-            if type2.char == 'U':
-                common = np.dtype('U'+maxsize)
+            if type2.char == "U":
+                common = np.dtype("U" + maxsize)
             else:
-                common = np.dtype('S'+maxsize)
+                common = np.dtype("S" + maxsize)
 
     return common
 
-#-------------------------------------------------------
-def empty(shape, dtype=np.float, order='C'):
-    #return LedgerFunction(np.empty, shape, dtype=dtype, order=order)
+
+# -------------------------------------------------------
+def empty(shape, dtype=np.float, order="C"):
+    # return LedgerFunction(np.empty, shape, dtype=dtype, order=order)
 
     # make into list of ints
     try:
@@ -218,34 +334,36 @@ def empty(shape, dtype=np.float, order='C'):
     except:
         shape = [int(shape)]
 
-    dtype= np.dtype(dtype)
+    dtype = np.dtype(dtype)
 
     # try to use recycler
-    result= rc.Empty(shape, dtype.num, dtype.itemsize, order=='F')
+    result = rc.Empty(shape, dtype.num, dtype.itemsize, order == "F")
     if result is None:
         return LedgerFunction(np.empty, shape, dtype=dtype, order=order)
     else:
         return result
 
-#-------------------------------------------------------
-def empty_like(array, dtype=None, order='K', subok=True):
+
+# -------------------------------------------------------
+def empty_like(array, dtype=None, order="K", subok=True):
     # TODO: call recycler
 
     # NOTE: np.empty_like preserves the subclass
     if isinstance(array, TypeRegister.FastArray):
-        array=array._np
+        array = array._np
     result = LedgerFunction(np.empty_like, array, dtype=dtype, order=order, subok=subok)
     return result
 
-#-------------------------------------------------------
-def _searchsorted(array, v, side='left', sorter=None):
+
+# -------------------------------------------------------
+def _searchsorted(array, v, side="left", sorter=None):
 
     # we cannot handle a sorter
     if sorter is None:
         try:
-            if side == 'leftplus':
+            if side == "leftplus":
                 return rc.BinsToCutsBSearch(v, array, 0)
-            elif side == 'left':
+            elif side == "left":
                 return rc.BinsToCutsBSearch(v, array, 1)
             else:
                 return rc.BinsToCutsBSearch(v, array, 2)
@@ -255,28 +373,39 @@ def _searchsorted(array, v, side='left', sorter=None):
 
     # numpy does not like fastarrays for this routine
     if isinstance(array, TypeRegister.FastArray):
-        array=array._np
+        array = array._np
     return LedgerFunction(np.searchsorted, array, v, side=side, sorter=sorter)
 
-#-------------------------------------------------------
-def searchsorted(a, v, side='left', sorter=None):
+
+# -------------------------------------------------------
+def searchsorted(a, v, side="left", sorter=None):
     """ see np.searchsorted
         side ='leftplus' is a new option in riptable where values > get a 0
     """
     return _searchsorted(a, v, side=side, sorter=sorter)
 
-#-------------------------------------------------------
-def issorted(*args,**kwargs):
+
+# -------------------------------------------------------
+def issorted(*args, **kwargs):
     """
     Examples
     --------
     rt.arange(10).issorted()
     """
-    return LedgerFunction(rc.IsSorted,*args,**kwargs)
+    return LedgerFunction(rc.IsSorted, *args, **kwargs)
 
-#-------------------------------------------------------
-def unique(arr, return_index:bool=False, return_inverse:bool=False, return_counts:bool=False, sorted:bool=True,
-        lex:bool=False, dtype:Optional[Union[str, np.dtype]]=None, filter=None) -> Tuple:
+
+# -------------------------------------------------------
+def unique(
+    arr,
+    return_index: bool = False,
+    return_inverse: bool = False,
+    return_counts: bool = False,
+    sorted: bool = True,
+    lex: bool = False,
+    dtype: Optional[Union[str, np.dtype]] = None,
+    filter=None,
+) -> Tuple:
     """
     Find the unique elements of an array.
 
@@ -348,9 +477,9 @@ def unique(arr, return_index:bool=False, return_inverse:bool=False, return_count
     if isinstance(arr, TypeRegister.Categorical):
         # NOTE if the categorical is not dirty, filter should do nothing
         # TODO: need to set dirty flag g=arr.filter().grouping
-        g=arr.grouping
+        g = arr.grouping
         if filter is not None:
-            g=g.regroup(filter)
+            g = g.regroup(filter)
         else:
             if g.isdirty:
                 # dirty flag means a boo or fancy index mask was applied
@@ -364,22 +493,24 @@ def unique(arr, return_index:bool=False, return_inverse:bool=False, return_count
             if isinstance(arr, list) and isinstance(arr[0], (np.ndarray, list)):
                 # user passing a list of arrays, or list of lists, assume multikey unique
                 if isinstance(arr[0], list):
-                    arr=[TypeRegister.FastArray(v, unicode=True) for v in arr]
+                    arr = [TypeRegister.FastArray(v, unicode=True) for v in arr]
             else:
                 arr = TypeRegister.FastArray(arr, unicode=True)
 
         # Grouping is faster than Categorical and preserves ifirstkey
         if lex is True or sorted is False:
-            g=TypeRegister.Grouping(arr, lex=lex, filter=filter)
+            g = TypeRegister.Grouping(arr, lex=lex, filter=filter)
         else:
             # TODO: need flag to preserve ifirstkey when making a Categorical
             # TODO: or grouping needs to obey ordered flag (then don't need to make Categorical)
-            g=TypeRegister.Categorical(arr, ordered=sorted, lex=lex, filter=filter).grouping
+            g = TypeRegister.Categorical(
+                arr, ordered=sorted, lex=lex, filter=filter
+            ).grouping
 
     un = g.uniquelist
 
     # check for multikey
-    if len(un)==1:
+    if len(un) == 1:
         un = un[0]
 
     if mark_readonly:
@@ -407,8 +538,8 @@ def unique(arr, return_index:bool=False, return_inverse:bool=False, return_count
         # an array mapping original values to their indices in the unique array
         if return_inverse:
             inv = g.ikey
-            if g.base_index ==1:
-                inv = inv -1
+            if g.base_index == 1:
+                inv = inv - 1
 
             if dtype is not None:
                 inv = inv.astype(dtype, copy=False)
@@ -439,7 +570,9 @@ def _possibly_match_categoricals(a, b):
 
     if isinstance(b, TypeRegister.Categorical):
         if a.category_mode != b.category_mode:
-            raise TypeError(f"ismember on categorical must be with a categorical in the same mode. Got {a.category_mode} {b.category_mode}")
+            raise TypeError(
+                f"ismember on categorical must be with a categorical in the same mode. Got {a.category_mode} {b.category_mode}"
+            )
         else:
             mode = a.category_mode
             # multikey categoricals need to have the same number of columns
@@ -449,16 +582,18 @@ def _possibly_match_categoricals(a, b):
                 bdict = b.category_dict
 
                 if len(adict) != len(bdict):
-                    raise ValueError(f"Multikey dictionaries in ismember categorical did not have the same number of keys. {len(adict)} vs. {len(bdict)}")
+                    raise ValueError(
+                        f"Multikey dictionaries in ismember categorical did not have the same number of keys. {len(adict)} vs. {len(bdict)}"
+                    )
 
             # if codes exist in both mappings, their values must be consistent
-            elif mode in [ CategoryMode.Dictionary, CategoryMode.IntEnum ]:
+            elif mode in [CategoryMode.Dictionary, CategoryMode.IntEnum]:
                 adict = a.category_mapping
                 bdict = b.category_mapping
 
                 match = True
                 for code, aval in adict.items():
-                    bval = bdict.get(code,None)
+                    bval = bdict.get(code, None)
                     if bval is not None:
                         if bval != aval:
                             match = False
@@ -469,10 +604,12 @@ def _possibly_match_categoricals(a, b):
                     b = b._fa
 
                 else:
-                    raise ValueError(f"Mapped categoricals had non-matching mappings. Could not perform ismember.")
+                    raise ValueError(
+                        f"Mapped categoricals had non-matching mappings. Could not perform ismember."
+                    )
 
             # ismember code will perform an ismember on these, take a different final path
-            elif mode in [ CategoryMode.StringArray, CategoryMode.NumericArray ]:
+            elif mode in [CategoryMode.StringArray, CategoryMode.NumericArray]:
                 pass
 
             else:
@@ -481,19 +618,21 @@ def _possibly_match_categoricals(a, b):
     # it's faster to make a categorical than to reexpand
     # turn other array argument into categorical before performing final ismember
     elif a.category_mode == CategoryMode.StringArray:
-        if b.dtype.char in ('U','S'):
+        if b.dtype.char in ("U", "S"):
             # future optimization: don't sort the bins when making the throwaway categorical
-            #if a.unique_count < 30_000_000 and TypeRegister.Categorical.TestIsMemberVerbose == True:
+            # if a.unique_count < 30_000_000 and TypeRegister.Categorical.TestIsMemberVerbose == True:
             #    _, idx = ismember(b, a.category_array)
             #    if a.base_index == 1:
             #        idx += 1
             #    return a._fa, idx
-            unicode=False
-            if b.dtype.char == 'U':
+            unicode = False
+            if b.dtype.char == "U":
                 unicode = True
             b = TypeRegister.Categorical(b, unicode=unicode, ordered=False)
         else:
-            raise TypeError(f"Cannot perform ismember on categorical in string array mode and array of dtype {b.dtype}")
+            raise TypeError(
+                f"Cannot perform ismember on categorical in string array mode and array of dtype {b.dtype}"
+            )
 
     elif a.category_mode == CategoryMode.NumericArray:
         if b.dtype.char in NumpyCharTypes.AllInteger:
@@ -502,12 +641,17 @@ def _possibly_match_categoricals(a, b):
         elif b.dtype.char in NumpyCharTypes.SupportedFloat:
             b = TypeRegister.Categorical(b)
         else:
-            raise TypeError(f"Could not perform ismember on numeric categorical and array with dtype {b.dtype}")
+            raise TypeError(
+                f"Could not perform ismember on numeric categorical and array with dtype {b.dtype}"
+            )
 
     else:
-        raise TypeError(f"Could not perform ismember on categorical in {a.category_mode.name} and array with dtype {b.dtype}")
+        raise TypeError(
+            f"Could not perform ismember on categorical in {a.category_mode.name} and array with dtype {b.dtype}"
+        )
 
     return a, b
+
 
 def _ismember_align_multikey(a, b):
     """
@@ -525,6 +669,7 @@ def _ismember_align_multikey(a, b):
     -----
     TODO: push these into methods that can be used to normalize single-key ``ismember()``.
     """
+
     def _as_fastarrays(col):
         # flip all input arrays to FastArray
         # re-expand single key or enum categoricals for IsMemberMultikey
@@ -532,19 +677,25 @@ def _ismember_align_multikey(a, b):
             col = TypeRegister.FastArray(col)
         elif isinstance(col, TypeRegister.Categorical):
             if col.ismultikey:
-                raise TypeError(f'Multikey ismember could not re-expand array for categorical in mode {col.category_mode.name}.')
+                raise TypeError(
+                    f"Multikey ismember could not re-expand array for categorical in mode {col.category_mode.name}."
+                )
             col = col.expand_array
         return col
 
-    allowed_int = 'bhilqpBHILQP'
-    allowed_float = 'fdg'
+    allowed_int = "bhilqpBHILQP"
+    allowed_float = "fdg"
     allowed_types = allowed_int + allowed_float
 
     # make sure original container items don't get blown away during fixup
-    if isinstance(a, tuple): a = list(a)
-    if isinstance(b, tuple): b = list(b)
-    if isinstance(a, list): a = a.copy()
-    if isinstance(b, list): b = b.copy()
+    if isinstance(a, tuple):
+        a = list(a)
+    if isinstance(b, tuple):
+        b = list(b)
+    if isinstance(a, list):
+        a = a.copy()
+    if isinstance(b, list):
+        b = b.copy()
 
     for idx, a_col in enumerate(a):
         b_col = b[idx]
@@ -554,23 +705,23 @@ def _ismember_align_multikey(a, b):
         a_char = a_col.dtype.char
         b_char = b_col.dtype.char
         # if a column was string, need to match string width in b
-        if a_char in 'US':
-            if b_char in 'US':
+        if a_char in "US":
+            if b_char in "US":
                 # TODO: find a prettier way of doing this...
                 if a_char != b_char:
                     # if unicode is present (probably rare), need to upcast both
-                    if a_char == 'U':
+                    if a_char == "U":
                         a_width = a_col.itemsize // 4
                         b_width = b_col.itemsize
                     else:
                         a_width = a_col.itemsize
                         b_width = b_col.itemsize // 4
-                    dtype_letter = 'U'
+                    dtype_letter = "U"
 
                 # both unicode or both bytes, just match width
                 else:
                     dtype_letter = a_char
-                    if dtype_letter == 'U':
+                    if dtype_letter == "U":
                         a_width = a_col.itemsize // 4
                         b_width = b_col.itemsize // 4
                     else:
@@ -583,20 +734,26 @@ def _ismember_align_multikey(a, b):
                 a_col = a_col.astype(dt_char, copy=False)
                 b_col = b_col.astype(dt_char, copy=False)
             else:
-                raise TypeError(f'Could not perform multikey ismember on types {a_col.dtype} and {b_col.dtype}')
+                raise TypeError(
+                    f"Could not perform multikey ismember on types {a_col.dtype} and {b_col.dtype}"
+                )
 
         else:
             # make sure both are supported numeric types
             if a_char not in allowed_types:
-                raise TypeError(f"{a_col.dtype} not in allowed types for ismember with {b_col.dtype}")
+                raise TypeError(
+                    f"{a_col.dtype} not in allowed types for ismember with {b_col.dtype}"
+                )
             if b_char not in allowed_types:
-                raise TypeError(f"{b_col.dtype} not in allowed types for ismember with {a_col.dtype}")
+                raise TypeError(
+                    f"{b_col.dtype} not in allowed types for ismember with {a_col.dtype}"
+                )
 
             # cast if necessary
             if a_char != b_char:
-                #warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
-                #raise TypeError('numeric arrays in ismember need to be the same dtype')
-                common_type = np.find_common_type([a_col.dtype,b_col.dtype],[])
+                # warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
+                # raise TypeError('numeric arrays in ismember need to be the same dtype')
+                common_type = np.find_common_type([a_col.dtype, b_col.dtype], [])
                 a_col = a_col.astype(common_type, copy=False)
                 b_col = b_col.astype(common_type, copy=False)
 
@@ -605,8 +762,9 @@ def _ismember_align_multikey(a, b):
 
     return a, b
 
-#-------------------------------------------------------
-def ismember(a,b,h=2, hint_size=0, base_index=0):
+
+# -------------------------------------------------------
+def ismember(a, b, h=2, hint_size=0, base_index=0):
     """
     The ismember function is meant to mimic the ismember function in MATLab. It takes two sets of data
     and returns two - a boolean array and array of indices of the first occurrence of an element in `a` in
@@ -667,10 +825,13 @@ def ismember(a,b,h=2, hint_size=0, base_index=0):
     """
 
     # make sure a and b are listlike, and not empty
-    if not (isinstance(a, (list, tuple, np.ndarray)) and isinstance(b, (list, tuple, np.ndarray))):
+    if not (
+        isinstance(a, (list, tuple, np.ndarray))
+        and isinstance(b, (list, tuple, np.ndarray))
+    ):
         raise TypeError("Input must be python list, tuple or np.ndarray.")
-    allowed_int = 'bhilqpBHILQP'
-    allowed_float = 'fdg'
+    allowed_int = "bhilqpBHILQP"
+    allowed_float = "fdg"
     allowed_types = allowed_int + allowed_float
 
     len_a = len(a)
@@ -678,46 +839,66 @@ def ismember(a,b,h=2, hint_size=0, base_index=0):
     is_multikey = False
 
     if len_a == 0 or len_b == 0:
-        return zeros(len(a), dtype=np.bool), np.full(len_a, INVALID_DICT[np.dtype(np.int32).num]).view(TypeRegister.FastArray)
+        return (
+            zeros(len(a), dtype=np.bool),
+            np.full(len_a, INVALID_DICT[np.dtype(np.int32).num]).view(
+                TypeRegister.FastArray
+            ),
+        )
 
-    if isinstance(a, TypeRegister.Categorical) or isinstance(b, TypeRegister.Categorical):
+    if isinstance(a, TypeRegister.Categorical) or isinstance(
+        b, TypeRegister.Categorical
+    ):
         if isinstance(a, TypeRegister.Categorical):
             if not isinstance(b, np.ndarray):
                 b = TypeRegister.FastArray(b)
-            a, b = _possibly_match_categoricals(a,b)
+            a, b = _possibly_match_categoricals(a, b)
 
         if isinstance(b, TypeRegister.Categorical):
             if not isinstance(a, np.ndarray):
                 a = TypeRegister.FastArray(a)
             if not isinstance(a, TypeRegister.Categorical):
-                b, a = _possibly_match_categoricals(b,a)
+                b, a = _possibly_match_categoricals(b, a)
 
         # re-expansion has happened, use regular ismember
         # enum/mapped categoricals with consistent mappings (but not necessarily the same ones) will take this path
         if not isinstance(a, TypeRegister.Categorical):
-            return ismember(a,b)
+            return ismember(a, b)
 
         # special categorical ismember needs to be called
         if a.issinglekey or a.ismultikey:
-            acats, bcats = list(a.category_dict.values()), list(b.category_dict.values())
+            acats, bcats = (
+                list(a.category_dict.values()),
+                list(b.category_dict.values()),
+            )
             num_unique_b = len(bcats[0])
         else:
-            raise NotImplementedError(f"Have not yet found a solution for ismember on categoricals in {a.category_mode.name} mode")
+            raise NotImplementedError(
+                f"Have not yet found a solution for ismember on categoricals in {a.category_mode.name} mode"
+            )
 
         _, on_unique = ismember(acats, bcats)
-        #rc.IsMemberCategorical:
-        #arg1 - underlying FastArray of a Categorical
-        #arg2 - underlying FastArray of b Categorical
-        #arg3 - first occurrence of a's uniques into b's uniques
-        #arg4 - number of unique in b
-        #arg5 - a base index
-        #arg6 - b base index
-        b, f = rc.IsMemberCategoricalFixup( a._fa, b._fa, on_unique.astype(np.int32), int(num_unique_b), a.base_index, b.base_index )
-        return b,f
+        # rc.IsMemberCategorical:
+        # arg1 - underlying FastArray of a Categorical
+        # arg2 - underlying FastArray of b Categorical
+        # arg3 - first occurrence of a's uniques into b's uniques
+        # arg4 - number of unique in b
+        # arg5 - a base index
+        # arg6 - b base index
+        b, f = rc.IsMemberCategoricalFixup(
+            a._fa,
+            b._fa,
+            on_unique.astype(np.int32),
+            int(num_unique_b),
+            a.base_index,
+            b.base_index,
+        )
+        return b, f
 
     # a and b contain list like, probably a multikey
-    if (isinstance(a[0], (np.ndarray, list, tuple)) and
-        isinstance(b[0], (np.ndarray, list, tuple))):
+    if isinstance(a[0], (np.ndarray, list, tuple)) and isinstance(
+        b[0], (np.ndarray, list, tuple)
+    ):
         is_multikey = True
 
     # different number of key columns
@@ -731,7 +912,9 @@ def ismember(a,b,h=2, hint_size=0, base_index=0):
 
             return rc.MultiKeyIsMember32((a,), (b,), hint_size)
         else:
-            raise ValueError(f"Multikey ismember must have the same number of keys in each item. a had {len_a}, b had {len_b}")
+            raise ValueError(
+                f"Multikey ismember must have the same number of keys in each item. a had {len_a}, b had {len_b}"
+            )
 
     # convert both to FastArray
     if isinstance(a, (list, tuple)):
@@ -743,26 +926,30 @@ def ismember(a,b,h=2, hint_size=0, base_index=0):
     b_char = b.dtype.char
 
     # handle strings
-    if a_char in ('U','S'):
-        if b_char in ('U', 'S'):
+    if a_char in ("U", "S"):
+        if b_char in ("U", "S"):
             # if the string types do not match, always try to use byte strings for the final operation
             if a_char != b_char:
-                if a_char == 'U':
+                if a_char == "U":
                     try:
-                        a = a.astype('S')
+                        a = a.astype("S")
                     except:
-                        b = b.astype('U')
+                        b = b.astype("U")
                 else:
                     try:
-                        b = b.astype('S')
+                        b = b.astype("S")
                     except:
-                        a = a.astype('U')
+                        a = a.astype("U")
         else:
-            raise TypeError(f"The first parameter is a string but the second parameter is not and cannot be compared. {a.dtype} vs. {b.dtype}")
+            raise TypeError(
+                f"The first parameter is a string but the second parameter is not and cannot be compared. {a.dtype} vs. {b.dtype}"
+            )
 
     # will only be hit if a is not strings
-    elif b_char in ('U', 'S'):
-        raise TypeError(f"The second parameter is a string but the first parameter is not and cannot be compared. {a.dtype} vs. {b.dtype}")
+    elif b_char in ("U", "S"):
+        raise TypeError(
+            f"The second parameter is a string but the first parameter is not and cannot be compared. {a.dtype} vs. {b.dtype}"
+        )
 
     else:
         # make sure both are supported numeric types
@@ -774,13 +961,13 @@ def ismember(a,b,h=2, hint_size=0, base_index=0):
         # cast if necessary
         if a_char != b_char:
 
-            #import traceback
-            #for line in traceback.format_stack():
+            # import traceback
+            # for line in traceback.format_stack():
             #    print(line.strip())
 
-            #warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
-            #raise TypeError('numeric arrays in ismember need to be the same dtype')
-            common_type = np.find_common_type([a.dtype,b.dtype],[])
+            # warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
+            # raise TypeError('numeric arrays in ismember need to be the same dtype')
+            common_type = np.find_common_type([a.dtype, b.dtype], [])
             if a.dtype != common_type:
                 a = a.astype(common_type)
             if b.dtype != common_type:
@@ -794,8 +981,9 @@ def ismember(a,b,h=2, hint_size=0, base_index=0):
     else:
         raise ValueError(f"base_index must be 0, 1, or None not {base_index!r}")
 
-#-------------------------------------------------------
-def assoc_index(key1,key2):
+
+# -------------------------------------------------------
+def assoc_index(key1, key2):
     """
     Parameters
     ----------
@@ -820,10 +1008,11 @@ def assoc_index(key1,key2):
     >>> rt.assoc_index([ds.symbol, ds.data], [dsa.symbol, dsa.data])
     FastArray([35, 43,  2, ..., 43, 37, 24])
     """
-    return ismember(key1,key2)[1]
+    return ismember(key1, key2)[1]
 
-#-------------------------------------------------------
-def assoc_copy(key1,key2,arr):
+
+# -------------------------------------------------------
+def assoc_copy(key1, key2, arr):
     """
     Parameters
     ----------
@@ -850,11 +1039,12 @@ def assoc_copy(key1,key2,arr):
     >>> rt.assoc_copy([ds.symbol, ds.data], [dsa.symbol, dsa.data], dsa.time)
     FastArray([13.,  5., 46., ...,  5., 11., 24.])
     """
-    fancyindex = assoc_index(key1,key2)
+    fancyindex = assoc_index(key1, key2)
     return arr[fancyindex]
 
-#-------------------------------------------------------
-def unique32(list_keys, hintSize:int=0, filter=None):
+
+# -------------------------------------------------------
+def unique32(list_keys, hintSize: int = 0, filter=None):
     """
     Returns the index location of the first occurence of each key.
 
@@ -878,7 +1068,8 @@ def unique32(list_keys, hintSize:int=0, filter=None):
     """
     return rc.MultiKeyUnique32(list_keys, hintSize, filter)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def combine_filter(key, filter):
     """
     Parameters
@@ -900,7 +1091,8 @@ def combine_filter(key, filter):
     """
     return rc.CombineFilter(key, filter)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def combine_accum1_filter(key1, unique_count1: int, filter=None):
     """
     Parameters
@@ -933,11 +1125,14 @@ def combine_accum1_filter(key1, unique_count1: int, filter=None):
 
     """
     iKey, iFirstKey, unique_count = rc.CombineAccum1Filter(key1, unique_count1, filter)
-    mkdict ={'iKey': iKey, 'iFirstKey':iFirstKey, 'unique_count': unique_count}
+    mkdict = {"iKey": iKey, "iFirstKey": iFirstKey, "unique_count": unique_count}
     return mkdict
 
-#-------------------------------------------------------
-def combine_accum2_filter(key1, key2, unique_count1:int, unique_count2:int, filter=None):
+
+# -------------------------------------------------------
+def combine_accum2_filter(
+    key1, key2, unique_count1: int, unique_count2: int, filter=None
+):
     """
     Parameters
     ----------
@@ -960,8 +1155,9 @@ def combine_accum2_filter(key1, key2, unique_count1:int, unique_count2:int, filt
     """
     return rc.CombineAccum2Filter(key1, key2, unique_count1, unique_count2, filter)
 
-#-------------------------------------------------------
-def combine2keys(key1, key2, unique_count1:int, unique_count2:int, filter=None):
+
+# -------------------------------------------------------
+def combine2keys(key1, key2, unique_count1: int, unique_count2: int, filter=None):
     """
     Parameters
     ----------
@@ -982,19 +1178,23 @@ def combine2keys(key1, key2, unique_count1:int, unique_count2:int, filter=None):
     bin is a 1 based index array with each False value setting the index to 0
     nCountGroup is INT32 array with size = to (unique_count1 + 1)*(unique_count2 + 1)
     """
-    iKey, nCountGroup= rc.CombineAccum2Filter(key1, key2, unique_count1, unique_count2, filter)
-    mkdict ={'iKey': iKey, 'nCountGroup': nCountGroup}
+    iKey, nCountGroup = rc.CombineAccum2Filter(
+        key1, key2, unique_count1, unique_count2, filter
+    )
+    mkdict = {"iKey": iKey, "nCountGroup": nCountGroup}
     return mkdict
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def cat2keys(
-        key1: Union['Categorical', np.ndarray, List[np.ndarray]],
-        key2: Union['Categorical', np.ndarray, List[np.ndarray]],
-        filter: bool = None,
-        ordered: bool = True,
-        sort_gb: bool = False,
-        invalid: bool = False,
-        fuse: bool = False):
+    key1: Union["Categorical", np.ndarray, List[np.ndarray]],
+    key2: Union["Categorical", np.ndarray, List[np.ndarray]],
+    filter: bool = None,
+    ordered: bool = True,
+    sort_gb: bool = False,
+    invalid: bool = False,
+    fuse: bool = False,
+):
     """
     Create a `Categorical` from two keys or two `Categorical`s with all possible unique combinations.
 
@@ -1053,21 +1253,25 @@ def cat2keys(
 
     try:
         if not isinstance(key1, Cat):
-            key1=Cat(key1, ordered=ordered, sort_gb=sort_gb)
+            key1 = Cat(key1, ordered=ordered, sort_gb=sort_gb)
     except Exception as e:
         warnings.warn(f"cat2keys: Got exception {e}", RuntimeWarning)
 
     if not isinstance(key1, Cat):
-        raise TypeError(f"cat2keys: Argument 1 must be a categorical or an array that can be made into a categorical not type {type(key1)!r}")
+        raise TypeError(
+            f"cat2keys: Argument 1 must be a categorical or an array that can be made into a categorical not type {type(key1)!r}"
+        )
 
     try:
         if not isinstance(key2, Cat):
-            key2=Cat(key2, ordered=ordered, sort_gb=sort_gb)
+            key2 = Cat(key2, ordered=ordered, sort_gb=sort_gb)
     except Exception as e:
         warnings.warn(f"cat2keys: Got exception {e}", RuntimeWarning)
 
     if not isinstance(key2, Cat):
-        raise TypeError(f"cat2keys: Argument 2 must be a categorical or an array that can be made into a categorical not type {type(key2)!r}")
+        raise TypeError(
+            f"cat2keys: Argument 2 must be a categorical or an array that can be made into a categorical not type {type(key2)!r}"
+        )
 
     group_row = key1.grouping
     group_col = key2.grouping
@@ -1077,18 +1281,22 @@ def cat2keys(
 
     # have to check for ==0 first
     if not invalid:
-        if np.sum(group_row.ikey==0) > 0 or np.sum(group_col.ikey==0) > 0:
-            warnings.warn(f"catmatrix: Invalid found in key array, please use invalid=True to avoid this warning.")
+        if np.sum(group_row.ikey == 0) > 0 or np.sum(group_col.ikey == 0) > 0:
+            warnings.warn(
+                f"catmatrix: Invalid found in key array, please use invalid=True to avoid this warning."
+            )
             invalid = True
         else:
             # now we can remove the invalid and reassign
-            ikey = group_col.ikey.astype(np.int64)-1
+            ikey = group_col.ikey.astype(np.int64) - 1
             # inplace operations for speed
             ikey *= numrows
             ikey += group_row.ikey
 
     if invalid:
-        ikey=combine2keys(group_row.ikey, group_col.ikey, numrows, numcols, filter=filter)['iKey']
+        ikey = combine2keys(
+            group_row.ikey, group_col.ikey, numrows, numcols, filter=filter
+        )["iKey"]
 
     # also check if the only want 2 keys with fuse
     if invalid or fuse:
@@ -1096,20 +1304,24 @@ def cat2keys(
         col_name, col_arr = group_col.onedict(invalid=invalid)
 
         # handle case when same name
-        if row_name == col_name: col_name = col_name+'1'
+        if row_name == col_name:
+            col_name = col_name + "1"
         if invalid:
             # invalid was inserted as first unique, so need to make room
-            numrows +=1
-            numcols +=1
-            ikey +=1
+            numrows += 1
+            numcols += 1
+            ikey += 1
 
-        newgroup = TypeRegister.Grouping( ikey,  {row_name: row_arr.tile(numcols), col_name: col_arr.repeat(numrows)})
+        newgroup = TypeRegister.Grouping(
+            ikey, {row_name: row_arr.tile(numcols), col_name: col_arr.repeat(numrows)}
+        )
 
     else:
         # construct grouping object with a multikey
         gdict = dict()
-        for k,v in group_row._grouping_unique_dict.items(): gdict[k]=v.tile(numcols)
-        for k,v in group_col._grouping_unique_dict.items():
+        for k, v in group_row._grouping_unique_dict.items():
+            gdict[k] = v.tile(numcols)
+        for k, v in group_col._grouping_unique_dict.items():
             # Handle column name conflicts (if present).
             if k in gdict:
                 counter = 1
@@ -1118,21 +1330,22 @@ def cat2keys(
                 # iterating until we find a column name that hasn't
                 # been used yet.
                 while k in gdict:
-                    k=origk+str(counter)
+                    k = origk + str(counter)
                     counter += 1
-            gdict[k]=v.repeat(numrows)
-        newgroup = TypeRegister.Grouping( ikey,  gdict)
+            gdict[k] = v.repeat(numrows)
+        newgroup = TypeRegister.Grouping(ikey, gdict)
 
     # create the categorical from the grouping object
-    result= Cat(newgroup)
+    result = Cat(newgroup)
 
     # save for later in case the categorical needs to be rectangularized like Accum2
     result._numrows = numrows
     result._numcols = numcols
     return result
 
-#-------------------------------------------------------
-def makeifirst(key, unique_count : int, filter=None):
+
+# -------------------------------------------------------
+def makeifirst(key, unique_count: int, filter=None):
     """
     Parameters
     ----------
@@ -1158,8 +1371,9 @@ def makeifirst(key, unique_count : int, filter=None):
 
     return rc.MakeiFirst(key, unique_count, filter, 0)
 
-#-------------------------------------------------------
-def makeilast(key, unique_count : int, filter=None):
+
+# -------------------------------------------------------
+def makeilast(key, unique_count: int, filter=None):
     """
     Parameters
     ----------
@@ -1186,8 +1400,8 @@ def makeilast(key, unique_count : int, filter=None):
     return rc.MakeiFirst(key, unique_count, filter, 1)
 
 
-#-------------------------------------------------------
-def makeinext(key, unique_count:int):
+# -------------------------------------------------------
+def makeinext(key, unique_count: int):
     """
     Parameters
     ----------
@@ -1203,8 +1417,9 @@ def makeinext(key, unique_count:int):
     """
     return rc.MakeiNext(key, unique_count, 0)
 
-#-------------------------------------------------------
-def makeiprev(key, unique_count:int):
+
+# -------------------------------------------------------
+def makeiprev(key, unique_count: int):
     """
     Parameters
     ----------
@@ -1219,7 +1434,8 @@ def makeiprev(key, unique_count:int):
     """
     return rc.MakeiNext(key, unique_count, 1)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def _groupbycalculateall(*args):
     """'
     Arg1 = list or tuple of numpy arrays which has the values to accumulate (often all the columns in a dataset)
@@ -1233,9 +1449,10 @@ def _groupbycalculateall(*args):
     Each array has the length of unique_rows (Arg3)
     The returned arrays have the cells(accum operation) filled in
     """
-    return LedgerFunction(rc.GroupByAll32,*args)
+    return LedgerFunction(rc.GroupByAll32, *args)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def _groupbycalculateallpack(*args):
     """'
     Arg1 = list or tuple of numpy arrays which has the values to accumulate (often all the columns in a dataset)
@@ -1252,13 +1469,15 @@ def _groupbycalculateallpack(*args):
     The returned arrays have the cells(accum operation) filled in
     """
 
-    return LedgerFunction(rc.GroupByAllPack32,*args)
-#-------------------------------------------------------
-#def _groupbycrunch(*args):
+    return LedgerFunction(rc.GroupByAllPack32, *args)
+
+
+# -------------------------------------------------------
+# def _groupbycrunch(*args):
 #    #return rc.GroupByOp32(*args)
 #    return LedgerFunction(rc.GroupByOp32,*args)
 
-#-------------------------------------------------------
+# -------------------------------------------------------
 def groupbypack(ikey, ncountgroup, unique_count=None, cutoffs=None):
     """
     A routine often called after groupbyhash or groupbylex.
@@ -1299,8 +1518,8 @@ def groupbypack(ikey, ncountgroup, unique_count=None, cutoffs=None):
     >>> rt.groupbypack(x['iKey'], ncountgroup)['nCountGroup'].sum()
     10000
     """
-    dnum =ikey.dtype.num
-    if ikey.dtype.num not in [1,3,5,7,9]:
+    dnum = ikey.dtype.num
+    if ikey.dtype.num not in [1, 3, 5, 7, 9]:
         raise ValueError("ikey must be int8, int16, int32, or int64")
 
     if cutoffs is None:
@@ -1309,34 +1528,48 @@ def groupbypack(ikey, ncountgroup, unique_count=None, cutoffs=None):
         #
         if ncountgroup is None:
             if unique_count is None or not np.isscalar(unique_count):
-                raise ValueError("groupbypack: unique_count must be a scalar value if ncountgroup is None")
+                raise ValueError(
+                    "groupbypack: unique_count must be a scalar value if ncountgroup is None"
+                )
 
             # get the unique_count ratio
-            ratio =  len(ikey) / unique_count
+            ratio = len(ikey) / unique_count
             if len(ikey) > 1_000_000 and ratio < 40:
                 nCountGroup = rc.BinCount(ikey, unique_count)
-                iGroup, iFirstGroup  = rc.GroupFromBinCount(ikey, nCountGroup)
+                iGroup, iFirstGroup = rc.GroupFromBinCount(ikey, nCountGroup)
             else:
                 # normal path (speed path from Ryan)
-                nCountGroup, iGroup, iFirstGroup = rc.BinCount(ikey, unique_count, pack=True)
+                nCountGroup, iGroup, iFirstGroup = rc.BinCount(
+                    ikey, unique_count, pack=True
+                )
 
         else:
             # TJD Oct 2019, this routine is probably slower than BinCount with pack=True
             # high unique routine...
-            iGroup, iFirstGroup  = rc.GroupFromBinCount(ikey, ncountgroup)
+            iGroup, iFirstGroup = rc.GroupFromBinCount(ikey, ncountgroup)
             nCountGroup = ncountgroup
 
     else:
         #
         # old routine which can take cutoffs
         # TODO: Delete this routine
-        iGroup, iFirstGroup, nCountGroup = rc.GroupByPack32(ikey, None, unique_count, cutoffs=cutoffs)
+        iGroup, iFirstGroup, nCountGroup = rc.GroupByPack32(
+            ikey, None, unique_count, cutoffs=cutoffs
+        )
 
-    mkdict= {'iGroup':iGroup, 'iFirstGroup':iFirstGroup, 'nCountGroup':nCountGroup}
+    mkdict = {"iGroup": iGroup, "iFirstGroup": iFirstGroup, "nCountGroup": nCountGroup}
     return mkdict
 
-#-------------------------------------------------------
-def groupbyhash(list_arrays, hint_size:int=0, filter=None, hash_mode:int=2, cutoffs=None, pack:bool=False):
+
+# -------------------------------------------------------
+def groupbyhash(
+    list_arrays,
+    hint_size: int = 0,
+    filter=None,
+    hash_mode: int = 2,
+    cutoffs=None,
+    pack: bool = False,
+):
     """
     Find unique values in an array using a linear hashing algorithm.
 
@@ -1420,38 +1653,48 @@ def groupbyhash(list_arrays, hint_size:int=0, filter=None, hash_mode:int=2, cuto
      'nCountGroup': None}
     """
     if isinstance(list_arrays, np.ndarray):
-        list_arrays=[list_arrays]
+        list_arrays = [list_arrays]
 
-    if isinstance(list_arrays, list) and len(list_arrays)> 0:
+    if isinstance(list_arrays, list) and len(list_arrays) > 0:
         common_len = {len(arr) for arr in list_arrays}
 
         if len(common_len) == 1:
             common_len = common_len.pop()
-            if common_len !=0:
-                iKey, iFirstKey, unique_count = rc.MultiKeyGroupBy32(list_arrays, hint_size, filter, hash_mode, cutoffs=cutoffs)
+            if common_len != 0:
+                iKey, iFirstKey, unique_count = rc.MultiKeyGroupBy32(
+                    list_arrays, hint_size, filter, hash_mode, cutoffs=cutoffs
+                )
             else:
                 iKey = TypeRegister.FastArray([], dtype=np.int32)
                 iFirstKey = iKey
-                unique_count =0
+                unique_count = 0
 
-            mkdict= {'iKey':iKey, 'iFirstKey':iFirstKey, 'unique_count': unique_count}
+            mkdict = {
+                "iKey": iKey,
+                "iFirstKey": iFirstKey,
+                "unique_count": unique_count,
+            }
 
             if pack:
-                packdict= groupbypack(iKey, None, unique_count + 1)
-                for k,v in packdict.items():
-                    mkdict[k]=v
+                packdict = groupbypack(iKey, None, unique_count + 1)
+                for k, v in packdict.items():
+                    mkdict[k] = v
             else:
                 # leave empty
-                for k in ['iGroup', 'iFirstGroup', 'nCountGroup']:
-                    mkdict[k]=None
+                for k in ["iGroup", "iFirstGroup", "nCountGroup"]:
+                    mkdict[k] = None
 
             return mkdict
-        raise ValueError(f'groupbyhash all arrays must have same length not {common_len}')
-    raise ValueError('groupbyhash first argument is not a list of numpy arrays')
+        raise ValueError(
+            f"groupbyhash all arrays must have same length not {common_len}"
+        )
+    raise ValueError("groupbyhash first argument is not a list of numpy arrays")
 
 
-#-------------------------------------------------------
-def groupbylex(list_arrays, filter=None, cutoffs=None, base_index:int=1, rec:bool=False):
+# -------------------------------------------------------
+def groupbylex(
+    list_arrays, filter=None, cutoffs=None, base_index: int = 1, rec: bool = False
+):
     """
     Parameters
     ----------
@@ -1511,18 +1754,18 @@ def groupbylex(list_arrays, filter=None, cutoffs=None, base_index:int=1, rec:boo
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1])}
     """
-    if base_index != 1 and base_index !=0:
+    if base_index != 1 and base_index != 0:
         raise ValueError(f"Invalid base_index {base_index!r}")
 
     if base_index == 0 and filter is not None:
         raise ValueError("Filter and base_index of 0 cannot be combined")
 
     if isinstance(list_arrays, np.ndarray):
-        list_arrays=[list_arrays]
+        list_arrays = [list_arrays]
 
-    if isinstance(list_arrays, list) and len(list_arrays)> 0:
+    if isinstance(list_arrays, list) and len(list_arrays) > 0:
         if not isinstance(list_arrays[0], np.ndarray):
-            raise ValueError('groupbylex first argument is not a list of numpy arrays')
+            raise ValueError("groupbylex first argument is not a list of numpy arrays")
 
         if len(list_arrays) > 1:
             # make a record array for greater comparison speed
@@ -1539,7 +1782,7 @@ def groupbylex(list_arrays, filter=None, cutoffs=None, base_index:int=1, rec:boo
             # just one array (no need to make a record array)
             value_array = list_arrays[0]
 
-        index=None
+        index = None
 
         # check for filtering
         if filter is not None:
@@ -1549,7 +1792,7 @@ def groupbylex(list_arrays, filter=None, cutoffs=None, base_index:int=1, rec:boo
             # build a fancy index to pass to lexsort
             filterfalse = filtertrue[truecount:totalcount]
             filtertrue = filtertrue[0:truecount]
-            index=filtertrue
+            index = filtertrue
 
         # lexsort
         if len(value_array) > 2e9:
@@ -1557,29 +1800,30 @@ def groupbylex(list_arrays, filter=None, cutoffs=None, base_index:int=1, rec:boo
         else:
             iGroup = rc.LexSort32(list_arrays, cutoffs=cutoffs, index=index)
 
-
         # make a record array if we did not already because GroupFromLexSort can only handle that
         if isinstance(value_array, list):
             value_array = np.core.records.fromarrays(list_arrays)
-        retval = rc.GroupFromLexSort(iGroup, value_array, cutoffs=cutoffs, base_index=base_index)
+        retval = rc.GroupFromLexSort(
+            iGroup, value_array, cutoffs=cutoffs, base_index=base_index
+        )
 
-        if len(retval)==3:
+        if len(retval) == 3:
             iKey, iFirstKey, nCountGroup = retval
         else:
             iKey, iFirstKey, nCountGroup, nUniqueCutoffs = retval
 
-        #print('igroup', len(iGroup), iGroup)
-        #print("ikey", len(iKey), iKey)
-        #print("ifirstkey", iFirstKey)
-        #print("nCountGroup", len(nCountGroup), nCountGroup)
+        # print('igroup', len(iGroup), iGroup)
+        # print("ikey", len(iKey), iKey)
+        # print("ifirstkey", iFirstKey)
+        # print("nCountGroup", len(nCountGroup), nCountGroup)
 
         if base_index == 0:
             iKey += 1
         else:
             # invalid bin count is 0 but we will fix up later if we have a filter
-            nCountGroup[0]=0
+            nCountGroup[0] = 0
 
-        #derive iFirstGroup from nCountGroup
+        # derive iFirstGroup from nCountGroup
         iFirstGroup = nCountGroup.copy()
         iFirstGroup[1:] = nCountGroup.cumsum()[:-1]
 
@@ -1591,17 +1835,34 @@ def groupbylex(list_arrays, filter=None, cutoffs=None, base_index:int=1, rec:boo
             iKey[filterfalse] = 0
 
             # the invalids are after all the valids in the iGroup
-            iFirstGroup[0]=len(filtertrue)
+            iFirstGroup[0] = len(filtertrue)
 
-        mkdict= {'iKey':iKey, 'iFirstKey':iFirstKey, 'unique_count': len(iFirstKey), 'iGroup':iGroup,  'iFirstGroup': iFirstGroup,  'nCountGroup': nCountGroup }
-        if len(retval)==4:
-            mkdict['nUniqueCutoffs']=nUniqueCutoffs
+        mkdict = {
+            "iKey": iKey,
+            "iFirstKey": iFirstKey,
+            "unique_count": len(iFirstKey),
+            "iGroup": iGroup,
+            "iFirstGroup": iFirstGroup,
+            "nCountGroup": nCountGroup,
+        }
+        if len(retval) == 4:
+            mkdict["nUniqueCutoffs"] = nUniqueCutoffs
         return mkdict
 
-    raise ValueError('groupbylex first argument is not a list of numpy arrays')
+    raise ValueError("groupbylex first argument is not a list of numpy arrays")
 
-#-------------------------------------------------------
-def groupby(list_arrays, filter=None, cutoffs=None, base_index:int=1, lex:bool=False, rec:bool=False, pack:bool=False, hint_size:int=0):
+
+# -------------------------------------------------------
+def groupby(
+    list_arrays,
+    filter=None,
+    cutoffs=None,
+    base_index: int = 1,
+    lex: bool = False,
+    rec: bool = False,
+    pack: bool = False,
+    hint_size: int = 0,
+):
     """
     Main routine used to groupby one or more keys.
 
@@ -1639,10 +1900,15 @@ def groupby(list_arrays, filter=None, cutoffs=None, base_index:int=1, lex:bool=F
     groupbylex
     """
     if lex:
-        return groupbylex(list_arrays, filter=filter, cutoffs=cutoffs, base_index=base_index, rec=rec)
-    return groupbyhash(list_arrays, filter=filter, cutoffs=cutoffs, pack=pack, hint_size=hint_size)
+        return groupbylex(
+            list_arrays, filter=filter, cutoffs=cutoffs, base_index=base_index, rec=rec
+        )
+    return groupbyhash(
+        list_arrays, filter=filter, cutoffs=cutoffs, pack=pack, hint_size=hint_size
+    )
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def multikeyhash(*args):
     """
     Returns 7 arrays to help navigate data.
@@ -1683,136 +1949,183 @@ def multikeyhash(*args):
     9     1     4         4     -1      6       0      9   0
     """
     key, nth, bktsize, iprev, inext, ifirst, ilast = rc.MultiKeyHash(*args)
-    mkdict= {'key':key, 'nth':nth, 'bktsize': bktsize, 'next':inext, 'prev':iprev, 'first':ifirst, 'last':ilast}
+    mkdict = {
+        "key": key,
+        "nth": nth,
+        "bktsize": bktsize,
+        "next": inext,
+        "prev": iprev,
+        "first": ifirst,
+        "last": ilast,
+    }
     return TypeRegister.Struct(mkdict)
 
-#-----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # START OF NUMPY OVERLOADS ---------------------------------------------------
-#-----------------------------------------------------------------------------
-def all(*args,**kwargs):
+# -----------------------------------------------------------------------------
+def all(*args, **kwargs):
     if isinstance(args[0], np.ndarray):
-        return LedgerFunction(np.all,*args,**kwargs)
+        return LedgerFunction(np.all, *args, **kwargs)
     # has python built-in
-    return builtins.all(*args,**kwargs)
+    return builtins.all(*args, **kwargs)
 
-#-------------------------------------------------------
-def any(*args,**kwargs):
+
+# -------------------------------------------------------
+def any(*args, **kwargs):
     if isinstance(args[0], np.ndarray):
-        return LedgerFunction(np.any,*args,**kwargs)
+        return LedgerFunction(np.any, *args, **kwargs)
     # has python built-in
-    return builtins.any(*args,**kwargs)
+    return builtins.any(*args, **kwargs)
 
-#-------------------------------------------------------
-def arange(*args,**kwargs): return LedgerFunction(np.arange,*args,**kwargs)
 
-#-------------------------------------------------------
+# -------------------------------------------------------
+def arange(*args, **kwargs):
+    return LedgerFunction(np.arange, *args, **kwargs)
+
+
+# -------------------------------------------------------
 # If argsort implementation changes then add test cases to Python/core/riptable/tests/test_riptable_numpy_equivalency.py.
-def argsort(*args,**kwargs): return LedgerFunction(np.argsort,*args,**kwargs)
+def argsort(*args, **kwargs):
+    return LedgerFunction(np.argsort, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # This is redefined down below...
 # def ceil(*args,**kwargs): return LedgerFunction(np.ceil,*args,**kwargs)
 
-#-------------------------------------------------------
-def concatenate(*args,**kwargs): return LedgerFunction(np.concatenate,*args,**kwargs)
+# -------------------------------------------------------
+def concatenate(*args, **kwargs):
+    return LedgerFunction(np.concatenate, *args, **kwargs)
 
-#-------------------------------------------------------
-def crc64(a): return rc.CalculateCRC(a)
 
-#-------------------------------------------------------
-def cumsum(*args,**kwargs): return LedgerFunction(np.cumsum,*args,**kwargs)
+# -------------------------------------------------------
+def crc64(a):
+    return rc.CalculateCRC(a)
 
-#-------------------------------------------------------
-def cumprod(*args,**kwargs): return LedgerFunction(np.cumprod,*args,**kwargs)
 
-#-------------------------------------------------------
-def diff(*args,**kwargs): return LedgerFunction(np.diff,*args,**kwargs)
+# -------------------------------------------------------
+def cumsum(*args, **kwargs):
+    return LedgerFunction(np.cumsum, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
+def cumprod(*args, **kwargs):
+    return LedgerFunction(np.cumprod, *args, **kwargs)
+
+
+# -------------------------------------------------------
+def diff(*args, **kwargs):
+    return LedgerFunction(np.diff, *args, **kwargs)
+
+
+# -------------------------------------------------------
 # this is a ufunc no need to take over def floor(*args,**kwargs): return LedgerFunction(np.floor,*args,**kwargs)
 
-#-------------------------------------------------------
-def full(shape, fill_value, dtype=None, order='C'):
-    result= LedgerFunction(np.full, shape, fill_value, dtype=dtype, order=order)
-    if hasattr(fill_value, 'newclassfrominstance'):
+# -------------------------------------------------------
+def full(shape, fill_value, dtype=None, order="C"):
+    result = LedgerFunction(np.full, shape, fill_value, dtype=dtype, order=order)
+    if hasattr(fill_value, "newclassfrominstance"):
         result = fill_value.newclassfrominstance(result, fill_value)
     return result
 
-#-------------------------------------------------------
-def lexsort(*args,**kwargs):
-    firstarg=args[0]
-    if isinstance(firstarg,tuple):
-        firstarg=list(firstarg)
-        args=tuple(firstarg) + args[1:]
-    if isinstance(firstarg,list):
-        firstarg=firstarg[0]
+
+# -------------------------------------------------------
+def lexsort(*args, **kwargs):
+    firstarg = args[0]
+    if isinstance(firstarg, tuple):
+        firstarg = list(firstarg)
+        args = tuple(firstarg) + args[1:]
+    if isinstance(firstarg, list):
+        firstarg = firstarg[0]
 
     if isinstance(firstarg, np.ndarray):
         # make sure fastarray
         # also if arraysize > 2billiom call LexSort64 instead
         if firstarg.size > 2e9:
-            return rc.LexSort64(*args,**kwargs)
-        return rc.LexSort32(*args,**kwargs)
+            return rc.LexSort64(*args, **kwargs)
+        return rc.LexSort32(*args, **kwargs)
     else:
-        return LedgerFunction(np.lexsort,*args,**kwargs)
+        return LedgerFunction(np.lexsort, *args, **kwargs)
 
 
-#-------------------------------------------------------
-def ones(*args,**kwargs): return LedgerFunction(np.ones,*args,**kwargs)
-def ones_like(*args,**kwargs): return LedgerFunction(np.ones_like,*args,**kwargs)
+# -------------------------------------------------------
+def ones(*args, **kwargs):
+    return LedgerFunction(np.ones, *args, **kwargs)
 
-#-------------------------------------------------------
-def zeros(*args,**kwargs): return LedgerFunction(np.zeros,*args,**kwargs)
-def zeros_like(*args,**kwargs): return LedgerFunction(np.zeros_like,*args,**kwargs)
 
-#-------------------------------------------------------
-def reshape(*args,**kwargs): return LedgerFunction(np.reshape,*args,**kwargs)
+def ones_like(*args, **kwargs):
+    return LedgerFunction(np.ones_like, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
+def zeros(*args, **kwargs):
+    return LedgerFunction(np.zeros, *args, **kwargs)
+
+
+def zeros_like(*args, **kwargs):
+    return LedgerFunction(np.zeros_like, *args, **kwargs)
+
+
+# -------------------------------------------------------
+def reshape(*args, **kwargs):
+    return LedgerFunction(np.reshape, *args, **kwargs)
+
+
+# -------------------------------------------------------
 # a faster way to do array index masks
 def reindex_fast(index, array):
     if isinstance(index, np.ndarray) and isinstance(array, np.ndarray):
         return rc.ReIndex(index, array)
-    raise TypeError("two arguments, both args must be numpy arrays.  the first argument indexes into the second argument.")
+    raise TypeError(
+        "two arguments, both args must be numpy arrays.  the first argument indexes into the second argument."
+    )
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # If sort implementation changes then add test cases to Python/core/riptable/tests/test_riptable_numpy_equivalency.py.
-def sort(*args,**kwargs): return LedgerFunction(np.sort,*args,**kwargs)
+def sort(*args, **kwargs):
+    return LedgerFunction(np.sort, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # If transpose implementation changes then add test cases to Python/core/riptable/tests/test_riptable_numpy_equivalency.py.
-def transpose(*args,**kwargs): return LedgerFunction(np.transpose,*args,**kwargs)
+def transpose(*args, **kwargs):
+    return LedgerFunction(np.transpose, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def where(condition, x=None, y=None):
     # handle the single-argument case
     missing = (x is None, y is None).count(True)
     if missing == 1:
-        raise ValueError(f"where: must provide both 'x' and 'y' or neither. x={x}  y={y}")
+        raise ValueError(
+            f"where: must provide both 'x' and 'y' or neither. x={x}  y={y}"
+        )
 
     if not isinstance(condition, np.ndarray):
         if condition is False or condition is True:
             # punt to normal numpy instead of error which may process None differently
-            return LedgerFunction(np.where,condition,x,y)
+            return LedgerFunction(np.where, condition, x, y)
 
         condition = TypeRegister.FastArray(condition)
     elif len(condition) == 1:
         # punt to normal numpy since an array of 1
-        return LedgerFunction(np.where,condition,x,y)
+        return LedgerFunction(np.where, condition, x, y)
 
     if condition.ndim > 1:
         # punt to normal numpy since more than one dimension
-        return LedgerFunction(np.where,condition,x,y)
+        return LedgerFunction(np.where, condition, x, y)
 
     if condition.dtype != np.bool:
-        #NOTE: believe numpy just flips it to boolean using astype, where object arrays handled differently with None and 0
+        # NOTE: believe numpy just flips it to boolean using astype, where object arrays handled differently with None and 0
         condition = condition != 0
 
     if missing == 2:
         return (bool_to_fancy(condition),)
 
     # this is the normal 3 argument where
-    common_dtype = get_common_dtype(x,y)
+    common_dtype = get_common_dtype(x, y)
 
     # see if we can accelerate where
     if common_dtype.char in NumpyCharTypes.SupportedAlternate:
@@ -1822,7 +2135,7 @@ def where(condition, x=None, y=None):
             try:
                 if arr.dtype.num != common_dtype.num:
                     # perform a safe conversion understanding sentinels
-                    #print("Converting1 to", common_dtype, arr.dtype.num, common_dtype.num)
+                    # print("Converting1 to", common_dtype, arr.dtype.num, common_dtype.num)
                     arr = TypeRegister.MathLedger._AS_FA_TYPE(arr, common_dtype.num)
                 elif arr.itemsize != common_dtype.itemsize:
                     # make strings sizes the same
@@ -1831,27 +2144,27 @@ def where(condition, x=None, y=None):
             except:
                 arr = TypeRegister.FastArray(arr)
                 if arr.dtype.num != common_dtype.num:
-                    #print("Converting2 to", common_dtype, arr.dtype.num, common_dtype.num)
+                    # print("Converting2 to", common_dtype, arr.dtype.num, common_dtype.num)
                     arr = arr.astype(common_dtype)
 
             # strided check
-            #if arr.ndim ==1 and arr.itemsize != arr.strides[0]:
+            # if arr.ndim ==1 and arr.itemsize != arr.strides[0]:
             #    arr = arr.copy()
 
-            #check if can make like a scalar
+            # check if can make like a scalar
             try:
                 if len(arr) == 1:
-                    #print("array len1 detected")
+                    # print("array len1 detected")
                     if common_dtype.char in NumpyCharTypes.AllFloat:
-                        arr=float(arr[0])
+                        arr = float(arr[0])
                     elif common_dtype.char in NumpyCharTypes.AllInteger:
-                        arr=int(arr[0])
+                        arr = int(arr[0])
                     else:
-                        arr=arr[0]
+                        arr = arr[0]
             except:
                 # probably cannot take len, might be numpy scalar
                 num = arr.dtype.num
-                if num ==0:
+                if num == 0:
                     arr = bool(arr)
                 elif num <= 10:
                     arr = int(arr)
@@ -1874,15 +2187,18 @@ def where(condition, x=None, y=None):
         return rc.Where(condition, (x, y), common_dtype.num, common_dtype.itemsize)
 
     # punt to normal numpy
-    return LedgerFunction(np.where,condition,x,y)
+    return LedgerFunction(np.where, condition, x, y)
 
-#-------------------------------------------------------
-def sortinplaceindirect(*args,**kwargs): return LedgerFunction(rc.SortInPlaceIndirect,*args,**kwargs)
 
-#-------------------------------------------------------
+# -------------------------------------------------------
+def sortinplaceindirect(*args, **kwargs):
+    return LedgerFunction(rc.SortInPlaceIndirect, *args, **kwargs)
+
+
+# -------------------------------------------------------
 # is a ufunc def trunc(*args,**kwargs): return LedgerFunction(rc.IsSorted,*args,**kwargs)
 
-#-------------------------------------------------------
+# -------------------------------------------------------
 def _unary_func(func, *args, **kwargs):
     """
     pooling of unary functions
@@ -1890,21 +2206,22 @@ def _unary_func(func, *args, **kwargs):
     then it will call the normal numpy routine, which will call FastArray unary func (which is parallelized)
     if a user calls rt.log(pandasarray) with a pandas array, it will get parallelized now
     """
-    if len(args) ==1:
+    if len(args) == 1:
         a = args[0]
         # if they pass a list, we do not bother to convert it (possible future improvement)
         if isinstance(a, np.ndarray):
             try:
                 # try to convert to FastArray so that it will route to TypeRegister.FastArray's array_ufunc
                 if not isinstance(a, TypeRegister.FastArray):
-                    a=a.view(TypeRegister.FastArray)
+                    a = a.view(TypeRegister.FastArray)
                 return func(a, **kwargs)
             except:
                 # fall through and call normal numpy
                 pass
     return func(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def _convert_cat_args(args):
     if len(args) == 1:
         if isinstance(args[0], TypeRegister.Categorical):
@@ -1912,16 +2229,18 @@ def _convert_cat_args(args):
         return args
     return args
 
-#-------------------------------------------------------
-def nan_to_num(*args,**kwargs):
+
+# -------------------------------------------------------
+def nan_to_num(*args, **kwargs):
     """
     arg1: ndarray
     returns: ndarray with nan_to_num
     notes: if you want to do this inplace contact TJD
     """
-    return np.nan_to_num(*args,**kwargs)
+    return np.nan_to_num(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nan_to_zero(a: np.ndarray) -> np.ndarray:
     """
     Replace the NaN or invalid values in an array with zeroes.
@@ -1942,44 +2261,52 @@ def nan_to_zero(a: np.ndarray) -> np.ndarray:
     a[where_are_NaNs] = 0
     return a
 
-#-------------------------------------------------------
-def ceil(*args,**kwargs):
-    return _unary_func(np.ceil,*args,**kwargs)
 
-#-------------------------------------------------------
-def floor(*args,**kwargs):
-    return _unary_func(np.floor,*args,**kwargs)
+# -------------------------------------------------------
+def ceil(*args, **kwargs):
+    return _unary_func(np.ceil, *args, **kwargs)
 
-#-------------------------------------------------------
-def trunc(*args,**kwargs):
-    return _unary_func(np.trunc,*args,**kwargs)
 
-#-------------------------------------------------------
-def log(*args,**kwargs):
-    return _unary_func(np.log,*args,**kwargs)
+# -------------------------------------------------------
+def floor(*args, **kwargs):
+    return _unary_func(np.floor, *args, **kwargs)
 
-#-------------------------------------------------------
-def log10(*args,**kwargs):
-    return _unary_func(np.log10,*args,**kwargs)
 
-#-------------------------------------------------------
-def absolute(*args,**kwargs):
-    return _unary_func(np.absolute,*args,**kwargs)
+# -------------------------------------------------------
+def trunc(*args, **kwargs):
+    return _unary_func(np.trunc, *args, **kwargs)
 
-#-------------------------------------------------------
-def abs(*args,**kwargs):
+
+# -------------------------------------------------------
+def log(*args, **kwargs):
+    return _unary_func(np.log, *args, **kwargs)
+
+
+# -------------------------------------------------------
+def log10(*args, **kwargs):
+    return _unary_func(np.log10, *args, **kwargs)
+
+
+# -------------------------------------------------------
+def absolute(*args, **kwargs):
+    return _unary_func(np.absolute, *args, **kwargs)
+
+
+# -------------------------------------------------------
+def abs(*args, **kwargs):
     """
     This will check for numpy array first and call np.abs
     """
     a = args[0]
     if isinstance(a, np.ndarray):
         if not isinstance(a, TypeRegister.FastArray):
-            a=TypeRegister.FastArray(a)
+            a = TypeRegister.FastArray(a)
         return np.abs(*args, **kwargs)
     return builtins.abs(a)
 
-#-------------------------------------------------------
-def round(*args,**kwargs):
+
+# -------------------------------------------------------
+def round(*args, **kwargs):
     """
     This will check for numpy array first and call np.round
     """
@@ -1988,8 +2315,9 @@ def round(*args,**kwargs):
         return np.round(*args, **kwargs)
     return builtins.round(a)
 
-#-------------------------------------------------------
-def sum(*args,**kwargs):
+
+# -------------------------------------------------------
+def sum(*args, **kwargs):
     """
     This will check for numpy array first and call np.sum
     otherwise use builtin
@@ -1998,9 +2326,10 @@ def sum(*args,**kwargs):
     args = _convert_cat_args(args)
     if isinstance(args[0], np.ndarray):
         return args[0].sum(*args[1:], **kwargs)
-    return builtins.sum(*args,**kwargs)
+    return builtins.sum(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nansum(*args, **kwargs):
     """
     This will check for numpy array first and call np.sum
@@ -2012,56 +2341,70 @@ def nansum(*args, **kwargs):
         return args[0].nansum()
     return np.nansum(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def argmax(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].argmax(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].argmax(**kwargs)
     return np.argmax(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def argmin(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].argmin(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].argmin(**kwargs)
     return np.argmin(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nanargmax(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanargmax(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].nanargmax(**kwargs)
     return np.nanargmax(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nanargmin(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanargmin(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].nanargmin(**kwargs)
     return np.nanargmin(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def _reclaim_type(arr, x1, x2):
-    if isinstance(arr, np.ndarray) and isinstance(x1, (TypeRegister.DateTimeBase, TypeRegister.DateBase)):
+    if isinstance(arr, np.ndarray) and isinstance(
+        x1, (TypeRegister.DateTimeBase, TypeRegister.DateBase)
+    ):
         # handle case when DateTime used (only checks first array not second)
         arrtype = type(x1)
         if not isinstance(arr, arrtype):
-            arr= arrtype(arr)
+            arr = arrtype(arr)
     return arr
 
-#-------------------------------------------------------
-def maximum(x1, x2, *args,**kwargs):
+
+# -------------------------------------------------------
+def maximum(x1, x2, *args, **kwargs):
     # two arrays are passed to maximum, minimum
     return _reclaim_type(np.maximum(x1, x2, *args, **kwargs), x1, x2)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def minimum(x1, x2, *args, **kwargs):
     return _reclaim_type(np.minimum(x1, x2, *args, **kwargs), x1, x2)
 
-#-------------------------------------------------------
-def max(*args,**kwargs):
+
+# -------------------------------------------------------
+def max(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray):
-        badlist=['S','O','U']
+    if isinstance(args[0], np.ndarray):
+        badlist = ["S", "O", "U"]
         if not args[0].dtype.char in badlist:
             if len(args) > 1:
-                return maximum(*args,**kwargs)
+                return maximum(*args, **kwargs)
             return args[0].max(**kwargs)
         else:
             # Object, String, Unicode
@@ -2069,18 +2412,21 @@ def max(*args,**kwargs):
                 # assuming they want length of string
                 return builtins.max([item for item in args[0]], **kwargs)
             else:
-                warnings.warn("Getting the max of two objects or string arrays is not currently allowed")
+                warnings.warn(
+                    "Getting the max of two objects or string arrays is not currently allowed"
+                )
                 return None
     return builtins.max(*args, **kwargs)
 
-#-------------------------------------------------------
-def min(*args,**kwargs):
+
+# -------------------------------------------------------
+def min(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray):
-        badlist=['S','O','U']
+    if isinstance(args[0], np.ndarray):
+        badlist = ["S", "O", "U"]
         if not args[0].dtype.char in badlist:
             if len(args) > 1:
-                return minimum(*args,**kwargs)
+                return minimum(*args, **kwargs)
             return args[0].min(**kwargs)
         else:
             # Object, String, Unicode
@@ -2088,110 +2434,142 @@ def min(*args,**kwargs):
                 # assuming they want length of string
                 return builtins.min([item for item in args[0]], **kwargs)
             else:
-                warnings.warn("Getting the max of two objects or string arrays is not currently allowed")
+                warnings.warn(
+                    "Getting the max of two objects or string arrays is not currently allowed"
+                )
                 return None
     return builtins.min(*args, **kwargs)
 
-#-------------------------------------------------------
-def nanmin(*args,**kwargs):
+
+# -------------------------------------------------------
+def nanmin(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray):
+    if isinstance(args[0], np.ndarray):
         if len(args) > 1:
-            return np.fmin(*args,**kwargs)
+            return np.fmin(*args, **kwargs)
 
         # NOTE: This will end up calling numpy's nanmin instead of riptable
         # riptable nanmin is
         if isinstance(args[0], TypeRegister.FastArray):
-            return TypeRegister.MathLedger._REDUCE(args[0], REDUCE_FUNCTIONS.REDUCE_NANMIN)
-        return LedgerFunction(np.nanmin,*args,**kwargs)
+            return TypeRegister.MathLedger._REDUCE(
+                args[0], REDUCE_FUNCTIONS.REDUCE_NANMIN
+            )
+        return LedgerFunction(np.nanmin, *args, **kwargs)
     return builtins.min(*args, **kwargs)
 
-#-------------------------------------------------------
-def nanmax(*args,**kwargs):
+
+# -------------------------------------------------------
+def nanmax(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray):
+    if isinstance(args[0], np.ndarray):
         if len(args) > 1:
-            return np.fmax(*args,**kwargs)
+            return np.fmax(*args, **kwargs)
         if isinstance(args[0], TypeRegister.FastArray):
             # possibly check for nans first and route to best routine
-            return TypeRegister.MathLedger._REDUCE(args[0], REDUCE_FUNCTIONS.REDUCE_NANMAX)
-        return LedgerFunction(np.nanmax,*args,**kwargs)
+            return TypeRegister.MathLedger._REDUCE(
+                args[0], REDUCE_FUNCTIONS.REDUCE_NANMAX
+            )
+        return LedgerFunction(np.nanmax, *args, **kwargs)
     return builtins.max(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mean(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].mean(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].mean(**kwargs)
     return np.mean(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nanmean(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanmean(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].nanmean(**kwargs)
     return np.nanmean(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def median(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return np.median(*args,**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return np.median(*args, **kwargs)
     return builtins.median(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nanmedian(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return np.nanmedian(*args, **kwargs)
+    if isinstance(args[0], np.ndarray):
+        return np.nanmedian(*args, **kwargs)
     return np.nanmedian(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def var(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].var(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].var(**kwargs)
     return builtins.var(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nanvar(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanvar(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].nanvar(**kwargs)
     return np.nanvar(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def std(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].std(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].std(**kwargs)
     return builtins.var(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nanstd(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanstd(**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return args[0].nanstd(**kwargs)
     return np.nanstd(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def percentile(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return np.percentile(*args,**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return np.percentile(*args, **kwargs)
     return np.percentile(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def nanpercentile(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return np.nanpercentile(*args,**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return np.nanpercentile(*args, **kwargs)
     return np.nanpercentile(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def bincount(*args, **kwargs):
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return np.bincount(*args,**kwargs)
+    if isinstance(args[0], np.ndarray):
+        return np.bincount(*args, **kwargs)
     return np.bincount(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def isnan(*args, **kwargs):
     try:
         return args[0].isnan(**kwargs)
     except:
-        return _unary_func(np.isnan,*args,**kwargs)
+        return _unary_func(np.isnan, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def isnotnan(*args, **kwargs):
     """ opposite of isnan """
     try:
@@ -2199,43 +2577,49 @@ def isnotnan(*args, **kwargs):
     except:
         return ~np.isnan(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def isnanorzero(*args, **kwargs):
     try:
         return args[0].isnanorzero(**kwargs)
     except:
         # slow way
-        result= np.isnan(*args, **kwargs)
-        result += (args[0] ==0)
+        result = np.isnan(*args, **kwargs)
+        result += args[0] == 0
         return result
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def isfinite(*args, **kwargs):
     try:
         return args[0].isfinite(**kwargs)
     except:
-        return _unary_func(np.isfinite,*args,**kwargs)
+        return _unary_func(np.isfinite, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def isnotfinite(*args, **kwargs):
     try:
         return args[0].isnotfinite(**kwargs)
     except:
         return ~np.isfinite(*args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def isinf(*args, **kwargs):
     try:
         return args[0].isinf(**kwargs)
     except:
-        return _unary_func(np.isinf,*args,**kwargs)
+        return _unary_func(np.isinf, *args, **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def isnotinf(*args, **kwargs):
     try:
         return args[0].isnotinf(**kwargs)
     except:
         return ~np.isinf(*args, **kwargs)
+
 
 # ------------------------------------------------------------
 def putmask(a, mask, values):
@@ -2278,11 +2662,12 @@ def putmask(a, mask, values):
     except:
         # false is returned on failure
         if not rc.PutMask(a, mask, values):
-            #final attempt use numpy
+            # final attempt use numpy
             return np.putmask(a, mask, values)
 
+
 # ------------------------------------------------------------
-def vstack(arrlist, dtype=None, order='C'):
+def vstack(arrlist, dtype=None, order="C"):
     """
     Parameters
     ----------
@@ -2333,15 +2718,16 @@ def vstack(arrlist, dtype=None, order='C'):
         if len(rowlength) == 1:
             numrows = rowlength.pop()
             numcols = len(arrlist)
-            h=hstack(arrlist, dtype=dtype)
-            if (order == 'F' or order =='f'):
-                return h.reshape((numrows, numcols), order='F')
+            h = hstack(arrlist, dtype=dtype)
+            if order == "F" or order == "f":
+                return h.reshape((numrows, numcols), order="F")
             else:
-                return h.reshape((numcols, numrows), order='C')
+                return h.reshape((numcols, numrows), order="C")
     except Exception:
         warnings.warn(f"vstack with order={order!r} failed, calling np.vstack")
 
     return np.vstack(arrlist)
+
 
 # ------------------------------------------------------------
 def repeat(a, repeats, axis=None):
@@ -2352,30 +2738,34 @@ def repeat(a, repeats, axis=None):
         return TypeRegister.newclassfrominstance(result, a)
     return np.repeat(a, repeats, axis=axis).view(TypeRegister.FastArray)
 
+
 # ------------------------------------------------------------
 def tile(arr, reps):
     """ see np.tile """
-    if isinstance(arr,TypeRegister.FastArray):
+    if isinstance(arr, TypeRegister.FastArray):
         # bug in tile, have to flip to normal numpy array first)
         result = np.tile(arr._np, reps).view(TypeRegister.FastArray)
         return TypeRegister.newclassfrominstance(result, arr)
 
     return np.tile(arr, reps).view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # like in matlab, convert to int8
 def logical(a):
     if isinstance(a, np.ndarray):
-        if a.dtype==np.bool: return a
+        if a.dtype == np.bool:
+            return a
         return a.astype(np.bool)
     return np.bool(a).view(TypeRegister.FastArray)
 
+
 ##-------------------------------------------------------
 # not allowed
-#class bool(np.bool):
+# class bool(np.bool):
 #    pass
 
-#-------------------------------------------------------
+# -------------------------------------------------------
 class bool_(np.bool_):
     """
     riptable equivalent of np.bool_
@@ -2391,15 +2781,17 @@ class bool_(np.bool_):
     inv = INVALID_DICT[0]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1:
+        if len(args) == 1:
             # check if converting an existing array
             if isinstance(args[0], np.ndarray):
                 return TypeRegister.FastArray.astype(args[0], np.bool_, **kwargs)
         instance = np.bool_(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class int8(np.int8):
     """
     riptable equivalent of np.int8
@@ -2414,15 +2806,17 @@ class int8(np.int8):
     inv = INVALID_DICT[1]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1:
+        if len(args) == 1:
             # check if converting an existing array
             if isinstance(args[0], np.ndarray):
                 return TypeRegister.FastArray.astype(args[0], np.int8, **kwargs)
         instance = np.int8(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class uint8(np.uint8):
     """
     riptable equivalent of np.uint8
@@ -2437,15 +2831,17 @@ class uint8(np.uint8):
     inv = INVALID_DICT[2]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1:
+        if len(args) == 1:
             # check if converting an existing array
             if isinstance(args[0], np.ndarray):
                 return TypeRegister.FastArray.astype(args[0], np.uint8, **kwargs)
         instance = np.uint8(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class int16(np.int16):
     """
     riptable equivalent of np.int16
@@ -2460,13 +2856,15 @@ class int16(np.int16):
     inv = INVALID_DICT[3]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.int16, **kwargs)
         instance = np.int16(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class uint16(np.uint16):
     """
     riptable equivalent of np.uint16
@@ -2481,13 +2879,15 @@ class uint16(np.uint16):
     inv = INVALID_DICT[4]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.uint16, **kwargs)
         instance = np.uint16(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class int32(np.int32):
     """
     riptable equivalent of np.int32
@@ -2502,13 +2902,15 @@ class int32(np.int32):
     inv = INVALID_DICT[5]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.int32, **kwargs)
         instance = np.int32(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class uint32(np.uint32):
     """
     riptable equivalent of np.uint32
@@ -2523,13 +2925,15 @@ class uint32(np.uint32):
     inv = INVALID_DICT[6]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.uint32, **kwargs)
         instance = np.uint32(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class int64(np.int64):
     """
     riptable equivalent of np.int64
@@ -2544,13 +2948,15 @@ class int64(np.int64):
     inv = INVALID_DICT[9]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.int64, **kwargs)
         instance = np.int64(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class uint64(np.uint64):
     """
     riptable equivalent of np.uint64
@@ -2565,21 +2971,25 @@ class uint64(np.uint64):
     inv = INVALID_DICT[10]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.uint64, **kwargs)
         instance = np.uint64(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class int0(int64):
     pass
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class uint0(uint64):
     pass
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class bytes_(np.bytes_):
     """
     riptable equivalent of np.bytes_
@@ -2596,9 +3006,10 @@ class bytes_(np.bytes_):
     def __new__(cls, arg0, *args, **kwargs):
         if np.isscalar(arg0):
             return np.bytes_(arg0, *args, **kwargs)
-        return TypeRegister.FastArray(arg0, *args, dtype = 'S', **kwargs)
+        return TypeRegister.FastArray(arg0, *args, dtype="S", **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class str_(np.str_):
     """
     riptable equivalent of np.str_
@@ -2615,41 +3026,50 @@ class str_(np.str_):
     def __new__(cls, arg0, *args, **kwargs):
         if np.isscalar(arg0):
             return np.str_(arg0, *args, **kwargs)
-        return TypeRegister.FastArray(arg0, *args, unicode=True, dtype = 'U', **kwargs)
+        return TypeRegister.FastArray(arg0, *args, unicode=True, dtype="U", **kwargs)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # like in numpy, convert to a half
 def half(a):
     if isinstance(a, np.ndarray):
-        if a.dtype==np.float16: return a
+        if a.dtype == np.float16:
+            return a
         return a.astype(np.float16)
     return np.float16(a).view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # like in matlab, convert to a single
 def single(a):
     if isinstance(a, np.ndarray):
-        if a.dtype==np.float32: return a
+        if a.dtype == np.float32:
+            return a
         return a.astype(np.float32)
     return np.float32(a).view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # like in matlab, convert to a double
 def double(a):
     if isinstance(a, np.ndarray):
-        if a.dtype==np.float64: return a
+        if a.dtype == np.float64:
+            return a
         return a.astype(np.float64)
     return np.float64(a).view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # like in numpy, convert to a longdouble
 def longdouble(a):
     if isinstance(a, np.ndarray):
-        if a.dtype==np.longdouble: return a
+        if a.dtype == np.longdouble:
+            return a
         return a.astype(np.longdouble)
     return np.longdouble(a).view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class float32(np.float32):
     """
     riptable equivalent of np.float32
@@ -2664,13 +3084,15 @@ class float32(np.float32):
     inv = INVALID_DICT[11]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.float32, **kwargs)
         instance = np.float32(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 class float64(np.float64):
     """
     riptable equivalent of np.float64
@@ -2685,17 +3107,19 @@ class float64(np.float64):
     inv = INVALID_DICT[12]
 
     def __new__(cls, *args, **kwargs):
-        if len(args) ==1 and isinstance(args[0], np.ndarray):
+        if len(args) == 1 and isinstance(args[0], np.ndarray):
             return TypeRegister.FastArray.astype(args[0], np.float64, **kwargs)
         instance = np.float64(*args, **kwargs)
-        if np.isscalar(instance): return instance
+        if np.isscalar(instance):
+            return instance
         return instance.view(TypeRegister.FastArray)
 
-#-------------------------------------------------------
-# linux only
-#class float128(np.float128):
 
-#-------------------------------------------------------
+# -------------------------------------------------------
+# linux only
+# class float128(np.float128):
+
+# -------------------------------------------------------
 def interp(x, xp, fp):
     """
     One-dimensional or two-dimensional linear interpolation with clipping.
@@ -2733,22 +3157,23 @@ def interp(x, xp, fp):
     riptable will warn if first parameter is a float32, but xp or yp is a double
     """
     if not isinstance(x, np.ndarray):
-        x=TypeRegister.FastArray(x)
+        x = TypeRegister.FastArray(x)
 
     if not isinstance(xp, np.ndarray):
-        xp=TypeRegister.FastArray(xp)
+        xp = TypeRegister.FastArray(xp)
 
     if not isinstance(fp, np.ndarray):
-        fp=TypeRegister.FastArray(fp)
+        fp = TypeRegister.FastArray(fp)
 
     # check for float32
     if x.dtype.num == 11 and (xp.dtype.num != 11 or fp.dtype.num != 11):
-        warnings.warn('rt.interp is downcasting to a float32 to match first array')
+        warnings.warn("rt.interp is downcasting to a float32 to match first array")
         xp = xp.astype(np.float32)
         fp = fp.astype(np.float32)
     return rc.InterpExtrap2d(x, xp, fp, 1)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def interp_extrap(x, xp, fp):
     """
     One-dimensional or two-dimensional linear interpolation without clipping.
@@ -2766,14 +3191,15 @@ def interp_extrap(x, xp, fp):
     * 2d mode is auto-detected based on `xp`/`fp`
     """
     if not isinstance(xp, np.ndarray):
-        xp=TypeRegister.FastArray(xp)
+        xp = TypeRegister.FastArray(xp)
 
     if not isinstance(fp, np.ndarray):
-        fp=TypeRegister.FastArray(fp)
+        fp = TypeRegister.FastArray(fp)
 
     return rc.InterpExtrap2d(x, xp, fp, 0)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def bitcount(a: Union[int, Sequence, np.array]) -> Union[int, np.array]:
     """
     Count the number of set (True) bits in an integer or in each integer within an array of
@@ -2805,15 +3231,16 @@ def bitcount(a: Union[int, Sequence, np.array]) -> Union[int, np.array]:
                 a = a.copy()
             return rc.BitCount(a)
         else:
-            raise ValueError(f'Unsupported array dtype {a.dtype}')
+            raise ValueError(f"Unsupported array dtype {a.dtype}")
     else:
         if isinstance(a, (int, np.integer)):
-            return bin(a).count('1')
+            return bin(a).count("1")
         else:
-            raise ValueError(f'Unsupported input type {type(a)}')
+            raise ValueError(f"Unsupported input type {type(a)}")
 
-#-------------------------------------------------------
-def bool_to_fancy(arr: np.ndarray, both:bool=False):
+
+# -------------------------------------------------------
+def bool_to_fancy(arr: np.ndarray, both: bool = False):
     """
     Parameters
     ----------
@@ -2857,60 +3284,68 @@ def bool_to_fancy(arr: np.ndarray, both:bool=False):
     (FastArray([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 12, 15, 17, 18, 19]), FastArray([ 0, 11, 13, 14, 16]))
     """
     if isinstance(arr, np.ndarray):
-        if arr.dtype.char == '?':
+        if arr.dtype.char == "?":
             return rc.BooleanToFancy(arr, both=both)
         else:
             raise TypeError(f"Input array must be boolean. Got {arr.dtype}")
     else:
         raise TypeError(f"Input must be ndarray. Got {type(arr)}")
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mask_or(*args, **kwargs):
     """pass in a tuple or list of boolean arrays to OR together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_OR, False)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mask_and(*args, **kwargs):
     """pass in a tuple or list of boolean arrays to AND together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_AND, False)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mask_xor(*args, **kwargs):
     """pass in a tuple or list of boolean arrays to XOR together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_XOR, False)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mask_andnot(*args, **kwargs):
     """pass in a tuple or list of boolean arrays to ANDNOT together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_ANDNOT, False)
 
 
-#-------------------------------------------------------
+# -------------------------------------------------------
 def mask_ori(*args, **kwargs):
     """inplace version: pass in a tuple or list of boolean arrays to OR together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_OR, True)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mask_andi(*args, **kwargs):
     """inplace version: pass in a tuple or list of boolean arrays to AND together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_AND, True)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mask_xori(*args, **kwargs):
     """inplace version: pass in a tuple or list of boolean arrays to XOR together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_XOR, True)
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 def mask_andnoti(*args, **kwargs):
     """inplace version: pass in a tuple or list of boolean arrays to ANDNOT together"""
     return _mask_op((args), MATH_OPERATION.BITWISE_ANDNOT, True)
 
-#-------------------------------------------------------
-def _mask_op( bool_list, funcNum, inplace = False):
+
+# -------------------------------------------------------
+def _mask_op(bool_list, funcNum, inplace=False):
     # size check done by TypeRegister.FastArray cpp code
     # we do an all boolen check here for CPP code
     lenbool = len(bool_list)
-    if lenbool == 1 and isinstance(bool_list[0], (list,tuple)):
+    if lenbool == 1 and isinstance(bool_list[0], (list, tuple)):
         bool_list = bool_list[0]
         lenbool = len(bool_list)
 
@@ -2923,32 +3358,34 @@ def _mask_op( bool_list, funcNum, inplace = False):
 
     # we could support all int types here as well
     dtype = 0
-    for v in bool_list: dtype += v.dtype.num
+    for v in bool_list:
+        dtype += v.dtype.num
     if dtype != 0:
         raise TypeError(f"Must all be boolean types")
 
     # we have at least two items
     # grabbing the func pointer speeds things up in testing
-    func=TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
+    func = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
     if inplace:
-        #assume first value can be reused
+        # assume first value can be reused
         result = bool_list[0]
         func((result, bool_list[1], result), funcNum, 0)
-        i=2
+        i = 2
 
         while i < lenbool:
             # this will do inplace
             func((result, bool_list[i], result), funcNum, 0)
-            i+=1
+            i += 1
     else:
-        result= func((bool_list[0], bool_list[1]), funcNum, 0)
-        i=2
+        result = func((bool_list[0], bool_list[1]), funcNum, 0)
+        i = 2
 
         while i < lenbool:
             func((result, bool_list[i], result), funcNum, 0)
-            i+=1
+            i += 1
 
     return result
+
 
 # ------------------------------------------------------------
 def hstack(tup, dtype=None, **kwargs):
@@ -2964,7 +3401,7 @@ def hstack(tup, dtype=None, **kwargs):
     # Check to see if we have one homogenized type
     set_of_types = {type(i) for i in tup}
 
-    if len(set_of_types)==1:
+    if len(set_of_types) == 1:
         # we know the data is all the same type
         # check if this is a special type that we know how to hstack
         try:
@@ -2973,7 +3410,7 @@ def hstack(tup, dtype=None, **kwargs):
         except:
             pass
 
-    dtypenum=-1
+    dtypenum = -1
 
     if dtype is not None:
         try:
@@ -2986,15 +3423,18 @@ def hstack(tup, dtype=None, **kwargs):
     except:
         return np.hstack(tup).view(TypeRegister.FastArray)
 
+
 # ------------------------------------------------------------
 def asanyarray(a, dtype=None, order=None):
     # note will get hooked directly
     return rc.AsAnyArray(a, dtype=dtype, order=order)
 
+
 # ------------------------------------------------------------
 def asarray(a, dtype=None, order=None):
     # note will get hooked directly
     return rc.AsFastArray(a, dtype=dtype, order=order)
+
 
 # ------------------------------------------------------------
 def _FixupDocStrings():
@@ -3003,34 +3443,34 @@ def _FixupDocStrings():
     Load all the member functions of the np module
     If we find a match, copy over the doc strings
     """
-    mymodule=sys.modules[__name__]
+    mymodule = sys.modules[__name__]
     all_myfunctions = inspect.getmembers(mymodule, inspect.isfunction)
     all_npfunctions = inspect.getmembers(np)
-    #all_npfunctions += inspect.getmembers(np, inspect.isfunction)
-    #all_npfunctions += inspect.getmembers(np, inspect.isbuiltin)
+    # all_npfunctions += inspect.getmembers(np, inspect.isfunction)
+    # all_npfunctions += inspect.getmembers(np, inspect.isbuiltin)
 
     # build dictionary
-    npdict={}
+    npdict = {}
     for funcs in all_npfunctions:
-        npdict[funcs[0]]=funcs[1]
+        npdict[funcs[0]] = funcs[1]
 
     # now for each function that has an np flavor, copy over the doc strings
     for funcs in all_myfunctions:
         if funcs[0] in npdict:
-            #print("doc fix", funcs[0])
+            # print("doc fix", funcs[0])
 
             # combine riptable docstring with numpy docstring
             npdoc = npdict[funcs[0]].__doc__
             if npdoc is not None:
                 if funcs[1].__doc__ is None:
-                    funcs[1].__doc__ = ''
+                    funcs[1].__doc__ = ""
                 funcs[1].__doc__ += npdoc
 
             # old, only uses numpy docstring
-            #funcs[1].__doc__ = npdict[funcs[0]].__doc__
+            # funcs[1].__doc__ = npdict[funcs[0]].__doc__
         else:
             pass
-            #print("reject", funcs[0])
+            # print("reject", funcs[0])
 
 
 # keep this function last

@@ -11,6 +11,7 @@ from ..rt_dataset import Dataset
 from ..rt_fastarray import FastArray
 from ..rt_numpy import arange, putmask
 
+
 def check_params(dtype, invalid_ratio):
     if not isinstance(dtype, np.dtype):
         raise TypeError(
@@ -23,6 +24,8 @@ def check_params(dtype, invalid_ratio):
             raise ValueError(
                 f"Invalid value specified for `invalid_ratio`: {invalid_ratio}"
             )
+
+
 def rand_fancyindex(
     rng: np.random.Generator,
     index_length: int,
@@ -51,7 +54,12 @@ def rand_fancyindex(
     return fancyindex
 
 
-def rand_array(rng: np.random.Generator, length: int, dtype: np.dtype, invalid_ratio: Optional[float] = None) -> np.ndarray:
+def rand_array(
+    rng: np.random.Generator,
+    length: int,
+    dtype: np.dtype,
+    invalid_ratio: Optional[float] = None,
+) -> np.ndarray:
     # TODO: Implement a flag that controls whether invalid values are included in the array? Or (instead) an invalid_ratio parameter like our other functions?
     check_params(dtype, invalid_ratio)
 
@@ -67,16 +75,24 @@ def rand_array(rng: np.random.Generator, length: int, dtype: np.dtype, invalid_r
         # Generate integers in the upper ASCII range, then use a view to expose those
         # values as fixed-length ASCII strings.
         # TODO: Support other character ranges (lower-range ASCII 0-127, full ASCII 0-255, lowercase+uppercase+digits).
-        arr = FastArray(rng.integers(
-            65, 90, size=length * dtype.itemsize, dtype=np.int8, endpoint=True
-        ).view(dtype))
+        arr = FastArray(
+            rng.integers(
+                65, 90, size=length * dtype.itemsize, dtype=np.int8, endpoint=True
+            ).view(dtype)
+        )
 
     elif dtype.kind == "U":
         # Generate integers in the upper ASCII range.
         # TODO: Support other character ranges (lower-range ASCII 0-127, full ASCII 0-255, lowercase+uppercase+digits, Unicode chars >255).
-        arr = FastArray(rng.integers(
-            65, 90, size=length * (dtype.itemsize // 4), dtype=np.int32, endpoint=True
-        ).view(dtype))
+        arr = FastArray(
+            rng.integers(
+                65,
+                90,
+                size=length * (dtype.itemsize // 4),
+                dtype=np.int32,
+                endpoint=True,
+            ).view(dtype)
+        )
 
     else:
         # TODO: Handle other dtypes
@@ -84,13 +100,14 @@ def rand_array(rng: np.random.Generator, length: int, dtype: np.dtype, invalid_r
             f"The dtype {dtype} is not yet supported by this function."
         )
 
-     # If the fancy index should have some invalids/NA values, add those in now.
+    # If the fancy index should have some invalids/NA values, add those in now.
     if invalid_ratio is not None and invalid_ratio > 0.0:
         # TODO: Also add in some out-of-bounds accesses (and not just invalid/NA values) here?
         invalid_outcomes = FastArray(rng.random(size=length))
         putmask(arr, invalid_outcomes < invalid_ratio, arr.inv)
 
     return arr
+
 
 def rand_keyarray(
     rng: np.random.Generator,

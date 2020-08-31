@@ -15,8 +15,10 @@ SDSMakeDirsOn()
 def arr_all(a):
     return bool(np.all(a))
 
+
 def arr_eq(a, b):
     return arr_all(a == b)
+
 
 #
 # TODO: Modify the tests in this file to -- at minimum -- generate the random data they use with a deterministic
@@ -29,14 +31,14 @@ def arr_eq(a, b):
 uniquelen = 7
 arrlen = 50
 modulo = 3
-keyname = 'keycol'
-d = {'data' + str(i): np.random.rand(arrlen) for i in range(7)}
+keyname = "keycol"
+d = {"data" + str(i): np.random.rand(arrlen) for i in range(7)}
 f = logical(arange(arrlen) % modulo)
 
 randi = np.random.randint(10000, 20000, uniquelen)
 randi = np.random.choice(randi, arrlen)
-rands = randi.astype('S')
-randu = randi.astype('U')
+rands = randi.astype("S")
+randu = randi.astype("U")
 randf = randi.astype(np.float32)
 
 
@@ -65,13 +67,13 @@ class Grouping_Test(unittest.TestCase):
 
             self.assertTrue(
                 gb_result.equals(c_result),
-                msg=f'Groupby and categorical results did not match for single key dtype {vals.dtype}.',
+                msg=f"Groupby and categorical results did not match for single key dtype {vals.dtype}.",
             )
             assert_array_equal(gb_result.label_get_names(), c_result.label_get_names())
 
             self.assertTrue(
                 c_result.equals(gbc_result),
-                msg=f'Categorical and groupby categorical results did not match for single key dtype {vals.dtype}.',
+                msg=f"Categorical and groupby categorical results did not match for single key dtype {vals.dtype}.",
             )
             assert_array_equal(c_result.label_get_names(), gbc_result.label_get_names())
 
@@ -94,7 +96,7 @@ class Grouping_Test(unittest.TestCase):
 
             self.assertTrue(
                 gb_result.equals(c_result),
-                msg=f'Groupby and categorical results did not match for single key dtype {vals.dtype}.',
+                msg=f"Groupby and categorical results did not match for single key dtype {vals.dtype}.",
             )
             assert_array_equal(gb_result.label_get_names(), c_result.label_get_names())
 
@@ -103,16 +105,16 @@ class Grouping_Test(unittest.TestCase):
                 if colname != keyname:
                     self.assertTrue(
                         arr_eq(c_result[colname], gbc_result[colname]),
-                        msg=f'Categorical and groupby categorical results did not match for single key dtype {vals.dtype}.',
+                        msg=f"Categorical and groupby categorical results did not match for single key dtype {vals.dtype}.",
                     )
             self.assertTrue(
                 c_result.equals(gbc_result),
-                msg=f'Categorical and groupby categorical results did not match for single key dtype {vals.dtype}.',
+                msg=f"Categorical and groupby categorical results did not match for single key dtype {vals.dtype}.",
             )
             assert_array_equal(c_result.label_get_names(), gbc_result.label_get_names())
 
     def test_multikey(self):
-        keynames = ['keycol_0', 'keycol_1']
+        keynames = ["keycol_0", "keycol_1"]
         for vals1 in [randi, rands, randu, randf]:
             vals1 = vals1.view(FA)
             vals1.set_name(keynames[0])
@@ -131,19 +133,21 @@ class Grouping_Test(unittest.TestCase):
                 c = Categorical(vals, sort_gb=True, unicode=True)
                 c_result = c.sum(d)
 
-                ds_c = Dataset({'keycol': c}, unicode=True)
-                gbc = ds_c.gb('keycol')
+                ds_c = Dataset({"keycol": c}, unicode=True)
+                gbc = ds_c.gb("keycol")
                 gbc_result = gbc.sum(d)
 
-                assert_array_equal(gb_result.label_get_names(), c_result.label_get_names())
+                assert_array_equal(
+                    gb_result.label_get_names(), c_result.label_get_names()
+                )
                 self.assertTrue(
                     gb_result.equals(c_result),
-                    msg=f'Groupby and categorical results did not match for multi key dtype {vals[0].dtype} {vals[1].dtype}.',
+                    msg=f"Groupby and categorical results did not match for multi key dtype {vals[0].dtype} {vals[1].dtype}.",
                 )
                 # assert_array_equal(c_result.label_get_names(), gbc_result.label_get_names())
                 self.assertTrue(
                     c_result.equals(gbc_result),
-                    msg=f'Categorical and groupby categorical results did not match for multi key dtype {c_result} \n {gbc_result}. {c_result} \n {gbc_result}',
+                    msg=f"Categorical and groupby categorical results did not match for multi key dtype {c_result} \n {gbc_result}. {c_result} \n {gbc_result}",
                 )
 
     def test_init_paths(self):
@@ -153,7 +157,7 @@ class Grouping_Test(unittest.TestCase):
 
         # array mismatch
         with self.assertRaises(ValueError):
-            g = Grouping({'a': arange(3), 'b': arange(4)})
+            g = Grouping({"a": arange(3), "b": arange(4)})
 
         # non-fastarray
         g = Grouping([np.arange(3), np.arange(3)])
@@ -162,7 +166,7 @@ class Grouping_Test(unittest.TestCase):
             self.assertTrue(isinstance(v, FastArray))
 
         # named arrays
-        ds = Dataset({'col1': arange(3), 'col2': arange(3)})
+        ds = Dataset({"col1": arange(3), "col2": arange(3)})
         g = Grouping([ds.col1, ds.col2])
         gdict = g._grouping_dict
         for k in gdict:
@@ -173,37 +177,37 @@ class Grouping_Test(unittest.TestCase):
         self.assertTrue(
             arr_eq(
                 list(g._grouping_dict),
-                [GROUPBY_KEY_PREFIX + '_0', GROUPBY_KEY_PREFIX + '_1'],
+                [GROUPBY_KEY_PREFIX + "_0", GROUPBY_KEY_PREFIX + "_1"],
             )
         )
 
         # conflicting name arrays
         g = Grouping([ds.col1, ds.col1])
         self.assertTrue(
-            arr_eq(list(g._grouping_dict), ['col1', GROUPBY_KEY_PREFIX + '_c1'])
+            arr_eq(list(g._grouping_dict), ["col1", GROUPBY_KEY_PREFIX + "_c1"])
         )
 
     def test_auto_naming(self):
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         self.assertTrue(c.get_name() is None)
-        ds = Dataset({'catcol': c})
+        ds = Dataset({"catcol": c})
         result = ds.catcol.sum(arange(5))
-        self.assertTrue(arr_eq(['catcol'], result.label_get_names()))
+        self.assertTrue(arr_eq(["catcol"], result.label_get_names()))
 
-        c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), FA([1, 1, 2, 3, 1])])
+        c = Categorical([FA(["a", "a", "b", "c", "a"]), FA([1, 1, 2, 3, 1])])
         self.assertTrue(c.get_name() is None)
-        ds = Dataset({'mkcol': c})
+        ds = Dataset({"mkcol": c})
         result = ds.mkcol.sum(arange(5))
-        self.assertTrue(arr_eq(['mkcol_0', 'mkcol_1'], result.label_get_names()))
+        self.assertTrue(arr_eq(["mkcol_0", "mkcol_1"], result.label_get_names()))
 
-        arr1 = FA(['a', 'a', 'b', 'c', 'a'])
-        arr1.set_name('mystrings')
+        arr1 = FA(["a", "a", "b", "c", "a"])
+        arr1.set_name("mystrings")
         arr2 = FA([1, 1, 2, 3, 1])
-        arr2.set_name('myints')
+        arr2.set_name("myints")
         c = Categorical([arr1, arr2])
-        ds = Dataset({'mkcol': c})
+        ds = Dataset({"mkcol": c})
         result = ds.mkcol.sum(arange(5))
-        self.assertTrue(arr_eq(['mystrings', 'myints'], result.label_get_names()))
+        self.assertTrue(arr_eq(["mystrings", "myints"], result.label_get_names()))
 
     def test_make_ifirst(self):
         int_types = [np.int8, np.int16, np.int32, np.int64]
@@ -218,7 +222,7 @@ class Grouping_Test(unittest.TestCase):
             assert isnan(ifirst)[0]
             assert isnan(ifirst)[2]
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         f = FastArray([True, True, False, True, True])
         cfilter = c.filter(f)
         ifirst = makeifirst(cfilter, 2)
@@ -231,16 +235,16 @@ class Grouping_Test(unittest.TestCase):
         assert ifirst[1] == 0
         assert ifirst[-1] == 3
 
-        c = Categorical([1, 1, 1, 1, 2, 1], ['a', 'b', 'c'])
+        c = Categorical([1, 1, 1, 1, 2, 1], ["a", "b", "c"])
         ifirst = makeifirst(c, c.unique_count)
         assert_array_equal(ifirst[1:3], FA([0, 4]))
         assert isnan(ifirst)[0]
         assert isnan(ifirst)[-1]
 
-        strs = np.random.choice(arange(100, 200).astype('S'), 1287)
+        strs = np.random.choice(arange(100, 200).astype("S"), 1287)
 
-        ds = Dataset({'stringvals': strs})
-        dsg = ds.gb('stringvals').grouping
+        ds = Dataset({"stringvals": strs})
+        dsg = ds.gb("stringvals").grouping
 
         c = Categorical(ds.stringvals, ordered=False)
         assert_array_equal(makeifirst(c, c.unique_count)[1:], dsg.iFirstKey)
@@ -262,7 +266,7 @@ class Grouping_Test(unittest.TestCase):
             assert isnan(ilast)[0]
             assert isnan(ilast)[2]
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         f = FastArray([True, True, False, True, True])
         cfilter = c.filter(f)
         ilast = makeilast(cfilter, 2)
@@ -275,16 +279,16 @@ class Grouping_Test(unittest.TestCase):
         assert ilast[1] == 4
         assert ilast[-1] == 3
 
-        c = Categorical([1, 1, 1, 1, 2, 1], ['a', 'b', 'c'])
+        c = Categorical([1, 1, 1, 1, 2, 1], ["a", "b", "c"])
         ilast = makeilast(c, c.unique_count)
         assert_array_equal(ilast[1:3], FA([5, 4]))
         assert isnan(ilast)[0]
         assert isnan(ilast)[-1]
 
-        strs = np.random.choice(arange(100, 200).astype('S'), 1287)
+        strs = np.random.choice(arange(100, 200).astype("S"), 1287)
 
-        ds = Dataset({'stringvals': strs})
-        dsg = ds.gb('stringvals').grouping
+        ds = Dataset({"stringvals": strs})
+        dsg = ds.gb("stringvals").grouping
 
         c = Categorical(ds.stringvals, ordered=False)
         assert_array_equal(makeilast(c, c.unique_count)[1:], dsg.ilastkey)
@@ -296,31 +300,31 @@ class Grouping_Test(unittest.TestCase):
     def test_isin(self):
         c = Categorical(
             [
-                np.random.choice(['aa', 'b', 'bbb', 'c'], 40),
+                np.random.choice(["aa", "b", "bbb", "c"], 40),
                 np.random.choice([1, 2, 3], 40).astype(dtype=np.int8),
             ]
         )
         uniquelist = c.grouping.uniquelist
         tups = [
-            t for t in zip(uniquelist[0].astype('U'), uniquelist[1].astype(np.float32))
+            t for t in zip(uniquelist[0].astype("U"), uniquelist[1].astype(np.float32))
         ]
         self.assertTrue(arr_all(c.grouping.isin(tups)))
 
         c = Categorical(
             [
-                np.random.choice(['aa', 'b', 'bbb', 'c'], 40),
+                np.random.choice(["aa", "b", "bbb", "c"], 40),
                 np.random.choice([1, 2, 3], 40).astype(dtype=np.float32),
             ]
         )
         uniquelist = c.grouping.uniquelist
         tups = [
-            t for t in zip(uniquelist[0].astype('U'), uniquelist[1].astype(np.int8))
+            t for t in zip(uniquelist[0].astype("U"), uniquelist[1].astype(np.int8))
         ]
         self.assertTrue(arr_all(c.grouping.isin(tups)))
 
     def test_isin_enum(self):
         c = Categorical(
-            [10, 10, 10, 20, 30, 20, 10, 20, 20, 40], {'a': 30, 'b': 20, 'c': 10}
+            [10, 10, 10, 20, 30, 20, 10, 20, 20, 40], {"a": 30, "b": 20, "c": 10}
         )
         ten_mask = FastArray(
             [True, True, True, False, False, False, True, False, False, False]
@@ -329,38 +333,38 @@ class Grouping_Test(unittest.TestCase):
         self.assertTrue(arr_eq(c.isin([10]), ten_mask))
         self.assertTrue(arr_eq(c.isin(FastArray(10)), ten_mask))
 
-        self.assertTrue(arr_eq(c.isin('c'), ten_mask))
-        self.assertTrue(arr_eq(c.isin(b'c'), ten_mask))
-        self.assertTrue(arr_eq(c.isin(['c']), ten_mask))
-        self.assertTrue(arr_eq(c.isin(np.array(['c'])), ten_mask))
-        self.assertTrue(arr_eq(c.isin(FA('c')), ten_mask))
+        self.assertTrue(arr_eq(c.isin("c"), ten_mask))
+        self.assertTrue(arr_eq(c.isin(b"c"), ten_mask))
+        self.assertTrue(arr_eq(c.isin(["c"]), ten_mask))
+        self.assertTrue(arr_eq(c.isin(np.array(["c"])), ten_mask))
+        self.assertTrue(arr_eq(c.isin(FA("c")), ten_mask))
 
         with self.assertRaises(TypeError):
             _ = c.isin(1.23)
 
     def test_hstack_base_0(self):
-        c7 = Categorical([1, 1], ['a', 'b'], base_index=0)
-        c8 = Categorical([1, 0], ['b', 'c'], base_index=0)
+        c7 = Categorical([1, 1], ["a", "b"], base_index=0)
+        c8 = Categorical([1, 0], ["b", "c"], base_index=0)
         c9 = hstack([c7, c8])
 
         self.assertTrue(isinstance(c9, Categorical))
         self.assertEqual(c9.base_index, 0)
         self.assertTrue(arr_eq(c9._fa, FA([1, 1, 2, 1])))
-        self.assertTrue(arr_eq(c9.expand_array, FA(['b', 'b', 'c', 'b'])))
+        self.assertTrue(arr_eq(c9.expand_array, FA(["b", "b", "c", "b"])))
 
     # TODO use pytest fixtures in place of 'paths' and move this and similar test cases into SDS save / load tests
     def test_stack_load_base_0(self):
         c1 = Categorical(
-            np.random.choice(5, 30), ['a', 'b', 'c', 'd', 'e'], base_index=0
+            np.random.choice(5, 30), ["a", "b", "c", "d", "e"], base_index=0
         )
         c2 = Categorical(
-            np.random.choice(5, 30), ['e', 'f', 'g', 'a', 'b'], base_index=0
+            np.random.choice(5, 30), ["e", "f", "g", "a", "b"], base_index=0
         )
 
-        ds1 = Dataset({'catcol': c1})
-        ds2 = Dataset({'catcol': c2})
+        ds1 = Dataset({"catcol": c1})
+        ds2 = Dataset({"catcol": c2})
 
-        paths = [r'riptable/tests/temp/ds1.sds', r'riptable/tests/temp/ds2.sds']
+        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
         ds1.save(paths[0])
         ds2.save(paths[1])
 
@@ -379,9 +383,9 @@ class Grouping_Test(unittest.TestCase):
             os.remove(p)
 
     def test_hstack_ordered(self):
-        c1 = Categorical([1, 2, 3], ['a', 'b', 'c'])
+        c1 = Categorical([1, 2, 3], ["a", "b", "c"])
         self.assertTrue(c1.ordered)
-        c2 = Categorical([1, 2, 3], ['b', 'a', 'z'])
+        c2 = Categorical([1, 2, 3], ["b", "a", "z"])
         self.assertFalse(c2.ordered)
 
         st = hstack([c1, c2])
@@ -401,14 +405,14 @@ class Grouping_Test(unittest.TestCase):
         self.assertFalse(st.ordered)
 
     def test_stack_load_ordered(self):
-        c1 = Categorical([1, 2, 3], ['a', 'b', 'c'])
+        c1 = Categorical([1, 2, 3], ["a", "b", "c"])
         self.assertTrue(c1.ordered)
-        c2 = Categorical([1, 2, 3], ['b', 'a', 'z'])
+        c2 = Categorical([1, 2, 3], ["b", "a", "z"])
         self.assertFalse(c2.ordered)
 
-        ds1 = Dataset({'catcol': c1})
-        ds2 = Dataset({'catcol': c2})
-        paths = [r'riptable/tests/temp/ds1.sds', r'riptable/tests/temp/ds2.sds']
+        ds1 = Dataset({"catcol": c1})
+        ds2 = Dataset({"catcol": c2})
+        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
         ds1.save(paths[0])
         ds2.save(paths[1])
 
@@ -432,17 +436,17 @@ class Grouping_Test(unittest.TestCase):
             os.remove(p)
 
     def test_stack_load_sort_display(self):
-        c = Categorical([1, 1, 2, 3, 1], ['b', 'c', 'a'])
+        c = Categorical([1, 1, 2, 3, 1], ["b", "c", "a"])
         self.assertFalse(c.ordered)
         self.assertFalse(c.grouping.isdisplaysorted)
 
-        d = Categorical([1, 1, 2, 3, 1], ['b', 'c', 'a'], sort_gb=True)
+        d = Categorical([1, 1, 2, 3, 1], ["b", "c", "a"], sort_gb=True)
         self.assertFalse(d.ordered)
         self.assertTrue(d.grouping.isdisplaysorted)
 
-        ds1 = Dataset({'catcol': c})
-        ds2 = Dataset({'catcol': d})
-        paths = [r'riptable/tests/temp/ds1.sds', r'riptable/tests/temp/ds2.sds']
+        ds1 = Dataset({"catcol": c})
+        ds2 = Dataset({"catcol": d})
+        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
 
         ds1.save(paths[0])
         ds2.save(paths[1])
@@ -488,41 +492,41 @@ class Grouping_Test(unittest.TestCase):
     def test_ema(self):
         arrsize = 100
         numrows = 20
-        ds = Dataset({'time': arange(arrsize * 1.0)})
+        ds = Dataset({"time": arange(arrsize * 1.0)})
         ds.data = np.random.randint(numrows, size=arrsize)
         ds.data2 = np.random.randint(numrows, size=arrsize)
-        symbols = ['ZYGO', 'YHOO', 'FB', 'GOOG', 'IBM']
+        symbols = ["ZYGO", "YHOO", "FB", "GOOG", "IBM"]
         ds.symbol2 = Cat(
             1 + ds.data,
             [
-                'A',
-                'B',
-                'C',
-                'D',
-                'E',
-                'F',
-                'G',
-                'H',
-                'I',
-                'J',
-                'K',
-                'L',
-                'M',
-                'N',
-                'O',
-                'P',
-                'Q',
-                'R',
-                'S',
-                'T',
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "F",
+                "G",
+                "H",
+                "I",
+                "J",
+                "K",
+                "L",
+                "M",
+                "N",
+                "O",
+                "P",
+                "Q",
+                "R",
+                "S",
+                "T",
             ],
         )
         ds.symbol = Cat(1 + arange(arrsize) % len(symbols), symbols)
         result = ds.data.ema_decay(ds.time, 2.2)
 
-        result = ds.data.ema_decay(ds.time, 2.2, filter=ds.symbol == 'YHOO')
+        result = ds.data.ema_decay(ds.time, 2.2, filter=ds.symbol == "YHOO")
 
-        gb = ds.gb('symbol')
+        gb = ds.gb("symbol")
         prev = gb.grouping.iprevkey
         next = gb.grouping.inextkey
 
@@ -534,21 +538,21 @@ class Grouping_Test(unittest.TestCase):
         # all of them should be 30000 except invalid bin
         x = (nCountGroup == 3000).sum()
         self.assertTrue(x == 1000)
-        self.assertTrue(np.all(nCountGroup == y['nCountGroup']))
+        self.assertTrue(np.all(nCountGroup == y["nCountGroup"]))
         z = bincount(c)
         self.assertTrue(np.all(nCountGroup[1:] == z))
 
         c = np.random.randint(0, 1000, 1_000_000)
         x = groupbyhash(c)
-        ncountgroup = rc.BinCount(x['iKey'], x['unique_count'] + 1)
-        y = groupbypack(x['iKey'], ncountgroup)
-        self.assertTrue(np.all(ncountgroup == y['nCountGroup']))
+        ncountgroup = rc.BinCount(x["iKey"], x["unique_count"] + 1)
+        y = groupbypack(x["iKey"], ncountgroup)
+        self.assertTrue(np.all(ncountgroup == y["nCountGroup"]))
 
         c1 = Cat(c)
-        pack = groupbypack(x['iKey'], None, c1.unique_count + 1)
-        self.assertTrue(np.all(ncountgroup == pack['nCountGroup']))
-        pack2 = groupbypack(x['iKey'], ncountgroup, None)
-        self.assertTrue(np.all(pack2['iFirstGroup'] == pack['iFirstGroup']))
+        pack = groupbypack(x["iKey"], None, c1.unique_count + 1)
+        self.assertTrue(np.all(ncountgroup == pack["nCountGroup"]))
+        pack2 = groupbypack(x["iKey"], ncountgroup, None)
+        self.assertTrue(np.all(pack2["iFirstGroup"] == pack["iFirstGroup"]))
 
         ## every 1 in 1000 is unique
         # c1=Cat(c)
@@ -573,21 +577,27 @@ class Grouping_Test(unittest.TestCase):
     def test_take_groups(self):
         ## Case 1: Basic operation.
         # Create a grouping from some data.
-        key_data1 = rt.FA([1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6])
+        key_data1 = rt.FA(
+            [1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6]
+        )
         g1 = rt.Grouping(key_data1)
 
         # Create another data array the same length as the key for the Grouping.
         data1 = rt.arange(len(key_data1))
 
         # Extract elements from the data array where they correspond to even-numbered groups.
-        result1 = Grouping.take_groups(data1, rt.FA([2, 4, 6]), g1.ncountgroup, g1.ifirstgroup)
+        result1 = Grouping.take_groups(
+            data1, rt.FA([2, 4, 6]), g1.ncountgroup, g1.ifirstgroup
+        )
 
         assert_array_equal(rt.FA([1, 2, 6, 7, 8, 9, 15, 16, 17, 18, 19, 20]), result1)
 
     def test_extract_groups(self):
         ## Case 1: Basic operation.
         # Create a grouping from some data.
-        key_data1 = rt.FA([1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6])
+        key_data1 = rt.FA(
+            [1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6]
+        )
         g1 = rt.Grouping(key_data1)
 
         # Create another data array the same length as the key for the Grouping.
@@ -597,7 +607,9 @@ class Grouping_Test(unittest.TestCase):
         group_mask1 = rt.arange(len(g1.ncountgroup)) % 2 == 0
 
         # Extract elements from the data array where they correspond to even-numbered groups.
-        result1 = Grouping.extract_groups(group_mask1, data1, g1.ncountgroup, g1.ifirstgroup)
+        result1 = Grouping.extract_groups(
+            group_mask1, data1, g1.ncountgroup, g1.ifirstgroup
+        )
 
         assert_array_equal(rt.FA([1, 2, 6, 7, 8, 9, 15, 16, 17, 18, 19, 20]), result1)
 
@@ -609,7 +621,7 @@ def test_merge_cats_stringcat_with_empty():
     ]  # Arbitrary; specify the lengths of our test Cats here so we can re-use the lengths below for consistency.
 
     indices = np.hstack([np.full(cat_lens[0], 1), np.full(cat_lens[1], 2)])
-    listcats = [rt.FA([b'2019/12/21', b'', b'2019/12/21'], dtype='|S32')]
+    listcats = [rt.FA([b"2019/12/21", b"", b"2019/12/21"], dtype="|S32")]
     idx_cutoffs = np.cumsum(cat_lens)
     uniques_cutoffs = [np.array([1, 3], dtype=np.int64)]
     assert len(listcats) == len(uniques_cutoffs)
@@ -621,5 +633,5 @@ def test_merge_cats_stringcat_with_empty():
     assert len(stacked_uniques[0]) == 2
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

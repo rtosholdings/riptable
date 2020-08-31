@@ -1,4 +1,4 @@
-__all__ = ['MetaData', 'meta_from_version', 'META_VERSION']
+__all__ = ["MetaData", "meta_from_version", "META_VERSION"]
 
 import json
 from ..rt_enum import TypeId, TypeRegister, DisplayLength, CategoryMode
@@ -13,55 +13,55 @@ version_dict = {
     0: {
         TypeId.Categorical: {
             # vars for container loader
-            'name': 'Categorical',
-            'typeid': TypeId.Categorical,
-            'version': 0,
+            "name": "Categorical",
+            "typeid": TypeId.Categorical,
+            "version": 0,
             # vars for additional arrays
-            'colnames': [],
-            'ncols': 0,
+            "colnames": [],
+            "ncols": 0,
             # vars to rebuild the same categorical
-            'instance_vars': {
-                'mode': CategoryMode.StringArray,
-                'base_index': 1,
-                'ordered': False,
-                'sorted': False,
+            "instance_vars": {
+                "mode": CategoryMode.StringArray,
+                "base_index": 1,
+                "ordered": False,
+                "sorted": False,
             },
         },
         TypeId.Dataset: None,
         TypeId.Struct: None,
         TypeId.DateTimeNano: {
-            'name': 'DateTimeNano',
-            'typeid': TypeId.DateTimeNano,
-            'ncols': 0,
-            'version': 0,
-            'instance_vars': {
-                '_display_length': DisplayLength.Long,
-                '_timezone_str': 'America/New York',
-                '_to_tz': 'NYC',
+            "name": "DateTimeNano",
+            "typeid": TypeId.DateTimeNano,
+            "ncols": 0,
+            "version": 0,
+            "instance_vars": {
+                "_display_length": DisplayLength.Long,
+                "_timezone_str": "America/New York",
+                "_to_tz": "NYC",
             },
         },
         TypeId.TimeSpan: {
-            'name': 'TimeSpan',
-            'typeid': TypeId.TimeSpan,
-            'ncols': 0,
-            'version': 0,
-            'instance_vars': {'_display_length': DisplayLength.Long},
+            "name": "TimeSpan",
+            "typeid": TypeId.TimeSpan,
+            "ncols": 0,
+            "version": 0,
+            "instance_vars": {"_display_length": DisplayLength.Long},
         },
     }
 }
 
 
 def meta_from_version(cls, vnum):
-    '''
+    """
     Returns a dictionary of meta data defaults.
-    '''
+    """
     id = getattr(TypeId, cls.__name__)
     return version_dict[vnum][id]
 
 
 class MetaData:
 
-    default_dict = {'name': "", 'typeid': TypeId.Default}
+    default_dict = {"name": "", "typeid": TypeId.Default}
 
     def __init__(self, metadict={}):
         self._dict = self.default_dict.copy()
@@ -86,11 +86,11 @@ class MetaData:
 
     @property
     def name(self):
-        return self['name']
+        return self["name"]
 
     @property
     def typeid(self):
-        return self['typeid']
+        return self["typeid"]
 
     @property
     def itemclass(self):
@@ -99,9 +99,9 @@ class MetaData:
         Both will lookup the items class in the TypeRegister, which holds classname -> itemclass.
         """
         try:
-            classname = self['classname']
+            classname = self["classname"]
         except:
-            classname = TypeId(self['typeid']).name
+            classname = TypeId(self["typeid"]).name
         return getattr(TypeRegister, classname)
 
     # pass these to dict

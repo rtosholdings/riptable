@@ -72,7 +72,8 @@ def one_of_categorical_values(draw):
 
 
 @pytest.mark.skipif(
-    is_running_in_teamcity(), reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds."
+    is_running_in_teamcity(),
+    reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds.",
 )
 @given(data())
 @pytest.mark.parametrize(
@@ -103,7 +104,7 @@ def one_of_categorical_values(draw):
                 dtype=integer_dtypes(endianness="=", sizes=(64,)),
                 elements=integers(min_value=1, max_value=np.iinfo(np.int64).max),
                 fill=integers(min_value=0, max_value=np.iinfo(np.int64).max),
-                unique=True
+                unique=True,
             ),
             id="integer_dtype_unique",
         ),
@@ -153,7 +154,8 @@ def test_categorical_ctor(value_strategy, category_mode, data):
 # E   hypothesis.errors.FailedHealthCheck: Data generation is extremely slow: Only produced 7 valid examples in 1.06 seconds (0 invalid ones and 5 exceeded maximum size). Try decreasing size of the data you're generating (with e.g.max_size or max_leaves parameters).
 # As is, the unsigned_integer_dtype case uses min and max values for data generation.
 @pytest.mark.skipif(
-    is_running_in_teamcity(), reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds."
+    is_running_in_teamcity(),
+    reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds.",
 )
 @hypothesis.settings(suppress_health_check=[HealthCheck.too_slow])
 @given(data())
@@ -270,7 +272,10 @@ def test_falsifying_categorical_ctor(data):
     Categorical(data)
 
 
-@pytest.mark.skipif(True, reason="RIP-452: Mutikey Categorical isin is consistent with its single key isin alternative")
+@pytest.mark.skipif(
+    True,
+    reason="RIP-452: Mutikey Categorical isin is consistent with its single key isin alternative",
+)
 def test_multikey_categorical_isin():
     # See Python/core/riptable/tests/test_categorical.py test_multikey_categorical_isin as an example
     pass

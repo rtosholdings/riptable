@@ -22,11 +22,11 @@ _DEBUG: bool = False  # toggle to enable stdout logging
 
 def _is_public(name: str) -> bool:
     """Returns True if a method is not protected, nor private; otherwise False."""
-    return not (name.startswith('__') or name.startswith('_'))
+    return not (name.startswith("__") or name.startswith("_"))
 
 
 def _get_key_names(obj: object) -> List[str]:
-    if hasattr(obj, 'keys'):
+    if hasattr(obj, "keys"):
         return obj.keys()
     return []
 
@@ -42,9 +42,9 @@ def _ns_search(name: str) -> Optional[object]:
 
     # check ipython namespace table
     chain_map = ChainMap(
-        ip.ns_table.get('user_local'),
-        ip.ns_table.get('user_global'),
-        ip.ns_table.get('builtin'),
+        ip.ns_table.get("user_local"),
+        ip.ns_table.get("user_global"),
+        ip.ns_table.get("builtin"),
     )
     if name in chain_map:
         return chain_map.get(name)
@@ -90,12 +90,12 @@ def _monkey_patched__complete(
     if cursor_pos is None:
         cursor_pos = len(line_buffer) if text is None else len(text)
 
-    #if self.use_main_ns:
+    # if self.use_main_ns:
     #    self.namespace = __main__.__dict__
 
     # if text is either None or an empty string, rely on the line buffer
     if (not line_buffer) and full_text:
-        line_buffer = full_text.split('\n')[cursor_line]
+        line_buffer = full_text.split("\n")[cursor_line]
     if not text:
         text = self.splitter.split_line(line_buffer, cursor_pos)
 
@@ -104,16 +104,16 @@ def _monkey_patched__complete(
         base_text = text if not line_buffer else line_buffer[:cursor_pos]
         latex_text, latex_matches = self.latex_matches(base_text)
         if latex_matches:
-            return latex_text, latex_matches, ['latex_matches'] * len(latex_matches), ()
-        name_text = ''
+            return latex_text, latex_matches, ["latex_matches"] * len(latex_matches), ()
+        name_text = ""
         name_matches = []
 
         # region monkey patched region
         # The latex namespace searches can be more defensive by falling back to a local implementation of these function
         # definitions if they are not found from _ns_search.
         back_latex_name_matches, back_unicode_name_matches = (
-            _ns_search('back_latex_name_matches'),
-            _ns_search('back_unicode_name_matches'),
+            _ns_search("back_latex_name_matches"),
+            _ns_search("back_unicode_name_matches"),
         )
         if back_latex_name_matches and back_unicode_name_matches:
             # endregion monkey patched region
@@ -129,8 +129,8 @@ def _monkey_patched__complete(
                     # region monkey patched region
                     # As of IPython 7.10.2, MATCHES_LIMIT is set to 500
                     MATCHES_LIMIT = (
-                        _ns_search('MATCHES_LIMIT')
-                        if _ns_search('MATCHES_LIMIT')
+                        _ns_search("MATCHES_LIMIT")
+                        if _ns_search("MATCHES_LIMIT")
                         else 500
                     )
                     # endregion monkey patched region
@@ -195,7 +195,7 @@ def _monkey_patched__complete(
     _filtered_matches = []
     if _DEBUG:
         print(
-            f'IPCompleter.monkey_patched__complete: check if {text + _PRESERVE_ORDER_SENTINEL} in matches={[m[0] for m in matches]}\n'
+            f"IPCompleter.monkey_patched__complete: check if {text + _PRESERVE_ORDER_SENTINEL} in matches={[m[0] for m in matches]}\n"
         )
     # region monkey patched region
     matches_text = [
@@ -206,10 +206,10 @@ def _monkey_patched__complete(
         _filtered_matches = matches
         if _DEBUG:
             print(
-                f'IPCompleter.monkey_patched__complete: custom completion path: check matches={[m[0] for m in matches]}\n\tmatches{matches}'
+                f"IPCompleter.monkey_patched__complete: custom completion path: check matches={[m[0] for m in matches]}\n\tmatches{matches}"
             )
     else:
-        completions_sorting_key_fn = _ns_search('completions_sorting_key')
+        completions_sorting_key_fn = _ns_search("completions_sorting_key")
         if not completions_sorting_key_fn:
             # completions_sorting_key is pulled in from IPython 7.10.2 in the event we cannot find this function in the namespace
             def completions_sorting_key(word):
@@ -223,20 +223,20 @@ def _monkey_patched__complete(
                 """
                 prio1, prio2 = 0, 0
 
-                if word.startswith('__'):
+                if word.startswith("__"):
                     prio1 = 2
-                elif word.startswith('_'):
+                elif word.startswith("_"):
                     prio1 = 1
 
-                if word.endswith('='):
+                if word.endswith("="):
                     prio1 = -1
 
-                if word.startswith('%%'):
+                if word.startswith("%%"):
                     # If there's another % in there, this is something else, so leave it alone
                     if not "%" in word[2:]:
                         word = word[2:]
                         prio2 = 2
-                elif word.startswith('%'):
+                elif word.startswith("%"):
                     if not "%" in word[1:]:
                         word = word[1:]
                         prio2 = 1
@@ -249,7 +249,7 @@ def _monkey_patched__complete(
         )
     # endregion monkey patched region
 
-    custom_res = [(m, 'custom') for m in self.dispatch_custom_completer(text) or []]
+    custom_res = [(m, "custom") for m in self.dispatch_custom_completer(text) or []]
 
     _filtered_matches = custom_res or _filtered_matches
 
@@ -278,7 +278,7 @@ def _set_custom_attribute_completion() -> None:
         obj: object, existing_completions: List[str]
     ) -> List[str]:
         key_names: List[str] = []  # grab keys if they are available
-        if hasattr(obj, '_ipython_key_completions_'):
+        if hasattr(obj, "_ipython_key_completions_"):
             key_names = obj._ipython_key_completions_()
         elif hasattr(obj, "keys"):
             key_names = obj.keys()

@@ -40,40 +40,40 @@ sorted_codes = FastArray(
 )
 str_fa = FastArray(
     [
-        'c',
-        'e',
-        'e',
-        'd',
-        'c',
-        'b',
-        'd',
-        'c',
-        'a',
-        'b',
-        'd',
-        'e',
-        'c',
-        'a',
-        'e',
-        'd',
-        'b',
-        'a',
-        'b',
-        'c',
-        'd',
-        'b',
-        'e',
-        'c',
-        'c',
-        'd',
-        'e',
-        'c',
-        'a',
-        'c',
+        "c",
+        "e",
+        "e",
+        "d",
+        "c",
+        "b",
+        "d",
+        "c",
+        "a",
+        "b",
+        "d",
+        "e",
+        "c",
+        "a",
+        "e",
+        "d",
+        "b",
+        "a",
+        "b",
+        "c",
+        "d",
+        "b",
+        "e",
+        "c",
+        "c",
+        "d",
+        "e",
+        "c",
+        "a",
+        "c",
     ]
 )
-complete_unique_cats = FastArray(['a', 'b', 'c', 'd', 'e'])
-big_cats = FastArray(['string' + str(i) for i in range(2000)])
+complete_unique_cats = FastArray(["a", "b", "c", "d", "e"])
+big_cats = FastArray(["string" + str(i) for i in range(2000)])
 matlab_codes = (sorted_codes + 1).astype(np.float32)
 
 
@@ -142,5 +142,5 @@ class Categorical_dtype_Test(unittest.TestCase):
             c = Categorical(sorted_codes, big_cats, dtype=np.int8)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

@@ -1,4 +1,4 @@
-__all__ = ['AccumTable', 'accum_ratio', 'accum_ratiop', 'accum_cols']
+__all__ = ["AccumTable", "accum_ratio", "accum_ratiop", "accum_cols"]
 
 
 import numpy as np
@@ -41,6 +41,7 @@ class AccumTable(Accum2):
     showfilter: bool
         Whether to include groupings whose values were all filtered out
     """
+
     # -------------------------------------------------------
     def __init__(cls, cat_rows, cat_cols, filter=None, showfilter=False):
         pass
@@ -64,7 +65,9 @@ class AccumTable(Accum2):
         AccumTable
             The new instance
         """
-        instance = super(AccumTable, cls).__new__(cls, cat_rows, cat_cols, filter, showfilter)
+        instance = super(AccumTable, cls).__new__(
+            cls, cat_rows, cat_cols, filter, showfilter
+        )
         instance._inner = OrderedDict()
         instance._rows = OrderedDict()
         instance._cols = OrderedDict()
@@ -81,9 +84,9 @@ class AccumTable(Accum2):
         str
             The repr string
         """
-        res = 'Inner Tables: ' + str(list(self._inner.keys())) + '\n'
-        res += 'Margin Columns: ' + str(list(self._cols.keys())) + '\n'
-        res += 'Footer Rows: ' + str(list(self._rows.keys()))
+        res = "Inner Tables: " + str(list(self._inner.keys())) + "\n"
+        res += "Margin Columns: " + str(list(self._cols.keys())) + "\n"
+        res += "Footer Rows: " + str(list(self._rows.keys()))
         return res
 
     # -------------------------------------------------------
@@ -104,9 +107,9 @@ class AccumTable(Accum2):
             If `ds` is not a Dataset
         """
         if not type(name) is str:
-            raise IndexError('name must be a string table name')
+            raise IndexError("name must be a string table name")
         if not isinstance(ds, TypeRegister.Dataset):
-            raise ValueError('ds must be a Dataset')
+            raise ValueError("ds must be a Dataset")
         self._inner[name] = ds
         self._rows[name] = None
         self._cols[name] = None
@@ -132,7 +135,7 @@ class AccumTable(Accum2):
             If `index` is not a string (table name).
         """
         if not type(index) is str:
-            raise IndexError('Index must be a string table name')
+            raise IndexError("Index must be a string table name")
         self._default_inner_name = index
         return self._inner[index]
 
@@ -199,13 +202,15 @@ class AccumTable(Accum2):
         table_name = self._default_inner_name if table_name is None else table_name
         self._default_inner_name = table_name
         if table_name is None:
-            raise ValueError('Must specify a table name')
+            raise ValueError("Must specify a table name")
         orig = self._inner[table_name]
 
         # Remove blanks, as required, and set the row filter
         if remove_blanks:
             (clean, row_filter, _) = orig.copy().trim(ret_filters=True)
-            row_filter = row_filter if row_filter is not None else slice(None, None, None)
+            row_filter = (
+                row_filter if row_filter is not None else slice(None, None, None)
+            )
         else:
             clean = orig.copy()
             row_filter = slice(None, None, None)
@@ -256,7 +261,20 @@ class AccumTable(Accum2):
             self._rows[k] = None
 
 
-def accum_ratio(cat1, cat2=None, val1=None, val2=None, filt1=None, filt2=None, func1='nansum', func2=None, return_table=False, include_numer=False, include_denom=True, remove_blanks=True):
+def accum_ratio(
+    cat1,
+    cat2=None,
+    val1=None,
+    val2=None,
+    filt1=None,
+    filt2=None,
+    func1="nansum",
+    func2=None,
+    return_table=False,
+    include_numer=False,
+    include_denom=True,
+    remove_blanks=True,
+):
     """
     Compute a bucketed ratio of two accums, using AccumTable.
 
@@ -294,8 +312,10 @@ def accum_ratio(cat1, cat2=None, val1=None, val2=None, filt1=None, filt2=None, f
     """
     # Handle missing inputs
     if val1 is None:
-        raise ValueError('Missing argument val1')
-    if (val2 is None) & (cat2 is not None) & (val1 is not None):  # Passing as accum_ratio(cat1, val1, val2), omitting cat2 argument
+        raise ValueError("Missing argument val1")
+    if (
+        (val2 is None) & (cat2 is not None) & (val1 is not None)
+    ):  # Passing as accum_ratio(cat1, val1, val2), omitting cat2 argument
         val2 = val1
         val1 = cat2
         cat2 = None
@@ -306,12 +326,14 @@ def accum_ratio(cat1, cat2=None, val1=None, val2=None, filt1=None, filt2=None, f
     if func2 is None:
         func2 = func1
     if cat2 is None:
-        cat2 = Categorical(full(val1.shape[0], 1, dtype=np.int8), ['NotGrouped'])  # This was playa.utils.onescol
+        cat2 = Categorical(
+            full(val1.shape[0], 1, dtype=np.int8), ["NotGrouped"]
+        )  # This was playa.utils.onescol
 
     # Handle name collisions
-    for key in ['Numer', 'Denom', 'Ratio']:
+    for key in ["Numer", "Denom", "Ratio"]:
         if key in cat2.categories():
-            cat2.category_replace(key, key + '_')
+            cat2.category_replace(key, key + "_")
 
     # Compute accum
     accum = AccumTable(cat1, cat2)
@@ -319,21 +341,37 @@ def accum_ratio(cat1, cat2=None, val1=None, val2=None, filt1=None, filt2=None, f
     func1 = getattr(accum, func1)
     func2 = getattr(accum, func2)
     # TODO: In the future, when arbitrary functions are allowed in Accum2 calls, handle a missing attr here by passing it in by name
-    accum['Numer'] = func1(val1, filter=filt1)
-    accum['Denom'] = func2(val2, filter=filt2)
+    accum["Numer"] = func1(val1, filter=filt1)
+    accum["Denom"] = func2(val2, filter=filt2)
 
-    accum['Ratio'] = accum['Numer'] / accum['Denom']
+    accum["Ratio"] = accum["Numer"] / accum["Denom"]
 
     if return_table:
         return accum
     else:
-        footers = [label for (label, boolean) in zip(['Numer', 'Denom'], [include_numer, include_denom]) if boolean]
+        footers = [
+            label
+            for (label, boolean) in zip(
+                ["Numer", "Denom"], [include_numer, include_denom]
+            )
+            if boolean
+        ]
         accum.set_margin_columns(footers)
         accum.set_footer_rows(footers)
-        return accum.gen('Ratio', remove_blanks=remove_blanks)
+        return accum.gen("Ratio", remove_blanks=remove_blanks)
 
 
-def accum_ratiop(cat1, cat2=None, val=None, filter=None, func='nansum', norm_by='T', include_total=True, remove_blanks=True, filt=None):
+def accum_ratiop(
+    cat1,
+    cat2=None,
+    val=None,
+    filter=None,
+    func="nansum",
+    norm_by="T",
+    include_total=True,
+    remove_blanks=True,
+    filt=None,
+):
     """
     Compute an internal ratio, either by Total (T), Row (R), or Column (C).
 
@@ -368,14 +406,20 @@ def accum_ratiop(cat1, cat2=None, val=None, filter=None, func='nansum', norm_by=
     if val is None:
         val = full(cat1.shape[0], 1, dtype=np.float64)  # This was playa.utils.onescol
     if filter is None:
-        if filt is not None: # Temporary until deprecated
-            warnings.warn('Kwarg "filt" is being deprecated for "filter" to align with common syntax. "filt" will be removed in a future version', FutureWarning)
+        if filt is not None:  # Temporary until deprecated
+            warnings.warn(
+                'Kwarg "filt" is being deprecated for "filter" to align with common syntax. "filt" will be removed in a future version',
+                FutureWarning,
+            )
             filter = filt
         else:
-            filter = full(val.shape[0], True, dtype=bool)  # This was playa.utils.truecol
+            filter = full(
+                val.shape[0], True, dtype=bool
+            )  # This was playa.utils.truecol
     if cat2 is None:
-        cat2 = Categorical(full(val.shape[0], 1, dtype=np.int8), ['NotGrouped'])  # This was playa.utils.onescol
-
+        cat2 = Categorical(
+            full(val.shape[0], 1, dtype=np.int8), ["NotGrouped"]
+        )  # This was playa.utils.onescol
 
     # Compute accum
     accum = AccumTable(cat1, cat2)
@@ -383,38 +427,65 @@ def accum_ratiop(cat1, cat2=None, val=None, filter=None, func='nansum', norm_by=
     func_name = func
     func = getattr(accum, func_name)
     # TODO: In the future, when arbitrary functions are allowed in Accum2 calls, handle a missing attr here by passing it in by name
-    accum['TotalRatio'] = func(val, filter=filter)
+    accum["TotalRatio"] = func(val, filter=filter)
     if include_total:
-        accum['Total'] = func(val, filter=filter)
+        accum["Total"] = func(val, filter=filter)
 
-    accumr = accum.gen('TotalRatio', remove_blanks=remove_blanks)
+    accumr = accum.gen("TotalRatio", remove_blanks=remove_blanks)
     if include_total:
         keys = accumr.keys()[1:-1]
     else:
         keys = accumr.keys()[1:]
 
-    if norm_by.upper() == 'T':
-        total = accumr.footer_get_dict()['TotalRatio']['TotalRatio']
-        accumr.footer_set_values('TotalRatio', {key: 100 * item / total for (key, item) in accumr.footer_get_dict()['TotalRatio'].items()})
+    if norm_by.upper() == "T":
+        total = accumr.footer_get_dict()["TotalRatio"]["TotalRatio"]
+        accumr.footer_set_values(
+            "TotalRatio",
+            {
+                key: 100 * item / total
+                for (key, item) in accumr.footer_get_dict()["TotalRatio"].items()
+            },
+        )
         for col in keys:
             accumr[col] = 100 * accumr[col] / total
-    elif norm_by.upper() == 'R':
-        total = accumr.footer_get_dict()['TotalRatio']['TotalRatio']
-        accumr.footer_set_values('TotalRatio', {key: 100 * item / total for (key, item) in accumr.footer_get_dict()['TotalRatio'].items()})
+    elif norm_by.upper() == "R":
+        total = accumr.footer_get_dict()["TotalRatio"]["TotalRatio"]
+        accumr.footer_set_values(
+            "TotalRatio",
+            {
+                key: 100 * item / total
+                for (key, item) in accumr.footer_get_dict()["TotalRatio"].items()
+            },
+        )
         for col in keys:
             accumr[col] = 100 * accumr[col] / accumr.TotalRatio
-    elif norm_by.upper() == 'C':
+    elif norm_by.upper() == "C":
         for col in keys:
-            total = accumr.footer_get_dict()['TotalRatio'][col]
+            total = accumr.footer_get_dict()["TotalRatio"][col]
             accumr[col] = 100 * accumr[col] / total
-        accumr.footer_set_values('TotalRatio', {key: 100.0 for (key, item) in accumr.footer_get_dict()['TotalRatio'].items()})
+        accumr.footer_set_values(
+            "TotalRatio",
+            {
+                key: 100.0
+                for (key, item) in accumr.footer_get_dict()["TotalRatio"].items()
+            },
+        )
     else:
-        raise ValueError(f'Invalid norm_by selection: {norm_by}. Valid choices are T, R, C.')
+        raise ValueError(
+            f"Invalid norm_by selection: {norm_by}. Valid choices are T, R, C."
+        )
 
     return accumr
 
 
-def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list='nansum', remove_blanks=True):
+def accum_cols(
+    cat,
+    val_list,
+    name_list=None,
+    filt_list=None,
+    func_list="nansum",
+    remove_blanks=True,
+):
     """
     Compute multiple accum calculations on the same categorical label, output as a single dataset.
 
@@ -449,17 +520,20 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list='nansum'
 
     # Handle missing inputs
     if name_list is None:
-        name_list = [f'col{n}' for n in range(len(val_list))]
+        name_list = [f"col{n}" for n in range(len(val_list))]
     if filt_list is None:
-        filt_list = full(val_list[0].shape[0], True, dtype=bool)  # This was playa.utils.truecol
+        filt_list = full(
+            val_list[0].shape[0], True, dtype=bool
+        )  # This was playa.utils.truecol
     if not isinstance(func_list, list):
         func_list = [func_list for _ in val_list]
     if not isinstance(filt_list, list):
         filt_list = [filt_list for _ in val_list]
 
-
     # Compute accum
-    temp_cat = Categorical(full(cat.shape[0], 1, dtype=np.int8), ['NotGrouped'])  # This was playa.utils.onescol
+    temp_cat = Categorical(
+        full(cat.shape[0], 1, dtype=np.int8), ["NotGrouped"]
+    )  # This was playa.utils.onescol
     accum = Accum2(cat, temp_cat)
 
     for (val, name, filt, func) in zip(val_list, name_list, filt_list, func_list):
@@ -467,25 +541,41 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list='nansum'
         func = getattr(accum, func_name)
         if isinstance(val, list):  # Special cases
             if isinstance(val[1], str):  # Named cases
-                if val[1] in 'pP':  # accum_ratiop type
-                    curr_data = accum_ratiop(cat, temp_cat, val[0], filt, func_name, 'T', False, False)
+                if val[1] in "pP":  # accum_ratiop type
+                    curr_data = accum_ratiop(
+                        cat, temp_cat, val[0], filt, func_name, "T", False, False
+                    )
                 else:
-                    raise ValueError(f'Invalid accum_cols specifier "{val[1]}" in second argument for column {name}')
+                    raise ValueError(
+                        f'Invalid accum_cols specifier "{val[1]}" in second argument for column {name}'
+                    )
             else:  # accum_ratio type
-                curr_data = accum_ratio(cat, temp_cat, val[0], val[1], filt, filt, func_name, func_name, remove_blanks=False)
+                curr_data = accum_ratio(
+                    cat,
+                    temp_cat,
+                    val[0],
+                    val[1],
+                    filt,
+                    filt,
+                    func_name,
+                    func_name,
+                    remove_blanks=False,
+                )
         else:
             # must pass multiple input params as list now
             curr_data = func([accum, val], filter=filt)
         try:
-            results[name] = curr_data['NotGrouped']
+            results[name] = curr_data["NotGrouped"]
         except NameError:
             # Get number of keys in (potentially) multikey categorical. This only happens once.
             cat_width = len(cat.category_dict)
             results = curr_data[:, 0:cat_width]
             results.footer_remove()
-            results[name] = curr_data['NotGrouped']
-        footer_val = list(curr_data.footer_get_dict().values())[0].get('NotGrouped', 0.0)
-        results.footer_set_values('Total', {name: footer_val})
+            results[name] = curr_data["NotGrouped"]
+        footer_val = list(curr_data.footer_get_dict().values())[0].get(
+            "NotGrouped", 0.0
+        )
+        results.footer_set_values("Total", {name: footer_val})
 
     if remove_blanks:
         return results.trim()

@@ -14,4 +14,4 @@ def is_running_in_teamcity() -> bool:
 
 
 def get_build_conf_name() -> Optional[str]:
-    return os.environ.get('TEAMCITY_BUILDCONF_NAME', None)
+    return os.environ.get("TEAMCITY_BUILDCONF_NAME", None)

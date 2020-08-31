@@ -8,7 +8,7 @@ from riptable import FastArray
 
 
 rand_nums = np.random.choice(30, 100)
-numeric_types = 'fd' + 'bB' + 'hH' + 'iIlL' + 'qQpP'  # + '?'
+numeric_types = "fd" + "bB" + "hH" + "iIlL" + "qQpP"  # + '?'
 
 
 @pytest.mark.parametrize("dt_char", list(numeric_types))
@@ -50,13 +50,13 @@ def test_numeric_accuracy(dt_char, lex):
     )
 
 
-@pytest.mark.parametrize("dt_char", list('US'))
+@pytest.mark.parametrize("dt_char", list("US"))
 @pytest.mark.parametrize("lex", [False, True])
 def test_string_accuracy(dt_char, lex):
     target_dtype = np.dtype(dt_char)
 
     rand_strings = (
-        np.random.choice(['test_string' + str(i) for i in range(30)], 100)
+        np.random.choice(["test_string" + str(i) for i in range(30)], 100)
         .astype(target_dtype, copy=False)
         .view(FastArray)
     )
@@ -97,7 +97,7 @@ def test_string_accuracy(dt_char, lex):
 #       back to the 'numeric_types' variable above, then this test can be removed
 #       (since bools will be included in the test_numeric_accuracy test).
 @pytest.mark.xfail(reason="RIP-371: Grouping returns incorrect results for bool array")
-@pytest.mark.parametrize("dt_char", list('?'))
+@pytest.mark.parametrize("dt_char", list("?"))
 @pytest.mark.parametrize("lex", [False, True])
 def test_bool_accuracy(dt_char, lex):
     target_dtype = np.dtype(dt_char)

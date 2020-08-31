@@ -5,10 +5,10 @@ from riptable import cut, qcut, FA, Categorical, FastArray, arange
 
 
 class Cut_Test(unittest.TestCase):
-    '''
+    """
     TODO: add more tests for different types
     also include string types
-    '''
+    """
 
     def test_cut(self):
         c = cut(arange(10), 3)
@@ -26,12 +26,12 @@ class Cut_Test(unittest.TestCase):
         c = cut(
             FA([2, 4, 6, 8, 10]),
             FA([0, 2, 4, 6, 8, 10]),
-            labels=['a', 'b', 'c', 'd', 'e'],
+            labels=["a", "b", "c", "d", "e"],
         )
         self.assertTrue(sum(c._np - FA([1, 2, 3, 4, 5])) == 0)
 
         a = np.array([1, 7, 5, 4, 6, 3])
-        l = FA([b'1.0->3.0', b'3.0->5.0', b'5.0->7.0'])
+        l = FA([b"1.0->3.0", b"3.0->5.0", b"5.0->7.0"])
 
         c = cut(a, 3)
         self.assertIsInstance(c, Categorical)
@@ -69,7 +69,7 @@ class Cut_Test(unittest.TestCase):
         x = arange(4).reshape(2, 2)
         knots = [-0.5, 0.5, 1.5, 2.5, 3.5]
         c = cut(x[:, 1], knots)
-        l = FastArray([b'-0.5->0.5', b'0.5->1.5', b'1.5->2.5', b'2.5->3.5'])
+        l = FastArray([b"-0.5->0.5", b"0.5->1.5", b"1.5->2.5", b"2.5->3.5"])
         self.assertTrue((c.category_array == l).all())
 
     def test_qcut(self):
@@ -100,7 +100,7 @@ class Cut_Test(unittest.TestCase):
         self.assertTrue(
             (
                 c.category_array
-                == [b'Clipped', b'0.0->1.0', b'1.0->2.0', b'2.0->3.0', b'3.0->4.0']
+                == [b"Clipped", b"0.0->1.0", b"1.0->2.0", b"2.0->3.0", b"3.0->4.0"]
             ).all()
         )
 
@@ -110,7 +110,7 @@ class Cut_Test(unittest.TestCase):
         self.assertTrue(
             (
                 c.category_array
-                == [b'Clipped', b'0.0->1.0', b'1.0->2.0', b'2.0->3.0', b'3.0->4.0']
+                == [b"Clipped", b"0.0->1.0", b"1.0->2.0", b"2.0->3.0", b"3.0->4.0"]
             ).all()
         )
 
@@ -120,7 +120,7 @@ class Cut_Test(unittest.TestCase):
         self.assertTrue(
             (
                 c.category_array
-                == [b'Clipped', b'0.0->1.0', b'1.0->2.0', b'2.0->3.0', b'3.0->4.0']
+                == [b"Clipped", b"0.0->1.0", b"1.0->2.0", b"2.0->3.0", b"3.0->4.0"]
             ).all()
         )
 
@@ -132,14 +132,14 @@ class Cut_Test(unittest.TestCase):
                 [
                     (h == t)
                     for (h, t) in zip(
-                        c.expand_array.astype('U'),
-                        ['good', 'good', 'medium', 'bad', 'bad'],
+                        c.expand_array.astype("U"),
+                        ["good", "good", "medium", "bad", "bad"],
                     )
                 ]
             ).all()
         )
         self.assertTrue(
-            (c.category_array == [[b'Clipped', b'good', b'medium', b'bad']]).all()
+            (c.category_array == [[b"Clipped", b"good", b"medium", b"bad"]]).all()
         )
 
         c = qcut(range(5), 4, labels=False)
@@ -151,7 +151,7 @@ class Cut_Test(unittest.TestCase):
             c = cut(
                 FA([2, 4, 6, 8, 10]),
                 FA([0, 2, 4, 6, 8, 10]),
-                labels=['a', 'b', 'c', 'd', 'e', 'f'],
+                labels=["a", "b", "c", "d", "e", "f"],
             )
 
 

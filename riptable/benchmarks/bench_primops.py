@@ -33,7 +33,7 @@ from .runner import create_comparison_dataset, create_trial_dataset
 from ..rt_enum import TypeRegister, NumpyCharTypes
 from ..rt_dataset import Dataset
 from ..rt_numpy import empty
-from ..rt_utils import mbget, _mbget_2dims #, mbget_numba
+from ..rt_utils import mbget, _mbget_2dims  # , mbget_numba
 
 
 logger = logging.getLogger(__name__)
@@ -79,13 +79,17 @@ def mbget_numba(aValues, aIndex) -> np.ndarray:
         aIndex = TypeRegister.FastArray(aIndex)
 
     if not isinstance(aValues, np.ndarray) or not isinstance(aIndex, np.ndarray):
-        raise TypeError(f"Values and index must be numpy arrays. Got {type(aValues)} {type(aIndex)}")
+        raise TypeError(
+            f"Values and index must be numpy arrays. Got {type(aValues)} {type(aIndex)}"
+        )
 
-    elif aValues.dtype.char == 'O':
+    elif aValues.dtype.char == "O":
         raise TypeError(f"mbget does not support object types")
 
     elif aIndex.dtype.char not in NumpyCharTypes.AllInteger:
-        raise TypeError(f"indices provided to mbget must be an integer type not {aIndex.dtype}")
+        raise TypeError(
+            f"indices provided to mbget must be an integer type not {aIndex.dtype}"
+        )
 
     if aValues.ndim == 2:
         return _mbget_2dims(aValues, aIndex)
@@ -96,7 +100,9 @@ def mbget_numba(aValues, aIndex) -> np.ndarray:
     elif aValues.dtype.char in "SU":
         result = _mbget_string(aValues, aIndex)
     else:
-        raise Exception(f"mbget can't operate on an array of this type: {aValues.dtype}")
+        raise Exception(
+            f"mbget can't operate on an array of this type: {aValues.dtype}"
+        )
 
     result = TypeRegister.newclassfrominstance(result, aValues)
 
@@ -108,7 +114,11 @@ def _mbget_numeric(aValues, aIndex) -> np.ndarray:
 
     # Choose different implementation for signed vs. unsigned dtype.
     # See comment in mbget_string for details.
-    _mbget_numeric_impl = _mbget_numeric_unsigned_impl if aIndex.dtype.kind == 'u' else _mbget_numeric_signed_impl
+    _mbget_numeric_impl = (
+        _mbget_numeric_unsigned_impl
+        if aIndex.dtype.kind == "u"
+        else _mbget_numeric_signed_impl
+    )
     _mbget_numeric_impl(aValues, aIndex, result, result.inv)
     return result
 
@@ -137,7 +147,7 @@ def _mbget_numeric_unsigned_impl(aValues, aIndex, result, default_val):
         result[i] = aValues[index] if index < num_elmnts else default_val
 
 
-#not using a default value here since we're handling byte strings only (default val. is 0)
+# not using a default value here since we're handling byte strings only (default val. is 0)
 def _mbget_string(aValues, aIndex) -> np.ndarray:
     result = empty(len(aIndex), dtype=aValues.dtype)
     itemsize = aValues.dtype.itemsize // 1  # ASCII
@@ -148,7 +158,11 @@ def _mbget_string(aValues, aIndex) -> np.ndarray:
     # is poor; for that same reason, numba fails with an error on the uint64 type since it tries to cast
     # the index value to a float before we use it as an array index (which isn't allowed).
     # TODO: This decision could probably be pushed into the numba JIT-specialized generic so we don't need to choose here?
-    _mbget_string_impl = _mbget_string_unsigned_impl if aIndex.dtype.kind == 'u' else _mbget_string_signed_impl
+    _mbget_string_impl = (
+        _mbget_string_unsigned_impl
+        if aIndex.dtype.kind == "u"
+        else _mbget_string_signed_impl
+    )
     _mbget_string_impl(aValues.view(np.uint8), aIndex, result.view(np.uint8), itemsize)
     return result
 
@@ -183,9 +197,9 @@ def _mbget_string_unsigned_impl(aValues, aIndex, result, itemsize):  # byte arra
 
 
 def astype_numba(arr, dst_dtype):
-    #only supports numeric-to-numeric type conversions
+    # only supports numeric-to-numeric type conversions
     if arr.dtype.char in "SU" or dst_dtype.char in "SU":
-        raise Exception (f"Only numeric-to-numeric type conversions are supported.")
+        raise Exception(f"Only numeric-to-numeric type conversions are supported.")
     result = empty(arr.shape[0], dtype=dst_dtype)
     _astype_numba(arr, result)
     return result
@@ -226,31 +240,14 @@ def bench_bool_index(**kwargs) -> Dataset:
         # TODO: Add 100M, 1G and 2G -- these need to be optional since smaller machines will run out of memory
         #       and also take longer than typical trials
     ]
-    true_ratios = [
-        0.0,
-        0.2,
-        0.4,
-        0.6,
-        0.8,
-        1.0
-    ]
+    true_ratios = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
-    setup_params = itertools.product(
-        rng_seeds,
-        data_dtypes,
-        data_lengths,
-        true_ratios
-    )
+    setup_params = itertools.product(rng_seeds, data_dtypes, data_lengths, true_ratios)
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
 
-    for (
-            rng_seed,
-            data_dtype,
-            data_length,
-            true_ratio,
-    ) in setup_params:
+    for (rng_seed, data_dtype, data_length, true_ratio,) in setup_params:
         # HACK: Until we have a better approach for supporting non-rectangular parameter spaces,
         #       or otherwise being able to skip certain combinations of parameters (e.g. because
         #       they're invalid, non-realistic, or otherwise don't make sense).
@@ -331,31 +328,14 @@ def bench_bool_index_numpy(**kwargs) -> Dataset:
         # TODO: Add 100M, 1G and 2G -- these need to be optional since smaller machines will run out of memory
         #       and also take longer than typical trials
     ]
-    true_ratios = [
-        0.0,
-        0.2,
-        0.4,
-        0.6,
-        0.8,
-        1.0
-    ]
+    true_ratios = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
-    setup_params = itertools.product(
-        rng_seeds,
-        data_dtypes,
-        data_lengths,
-        true_ratios
-    )
+    setup_params = itertools.product(rng_seeds, data_dtypes, data_lengths, true_ratios)
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
 
-    for (
-            rng_seed,
-            data_dtype,
-            data_length,
-            true_ratio,
-    ) in setup_params:
+    for (rng_seed, data_dtype, data_length, true_ratio,) in setup_params:
         # HACK: Until we have a better approach for supporting non-rectangular parameter spaces,
         #       or otherwise being able to skip certain combinations of parameters (e.g. because
         #       they're invalid, non-realistic, or otherwise don't make sense).
@@ -433,7 +413,7 @@ def bench_mbget(**kwargs) -> Dataset:
         np.float64,
         # TODO: Enable these additional data types; they're somewhat slow though, so we'd only want to
         #       run them under a 'detailed' / 'long-running' scenario
-        np.dtype('S11'),
+        np.dtype("S11"),
     ]
     index_dtypes = [
         np.int8,
@@ -498,7 +478,9 @@ def bench_mbget(**kwargs) -> Dataset:
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        data_array = rand_array(rng, data_length, dtype=np.dtype(data_dtype), invalid_ratio=invalid_ratio)
+        data_array = rand_array(
+            rng, data_length, dtype=np.dtype(data_dtype), invalid_ratio=invalid_ratio
+        )
         fancyindex = rand_fancyindex(
             rng,
             index_length,
@@ -569,7 +551,7 @@ def bench_mbget_numba(**kwargs) -> Dataset:
         np.float64,
         # TODO: Enable these additional data types; they're somewhat slow though, so we'd only want to
         #       run them under a 'detailed' / 'long-running' scenario
-        np.dtype('S11'),
+        np.dtype("S11"),
     ]
     index_dtypes = [
         np.int8,
@@ -614,12 +596,12 @@ def bench_mbget_numba(**kwargs) -> Dataset:
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
     for (
-            rng_seed,
-            data_dtype,
-            index_dtype,
-            data_length,
-            index_length,
-            invalid_ratio,
+        rng_seed,
+        data_dtype,
+        index_dtype,
+        data_length,
+        index_length,
+        invalid_ratio,
     ) in setup_params:
         # HACK: Until we have a better approach for supporting non-rectangular parameter spaces,
         #       or otherwise being able to skip certain combinations of parameters (e.g. because
@@ -633,7 +615,9 @@ def bench_mbget_numba(**kwargs) -> Dataset:
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        data_array = rand_array(rng, data_length, dtype=np.dtype(data_dtype), invalid_ratio=invalid_ratio)
+        data_array = rand_array(
+            rng, data_length, dtype=np.dtype(data_dtype), invalid_ratio=invalid_ratio
+        )
         fancyindex = rand_fancyindex(
             rng,
             index_length,
@@ -731,29 +715,21 @@ def bench_astype(**kwargs):
         # 0.9,
     ]
     setup_params = itertools.product(
-        rng_seeds,
-        src_dtypes,
-        dst_dtypes,
-        data_lengths,
-        invalid_ratios,
+        rng_seeds, src_dtypes, dst_dtypes, data_lengths, invalid_ratios,
     )
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
 
-    for (
-            rng_seed,
-            src_dtype,
-            dst_dtype,
-            data_length,
-            invalid_ratio,
-    ) in setup_params:
+    for (rng_seed, src_dtype, dst_dtype, data_length, invalid_ratio,) in setup_params:
         # Setup phase. The data here is used for both the warmup and the real, timed function invocations.
         #
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        data_array = rand_array(rng, data_length, dtype=np.dtype(src_dtype), invalid_ratio=invalid_ratio)
+        data_array = rand_array(
+            rng, data_length, dtype=np.dtype(src_dtype), invalid_ratio=invalid_ratio
+        )
 
         # Sweep over other parameters that aren't required by the setup phase.
         other_params = [None]
@@ -843,30 +819,22 @@ def bench_astype_numpy(**kwargs):
         # 0.9,
     ]
     setup_params = itertools.product(
-        rng_seeds,
-        src_dtypes,
-        dst_dtypes,
-        data_lengths,
-        invalid_ratios,
+        rng_seeds, src_dtypes, dst_dtypes, data_lengths, invalid_ratios,
     )
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
 
-    for (
-            rng_seed,
-            src_dtype,
-            dst_dtype,
-            data_length,
-            invalid_ratio,
-    ) in setup_params:
+    for (rng_seed, src_dtype, dst_dtype, data_length, invalid_ratio,) in setup_params:
         # Setup phase. The data here is used for both the warmup and the real, timed function invocations.
         #
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        data_array = rand_array(rng, data_length, dtype=np.dtype(src_dtype), invalid_ratio=invalid_ratio)
-        if hasattr(data_array, '_np'):
+        data_array = rand_array(
+            rng, data_length, dtype=np.dtype(src_dtype), invalid_ratio=invalid_ratio
+        )
+        if hasattr(data_array, "_np"):
             data_array = data_array._np
 
         # Sweep over other parameters that aren't required by the setup phase.
@@ -954,29 +922,21 @@ def bench_astype_numba(**kwargs):
         # 0.9,
     ]
     setup_params = itertools.product(
-        rng_seeds,
-        src_dtypes,
-        dst_dtypes,
-        data_lengths,
-        invalid_ratios,
+        rng_seeds, src_dtypes, dst_dtypes, data_lengths, invalid_ratios,
     )
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
 
-    for (
-            rng_seed,
-            src_dtype,
-            dst_dtype,
-            data_length,
-            invalid_ratio,
-    ) in setup_params:
+    for (rng_seed, src_dtype, dst_dtype, data_length, invalid_ratio,) in setup_params:
         # Setup phase. The data here is used for both the warmup and the real, timed function invocations.
         #
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        data_array = rand_array(rng, data_length, dtype=np.dtype(src_dtype), invalid_ratio=invalid_ratio)
+        data_array = rand_array(
+            rng, data_length, dtype=np.dtype(src_dtype), invalid_ratio=invalid_ratio
+        )
 
         # Sweep over other parameters that aren't required by the setup phase.
         other_params = [None]
@@ -1061,41 +1021,33 @@ def bench_compare_ops(**kwargs):
         # 0.5,
         # 0.9,
     ]
-    ops = [
-        operator.eq,
-        operator.ne,
-        operator.lt,
-        operator.le,
-        operator.ge,
-        operator.gt
-    ]
+    ops = [operator.eq, operator.ne, operator.lt, operator.le, operator.ge, operator.gt]
     setup_params = itertools.product(
-        rng_seeds,
-        arr1_dtypes,
-        arr2_dtypes,
-        data_lengths,
-        invalid_ratios,
-        ops,
+        rng_seeds, arr1_dtypes, arr2_dtypes, data_lengths, invalid_ratios, ops,
     )
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
 
     for (
-            rng_seed,
-            arr1_dtype,
-            arr2_dtype,
-            data_length,
-            invalid_ratio,
-            op,
+        rng_seed,
+        arr1_dtype,
+        arr2_dtype,
+        data_length,
+        invalid_ratio,
+        op,
     ) in setup_params:
         # Setup phase. The data here is used for both the warmup and the real, timed function invocations.
         #
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        arr1 = rand_array(rng, data_length, dtype=np.dtype(arr1_dtype), invalid_ratio=invalid_ratio)
-        arr2 = rand_array(rng, data_length, dtype=np.dtype(arr2_dtype), invalid_ratio=invalid_ratio)
+        arr1 = rand_array(
+            rng, data_length, dtype=np.dtype(arr1_dtype), invalid_ratio=invalid_ratio
+        )
+        arr2 = rand_array(
+            rng, data_length, dtype=np.dtype(arr2_dtype), invalid_ratio=invalid_ratio
+        )
 
         # Sweep over other parameters that aren't required by the setup phase.
         other_params = [None]
@@ -1110,7 +1062,7 @@ def bench_compare_ops(**kwargs):
 
                     start_time_ns = timestamper()
 
-                    #invocation of actual actual function
+                    # invocation of actual actual function
                     op(arr1, arr2)
 
                     ### Store the timing results (if this was a real invocation).
@@ -1173,32 +1125,15 @@ def bench_compare_ops_numpy(**kwargs):
         # TODO: Add 100M, 1G and 2G -- these need to be optional since smaller machines will run out of memory
         #       and also take longer than typical trials
     ]
-    ops = [
-        operator.eq,
-        operator.ne,
-        operator.lt,
-        operator.le,
-        operator.ge,
-        operator.gt
-    ]
+    ops = [operator.eq, operator.ne, operator.lt, operator.le, operator.ge, operator.gt]
     setup_params = itertools.product(
-        rng_seeds,
-        arr1_dtypes,
-        arr2_dtypes,
-        data_lengths,
-        ops,
+        rng_seeds, arr1_dtypes, arr2_dtypes, data_lengths, ops,
     )
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
 
-    for (
-            rng_seed,
-            arr1_dtype,
-            arr2_dtype,
-            data_length,
-            op,
-    ) in setup_params:
+    for (rng_seed, arr1_dtype, arr2_dtype, data_length, op,) in setup_params:
         # Setup phase. The data here is used for both the warmup and the real, timed function invocations.
         #
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
@@ -1220,7 +1155,7 @@ def bench_compare_ops_numpy(**kwargs):
 
                     start_time_ns = timestamper()
 
-                    #invocation of actual actual function
+                    # invocation of actual actual function
                     op(arr1, arr2)
 
                     ### Store the timing results (if this was a real invocation).
@@ -1251,10 +1186,7 @@ def bench_compare_ops_numpy(**kwargs):
 
 def compare_mbget():
     return create_comparison_dataset(
-        {
-            "mbget": bench_mbget(),
-            "mbget_numba": bench_mbget_numba(),
-        }
+        {"mbget": bench_mbget(), "mbget_numba": bench_mbget_numba(),}
     )
 
 
@@ -1270,10 +1202,7 @@ def compare_astype():
 
 def compare_bool_index():
     return create_comparison_dataset(
-        {
-            "bool_index": bench_bool_index(),
-            "bool_index_numpy": bench_bool_index_numpy()
-        }
+        {"bool_index": bench_bool_index(), "bool_index_numpy": bench_bool_index_numpy()}
     )
 
 

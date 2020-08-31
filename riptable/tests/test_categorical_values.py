@@ -12,7 +12,7 @@ def arr_equal(a, b):
 
 
 class Categorical_Values_Test(unittest.TestCase):
-    '''
+    """
     Test Categorical constructor will list / array of values only.
 
     Use every combination of flags:
@@ -50,15 +50,15 @@ class Categorical_Values_Test(unittest.TestCase):
     
 
 
-    '''
+    """
 
     def test_strings(self):
-        bytes_arr = FA(['d', 'b', 'c', 'a', 'a', 'b', 'd'])
+        bytes_arr = FA(["d", "b", "c", "a", "a", "b", "d"])
 
-        cats_first_order = FA(['d', 'b', 'c', 'a'])
-        cats_first_order_filtered = FA(['d', 'c', 'a'])
-        cats_sorted = FA(['a', 'b', 'c', 'd'])
-        cats_sorted_filtered = FA(['a', 'c', 'd'])
+        cats_first_order = FA(["d", "b", "c", "a"])
+        cats_first_order_filtered = FA(["d", "c", "a"])
+        cats_sorted = FA(["a", "b", "c", "d"])
+        cats_sorted_filtered = FA(["a", "c", "d"])
 
         base_1_underlying_sorted = FA([4, 2, 3, 1, 1, 2, 4])
         base_0_underlying_sorted = base_1_underlying_sorted - 1
@@ -88,7 +88,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(base_0_underlying_sorted, c._fa))
         self.assertTrue(arr_equal(cats_sorted, c.category_array))
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
+        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted))
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
         # 0, 0, None, None, 1
@@ -103,7 +103,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(base_1_underlying_sorted, c._fa))
         self.assertTrue(arr_equal(cats_sorted, c.category_array))
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
+        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted))
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
         # 0, 0, None, FILTER, 0
@@ -130,7 +130,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
         gb_result = c.sum(gb_data)
         self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+            arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted_filtered)
         )
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
 
@@ -149,7 +149,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_sorted, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
@@ -168,7 +168,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_sorted, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
@@ -199,7 +199,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted_filtered)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
 
@@ -210,7 +210,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(base_0_underlying_sorted, c._fa))
         self.assertTrue(arr_equal(cats_sorted, c.category_array))
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
+        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted))
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
         # 0, 1, None, None, 1
@@ -220,7 +220,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(base_1_underlying_sorted, c._fa))
         self.assertTrue(arr_equal(cats_sorted, c.category_array))
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
+        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted))
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
         # 0, 1, None, FILTER, 0
@@ -247,7 +247,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
         gb_result = c.sum(gb_data)
         self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+            arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted_filtered)
         )
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
 
@@ -266,7 +266,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_sorted, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
@@ -285,7 +285,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_sorted, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
@@ -316,7 +316,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted_filtered)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
 
@@ -333,7 +333,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(cats_first_order, c.category_array))
         gb_result = c.sum(gb_data)
         self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+            arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_first_order)
         )
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
 
@@ -350,7 +350,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(cats_first_order, c.category_array))
         gb_result = c.sum(gb_data)
         self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+            arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_first_order)
         )
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
 
@@ -378,7 +378,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(cats_first_order_filtered, c.category_array))
         gb_result = c.sum(gb_data)
         self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order_filtered)
+            arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_first_order_filtered)
         )
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order_filtered))
 
@@ -397,7 +397,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_first_order, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_first_order)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
 
@@ -416,7 +416,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_first_order, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_first_order)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
 
@@ -447,7 +447,7 @@ class Categorical_Values_Test(unittest.TestCase):
             gb_result = c.sum(gb_data)
             self.assertTrue(
                 arr_equal(
-                    gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order_filtered
+                    gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_first_order_filtered
                 )
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order_filtered))
@@ -464,7 +464,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(base_0_underlying_first_order, c._fa))
         self.assertTrue(arr_equal(cats_first_order, c.category_array))
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
+        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted))
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
         # 1, 1, None, None, 1
@@ -479,7 +479,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(base_1_underlying_first_order, c._fa))
         self.assertTrue(arr_equal(cats_first_order, c.category_array))
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
+        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted))
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
         # 1, 1, None, FILTER, 0
@@ -506,7 +506,7 @@ class Categorical_Values_Test(unittest.TestCase):
         self.assertTrue(arr_equal(cats_first_order_filtered, c.category_array))
         gb_result = c.sum(gb_data)
         self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+            arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted_filtered)
         )
         self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
 
@@ -525,7 +525,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_first_order, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
@@ -544,7 +544,7 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_first_order, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
 
@@ -575,6 +575,6 @@ class Categorical_Values_Test(unittest.TestCase):
             self.assertTrue(arr_equal(cats_first_order_filtered, c.category_array))
             gb_result = c.sum(gb_data)
             self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+                arr_equal(gb_result[GROUPBY_KEY_PREFIX + "_0"], cats_sorted_filtered)
             )
             self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))

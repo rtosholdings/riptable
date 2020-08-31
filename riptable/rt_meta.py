@@ -1,4 +1,4 @@
-__all__ = ['Item', 'Info', 'Doc', 'apply_schema', 'info', 'doc']
+__all__ = ["Item", "Info", "Doc", "apply_schema", "info", "doc"]
 
 from typing import Optional, List
 
@@ -6,17 +6,17 @@ from .rt_struct import Struct
 from .rt_fastarray import FastArray
 from .rt_display import DisplayText
 
-META_DICT = '_meta'
-DOC_KEY = 'Doc'
-DESCRIPTION_KEY = 'Description'
-STEWARD_KEY = 'Steward'
-TYPE_KEY = 'Type'
-DETAIL_KEY = 'Detail'
-CONTENTS_KEY = 'Contents'
+META_DICT = "_meta"
+DOC_KEY = "Doc"
+DESCRIPTION_KEY = "Description"
+STEWARD_KEY = "Steward"
+TYPE_KEY = "Type"
+DETAIL_KEY = "Detail"
+CONTENTS_KEY = "Contents"
 
-NO_DESCRIPTION = '<no description>'
-NO_STEWARD = '<no steward>'
-NO_TYPE = '<none>'
+NO_DESCRIPTION = "<no description>"
+NO_STEWARD = "<no steward>"
+NO_TYPE = "<none>"
 
 NAME_DEFAULT_WIDTH = 4
 DESCRIPTION_DEFAULT_WIDTH = 50
@@ -24,9 +24,10 @@ STEWARD_DEFAULT_WIDTH = 12
 TYPE_STR_DEFAULT_WIDTH = 4
 
 # ERROR KEYS
-TYPE_MISMATCH = 'Type Mismatch'
-EXTRA_COLUMN = 'Extra Column'
-MISSING_COLUMN = 'Missing Column'
+TYPE_MISMATCH = "Type Mismatch"
+EXTRA_COLUMN = "Extra Column"
+MISSING_COLUMN = "Missing Column"
+
 
 class Item:
     """Descriptive information for a data object.
@@ -42,13 +43,14 @@ class Item:
     steward : str
         The steward of the data object.
     """
-    name : str
+
+    name: str
     """str: The name of the data object."""
-    type : str
+    type: str
     """str: The type of the data object."""
-    description : str
+    description: str
     """str: A description of the data object."""
-    steward : str
+    steward: str
     """steward: The steward of the data object."""
 
     def __init__(self, name: str, type: str, description: str, steward: str):
@@ -62,18 +64,20 @@ class Info:
     """A hierarchically structured container of descriptive information
     for a data object.
     """
+
     title = []
     """list: The title of the data object"""
-    description : Optional[str] = None
+    description: Optional[str] = None
     """str: The description of the data object."""
-    steward : Optional[str] = None
+    steward: Optional[str] = None
     """str: The steward of the data object."""
-    type : Optional[str] = None
+    type: Optional[str] = None
     """str: The type of the data object."""
     detail = None
     """str: Detail about the data object."""
-    items : Optional[List[Item]] = None
+    items: Optional[List[Item]] = None
     """list of `Item`: For a :class:`~.rt_struct.Struct` or :class:`~.rt_dataset.Dataset`, the items contained within it."""
+
     def __init__(self):
         pass
 
@@ -83,41 +87,72 @@ class Info:
 
         rows = []
         if self.title:
-            rows += [title_format('{}'.format(self.title))]
-            rows += [title_format('='*len(self.title))]
+            rows += [title_format("{}".format(self.title))]
+            rows += [title_format("=" * len(self.title))]
         if self.description:
-            rows += [header_format('Description: ') + self.description]
+            rows += [header_format("Description: ") + self.description]
         if self.steward:
-            rows += [header_format('Steward: ') + self.steward]
+            rows += [header_format("Steward: ") + self.steward]
         if self.type:
-            rows += [header_format('Type: ') + self.type]
+            rows += [header_format("Type: ") + self.type]
         if self.detail:
-            rows += [header_format('Detail: ') + self.detail]
+            rows += [header_format("Detail: ") + self.detail]
         if self.items:
-            rows += [header_format('Contents:'), '']
+            rows += [header_format("Contents:"), ""]
 
             # Set column widths
-            name_width = max(NAME_DEFAULT_WIDTH, max(len(item.name) for item in self.items))
+            name_width = max(
+                NAME_DEFAULT_WIDTH, max(len(item.name) for item in self.items)
+            )
             descrip_width = DESCRIPTION_DEFAULT_WIDTH
             steward_width = STEWARD_DEFAULT_WIDTH
-            stype_width = max(TYPE_STR_DEFAULT_WIDTH, max(len(item.type) for item in self.items))
+            stype_width = max(
+                TYPE_STR_DEFAULT_WIDTH, max(len(item.type) for item in self.items)
+            )
 
             # Add list header
-            rows += [header_format("{: <{}}  {: <{}}  {: <{}}  {: <{}}".format(
-                "Type", stype_width, "Name", name_width,
-                "Description", descrip_width, "Steward", steward_width))]
-            rows += [header_format("{}  {}  {}  {}".format(
-                "-" * stype_width, "-" * name_width, "-" * descrip_width, "-" * steward_width))]
+            rows += [
+                header_format(
+                    "{: <{}}  {: <{}}  {: <{}}  {: <{}}".format(
+                        "Type",
+                        stype_width,
+                        "Name",
+                        name_width,
+                        "Description",
+                        descrip_width,
+                        "Steward",
+                        steward_width,
+                    )
+                )
+            ]
+            rows += [
+                header_format(
+                    "{}  {}  {}  {}".format(
+                        "-" * stype_width,
+                        "-" * name_width,
+                        "-" * descrip_width,
+                        "-" * steward_width,
+                    )
+                )
+            ]
 
             # Add item rows
             for item in self.items:
-                rows += ["{: <{}}  {}  {: <{}}  {: <{}}".format(
-                    item.type, stype_width, title_format('{: <{}}'.format(item.name, name_width)),
-                    item.description, descrip_width, item.steward, steward_width)]
+                rows += [
+                    "{: <{}}  {}  {: <{}}  {: <{}}".format(
+                        item.type,
+                        stype_width,
+                        title_format("{: <{}}".format(item.name, name_width)),
+                        item.description,
+                        descrip_width,
+                        item.steward,
+                        steward_width,
+                    )
+                ]
 
         # Add a newline at the end if there is a title on top
         if self.title:
-            rows += ['']
+            rows += [""]
 
         return "\n".join(rows)
 
@@ -168,8 +203,7 @@ class Doc(Struct):
         info.items = []
         for name in self.keys():
             elem = self[name]
-            info.items.append(Item(name, elem._type, elem._descrip,
-                                   elem._steward))
+            info.items.append(Item(name, elem._type, elem._descrip, elem._steward))
         return info
 
     def __str__(self):
@@ -182,7 +216,7 @@ class Doc(Struct):
         return self._as_info()._repr_html_()
 
 
-def apply_schema(obj, schema: dict, doc: bool=True):
+def apply_schema(obj, schema: dict, doc: bool = True):
     """
     Apply a schema containing descriptive information recursively to the
     input data object.
@@ -241,8 +275,9 @@ def apply_schema(obj, schema: dict, doc: bool=True):
         obj._meta[DETAIL_KEY] = schema.get(DETAIL_KEY, None)
         stype = schema.get(TYPE_KEY)
         if stype and _type_str(obj) != stype:
-            res[TYPE_MISMATCH] = "Type {} does not match schema type {}".\
-                format(_type_str(obj), stype)
+            res[TYPE_MISMATCH] = "Type {} does not match schema type {}".format(
+                _type_str(obj), stype
+            )
         schema_contents = schema.get(CONTENTS_KEY)
         if schema_contents:
             for key in obj.keys():
@@ -257,6 +292,7 @@ def apply_schema(obj, schema: dict, doc: bool=True):
                 if key not in obj.keys():
                     res[MISSING_COLUMN] = key
     return res
+
 
 def _type_str(obj) -> str:
     """
@@ -277,6 +313,7 @@ def _type_str(obj) -> str:
     else:
         stype = type(obj).__name__
     return stype
+
 
 def info(obj, title=None) -> Info:
     """
@@ -314,6 +351,7 @@ def info(obj, title=None) -> Info:
                 steward = obj[name]._meta.get(STEWARD_KEY, steward)
             info.items.append(Item(name, _type_str(obj[name]), descrip, steward))
     return info
+
 
 def doc(obj) -> Optional[Doc]:
     """

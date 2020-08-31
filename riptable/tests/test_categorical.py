@@ -10,9 +10,7 @@ from riptable import *
 from riptable import save_sds, load_sds
 from riptable import FastArray, Categorical, CatZero
 from riptable.rt_categorical import Categories
-from riptable.rt_enum import (
-    INVALID_DICT,
-)
+from riptable.rt_enum import INVALID_DICT
 from riptable.rt_enum import (
     DisplayLength,
     DisplayJustification,
@@ -28,15 +26,14 @@ from riptable.rt_sds import SDSMakeDirsOn
 from riptable.tests.utils import LikertDecision
 
 
-
 # change to true since we write into /tests directory
 SDSMakeDirsOn()
 
 three_unicode = np.array(["AAPL\u2080", "AMZN\u2082", "IBM\u2081"])
-three_bytes = FastArray([b'a', b'b', b'c'])
+three_bytes = FastArray([b"a", b"b", b"c"])
 three_ints = FastArray([1, 2, 3])
 
-compare_func_names = ['__ne__', '__eq__', '__ge__', '__gt__', '__le__', '__lt__']
+compare_func_names = ["__ne__", "__eq__", "__ge__", "__gt__", "__le__", "__lt__"]
 int_success = [
     np.array([True, False, True]),  # ne
     np.array([False, True, False]),  # eq
@@ -63,9 +60,9 @@ diff_success = [
 ]
 ShowCompareInfo = False
 
-list_bytes = [b'b', b'b', b'a', b'd', b'c']
-list_unicode = ['b', 'b', 'a', 'd', 'c']
-list_true_unicode = [u'b\u2082', u'b\u2082', u'a\u2082', u'd\u2082', u'c\u2082']
+list_bytes = [b"b", b"b", b"a", b"d", b"c"]
+list_unicode = ["b", "b", "a", "d", "c"]
+list_true_unicode = ["b\u2082", "b\u2082", "a\u2082", "d\u2082", "c\u2082"]
 
 
 decision_dict = dict(
@@ -136,12 +133,12 @@ class Categorical_Test(unittest.TestCase):
         )
         self.assertEqual(
             c_unicode._categories_wrap._list[0],
-            b'a',
+            b"a",
             msg=f"Unique categories were not sorted for construction from unicode.",
         )
         self.assertEqual(
             c_unicode._categories_wrap._list.dtype.char,
-            'S',
+            "S",
             msg=f"Unicode strings were not flipped to byte strings.",
         )
 
@@ -163,12 +160,12 @@ class Categorical_Test(unittest.TestCase):
         )
         self.assertEqual(
             c_true_unicode._categories_wrap._list[0],
-            u'a\u2082',
+            "a\u2082",
             msg=f"Unique categories were not sorted for construction from true unicode.",
         )
         self.assertEqual(
             c_true_unicode._categories_wrap._list.dtype.char,
-            'U',
+            "U",
             msg=f"Unicode strings were not flipped to byte strings.",
         )
 
@@ -208,12 +205,12 @@ class Categorical_Test(unittest.TestCase):
         )
         self.assertEqual(
             c_unicode._categories_wrap._list[0],
-            b'a',
+            b"a",
             msg=f"Unique categories were not sorted for construction from unicode.",
         )
         self.assertEqual(
             c_unicode._categories_wrap._list.dtype.char,
-            'S',
+            "S",
             msg=f"Unicode strings were not flipped to byte strings.",
         )
 
@@ -235,32 +232,32 @@ class Categorical_Test(unittest.TestCase):
         )
         self.assertEqual(
             c_true_unicode._categories_wrap._list[0],
-            u'a\u2082',
+            "a\u2082",
             msg=f"Unique categories were not sorted for construction from true unicode.",
         )
         self.assertEqual(
             c_true_unicode._categories_wrap._list.dtype.char,
-            'U',
+            "U",
             msg=f"Unicode strings were not flipped to byte strings.",
         )
 
     def test_ctor_values_and_cats(self):
-        v_bytes = [b'IBM', b'AAPL', b'AMZN', b'IBM', b'hello']
-        v_str = ['IBM', 'AAPL', 'AMZN', 'IBM', 'hello']
+        v_bytes = [b"IBM", b"AAPL", b"AMZN", b"IBM", b"hello"]
+        v_str = ["IBM", "AAPL", "AMZN", "IBM", "hello"]
         v_true = [
-            u'IBM\u2082',
-            u'AAPL\u2082',
-            u'AMZN\u2082',
-            u'IBM\u2082',
-            u'hello\u2082',
+            "IBM\u2082",
+            "AAPL\u2082",
+            "AMZN\u2082",
+            "IBM\u2082",
+            "hello\u2082",
         ]
 
-        c_bytes = [b'AAPL', b'AMZN', b'IBM']
-        c_str = ['AAPL', 'AMZN', 'IBM']
-        c_true = [u'AAPL\u2082', u'AMZN\u2082', u'IBM\u2082']
+        c_bytes = [b"AAPL", b"AMZN", b"IBM"]
+        c_str = ["AAPL", "AMZN", "IBM"]
+        c_true = ["AAPL\u2082", "AMZN\u2082", "IBM\u2082"]
 
         v_correct = [2, 0, 1, 2, 3]
-        c_correct = [b'AAPL', b'AMZN', b'IBM', b'inv']
+        c_correct = [b"AAPL", b"AMZN", b"IBM", b"inv"]
 
         valid_v = [
             v_bytes,
@@ -281,13 +278,13 @@ class Categorical_Test(unittest.TestCase):
 
         for v in valid_v:
             vdt = None
-            if hasattr(v, 'dtype'):
+            if hasattr(v, "dtype"):
                 vdt = v.dtype
             else:
                 vdt = type(v)
             for c in valid_c:
                 cdt = None
-                if hasattr(c, 'dtype'):
+                if hasattr(c, "dtype"):
                     cdt = c.dtype
                 else:
                     cdt = type(c)
@@ -318,7 +315,7 @@ class Categorical_Test(unittest.TestCase):
     # ---------------------------------------------------------------------------
     def test_ctor_bad_index(self):
         idx_list = [1, 2, 3, 4, 5]
-        str_list = ['a', 'b']
+        str_list = ["a", "b"]
         with self.assertRaises(
             ValueError,
             msg=f"Failed to raise value error when initializing with bad index in {idx_list} for categories {str_list}",
@@ -327,11 +324,11 @@ class Categorical_Test(unittest.TestCase):
 
     # ---------------------------------------------------------------------------
     def test_ctor_non_unique(self):
-        '''
+        """
         riptable categoricals, like pandas categoricals, do not allow a non-unique list of categories when an index array is provided.
-        '''
+        """
         idx_list = [0, 1]
-        str_list = ['b', 'b', 'a']
+        str_list = ["b", "b", "a"]
         c = Categorical(idx_list, str_list)
 
     # ---------------------------------------------------------------------------
@@ -342,12 +339,12 @@ class Categorical_Test(unittest.TestCase):
     # ---------------------------------------------------------------------------
     def test_compare_enum_int(self):
         compare_func_names = [
-            '__ne__',
-            '__eq__',
-            '__ge__',
-            '__gt__',
-            '__le__',
-            '__lt__',
+            "__ne__",
+            "__eq__",
+            "__ge__",
+            "__gt__",
+            "__le__",
+            "__lt__",
         ]
         codes = [1, 44, 44, 133, 75]
         valid_idx = 44
@@ -394,16 +391,16 @@ class Categorical_Test(unittest.TestCase):
     # ---------------------------------------------------------------------------
     def test_compare_enum_str(self):
         compare_func_names = [
-            '__ne__',
-            '__eq__',
-            '__ge__',
-            '__gt__',
-            '__le__',
-            '__lt__',
+            "__ne__",
+            "__eq__",
+            "__ge__",
+            "__gt__",
+            "__le__",
+            "__lt__",
         ]
         codes = [1, 44, 44, 133, 75]
-        valid_idx = 'StronglyAgree'
-        bad_idx = 'x'
+        valid_idx = "StronglyAgree"
+        bad_idx = "x"
         valid_idx_correct = [
             FastArray([True, False, False, True, True]),
             FastArray([False, True, True, False, False]),
@@ -436,67 +433,67 @@ class Categorical_Test(unittest.TestCase):
 
     def test_map(self):
 
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False)
-        mapping = {'a': 'AA', 'b': 'BB', 'c': 'CC', 'd': 'DD'}
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False)
+        mapping = {"a": "AA", "b": "BB", "c": "CC", "d": "DD"}
         result = c.map(mapping)
-        correct = FastArray([b'BB', b'BB', b'CC', b'AA', b'DD'])
+        correct = FastArray([b"BB", b"BB", b"CC", b"AA", b"DD"])
         self.assertTrue(bool(np.all(result == correct)))
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False, base_index=0)
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False, base_index=0)
         result = c.map(mapping)
         self.assertTrue(bool(np.all(result == correct)))
 
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False)
-        mapping = {'a': 'AA', 'b': 'BB', 'c': 'CC'}
-        result = c.map(mapping, invalid='INVALID')
-        correct = FastArray([b'BB', b'BB', b'CC', b'AA', b'INVALID'])
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False)
+        mapping = {"a": "AA", "b": "BB", "c": "CC"}
+        result = c.map(mapping, invalid="INVALID")
+        correct = FastArray([b"BB", b"BB", b"CC", b"AA", b"INVALID"])
         self.assertTrue(bool(np.all(result == correct)))
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False, base_index=0)
-        result = c.map(mapping, invalid='INVALID')
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False, base_index=0)
+        result = c.map(mapping, invalid="INVALID")
         self.assertTrue(bool(np.all(result == correct)))
 
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False)
-        mapping = {'a': 1.0, 'b': 2.0, 'c': 3.0}
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False)
+        mapping = {"a": 1.0, "b": 2.0, "c": 3.0}
         result = c.map(mapping, invalid=666)
         correct = FastArray([2.0, 2.0, 3.0, 1.0, 666.0])
         self.assertTrue(bool(np.all(result == correct)))
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False, base_index=0)
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False, base_index=0)
         result = c.map(mapping, invalid=666)
         self.assertTrue(bool(np.all(result == correct)))
 
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False)
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False)
         result = c.map(mapping)
         self.assertTrue(np.isnan(result[4]))
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False, base_index=0)
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False, base_index=0)
         result = c.map(mapping)
         self.assertTrue(np.isnan(result[4]))
 
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False)
-        mapping = FastArray(['w', 'x', 'y', 'z'])
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False)
+        mapping = FastArray(["w", "x", "y", "z"])
         result = c.map(mapping)
-        correct = FastArray([b'w', b'w', b'x', b'y', b'z'])
+        correct = FastArray([b"w", b"w", b"x", b"y", b"z"])
         self.assertTrue(bool(np.all(result == correct)))
-        c = Categorical(['b', 'b', 'c', 'a', 'd'], ordered=False, base_index=0)
+        c = Categorical(["b", "b", "c", "a", "d"], ordered=False, base_index=0)
         result = c.map(mapping)
         self.assertTrue(bool(np.all(result == correct)))
 
-        c = Categorical([2, 2, 3, 1, 4, 0], ['a', 'b', 'c', 'd'])
-        mapping = {'a': 1.0, 'b': 2.0, 'c': 3.0}
+        c = Categorical([2, 2, 3, 1, 4, 0], ["a", "b", "c", "d"])
+        mapping = {"a": 1.0, "b": 2.0, "c": 3.0}
         result = c.map(mapping, invalid=666)
         correct = FastArray([2.0, 2.0, 3.0, 1.0, 666.0, 666.0])
         self.assertTrue(bool(np.all(result == correct)))
 
     # ---------------------------------------------------------------------------
     def test_from_category(self):
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
-        bin = c.from_category('a')
+        c = Categorical(["a", "a", "b", "c", "a"])
+        bin = c.from_category("a")
         self.assertEqual(bin, 1)
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0)
-        bin = c.from_category(b'a')
+        c = Categorical(["a", "a", "b", "c", "a"], base_index=0)
+        bin = c.from_category(b"a")
         self.assertEqual(bin, 0)
 
         with self.assertRaises(ValueError):
-            bin = c.from_category('z')
+            bin = c.from_category("z")
 
         c = Categorical(np.arange(5, 10))
         bin = c.from_category(5)
@@ -505,19 +502,19 @@ class Categorical_Test(unittest.TestCase):
         with self.assertRaises(ValueError):
             bin = c.from_category(100)
 
-        c = Categorical([FastArray(['a', 'b', 'c']), np.arange(3)])
-        bin = c.from_category(('c', 2))
+        c = Categorical([FastArray(["a", "b", "c"]), np.arange(3)])
+        bin = c.from_category(("c", 2))
         self.assertEqual(bin, 3)
 
     # ---------------------------------------------------------------------------
     def test_getitem_enum_int(self):
         codes = [1, 44, 44, 133, 75]
         correct_strings = [
-            'StronglyDisagree',
-            'StronglyAgree',
-            'StronglyAgree',
-            'Agree',
-            'Disagree',
+            "StronglyDisagree",
+            "StronglyAgree",
+            "StronglyAgree",
+            "Agree",
+            "Disagree",
         ]
         c = Categorical(codes, LikertDecision)
 
@@ -540,11 +537,11 @@ class Categorical_Test(unittest.TestCase):
     def test_getitem_enum_int_list(self):
         codes = [1, 44, 44, 133, 75]
         correct_strings = [
-            'StronglyDisagree',
-            'StronglyAgree',
-            'StronglyAgree',
-            'Agree',
-            'Disagree',
+            "StronglyDisagree",
+            "StronglyAgree",
+            "StronglyAgree",
+            "Agree",
+            "Disagree",
         ]
         c = Categorical(codes, LikertDecision)
 
@@ -553,24 +550,24 @@ class Categorical_Test(unittest.TestCase):
             isinstance(result, Categorical),
             msg=f"Failed to return Categorical when indexing by integer list. Returned {type(result)} instead.",
         )
-        self.assertEqual(result[0], 'StronglyAgree')
-        self.assertEqual(result[1], 'Disagree')
+        self.assertEqual(result[0], "StronglyAgree")
+        self.assertEqual(result[1], "Disagree")
 
         result = c[np.array([1, 4])]
         self.assertTrue(
             isinstance(result, Categorical),
             msg=f"Failed to return Categorical when indexing by integer list. Returned {type(result)} instead.",
         )
-        self.assertEqual(result[0], 'StronglyAgree')
-        self.assertEqual(result[1], 'Disagree')
+        self.assertEqual(result[0], "StronglyAgree")
+        self.assertEqual(result[1], "Disagree")
 
         result = c[FastArray([1, 4])]
         self.assertTrue(
             isinstance(result, Categorical),
             msg=f"Failed to return Categorical when indexing by integer list. Returned {type(result)} instead.",
         )
-        self.assertEqual(result[0], 'StronglyAgree')
-        self.assertEqual(result[1], 'Disagree')
+        self.assertEqual(result[0], "StronglyAgree")
+        self.assertEqual(result[1], "Disagree")
 
     def test_getitem_enum(self):
         self._notimpl()
@@ -581,7 +578,7 @@ class Categorical_Test(unittest.TestCase):
     # -------------------------------------------- MATLAB ----------------------------------
     def test_ctor_matlab(self):
         idx_list = [1.0, 2.0, 3.0, 4.0, 5.0]
-        str_list = ['a', 'b', 'c', 'd', 'e']
+        str_list = ["a", "b", "c", "d", "e"]
         with self.assertRaises(
             TypeError,
             msg=f"Failed to raise error for float indexes when MATLab flag is not set",
@@ -589,7 +586,7 @@ class Categorical_Test(unittest.TestCase):
             c = Categorical(idx_list, str_list)
 
         c = Categorical(idx_list, str_list, from_matlab=True)
-        self.assertEqual(c[0], 'a')
+        self.assertEqual(c[0], "a")
         self.assertEqual(c.dtype, np.dtype(np.int8))
 
     # def test_ctor_matlab_non_unique(self):
@@ -601,7 +598,7 @@ class Categorical_Test(unittest.TestCase):
     # ------------------------------- PANDAS CATEGORICAL ----------------------------------
     def test_ctor_pandas_cat(self):
         idx_list = [0, 1, 2, 3, 4]
-        str_list = ['a', 'b', 'c', 'd', 'e']
+        str_list = ["a", "b", "c", "d", "e"]
         pd_c = pd.Categorical.from_codes(idx_list, str_list)
         pd_c = Categorical(pd_c)
         rt_c = Categorical(idx_list, str_list)
@@ -616,7 +613,7 @@ class Categorical_Test(unittest.TestCase):
         # self.assertTrue(idx_match, msg=f"Failed to create matching unerlying array from pandas categorical")
 
         # convert pandas invalid bytes
-        pd_c = pd.Categorical.from_codes([-1, 0, 1, 2], ['a', 'b', 'c'])
+        pd_c = pd.Categorical.from_codes([-1, 0, 1, 2], ["a", "b", "c"])
         pd_c = Categorical(pd_c)
         cat_list = pd_c.category_array
         self.assertEqual(len(cat_list), 3)
@@ -624,9 +621,7 @@ class Categorical_Test(unittest.TestCase):
         self.assertTrue(no_negative)
 
         # convert pandas invalid unicode
-        pd_c = pd.Categorical.from_codes(
-            [-1, 0, 1, 2], [u'\u2082', u'\u2083', u'\u2084']
-        )
+        pd_c = pd.Categorical.from_codes([-1, 0, 1, 2], ["\u2082", "\u2083", "\u2084"])
         pd_c = Categorical(pd_c)
         cat_list = pd_c.category_array
         self.assertEqual(len(cat_list), 3)
@@ -641,8 +636,8 @@ class Categorical_Test(unittest.TestCase):
 
     # ------------------------------------CUSTOM CATEGORIES ----------------------------------
     def test_ctor_list_unique(self):
-        unique_str = ['a', 'b', 'c', 'd', 'e', 'f']
-        str_list = ['a', 'b', 'c', 'd', 'e']
+        unique_str = ["a", "b", "c", "d", "e", "f"]
+        str_list = ["a", "b", "c", "d", "e"]
         c = Categorical(str_list, unique_str)
         cats_match = bool(np.all(c._categories_wrap._list == unique_str))
         self.assertTrue(
@@ -670,7 +665,7 @@ class Categorical_Test(unittest.TestCase):
         int_types = [np.int8, np.int16, np.int32, np.int64]
         float_types = [np.float32, np.float64]
         uint_types = [np.uint8, np.uint16, np.uint32, np.uint64]
-        arr = ['a', 'b', 'c', 'd', 'e']
+        arr = ["a", "b", "c", "d", "e"]
         for dt in int_types:
             c = Categorical(arr, dtype=dt)
             self.assertEqual(
@@ -688,19 +683,19 @@ class Categorical_Test(unittest.TestCase):
 
     # ------------------------------------TEST CONVERT VALUE-------------------------------------
     def test_possibly_convert_value(self):
-        '''
+        """
         TODO: fix for new Categories class
-        '''
+        """
         self._notimpl()
 
     def test_categories_bad_init(self):
-        tup = ('a', 'b', 'c')
+        tup = ("a", "b", "c")
         with self.assertRaises(TypeError):
             cat = Categories(tup)
 
     def test_categories_len(self):
         cats_from_list = Categorical(
-            ['a', 'b', 'c'], ordered=True, base_index=1, filter=None
+            ["a", "b", "c"], ordered=True, base_index=1, filter=None
         )._categories_wrap
         self.assertEqual(len(cats_from_list), 3)
 
@@ -709,11 +704,11 @@ class Categorical_Test(unittest.TestCase):
 
     def test_get_categories(self):
         c_list = [
-            'StronglyAgree',
-            'Agree',
-            'Disagree',
-            'StronglyDisagree',
-            'NeitherAgreeNorDisagree',
+            "StronglyAgree",
+            "Agree",
+            "Disagree",
+            "StronglyDisagree",
+            "NeitherAgreeNorDisagree",
         ]
         cats_from_list = Categories(c_list, unicode=True)
         cats_from_enum = Categories(LikertDecision)
@@ -736,19 +731,19 @@ class Categorical_Test(unittest.TestCase):
         # Single-key Categorical
         dates = rt.Date(
             [
-                '2019-03-15',
-                '2019-04-18',
-                '2019-05-17',
-                '2019-06-21',
-                '2019-07-19',
-                '2019-08-16',
-                '2019-09-20',
-                '2019-10-18',
-                '2019-11-15',
-                '2019-12-20',
+                "2019-03-15",
+                "2019-04-18",
+                "2019-05-17",
+                "2019-06-21",
+                "2019-07-19",
+                "2019-08-16",
+                "2019-09-20",
+                "2019-10-18",
+                "2019-11-15",
+                "2019-12-20",
             ]
         )
-        dates.name = 'dates'
+        dates.name = "dates"
         dates_cat = rt.Cat(dates)
         cats = dates_cat.categories()
         self.assertEqual(type(dates), type(cats))
@@ -756,23 +751,23 @@ class Categorical_Test(unittest.TestCase):
         # Multi-key Categorical
         datestrs = rt.FA(
             [
-                '2019-03-15',
-                '2019-04-18',
-                '2019-05-17',
-                '2019-06-21',
-                '2019-07-19',
-                '2019-08-16',
-                '2019-09-20',
-                '2019-10-18',
-                '2019-11-15',
-                '2019-12-20',
+                "2019-03-15",
+                "2019-04-18",
+                "2019-05-17",
+                "2019-06-21",
+                "2019-07-19",
+                "2019-08-16",
+                "2019-09-20",
+                "2019-10-18",
+                "2019-11-15",
+                "2019-12-20",
             ]
         )
-        datestrs.name = 'datestrs'
+        datestrs.name = "datestrs"
         mcat = rt.Cat([dates, datestrs])
         mcats = mcat.categories()
-        self.assertEqual(type(mcats['key_0']), type(dates))
-        self.assertEqual(type(mcats['key_1']), type(datestrs))
+        self.assertEqual(type(mcats["key_0"]), type(dates))
+        self.assertEqual(type(mcats["key_1"]), type(datestrs))
 
         # Empty single-key Categorical
         dates = rt.Date([])
@@ -782,7 +777,7 @@ class Categorical_Test(unittest.TestCase):
 
     def test_make_unique(self):
         # SJK: changed this test on 8/21/2018 - count now comes from the grouping object, not Categories.make unique
-        values = FastArray(['a', 'b', 'c', 'c', 'd', 'a', 'b'])
+        values = FastArray(["a", "b", "c", "c", "d", "a", "b"])
         # c = Categories([],base_index=1)
         # index, cat_len, filter = c.make_unique(values)
 
@@ -793,10 +788,10 @@ class Categorical_Test(unittest.TestCase):
         self.assertEqual(len(index), 7)
         self.assertEqual(max(index), 4)
         self.assertEqual(c._mode, CategoryMode.StringArray)
-        self.assertEqual(c._list.dtype.char, 'S')
+        self.assertEqual(c._list.dtype.char, "S")
         self.assertTrue(c.isbytes)
 
-        univals = values.astype('U')
+        univals = values.astype("U")
         cat = Categorical(
             univals, ordered=True, base_index=1, filter=None, unicode=True
         )
@@ -806,62 +801,64 @@ class Categorical_Test(unittest.TestCase):
         self.assertEqual(len(index), 7)
         self.assertEqual(max(index), 4)
         self.assertEqual(c._mode, CategoryMode.StringArray)
-        self.assertEqual(c._list.dtype.char, 'U')
+        self.assertEqual(c._list.dtype.char, "U")
         self.assertTrue(c.isunicode)
 
-    @pytest.mark.xfail(reason='20200416 This test was previously overridden by a later test in the file with the same name. Need to revisit and get back in a working state.')
+    @pytest.mark.xfail(
+        reason="20200416 This test was previously overridden by a later test in the file with the same name. Need to revisit and get back in a working state."
+    )
     def test_force_base_index(self):
         filter = FastArray([True, True, False, False, True])
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
-        self.assertEqual(c.base_index, 1, msg='Did not default base index to 1')
-        self.assertEqual(c._fa[0], 1, msg='Did not default base index to 1')
+        c = Categorical(["a", "a", "b", "c", "a"])
+        self.assertEqual(c.base_index, 1, msg="Did not default base index to 1")
+        self.assertEqual(c._fa[0], 1, msg="Did not default base index to 1")
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0)
-        self.assertEqual(c.base_index, 0, msg='Did not force base index to 0')
-        self.assertEqual(c._fa[0], 0, msg='Did not force base index to 0')
+        c = Categorical(["a", "a", "b", "c", "a"], base_index=0)
+        self.assertEqual(c.base_index, 0, msg="Did not force base index to 0")
+        self.assertEqual(c._fa[0], 0, msg="Did not force base index to 0")
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], filter=filter)
+        c = Categorical(["a", "a", "b", "c", "a"], filter=filter)
         self.assertEqual(len(c.category_array), 1)
-        self.assertEqual(c._fa[2], 0, msg='Did not default base index to 1')
+        self.assertEqual(c._fa[2], 0, msg="Did not default base index to 1")
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0, filter=filter)
+        c = Categorical(["a", "a", "b", "c", "a"], base_index=0, filter=filter)
         self.assertEqual(len(c.category_array), 1)
         self.assertEqual(
-            c._fa[2], INVALID_DICT[c.dtype.num], msg='Did not force base index to 0'
+            c._fa[2], INVALID_DICT[c.dtype.num], msg="Did not force base index to 0"
         )
 
         with self.assertRaises(ValueError):
-            c = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=99, filter=filter)
+            c = Categorical(["a", "a", "b", "c", "a"], base_index=99, filter=filter)
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], ['a', 'b', 'c'])
-        self.assertEqual(c.base_index, 1, msg='Did not default base index to 1')
-        self.assertEqual(c._fa[0], 1, msg='Did not default base index to 1')
+        c = Categorical(["a", "a", "b", "c", "a"], ["a", "b", "c"])
+        self.assertEqual(c.base_index, 1, msg="Did not default base index to 1")
+        self.assertEqual(c._fa[0], 1, msg="Did not default base index to 1")
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], ['a', 'b', 'c'], base_index=0)
-        self.assertEqual(c.base_index, 0, msg='Did not force base index to 0')
-        self.assertEqual(c._fa[0], 0, msg='Did not force base index to 0')
+        c = Categorical(["a", "a", "b", "c", "a"], ["a", "b", "c"], base_index=0)
+        self.assertEqual(c.base_index, 0, msg="Did not force base index to 0")
+        self.assertEqual(c._fa[0], 0, msg="Did not force base index to 0")
 
         with self.assertRaises(NotImplementedError):
             c = Categorical(
-                ['a', 'a', 'b', 'c', 'a'], ['a', 'b', 'c'], base_index=0, filter=filter
+                ["a", "a", "b", "c", "a"], ["a", "b", "c"], base_index=0, filter=filter
             )
 
         with self.assertRaises(ValueError):
             c = Categorical(
-                [1.0, 2.0, 3.0], ['a', 'b', 'c'], from_matlab=True, base_index=0
+                [1.0, 2.0, 3.0], ["a", "b", "c"], from_matlab=True, base_index=0
             )
 
-        pdc = pd.Categorical(['a', 'a', 'b', 'c', 'a'])
+        pdc = pd.Categorical(["a", "a", "b", "c", "a"])
         with self.assertRaises(ValueError):
             c = Categorical(pdc, base_index=0)
 
     def test_is_in_unique_strings(self):
-        values = ['a', 'b', 'c', 'c', 'd', 'a', 'b']
-        good_cats = ['a', 'b', 'c', 'd']
-        incomplete_cats = ['a', 'b', 'c']
-        bad_cats = ['a', 'a', 'b']
-        invalid = 'invalid'
+        values = ["a", "b", "c", "c", "d", "a", "b"]
+        good_cats = ["a", "b", "c", "d"]
+        incomplete_cats = ["a", "b", "c"]
+        bad_cats = ["a", "a", "b"]
+        invalid = "invalid"
 
         ###--------REMOVED from_provided_categories, rewrite these tests to go through main constructor
 
@@ -873,7 +870,7 @@ class Categorical_Test(unittest.TestCase):
         self.assertEqual(len(c), 7)
         self.assertEqual(max(c._fa), 4)
         self.assertEqual(cats._mode, CategoryMode.StringArray)
-        self.assertEqual(cats._list.dtype.char, 'S')
+        self.assertEqual(cats._list.dtype.char, "S")
         self.assertTrue(cats.isbytes)
 
         # valid unicode
@@ -884,7 +881,7 @@ class Categorical_Test(unittest.TestCase):
         self.assertEqual(len(c), 7)
         self.assertEqual(max(c._fa), 4)
         self.assertEqual(cats._mode, CategoryMode.StringArray)
-        self.assertEqual(cats._list.dtype.char, 'U')
+        self.assertEqual(cats._list.dtype.char, "U")
         self.assertTrue(cats.isunicode)
 
         # non-unique categories
@@ -919,14 +916,14 @@ class Categorical_Test(unittest.TestCase):
             self.assertEqual(len(c), 7)
             self.assertEqual(max(c._fa), 3)
             self.assertEqual(cats._mode, CategoryMode.StringArray)
-            self.assertEqual(cats._list.dtype.char, 'U')
+            self.assertEqual(cats._list.dtype.char, "U")
             self.assertTrue(cats.isunicode)
 
     def test_getitem_enum_str(self):
         codes = [1, 44, 44, 133, 75]
         correct = [True, False, False, False, False]
-        valid_str = 'StronglyDisagree'
-        invalid_str = 'q'
+        valid_str = "StronglyDisagree"
+        invalid_str = "q"
         c = Categorical(codes, LikertDecision)
 
         # with self.assertRaises(IndexError):
@@ -939,13 +936,13 @@ class Categorical_Test(unittest.TestCase):
             self.assertEqual(sum(mask), 0)
 
     def test_match_str_to_category(self):
-        single_byte = b'a'
-        single_unicode = 'a'
-        single_true_unicode = u'\u2082'
+        single_byte = b"a"
+        single_unicode = "a"
+        single_true_unicode = "\u2082"
 
-        byte_values = [b'a', b'b', b'c', b'c', b'd', b'a', b'b']
-        values = FastArray(['a', 'b', 'c', 'c', 'd', 'a', 'b'])
-        true_unicode = [u'\u2082', u'\u2083', u'\u2082']
+        byte_values = [b"a", b"b", b"c", b"c", b"d", b"a", b"b"]
+        values = FastArray(["a", "b", "c", "c", "d", "a", "b"])
+        true_unicode = ["\u2082", "\u2083", "\u2082"]
 
         # 4/25/2019 - changed these tests to construct a Categorical, rather than
         # a Categories object directly. Categorical will always make a Categories object.
@@ -956,20 +953,20 @@ class Categorical_Test(unittest.TestCase):
         with self.assertRaises(TypeError):
             matching = c._categories_wrap.match_str_to_category(single_true_unicode)
 
-        univals = np.array(['a', 'b', 'c', 'c', 'd', 'a', 'b'])
+        univals = np.array(["a", "b", "c", "c", "d", "a", "b"])
         c = Categorical(univals, ordered=True, base_index=1, filter=None, unicode=True)
         matching_char = c._categories_wrap.match_str_to_category(single_byte)
         self.assertTrue(isinstance(matching_char, str))
 
         c = Categorical(values, ordered=True, base_index=1, filter=None)
         matching = c._categories_wrap.match_str_to_category(values)
-        self.assertEqual(matching.dtype.char, 'S')
+        self.assertEqual(matching.dtype.char, "S")
         with self.assertRaises(TypeError):
             matching = c._categories_wrap.match_str_to_category(true_unicode)
 
         c = Categorical(univals, ordered=True, base_index=1, filter=None, unicode=True)
         matching = c._categories_wrap.match_str_to_category(values)
-        self.assertEqual(matching.dtype.char, 'U')
+        self.assertEqual(matching.dtype.char, "U")
 
     # Categories object being removed
     # Disabling these tests - methods will move into Categorical
@@ -1003,7 +1000,7 @@ class Categorical_Test(unittest.TestCase):
     #        string_matches = c.get_category_match_index(['a','b'])
 
     def test_possibly_invalid(self):
-        values = ['a', 'b', 'c', 'c', 'd', 'a', 'b', 'g']
+        values = ["a", "b", "c", "c", "d", "a", "b", "g"]
         c = Categorical(values, base_index=1)
         out_of_range = -50
         sentinel = INVALID_DICT[c.dtype.num]
@@ -1019,11 +1016,11 @@ class Categorical_Test(unittest.TestCase):
         correct = FastArray([False, True, True, False, True])
         c = Categorical(codes, LikertDecision)
 
-        mask = c[['StronglyAgree', 'Disagree']]
+        mask = c[["StronglyAgree", "Disagree"]]
         is_correct = bool(np.all(mask == correct))
         self.assertTrue(is_correct)
 
-        mask = c[[b'StronglyAgree', b'Disagree']]
+        mask = c[[b"StronglyAgree", b"Disagree"]]
         is_correct = bool(np.all(mask == correct))
         self.assertTrue(is_correct)
 
@@ -1060,12 +1057,12 @@ class Categorical_Test(unittest.TestCase):
 
     # ------------------------- TEST HSTACK -------------------------------------------
     def test_hstack(self):
-        c1 = Categorical(['a', 'a', 'c', 'b', 'b'])
-        c2 = Categorical(['b', 'b', 'd', 'd', 'c'])
+        c1 = Categorical(["a", "a", "c", "b", "b"])
+        c2 = Categorical(["b", "b", "d", "d", "c"])
         cm = Categorical.hstack([c1, c2])
         self.assertTrue(
             (
-                cm.as_string_array == ['a', 'a', 'c', 'b', 'b', 'b', 'b', 'd', 'd', 'c']
+                cm.as_string_array == ["a", "a", "c", "b", "b", "b", "b", "d", "d", "c"]
             ).all()
         )
         c1 = Categorical([1, 1, 3, 2, 2], [1, 2, 3, 4, 5], from_matlab=True)
@@ -1074,17 +1071,17 @@ class Categorical_Test(unittest.TestCase):
         self.assertTrue((cm == [1, 1, 3, 2, 2, 2, 2, 4, 4, 3]).all())
 
     def test_align(self):
-        c1 = Categorical(['a', 'b', 'c'])
-        c2 = Categorical(['d', 'e', 'f'])
-        c3 = Categorical(['c', 'f', 'z'])
+        c1 = Categorical(["a", "b", "c"])
+        c2 = Categorical(["d", "e", "f"])
+        c3 = Categorical(["c", "f", "z"])
         cm = Categorical.align([c1, c2, c3])
-        self.assertTrue((cm[0].as_string_array == ['a', 'b', 'c']).all())
-        self.assertTrue((cm[1].as_string_array == ['d', 'e', 'f']).all())
-        self.assertTrue((cm[2].as_string_array == ['c', 'f', 'z']).all())
+        self.assertTrue((cm[0].as_string_array == ["a", "b", "c"]).all())
+        self.assertTrue((cm[1].as_string_array == ["d", "e", "f"]).all())
+        self.assertTrue((cm[2].as_string_array == ["c", "f", "z"]).all())
         self.assertTrue(
             (
                 cm[0].categories()
-                == FastArray([b'Filtered', b'a', b'b', b'c', b'd', b'e', b'f', b'z'])
+                == FastArray([b"Filtered", b"a", b"b", b"c", b"d", b"e", b"f", b"z"])
             ).all()
         )
         self.assertTrue((cm[0].categories() == cm[1].categories()).all())
@@ -1098,8 +1095,8 @@ class Categorical_Test(unittest.TestCase):
     def test_categorical_merge_dict(self):
         from riptable.rt_categorical import categorical_merge_dict
 
-        d1 = {'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5}
-        d2 = {'a': 1, 'e': 5, 'b': 2, 'f': 6}
+        d1 = {"a": 1, "b": 2, "c": 3, "d": 4, "e": 5}
+        d2 = {"a": 1, "e": 5, "b": 2, "f": 6}
         c1 = Categorical([3, 3, 4, 3, 1, 2, 5], d1)
         c2 = Categorical([1, 1, 5, 2, 2, 1, 5], d2)
 
@@ -1108,7 +1105,7 @@ class Categorical_Test(unittest.TestCase):
             self.assertTrue(i in combined.values())
 
     def test_getitem_empty(self):
-        c = Categorical([0, 1, 2], ['a', 'b', 'c'])
+        c = Categorical([0, 1, 2], ["a", "b", "c"])
 
         empty_list = c[[]]
         self.assertTrue(isinstance(empty_list, Categorical))
@@ -1122,9 +1119,9 @@ class Categorical_Test(unittest.TestCase):
             self.assertTrue(dict_matches)
 
     def test_iter_groups(self):
-        correct_keys = FastArray(['a', 'b', 'c', 'd', 'e'])
+        correct_keys = FastArray(["a", "b", "c", "d", "e"])
         correct_idx = [[8], [3], [5, 6], [2, 9], [0, 1, 4, 7]]
-        str_arr = FastArray(['e', 'e', 'd', 'b', 'e', 'c', 'c', 'e', 'a', 'd'])
+        str_arr = FastArray(["e", "e", "d", "b", "e", "c", "c", "e", "a", "d"])
         c = Categorical(str_arr)
         for i, tup in enumerate(c.iter_groups()):
             self.assertEqual(tup[0], correct_keys[i])
@@ -1136,17 +1133,17 @@ class Categorical_Test(unittest.TestCase):
 
     def test_enum_init_errors(self):
         with self.assertRaises(TypeError):
-            c = Categorical(['a', 'b', 'c'], LikertDecision)
+            c = Categorical(["a", "b", "c"], LikertDecision)
 
     def test_custom_invalid_category(self):
         # 5/16/2019 invalid must appear in provided uniques
         c = Categorical(
-            ['a', 'b', 'c', 'my_invalid'],
-            ['a', 'b', 'c', 'my_invalid'],
-            invalid='my_invalid',
+            ["a", "b", "c", "my_invalid"],
+            ["a", "b", "c", "my_invalid"],
+            invalid="my_invalid",
             base_index=1,
         )
-        self.assertEqual(c[3], 'my_invalid')
+        self.assertEqual(c[3], "my_invalid")
         self.assertTrue(c.isnan()[3])
         self.assertEqual(len(c.category_array), 4)
 
@@ -1155,9 +1152,9 @@ class Categorical_Test(unittest.TestCase):
     )
     def test_invalid_set(self):
         c = Categorical(
-            ['a', 'b', 'c', 'my_invalid'],
-            ['a', 'b', 'c', 'my_invalid'],
-            invalid='my_invalid',
+            ["a", "b", "c", "my_invalid"],
+            ["a", "b", "c", "my_invalid"],
+            invalid="my_invalid",
             base_index=1,
         )
         # set a new string to be displayed for invalid items and validate
@@ -1183,17 +1180,17 @@ class Categorical_Test(unittest.TestCase):
         # this code still needs to get written
 
     def test_getitem_np_str(self):
-        c = Categorical(['a', 'a', 'b', 'a', 'c', 'c', 'b'])
+        c = Categorical(["a", "a", "b", "a", "c", "c", "b"])
         correct = FastArray([True, True, True, True, False, False, True])
         with self.assertRaises(IndexError):
-            result = c[np.array(['a', 'b'])]
+            result = c[np.array(["a", "b"])]
         # self.assertTrue(array_equal(result, correct), msg=f"incorrect getitem result when indexing by numpy array of strings")
         with self.assertRaises(IndexError):
-            result = c[np.array(['a', 'b']).astype('S')]
+            result = c[np.array(["a", "b"]).astype("S")]
         # self.assertTrue(array_equal(result, correct), msg=f"incorrect getitem result when indexing by numpy array of strings")
 
     def test_getitem_slice(self):
-        c = Categorical(['a', 'a', 'b', 'a', 'c', 'c', 'b'])
+        c = Categorical(["a", "a", "b", "a", "c", "c", "b"])
         result = c[:3]
         self.assertTrue(isinstance(result, Categorical))
         match_fa = bool(np.all(result.view(FastArray) == [1, 1, 2]))
@@ -1223,13 +1220,13 @@ class Categorical_Test(unittest.TestCase):
     #    self.assertFalse(c.categories() is invalid_copy.categories())
 
     def test_fill_invalid(self):
-        values = list('aabaccb')
+        values = list("aabaccb")
         c = Categorical(values, base_index=1)
         c.fill_invalid(inplace=True)
 
         assert_array_equal(FastArray([c.filtered_name] * len(values)), c.expand_array)
         assert_array_equal(FastArray([0] * len(values)), c._fa)
-        expected = FastArray(sorted(set(values))).astype('|S1')
+        expected = FastArray(sorted(set(values))).astype("|S1")
 
         assert_array_equal(expected, c.category_array)
         assert_array_equal(
@@ -1237,17 +1234,17 @@ class Categorical_Test(unittest.TestCase):
         )  # values of first key
 
     def test_force_unicode(self):
-        c = Categorical(['a', 'a', 'b', 'a', 'c', 'c', 'b'], unicode=True)
+        c = Categorical(["a", "a", "b", "a", "c", "c", "b"], unicode=True)
         result_dtype = c.categories().dtype.char
         self.assertEqual(
             result_dtype,
-            'U',
+            "U",
             msg=f"Failed to force unicode when constructing categorical from list of string values",
         )
 
     def test_categories_shallow_copy(self):
         codes = [10, 10, 20, 10, 30, 20, 10]
-        d = {10: 'a', 20: 'b', 30: 'c'}
+        d = {10: "a", 20: "b", 30: "c"}
         c = Categorical(codes, d)
         original_cats = c._categories_wrap
         new_cats = original_cats.copy(deep=False)
@@ -1265,25 +1262,27 @@ class Categorical_Test(unittest.TestCase):
     #    c = Categorical(['a','a','b','a','c','c','b'],np.array(['a','b']), invalid='inv', base_index=1)
     #    self.assertEqual(c[4],FILTERED_LONG_NAME)
 
-    @pytest.mark.xfail(reason='20200416 This test was previously overridden by a later test in the file with the same name. Need to revisit and get back in a working state.')
+    @pytest.mark.xfail(
+        reason="20200416 This test was previously overridden by a later test in the file with the same name. Need to revisit and get back in a working state."
+    )
     def test_getitem_enum_list(self):
         c = Categorical([44, 133, 133, 75, 144, 1], LikertDecision)
         with self.assertRaises(IndexError):
-            result = c[[b'NeitherAgreeNorDisagree']]
+            result = c[[b"NeitherAgreeNorDisagree"]]
         correct = FastArray([False, False, False, False, True, False])
         # self.assertTrue(array_equal(result, correct))
 
         result = c[[4]]
-        self.assertEqual(result[0], 'NeitherAgreeNorDisagree')
+        self.assertEqual(result[0], "NeitherAgreeNorDisagree")
 
     def test_non_unique(self):
         with self.assertRaises(ValueError):
-            c = Categorical(['a', 'a', 'b', 'a', 'c', 'c', 'b'], ['a', 'a', 'b'])
+            c = Categorical(["a", "a", "b", "a", "c", "c", "b"], ["a", "a", "b"])
 
     def test_match_to_category(self):
-        c = Categorical(['a', 'a', 'b', 'a', 'c', 'c', 'b'])
-        result = c._categories_wrap.match_str_to_category('a')
-        self.assertEqual(b'a', result)
+        c = Categorical(["a", "a", "b", "a", "c", "c", "b"])
+        result = c._categories_wrap.match_str_to_category("a")
+        self.assertEqual(b"a", result)
 
         with self.assertRaises(TypeError):
             result = c._categories_wrap.match_str_to_category([1, 2, 3])
@@ -1292,16 +1291,16 @@ class Categorical_Test(unittest.TestCase):
             result = c._categories_wrap.match_str_to_category({1, 2, 3})
 
         c1 = Categorical(
-            ['abc', 'def', 'abc', 'abc'], np.array(['abc', 'def']), unicode=True
+            ["abc", "def", "abc", "abc"], np.array(["abc", "def"]), unicode=True
         )
-        result = c1._categories_wrap.match_str_to_category([b'a'])
-        self.assertEqual(result.dtype.char, 'U')
+        result = c1._categories_wrap.match_str_to_category([b"a"])
+        self.assertEqual(result.dtype.char, "U")
 
     # ------------------------------------TEST SET ITEM------------------------------------------
     def test_set_item_str_index(self):
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
         correct = [2, 2, 2, 2, 2, 2]
-        c['a'] = 'b'
+        c["a"] = "b"
         is_correct = bool(np.all(c.view(FastArray) == correct))
         self.assertTrue(
             is_correct,
@@ -1311,12 +1310,12 @@ class Categorical_Test(unittest.TestCase):
             ValueError,
             msg=f"Failed to stop categories from being added when auto add set to False.",
         ):
-            c['b'] = 'c'
+            c["b"] = "c"
 
     def test_set_item_int_index(self):
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
         correct = [1, 2, 2, 1, 2, 2]
-        c[0] = 'a'
+        c[0] = "a"
         is_correct = bool(np.all(c.view(FastArray) == correct))
         self.assertTrue(
             is_correct,
@@ -1326,13 +1325,13 @@ class Categorical_Test(unittest.TestCase):
             ValueError,
             msg=f"Failed to stop categories from being added when auto add set to False.",
         ):
-            c[0] = 'c'
+            c[0] = "c"
 
     # ------------------------------------TEST CALCULATE DTYPE ----------------------------------
     def test_get_dtype_from_len(self):
-        '''
+        """
         Categorical will select different types
-        '''
+        """
 
         dtype_sizes = {
             np.int8: 1,
@@ -1343,7 +1342,7 @@ class Categorical_Test(unittest.TestCase):
             LENGTH = 6
             NO_CODES = sz
             alphabet = list(
-                'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
             )
             np_alphabet = np.array(alphabet, dtype="|U1")
             np_codes = np.random.choice(np_alphabet, [NO_CODES, LENGTH])
@@ -1359,19 +1358,19 @@ class Categorical_Test(unittest.TestCase):
 
     # -------SINGLE INTEGER
     def test_getitem_int(self):
-        '''
+        """
         Single integer index should return the corresponding category in unicode format.
-        '''
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
+        """
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
         self.assertEqual(
-            c[0], 'b', msg=f"Get item with integer did not return the correct category."
+            c[0], "b", msg=f"Get item with integer did not return the correct category."
         )
         self.assertTrue(
             isinstance(c[0], str),
             msg=f"Get item with integer did not return as unicode.",
         )
         self.assertEqual(
-            c[3], 'a', msg=f"Get item with integer did not return the correct category."
+            c[3], "a", msg=f"Get item with integer did not return the correct category."
         )
         self.assertTrue(
             isinstance(c[3], str),
@@ -1383,7 +1382,7 @@ class Categorical_Test(unittest.TestCase):
     # --------INTEGER MASK
     def test_getitem_int_mask(self):
         py_mask = [0, 3]
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
 
         for mask in [py_mask, np.array(py_mask)]:
             d = c[mask]
@@ -1411,12 +1410,12 @@ class Categorical_Test(unittest.TestCase):
     # -------BOOLEAN MASK
     def test_getitem_bool_mask(self):
         py_mask = [True, True, True, False, True, True]
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
 
         for mask in [py_mask, np.array(py_mask)]:
             d = c[mask]
             self.assertFalse(
-                b'a' in d.as_string_array,
+                b"a" in d.as_string_array,
                 msg=f"b'a' does not get trimmed out of categorical with getitem from boolean array.",
             )
             self.assertEqual(
@@ -1435,8 +1434,8 @@ class Categorical_Test(unittest.TestCase):
     # -------SINGLE STRING
     def test_getitem_single_string(self):
         b_result = [True, True, True, False, True, True]
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
-        idx = b'c'
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
+        idx = b"c"
         # with self.assertRaises(IndexError):
         d = c[idx]
         has_true = bool(np.any(d))
@@ -1449,7 +1448,7 @@ class Categorical_Test(unittest.TestCase):
             msg=f"Get item input {idx} did not return FastArray",
         )
         self.assertEqual(
-            d.dtype.char, '?', msg=f"Get item input {idx} did not return FastArray"
+            d.dtype.char, "?", msg=f"Get item input {idx} did not return FastArray"
         )
         idx = idx.decode()
         # with self.assertRaises(IndexError):
@@ -1464,10 +1463,10 @@ class Categorical_Test(unittest.TestCase):
             msg=f"Get item input {idx} did not return FastArray",
         )
         self.assertEqual(
-            d.dtype.char, '?', msg=f"Get item input {idx} did not return FastArray"
+            d.dtype.char, "?", msg=f"Get item input {idx} did not return FastArray"
         )
 
-        idx = b'b'
+        idx = b"b"
         # with self.assertRaises(IndexError):
         d = c[idx]
         is_correct = bool(np.all(d == b_result))
@@ -1479,7 +1478,7 @@ class Categorical_Test(unittest.TestCase):
             msg=f"Get item input {idx} did not return FastArray",
         )
         self.assertEqual(
-            d.dtype.char, '?', msg=f"Get item input {idx} did not return FastArray"
+            d.dtype.char, "?", msg=f"Get item input {idx} did not return FastArray"
         )
         idx = idx.decode()
         # with self.assertRaises(IndexError):
@@ -1493,17 +1492,17 @@ class Categorical_Test(unittest.TestCase):
             msg=f"Get item input {idx} did not return FastArray",
         )
         self.assertEqual(
-            d.dtype.char, '?', msg=f"Get item input {idx} did not return FastArray"
+            d.dtype.char, "?", msg=f"Get item input {idx} did not return FastArray"
         )
 
     # ------MULTIPLE STRINGS
     def test_getitem_multiple_strings(self):
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'])
+        c = Categorical(["b", "b", "b", "a", "b", "b"])
         inputs = {
-            (b'b',): [True, True, True, False, True, True],  # single in (list)
-            (b'c',): [False, False, False, False, False, False],  # single not in (list)
-            (b'a', b'b'): [True, True, True, True, True, True],  # both in (list)
-            (b'c', b'd'): [
+            (b"b",): [True, True, True, False, True, True],  # single in (list)
+            (b"c",): [False, False, False, False, False, False],  # single not in (list)
+            (b"a", b"b"): [True, True, True, True, True, True],  # both in (list)
+            (b"c", b"d"): [
                 False,
                 False,
                 False,
@@ -1511,7 +1510,7 @@ class Categorical_Test(unittest.TestCase):
                 False,
                 False,
             ],  # both not in (list)
-            (b'b', b'c'): [True, True, True, False, True, True],  # mixed (list)
+            (b"b", b"c"): [True, True, True, False, True, True],  # mixed (list)
         }
         for idx, correct in inputs.items():
             idx = list(idx)
@@ -1523,7 +1522,7 @@ class Categorical_Test(unittest.TestCase):
                 msg=f"Indexing categorical {c} by {idx} did not return the correct result.",
             )
             self.assertEqual(
-                d.dtype.char, '?', msg=f"Get item input {idx} did not return FastArray"
+                d.dtype.char, "?", msg=f"Get item input {idx} did not return FastArray"
             )
 
             idx = [b.decode() for b in idx]
@@ -1534,7 +1533,7 @@ class Categorical_Test(unittest.TestCase):
                 msg=f"Indexing categorical {c} by {idx} did not return the correct result.",
             )
             self.assertEqual(
-                d.dtype.char, '?', msg=f"Get item input {idx} did not return FastArray"
+                d.dtype.char, "?", msg=f"Get item input {idx} did not return FastArray"
             )
 
     # ------NUMERIC GETITEM
@@ -1554,19 +1553,19 @@ class Categorical_Test(unittest.TestCase):
 
     # ------------------------- TEST COMPARE CHECK -------------------------------------------
     def test_compare_check(self):
-        '''
+        """
         Test comparison between two 'equal' categoricals with different underlying arrays.
-        '''
+        """
         compare_ops = {
-            '__ne__': [False, False, False, False, False, False],
-            '__eq__': [True, True, True, True, True, True],
-            '__ge__': [True, True, True, True, True, True],
-            '__gt__': [False, False, False, False, False, False],
-            '__le__': [True, True, True, True, True, True],
-            '__lt__': [False, False, False, False, False, False],
+            "__ne__": [False, False, False, False, False, False],
+            "__eq__": [True, True, True, True, True, True],
+            "__ge__": [True, True, True, True, True, True],
+            "__gt__": [False, False, False, False, False, False],
+            "__le__": [True, True, True, True, True, True],
+            "__lt__": [False, False, False, False, False, False],
         }
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b', 'c'])
-        d = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b", "c"])
+        d = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
         for name, correct in compare_ops.items():
             func = c.__getattribute__(name)
             result = func(d)
@@ -1577,12 +1576,12 @@ class Categorical_Test(unittest.TestCase):
             )
 
     def test_compare_return_type(self):
-        '''
+        """
         Test comparison operations with single strings to make sure FastArray of boolean is returned.
-        '''
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
-        scalars = ['a', 'c']
-        compare_ops = ['__ne__', '__eq__', '__ge__', '__gt__', '__le__', '__lt__']
+        """
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
+        scalars = ["a", "c"]
+        compare_ops = ["__ne__", "__eq__", "__ge__", "__gt__", "__le__", "__lt__"]
         for s in scalars:
             for op in compare_ops:
                 func = c.__getattribute__(op)
@@ -1593,32 +1592,32 @@ class Categorical_Test(unittest.TestCase):
                 )
                 self.assertEqual(
                     result.dtype.char,
-                    '?',
+                    "?",
                     msg=f"comparison {op} with input {s} did not return boolean",
                 )
 
     def test_compare_different_modes(self):
-        c1 = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
-        c2 = Categorical([0, 1], {0: 'a', 1: 'b'})
+        c1 = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
+        c2 = Categorical([0, 1], {0: "a", 1: "b"})
         with self.assertRaises(TypeError):
             c1 == c2
 
     def test_compare_conflicting_dicts(self):
-        c1 = Categorical([0, 1], {0: 'a', 1: 'b'})
-        c2 = Categorical([0, 1], {1: 'a', 0: 'b'})
+        c1 = Categorical([0, 1], {0: "a", 1: "b"})
+        c2 = Categorical([0, 1], {1: "a", 0: "b"})
         with self.assertRaises(ValueError):
             c1 == c2
 
     def test_compare_safe_dicts(self):
-        c1 = Categorical([0, 1], {0: 'a', 1: 'b'})
-        c2 = Categorical([2, 1], {2: 'c', 1: 'b'})
+        c1 = Categorical([0, 1], {0: "a", 1: "b"})
+        c2 = Categorical([2, 1], {2: "c", 1: "b"})
         correct = FastArray([False, True])
         result = c1 == c2
         match = bool(np.all(correct == result))
         self.assertTrue(match)
 
     def test_isnan(self):
-        c = Categorical([1, 1, 3, 2, 2], ['a', 'b', 'c'], base_index=1, invalid='a')
+        c = Categorical([1, 1, 3, 2, 2], ["a", "b", "c"], base_index=1, invalid="a")
         is_correct = [True, True, False, False, False]
         is_not_correct = [False, False, True, True, True]
         self.assertTrue(bool(np.all(is_correct == isnan(c))))
@@ -1629,7 +1628,7 @@ class Categorical_Test(unittest.TestCase):
     # ------------------------------------------------------
     def test_get_categories(self):
         # string list
-        c = Categorical(['a', 'b', 'c', 'd', 'e'])
+        c = Categorical(["a", "b", "c", "d", "e"])
         catsarray = c.category_array
         self.assertTrue(isinstance(catsarray, np.ndarray))
         catsdict = c.category_dict
@@ -1653,7 +1652,7 @@ class Categorical_Test(unittest.TestCase):
             catsmapping = c.category_mapping
 
         # dict/enum
-        c = Categorical([1, 2, 3, 4], {1: 'a', 2: 'b', 3: 'c', 4: 'd'})
+        c = Categorical([1, 2, 3, 4], {1: "a", 2: "b", 3: "c", 4: "d"})
         catsarray = c.category_array
         self.assertTrue(isinstance(catsarray, np.ndarray))
         catsdict = c.category_dict
@@ -1678,16 +1677,16 @@ class Categorical_Test(unittest.TestCase):
 
     # ------------------------------------------------------
     def test_force_base_index2(self):
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         self.assertEqual(c.base_index, 1)
         self.assertEqual(c._fa[0], 1)
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0)
+        c = Categorical(["a", "a", "b", "c", "a"], base_index=0)
         self.assertEqual(c.base_index, 0)
         self.assertEqual(c._fa[0], 0)
 
         codes = np.array([0, 0, 1, 2, 0])
-        cats = np.array(['a', 'b', 'c'])
+        cats = np.array(["a", "b", "c"])
         # c = Categorical(codes, cats)
         # self.assertEqual(c.base_index, 0)
         # self.assertEqual(c._fa[0], 0)
@@ -1705,32 +1704,32 @@ class Categorical_Test(unittest.TestCase):
         with self.assertRaises(ValueError):
             c = Categorical(codes, cats, from_matlab=True, base_index=0)
 
-        c = Categorical(np.array(['a', 'a', 'b', 'c', 'a']), np.array(['a', 'b', 'c']))
+        c = Categorical(np.array(["a", "a", "b", "c", "a"]), np.array(["a", "b", "c"]))
         self.assertEqual(c.base_index, 1)
         self.assertEqual(c._fa[0], 1)
 
         c = Categorical(
-            np.array(['a', 'a', 'b', 'c', 'a']), np.array(['a', 'b', 'c']), base_index=0
+            np.array(["a", "a", "b", "c", "a"]), np.array(["a", "b", "c"]), base_index=0
         )
         self.assertEqual(c.base_index, 0)
         self.assertEqual(c._fa[0], 0)
 
     # ------------------------------------------------------
     def test_ordered(self):
-        c = Categorical(['c', 'c', 'a', 'b', 'c'])
+        c = Categorical(["c", "c", "a", "b", "c"])
         cats = c.category_array
-        self.assertEqual(cats[0], b'a')
+        self.assertEqual(cats[0], b"a")
 
-        c = Categorical(['c', 'c', 'a', 'b', 'c'], ordered=False)
+        c = Categorical(["c", "c", "a", "b", "c"], ordered=False)
         cats = c.category_array
-        self.assertEqual(cats[0], b'c')
+        self.assertEqual(cats[0], b"c")
 
-        c = Categorical(['c', 'c', 'a', 'b', 'c'], ['c', 'a', 'b'])
+        c = Categorical(["c", "c", "a", "b", "c"], ["c", "a", "b"])
         cats = c.category_array
-        self.assertEqual(cats[0], b'c')
+        self.assertEqual(cats[0], b"c")
         self.assertFalse(c.ordered)
 
-        c = Categorical(['c', 'c', 'a', 'b', 'c'], ['a', 'b', 'c'])
+        c = Categorical(["c", "c", "a", "b", "c"], ["a", "b", "c"])
         self.assertTrue(c.ordered)
 
         ## removed this test - side-effect of search sorted with unsorted array (not categorical related)
@@ -1739,15 +1738,15 @@ class Categorical_Test(unittest.TestCase):
         # self.assertTrue(bool(np.all(c!='c')))
         # self.assertTrue(bool(np.all(c!=b'c')))
 
-        c = Categorical(['c', 'c', 'a', 'b', 'c'], ['c', 'a', 'b'], ordered=False)
+        c = Categorical(["c", "c", "a", "b", "c"], ["c", "a", "b"], ordered=False)
         cats = c.category_array
-        self.assertEqual(cats[0], b'c')
+        self.assertEqual(cats[0], b"c")
         self.assertFalse(c.ordered)
 
         codes = FastArray([0, 0, 1, 2, 0])
-        cats = FastArray(['c', 'b', 'a'], unicode=True)
+        cats = FastArray(["c", "b", "a"], unicode=True)
         c = Categorical(codes, cats)
-        self.assertEqual(c.category_array[0], 'c')
+        self.assertEqual(c.category_array[0], "c")
         self.assertFalse(c.ordered)
 
         # with self.assertWarns(UserWarning):
@@ -1761,15 +1760,15 @@ class Categorical_Test(unittest.TestCase):
         # filter + base index 0
         f = np.array([True, False, True])
         with self.assertRaises(ValueError):
-            c = Categorical(['a', 'b', 'c'], filter=f, base_index=0)
+            c = Categorical(["a", "b", "c"], filter=f, base_index=0)
 
     # ------------------------------------------------------
     def test_display_properties(self):
-        '''
+        """
         Categoricals take over their display properties to appear like strings (not the underlying integer array)
         (see Utils.rt_display_properties)
-        '''
-        c = Categorical(['b', 'b', 'b', 'a', 'b', 'b'], ['a', 'b'])
+        """
+        c = Categorical(["b", "b", "b", "a", "b", "b"], ["a", "b"])
         item_format, convert_func = c.display_query_properties()
         self.assertEqual(
             item_format.length,
@@ -1781,12 +1780,12 @@ class Categorical_Test(unittest.TestCase):
         self.assertEqual(item_format.can_have_spaces, True)
         self.assertEqual(item_format.decoration, None)
         self.assertEqual(item_format.color, DisplayColumnColors.Default)
-        self.assertEqual(convert_func.__name__, 'display_convert_func')
+        self.assertEqual(convert_func.__name__, "display_convert_func")
 
         # this could change, right now the convert function just does a str over the item
         self.assertEqual(
             convert_func(1, item_format),
-            '1',
+            "1",
             msg=f"Incorrect convert function was returned.",
         )
 
@@ -1795,7 +1794,7 @@ class Categorical_Test(unittest.TestCase):
     def test_non_array_dict_categories_ctor(self):
 
         with self.assertRaises(TypeError):
-            c = Categories(['garbage', 'list'])
+            c = Categories(["garbage", "list"])
 
     def test_too_many_args_categories_ctor(self):
         with self.assertRaises(ValueError):
@@ -1803,21 +1802,21 @@ class Categorical_Test(unittest.TestCase):
 
     def test_filter_and_invalid(self):
         c = Categorical(
-            ['a', 'a', 'b', 'c', 'c'],
-            ['c'],
-            invalid='a',
+            ["a", "a", "b", "c", "c"],
+            ["c"],
+            invalid="a",
             filter=FastArray([True, True, False, True, True]),
         )
-        c.filtered_set_name('a')
+        c.filtered_set_name("a")
         self.assertTrue(bool(np.all(c._fa == [0, 0, 0, 1, 1])))
         for i in range(3):
-            self.assertEqual(c[i], 'a')
+            self.assertEqual(c[i], "a")
         for i in range(3, 5):
-            self.assertEqual(c[i], 'c')
+            self.assertEqual(c[i], "c")
 
     def test_zero_base_with_invalid(self):
         with self.assertRaises(ValueError):
-            c = Categorical(['a', 'b', 'c'], ['b', 'c'], base_index=0)
+            c = Categorical(["a", "b", "c"], ["b", "c"], base_index=0)
 
     # removed this property from Categories 04/24/2019
     # def test_multikey_labels(self):
@@ -1827,7 +1826,7 @@ class Categorical_Test(unittest.TestCase):
     #    self.assertEqual(labels[0][0],'a')
 
     def test_ncols_non_multikey(self):
-        c = Categorical(['a', 'b', 'c'])
+        c = Categorical(["a", "b", "c"])
         self.assertEqual(c._categories_wrap.ncols, 1)
 
     # now checks for single / multikey / enum, not CategoryMode
@@ -1837,12 +1836,12 @@ class Categorical_Test(unittest.TestCase):
     #    self.assertEqual(len(c._categories_wrap),0)
 
     def test_categories_copy_shallow(self):
-        c = Categorical(['a', 'b', 'c'])
+        c = Categorical(["a", "b", "c"])
         copycat = c._categories_wrap.copy(deep=False)
         self.assertTrue(isinstance(copycat, Categories))
 
     def test_categories_copy_deep(self):
-        c = Categorical([1, 2, 3], {1: 'a', 2: 'b', 3: 'c'})
+        c = Categorical([1, 2, 3], {1: "a", 2: "b", 3: "c"})
         copycat = c._categories_wrap.copy(deep=False)
         self.assertTrue(isinstance(copycat, Categories))
 
@@ -1852,11 +1851,11 @@ class Categorical_Test(unittest.TestCase):
         #    c = c._categories_wrap.copy()
 
     def test_wrap_get_categories(self):
-        c = Categorical(['a', 'b', 'c'])
+        c = Categorical(["a", "b", "c"])
         arr = c._categories_wrap.get_categories()
         self.assertTrue(isinstance(arr, FastArray))
 
-        c = Categorical([FastArray(['a', 'b', 'c']), FastArray([1, 2, 3])])
+        c = Categorical([FastArray(["a", "b", "c"]), FastArray([1, 2, 3])])
         d = c._categories_wrap.get_categories()
         self.assertTrue(isinstance(d, dict))
 
@@ -1866,32 +1865,32 @@ class Categorical_Test(unittest.TestCase):
         self.assertFalse(c._categories_wrap.isunicode)
 
     def test_pop_single_arr(self):
-        c = Categorical([np.array(['a', 'b', 'c'])])
-        d = Categorical(np.array(['a', 'b', 'c']))
+        c = Categorical([np.array(["a", "b", "c"])])
+        d = Categorical(np.array(["a", "b", "c"]))
         self.assertTrue(bool(np.all(c == d)))
 
-        c = Categorical({'test': np.array(['a', 'b', 'c'])})
-        d = Categorical(np.array(['a', 'b', 'c']))
+        c = Categorical({"test": np.array(["a", "b", "c"])})
+        d = Categorical(np.array(["a", "b", "c"]))
         self.assertTrue(bool(np.all(c == d)))
 
     def test_from_cat_as_array(self):
         c = Categorical(
-            FastArray([1, 2, 3]), _from_categorical=np.array(['a', 'b', 'c'])
+            FastArray([1, 2, 3]), _from_categorical=np.array(["a", "b", "c"])
         )
         self.assertTrue(isinstance(c.category_array, FastArray))
         self.assertEqual(c.base_index, 1)
 
     def test_from_pandas_object(self):
-        pdc = pd.Categorical(['a', 'b', 'c'])
+        pdc = pd.Categorical(["a", "b", "c"])
         c = Categorical(pdc, unicode=True)
-        self.assertEqual(c.category_array.dtype.char, 'U')
+        self.assertEqual(c.category_array.dtype.char, "U")
 
         c = Categorical(pdc, unicode=False)
-        self.assertEqual(c.category_array.dtype.char, 'S')
+        self.assertEqual(c.category_array.dtype.char, "S")
 
         pdc = pd.Categorical(three_unicode)
         c = Categorical(pdc)
-        self.assertEqual(c.category_array.dtype.char, 'U')
+        self.assertEqual(c.category_array.dtype.char, "U")
 
     def test_empty_init(self):
         with self.assertRaises(ValueError):
@@ -1903,8 +1902,8 @@ class Categorical_Test(unittest.TestCase):
     def test_multi_with_cats(self):
         with self.assertRaises(NotImplementedError):
             c = Categorical(
-                [FastArray(['a', 'b', 'c', 'a']), FastArray([1, 2, 3, 1])],
-                [FastArray(['a', 'b', 'c']), FastArray([1, 2, 3])],
+                [FastArray(["a", "b", "c", "a"]), FastArray([1, 2, 3, 1])],
+                [FastArray(["a", "b", "c"]), FastArray([1, 2, 3])],
             )
 
     # 5/9/2019 removed this warning to reduce constructor paths
@@ -1914,67 +1913,67 @@ class Categorical_Test(unittest.TestCase):
 
     def test_map_non_integer(self):
         with self.assertRaises(TypeError):
-            c = Categorical([1.0, 2.0, 3.0], {1: 'a', 2: 'b', 3: 'c'})
+            c = Categorical([1.0, 2.0, 3.0], {1: "a", 2: "b", 3: "c"})
 
     def test_category_multi_arrays(self):
         with self.assertRaises(TypeError):
             c = Categorical([1, 2, 3], [np.arange(5), np.arange(5)])
 
     def test_getitem_enum_list2(self):
-        c = Categorical([1, 1, 2, 3, 1], {'a': 1, 'b': 2, 'c': 3})
+        c = Categorical([1, 1, 2, 3, 1], {"a": 1, "b": 2, "c": 3})
         d = c[[1, 2, 3]]
-        self.assertEqual(d[0], 'a')
+        self.assertEqual(d[0], "a")
 
     def test_tuple_compare_error(self):
-        c = Categorical([FastArray(['a', 'b', 'c', 'a']), FastArray([1, 2, 3, 1])])
+        c = Categorical([FastArray(["a", "b", "c", "a"]), FastArray([1, 2, 3, 1])])
         with self.assertRaises(ValueError):
-            _ = c == ('a', 'b', 'c')
+            _ = c == ("a", "b", "c")
 
     def test_filter_out_bytes_from_unicode(self):
-        c = Categorical(['a', 'a', 'b', 'c', 'a'], unicode=True, invalid=b'a')
+        c = Categorical(["a", "a", "b", "c", "a"], unicode=True, invalid=b"a")
         self.assertTrue(bool(np.all(c._fa == [1, 1, 2, 3, 1])))
-        self.assertTrue(c.category_array.dtype.char == 'U')
-        self.assertTrue('a' in c.category_array)
+        self.assertTrue(c.category_array.dtype.char == "U")
+        self.assertTrue("a" in c.category_array)
 
     def test_bytes_compare_multikey(self):
         c = Categorical(
-            [np.array(['a', 'b', 'c', 'a']), FastArray([1, 2, 3, 1])], unicode=True
+            [np.array(["a", "b", "c", "a"]), FastArray([1, 2, 3, 1])], unicode=True
         )
         cols = c.category_dict
         bytescol = list(cols.values())[0]
-        self.assertEqual(bytescol.dtype.char, 'U')
-        result = c == (b'a', 1)
+        self.assertEqual(bytescol.dtype.char, "U")
+        result = c == (b"a", 1)
         self.assertTrue(bool(np.all(FastArray([True, False, False, True]) == result)))
 
     def test_cat_zero_wronge_base(self):
         with self.assertRaises(ValueError):
-            c = CatZero(['a', 'a', 'b', 'c', 'a'], base_index=1)
+            c = CatZero(["a", "a", "b", "c", "a"], base_index=1)
 
     def test_preserve_name(self):
         ds = TypeRegister.Dataset(
-            {'strcol': np.random.choice(['a', 'b', 'c'], 10), 'numcol': arange(10)}
+            {"strcol": np.random.choice(["a", "b", "c"], 10), "numcol": arange(10)}
         )
         c = Categorical(ds.strcol)
-        self.assertEqual(c.get_name(), 'strcol')
+        self.assertEqual(c.get_name(), "strcol")
 
         c = Categorical([ds.strcol, ds.numcol])
         ds2 = c.sum(arange(10))
         labels = ds2.label_get_names()
-        self.assertEqual(labels[0], 'strcol')
-        self.assertEqual(labels[1], 'numcol')
+        self.assertEqual(labels[0], "strcol")
+        self.assertEqual(labels[1], "numcol")
 
-        ds = TypeRegister.Dataset({'mycodes': np.random.randint(1, 4, 10)})
-        c = Categorical(ds.mycodes, {'a': 1, 'b': 2, 'c': 3})
-        self.assertEqual(c.get_name(), 'mycodes')
+        ds = TypeRegister.Dataset({"mycodes": np.random.randint(1, 4, 10)})
+        c = Categorical(ds.mycodes, {"a": 1, "b": 2, "c": 3})
+        self.assertEqual(c.get_name(), "mycodes")
 
         codes = np.random.randint(1, 4, 10)
-        cats = FastArray(['a', 'b', 'c'])
-        cats.set_name('test')
+        cats = FastArray(["a", "b", "c"])
+        cats.set_name("test")
         c = Categorical(codes, cats)
-        self.assertTrue(c.get_name(), 'test')
+        self.assertTrue(c.get_name(), "test")
 
     def test_construct_from_categorical(self):
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         d = Categorical(c)
         assert isinstance(d.category_array, np.ndarray)
         assert isinstance(d.expand_array, np.ndarray)
@@ -1984,7 +1983,7 @@ class Categorical_Test(unittest.TestCase):
         assert isinstance(d2.expand_array, np.ndarray)
 
     def test_total_size(self):
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         self.assertEqual(c._total_size, 8)
 
         c = Categorical([arange(5, dtype=np.int32), arange(5, dtype=np.int32)])
@@ -2003,7 +2002,7 @@ class Categorical_Test(unittest.TestCase):
     #    self.assertEqual(result._nrows, 3)
 
     def test_expand_dict(self):
-        og_strings = FastArray(['a', 'a', 'b', 'c', 'a'])
+        og_strings = FastArray(["a", "a", "b", "c", "a"])
         og_nums = arange(5)
 
         c = Categorical([og_strings, og_nums])
@@ -2014,7 +2013,7 @@ class Categorical_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(dictlist[0] == og_strings)))
         self.assertTrue(bool(np.all(dictlist[1] == og_nums)))
 
-        c = Categorical([1, 2, 3], {'a': 1, 'b': 2, 'c': 3})
+        c = Categorical([1, 2, 3], {"a": 1, "b": 2, "c": 3})
         d = c.expand_dict
         self.assertTrue(isinstance(d, dict))
         self.assertEqual(len(d), 1)
@@ -2026,45 +2025,45 @@ class Categorical_Test(unittest.TestCase):
             d = c.expand_dict
 
     def test_expand_array(self):
-        c = Categorical([1, 2, 3], {'a': 1, 'b': 2, 'c': 3})
+        c = Categorical([1, 2, 3], {"a": 1, "b": 2, "c": 3})
         arr = c.expand_array
         self.assertTrue(bool(np.all(arr == arange(1, 4))))
 
-        c = Categorical([FastArray(['a', 'b', 'c', 'a']), FastArray([1, 2, 3, 1])])
+        c = Categorical([FastArray(["a", "b", "c", "a"]), FastArray([1, 2, 3, 1])])
 
         # expand array now works on multikey categoricals, returns a tuple of expanded arrays SJK: 4/29/2019
         multi_expand = c.expand_array
         self.assertTrue(isinstance(multi_expand, tuple))
         self.assertEqual(len(multi_expand), 2)
         self.assertTrue(
-            bool(np.all(FastArray(['a', 'b', 'c', 'a']) == multi_expand[0]))
+            bool(np.all(FastArray(["a", "b", "c", "a"]) == multi_expand[0]))
         )
         self.assertTrue(bool(np.all(FastArray([1, 2, 3, 1]) == multi_expand[1])))
 
         c._fa[:] = 0
         multi_expand = c.expand_array
         self.assertTrue(bool(np.all(isnan(multi_expand[1]))))
-        self.assertTrue(bool(np.all(multi_expand[0] == b'Filtered')))
+        self.assertTrue(bool(np.all(multi_expand[0] == b"Filtered")))
 
     def test_true_false_spacer(self):
-        c = Categorical(['a', 'b', 'c'])
-        t_true = c._tf_spacer(['test', True])
-        self.assertEqual(t_true, 'testTrue ')
+        c = Categorical(["a", "b", "c"])
+        t_true = c._tf_spacer(["test", True])
+        self.assertEqual(t_true, "testTrue ")
 
-        t_false = c._tf_spacer(['test', False])
-        self.assertEqual(t_false, 'testFalse')
+        t_false = c._tf_spacer(["test", False])
+        self.assertEqual(t_false, "testFalse")
 
     def test_mapping_hstack(self):
-        c1 = Categorical([1, 1, 1, 1, 2, 3], {'a': 1, 'b': 2, 'c': 3})
-        c2 = Categorical([1, 1, 1, 1, 3, 4], {'a': 1, 'c': 3, 'd': 4})
+        c1 = Categorical([1, 1, 1, 1, 2, 3], {"a": 1, "b": 2, "c": 3})
+        c2 = Categorical([1, 1, 1, 1, 3, 4], {"a": 1, "c": 3, "d": 4})
         stacked = Categorical.hstack([c1, c2])
         self.assertEqual(stacked.unique_count, 4)
-        self.assertEqual(stacked.from_category('b'), 2)
-        self.assertEqual(stacked.from_category('d'), 4)
+        self.assertEqual(stacked.from_category("b"), 2)
+        self.assertEqual(stacked.from_category("d"), 4)
         self.assertEqual(len(stacked), 12)
 
-        c1 = Categorical([1, 1, 1, 1, 2, 3], {'a': 1, 'b': 2, 'd': 3})
-        c2 = Categorical([1, 1, 1, 1, 3, 4], {'a': 1, 'c': 3, 'd': 4})
+        c1 = Categorical([1, 1, 1, 1, 2, 3], {"a": 1, "b": 2, "d": 3})
+        c2 = Categorical([1, 1, 1, 1, 3, 4], {"a": 1, "c": 3, "d": 4})
 
         # removed, hstack now relies on unique codes only SJK: 3/5/2019
         # with self.assertRaises(TypeError):
@@ -2073,46 +2072,46 @@ class Categorical_Test(unittest.TestCase):
     def test_matlab_nan(self):
         dts = [np.int8, np.int16, np.int32, np.int64]
         matlab_float_idx = FastArray([1.0, 0.0, np.nan])
-        matlab_cats = ['a', 'b']
+        matlab_cats = ["a", "b"]
 
         for dt in dts:
             c = Categorical(matlab_float_idx, matlab_cats, dtype=dt, from_matlab=True)
             self.assertTrue(
                 bool(np.all(c._fa == [1, 0, 0])),
-                msg=f'failed to flip nan to zero for dtype {dt}',
+                msg=f"failed to flip nan to zero for dtype {dt}",
             )
             self.assertEqual(np.dtype(dt), c.dtype)
 
     def test_from_provided_with_filter(self):
         # not found and filter
         c = Categorical(
-            ['a', 'a', 'b', 'c', 'd'],
-            ['a', 'b', 'c'],
+            ["a", "a", "b", "c", "d"],
+            ["a", "b", "c"],
             filter=FastArray([False, False, True, True, False]),
-            invalid='INVALID',
+            invalid="INVALID",
         )
-        c.filtered_set_name('INVALID')
-        correct = FastArray([b'INVALID', b'INVALID', b'b', b'c', b'INVALID'])
+        c.filtered_set_name("INVALID")
+        correct = FastArray([b"INVALID", b"INVALID", b"b", b"c", b"INVALID"])
         self.assertTrue(bool(np.all(c.expand_array == correct)))
 
         # filter only (uses default invalid)
         c = Categorical(
-            ['a', 'a', 'b', 'c'],
-            ['a', 'b', 'c'],
+            ["a", "a", "b", "c"],
+            ["a", "b", "c"],
             filter=FastArray([False, False, True, True]),
         )
         f = c.filtered_name
-        correct = FastArray([f, f, b'b', b'c'])
+        correct = FastArray([f, f, b"b", b"c"])
         self.assertTrue(bool(np.all(c.expand_array == correct)))
         # even though filtered out, categories still untouched
-        correct = FastArray([b'a', b'b', b'c'])
+        correct = FastArray([b"a", b"b", b"c"])
         self.assertTrue(bool(np.all(c.category_array == correct)))
 
         # filtering not allowed for base index 0
         with self.assertRaises(ValueError):
             c = Categorical(
-                ['a', 'a', 'b', 'c'],
-                ['a', 'b', 'c'],
+                ["a", "a", "b", "c"],
+                ["a", "b", "c"],
                 filter=FastArray([False, False, True, True]),
                 base_index=0,
             )
@@ -2131,54 +2130,54 @@ class Categorical_Test(unittest.TestCase):
             FastArray([0, 2, 2, 1]),
         )
 
-        c = Categorical(['b', 'c', 'a', 'a', 'b'], base_index=0)
+        c = Categorical(["b", "c", "a", "a", "b"], base_index=0)
         gg = c.get_groupings()
-        group = gg['iGroup']
-        first = gg['iFirstGroup']
-        ncount = gg['nCountGroup']
+        group = gg["iGroup"]
+        first = gg["iFirstGroup"]
+        ncount = gg["nCountGroup"]
 
         self.assertTrue(bool(np.all(g == group)))
         self.assertTrue(bool(np.all(f == first)))
         self.assertTrue(bool(np.all(n == ncount)))
 
-        c = Categorical(['b', 'c', 'a', 'a', 'b'], base_index=1)
+        c = Categorical(["b", "c", "a", "a", "b"], base_index=1)
         gg = c.get_groupings()
-        group = gg['iGroup']
-        first = gg['iFirstGroup']
-        ncount = gg['nCountGroup']
+        group = gg["iGroup"]
+        first = gg["iFirstGroup"]
+        ncount = gg["nCountGroup"]
         self.assertTrue(bool(np.all(g == group)))
         self.assertTrue(bool(np.all(f == first)))
         self.assertTrue(bool(np.all(n == ncount)))
 
     def test_repr(self):
         # just make sure no error for coverage
-        c = Categorical(['a', 'b', 'c'])
+        c = Categorical(["a", "b", "c"])
         r = c.__repr__()
         assert r, f"Representation should not be empty for Categorical '{c}'."
         assert isinstance(r, str)
 
     def test_copy_deep(self):
-        c = Categorical(['a', 'b', 'c'])
+        c = Categorical(["a", "b", "c"])
         d = c.copy(deep=True)
 
-        d[0] = 'b'
-        self.assertEqual(c[0], 'a')
+        d[0] = "b"
+        self.assertEqual(c[0], "a")
         self.assertEqual(c._fa[0], 1)
-        self.assertEqual(d[0], 'b')
+        self.assertEqual(d[0], "b")
         self.assertEqual(d._fa[0], 2)
 
     def test_copy_new_filter(self):
-        a = Categorical('A B A B A B'.split())
-        b = Categorical('B A B A B A'.split())
+        a = Categorical("A B A B A B".split())
+        b = Categorical("B A B A B A".split())
         c = a.copy()
-        f = c == 'A'
+        f = c == "A"
         c[f] = b[f]
-        self.assertEqual(c[0], 'B')
-        self.assertEqual(c[1], 'B')
-        self.assertEqual(a[0], 'A')
-        self.assertEqual(a[1], 'B')
-        self.assertEqual(b[0], 'B')
-        self.assertEqual(b[1], 'A')
+        self.assertEqual(c[0], "B")
+        self.assertEqual(c[1], "B")
+        self.assertEqual(a[0], "A")
+        self.assertEqual(a[1], "B")
+        self.assertEqual(b[0], "B")
+        self.assertEqual(b[1], "A")
 
     def test_setitem_tuple(self):
         c = Categorical([arange(5), arange(5)])
@@ -2187,7 +2186,7 @@ class Categorical_Test(unittest.TestCase):
 
     def test_nunique(self):
         codes = np.random.randint(0, 3, 1000)
-        d = {0: 'All', 1: 'ManualAndQuasi', 2: 'Manual'}
+        d = {0: "All", 1: "ManualAndQuasi", 2: "Manual"}
         c = Categorical(codes, d)
         n = c.nunique()
         self.assertEqual(n, 3)
@@ -2205,24 +2204,24 @@ class Categorical_Test(unittest.TestCase):
         self.assertEqual(n, 5)
         self.assertEqual(len(c.unique()), 5)
 
-        c = Categorical(['a', 'a', 'b', 'c', 'd'], ['a', 'b', 'c', 'd'])
+        c = Categorical(["a", "a", "b", "c", "d"], ["a", "b", "c", "d"])
         n = c.nunique()
         self.assertEqual(n, 4)
         self.assertEqual(len(c.unique()), 4)
 
-        c = Categorical(['a', 'a', 'b', 'c', 'd'], ['a', 'b', 'c', 'd'], base_index=0)
+        c = Categorical(["a", "a", "b", "c", "d"], ["a", "b", "c", "d"], base_index=0)
         n = c.nunique()
         self.assertEqual(n, 4)
         self.assertEqual(len(c.unique()), 4)
 
-        c = Categorical(['a', 'a', 'b', 'c', 'd'])
+        c = Categorical(["a", "a", "b", "c", "d"])
         c._fa[2] = 0
         n = c.nunique()
         self.assertEqual(n, 3)
         self.assertEqual(len(c.unique()), 3)
         self.assertEqual(c.unique_count, 4)
 
-        c = Categorical([arange(3), np.array(['a', 'b', 'c'])])
+        c = Categorical([arange(3), np.array(["a", "b", "c"])])
         c._fa[0] = 0
         n = c.nunique()
         self.assertEqual(n, 2)
@@ -2232,18 +2231,36 @@ class Categorical_Test(unittest.TestCase):
         # found below and named test_multikey_categorical_unique.
         # self.assertEqual(len(c.unique()), 2)
 
-
     def test_unique(self):
-        l = list('xyyz')
+        l = list("xyyz")
         c, c_sub = rt.Cat(l), rt.Cat(l[:3])
-        assert_array_equal(c.unique(), c.category_array, 'mismatch between unique categories and category array')
-        assert_array_equal(c.unique(), c.category_array.unique(), 'mismatch between unique categories and expanded category array')
-        self.assertEqual(c.nunique(), 3, msg='mismatch in number of unique categories')
+        assert_array_equal(
+            c.unique(),
+            c.category_array,
+            "mismatch between unique categories and category array",
+        )
+        assert_array_equal(
+            c.unique(),
+            c.category_array.unique(),
+            "mismatch between unique categories and expanded category array",
+        )
+        self.assertEqual(c.nunique(), 3, msg="mismatch in number of unique categories")
 
-        assert_array_equal(c[:3].unique(), c_sub.category_array, 'mismatch between unique categories and category array with sliced categorical')
-        assert_array_equal(c[:3].unique(), c_sub.category_array.unique(), 'mismatch between unique categories and expanded category array with sliced categorical')
-        self.assertEqual(c[:3].nunique(), 2, msg='mismatch in number of unique categories with sliced categorical')
-
+        assert_array_equal(
+            c[:3].unique(),
+            c_sub.category_array,
+            "mismatch between unique categories and category array with sliced categorical",
+        )
+        assert_array_equal(
+            c[:3].unique(),
+            c_sub.category_array.unique(),
+            "mismatch between unique categories and expanded category array with sliced categorical",
+        )
+        self.assertEqual(
+            c[:3].nunique(),
+            2,
+            msg="mismatch in number of unique categories with sliced categorical",
+        )
 
     def test_scalar_unique(self):
         idx = ones(100)
@@ -2254,13 +2271,13 @@ class Categorical_Test(unittest.TestCase):
 
     def test_stack_multikey(self):
         # TODO pytest parameterize the strings
-        strs = FA(np.random.choice(['aaaaa', 'b', 'ccc'], 23))
+        strs = FA(np.random.choice(["aaaaa", "b", "ccc"], 23))
         flts = np.random.choice([7.14, 6.66, 5.03], 23)
         c1 = Categorical([strs, flts])
         c1_str = Categorical(strs)
         c1_flt = Categorical(flts)
 
-        strs2 = FA(np.random.choice(['b', 'aaaaa'], 17))
+        strs2 = FA(np.random.choice(["b", "aaaaa"], 17))
         flts2 = np.random.choice([5.03, 7.14], 17)
         c2 = Categorical([strs2, flts2])
         c2_str = Categorical(strs2)
@@ -2274,23 +2291,23 @@ class Categorical_Test(unittest.TestCase):
         c_flt = Categorical(fa_flt)
 
         # TODO move these into SDS save / load tests
-        paths = [r'riptable/tests/temp/ds1.sds', r'riptable/tests/temp/ds2.sds']
+        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
         ds1 = Dataset(
             {
-                'mkcat': c1,
-                'strcat': c1_str,
-                'fltcat': c1_flt,
-                'strfa': strs,
-                'fltfa': flts,
+                "mkcat": c1,
+                "strcat": c1_str,
+                "fltcat": c1_flt,
+                "strfa": strs,
+                "fltfa": flts,
             }
         )
         ds2 = Dataset(
             {
-                'mkcat': c2,
-                'strcat': c2_str,
-                'fltcat': c2_flt,
-                'strfa': strs2,
-                'fltfa': flts2,
+                "mkcat": c2,
+                "strcat": c2_str,
+                "fltcat": c2_flt,
+                "strfa": strs2,
+                "fltfa": flts2,
             }
         )
         ds1.save(paths[0])
@@ -2380,7 +2397,7 @@ class Categorical_Test(unittest.TestCase):
 
     def test_as_string_array(self):
         # SJK 10/4/2018 - as string array now returns bytes OR unicode (whatever type the string based categorical is holding)
-        f = np.array([b'b', b'b', b'b', b'a', b'b', b'b'])
+        f = np.array([b"b", b"b", b"b", b"a", b"b", b"b"])
         c = Categorical(f)
         is_equal = bool(np.all(c.as_string_array == f))
         self.assertTrue(
@@ -2394,7 +2411,7 @@ class Categorical_Test(unittest.TestCase):
 
     def test_indexing_numeric(self):
         c = Cat([1.1, 2.2, 3.3])
-        result = c['2.2']
+        result = c["2.2"]
         self.assertTrue(np.all(result == [False, True, False]))
 
     # TODO pytest parameterize `compare_func_names`
@@ -2425,7 +2442,7 @@ class Categorical_Test(unittest.TestCase):
         self.compare_cat_test(c3, compare_func_names, int_success, np.array([i]))
 
         # cat(bytes) / bytes, bytes list
-        i = b'b'
+        i = b"b"
         c4 = Categorical(three_bytes)
         if ShowCompareInfo:
             print("Categorical:", c4)
@@ -2625,7 +2642,7 @@ class Categorical_Test(unittest.TestCase):
         for fname, success in zip(compare_func_names, success_bools):
             func = getattr(cat, fname)
             result = func(i)
-            self.assertTrue(np.all(result == success), msg=f'fail on {fname} {cat} {i}')
+            self.assertTrue(np.all(result == success), msg=f"fail on {fname} {cat} {i}")
             if ShowCompareInfo:
                 if np.all(result == success):
                     message = "succeeded"
@@ -2634,17 +2651,17 @@ class Categorical_Test(unittest.TestCase):
                 print(fname, message)
 
     def test_duplicated(self):
-        result = Cat([2, 3, 2], list('qwery')).duplicated()
+        result = Cat([2, 3, 2], list("qwery")).duplicated()
         self.assertTrue(np.all(result == FA([False, False, True])))
 
     def test_cat_copy(self):
         # add deep copy for enum, single, multi
         x = arange(6, dtype=uint16) // 2
-        c = Cat(x, {0: 'Run', 1: 'Stop', 2: 'Start'}, dtype=uint16)
-        c[1] = 'Start'
+        c = Cat(x, {0: "Run", 1: "Stop", 2: "Start"}, dtype=uint16)
+        c[1] = "Start"
         a = c.copy()
         d = a[:5]
-        a[1] = 'Run'
+        a[1] = "Run"
         b = a[:5]
         self.assertTrue(a._fa[1] == 0)
         self.assertTrue(b._fa[1] == 0)
@@ -2652,13 +2669,13 @@ class Categorical_Test(unittest.TestCase):
         self.assertTrue(d._fa[1] == 0)
 
     def test_assinglekey(self):
-        c = Cat([1, 2, 1, 2, 1, 2], {'SendOrder': 1, 'LacksEdge': 2})
+        c = Cat([1, 2, 1, 2, 1, 2], {"SendOrder": 1, "LacksEdge": 2})
         # insert bad value
         c._fa[3] = 17
         c1 = c.as_singlekey(ordered=False)
         c2 = c.as_singlekey(ordered=True)
         self.assertTrue(np.all(c1.expand_array == c2.expand_array))
-        c = Cat([-1, -2, -1, -2, -1, -2], {'SendOrder': -1, 'LacksEdge': -2})
+        c = Cat([-1, -2, -1, -2, -1, -2], {"SendOrder": -1, "LacksEdge": -2})
         c._fa[3] = 17
         c3 = c.as_singlekey(ordered=False)
         c2 = c.as_singlekey(ordered=True)
@@ -2721,7 +2738,7 @@ class Categorical_Test(unittest.TestCase):
 def test_one_hot_encode(categoricals):
     for categorical in categoricals:
         col_names, encoded_arrays = categorical.one_hot_encode()
-        category_array = categorical.category_array.astype('U')
+        category_array = categorical.category_array.astype("U")
 
         # Test 1.1 The col_names are the same as the category array.
         assert not set(category_array).symmetric_difference(set(col_names)), (
@@ -3229,7 +3246,7 @@ def test_auto_add(cats):
 
 @pytest.mark.xfail(reason="rt_numpy.unique() needs to handles multikey categoricals")
 def test_multikey_categorical_unique():
-    c = Categorical([arange(3), FA(list('abc'))])
+    c = Categorical([arange(3), FA(list("abc"))])
     assert len(c.unique()) == c.nunique()
 
 
@@ -3320,58 +3337,58 @@ def test_build_dicts_python(values):
     "a,b,a_in_b,b_in_a",
     [
         pytest.param(
-            Cat(list('abc')),
-            Cat(list('a')),
+            Cat(list("abc")),
+            Cat(list("a")),
             FA([True, False, False]),
             FA([True]),
-            id='single_key_overlap'
+            id="single_key_overlap",
         ),
         pytest.param(
-            Cat([FA(list('abc')), FA([1,2,3])]),
-            Cat([FA(list('a')), FA([1])]),
+            Cat([FA(list("abc")), FA([1, 2, 3])]),
+            Cat([FA(list("a")), FA([1])]),
             FA([True, False, False]),
             FA([True]),
-            id='single_multikey_overlap'
+            id="single_multikey_overlap",
         ),
         pytest.param(
-            Cat([FA(list('abc')), FA([1,2,3])]),
-            Cat([FA(list('ab')), FA([1,2])]),
+            Cat([FA(list("abc")), FA([1, 2, 3])]),
+            Cat([FA(list("ab")), FA([1, 2])]),
             FA([True, True, False]),
             FA([True, True]),
-            id='two_multikey_overlap'
+            id="two_multikey_overlap",
         ),
         pytest.param(
-            Cat([FA(list('abcde')), FA([1,2,3,4,5])]),
-            Cat([FA(list('dc')), FA([4,5])]),
+            Cat([FA(list("abcde")), FA([1, 2, 3, 4, 5])]),
+            Cat([FA(list("dc")), FA([4, 5])]),
             FA([False, False, False, True, False]),
             FA([True, False]),
-            id='single_multikey_overlap2'
+            id="single_multikey_overlap2",
         ),
         pytest.param(
-            Cat([FA(list('abcde')), FA([1,2,3,4,5])]),
-            Cat([FA(list('aba')), FA([1,2,1])]),
+            Cat([FA(list("abcde")), FA([1, 2, 3, 4, 5])]),
+            Cat([FA(list("aba")), FA([1, 2, 1])]),
             FA([True, True, False, False, False]),
             FA([True, True, True]),
-            id='repeated_key_multikey_overlap'
+            id="repeated_key_multikey_overlap",
         ),
         pytest.param(
-            Cat([FA(list('abcdeab')), FA([1,2,3,4,5,1,6])]),
-            Cat([FA(list('aba')), FA([1, 2, 1])]),
+            Cat([FA(list("abcdeab")), FA([1, 2, 3, 4, 5, 1, 6])]),
+            Cat([FA(list("aba")), FA([1, 2, 1])]),
             FA([True, True, False, False, False, True, False]),
             FA([True, True, True]),
-            id='repeated_key_multikey_overlap2'
+            id="repeated_key_multikey_overlap2",
         ),
-    ]
+    ],
 )
 def test_multikey_categorical_isin(a, b, a_in_b, b_in_a):
     assert_array_equal(a_in_b, a.isin(b))
     assert_array_equal(b_in_a, b.isin(a))
 
     # TODO this is a good candidate for a hypothesis test once the CategoricalStrategy is able to generate MultiKey Categoricals
-    f_msg = 'expected to be consistent with cat1.as_singlekey().isin(cat2.as_singlekey()) operation.'
+    f_msg = "expected to be consistent with cat1.as_singlekey().isin(cat2.as_singlekey()) operation."
     assert_array_equal(a.as_singlekey().isin(b.as_singlekey()), a.isin(b), f_msg)
     assert_array_equal(b.as_singlekey().isin(a.as_singlekey()), b.isin(a), f_msg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

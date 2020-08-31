@@ -11,9 +11,9 @@ class TestCat2Keys:
     @pytest.mark.parametrize(
         "key1,key2",
         [
-            (list('abc'), list('xyz')),
-            (np.array(list('abc')), np.array(list('xyz'))),
-            (np.array(list('abc')), list('xyz')),
+            (list("abc"), list("xyz")),
+            (np.array(list("abc")), np.array(list("xyz"))),
+            (np.array(list("abc")), list("xyz")),
             # add the following test cases for nested list of arrays and categoricals
             # ([FA(list('abc')), FA(list('def'))], [FA(list('uvw')), FA(list('xyz'))])
             # ([FA('a'), FA('b'), FA('c')], [FA('x'), FA('y'), FA('z')]),
@@ -50,11 +50,11 @@ class TestQuantile:
         # Related Jira issue: https://jira/browse/RIP-341
         arr = np.zeros(shape=(2,), dtype=np.float16)
         with pytest.raises(SystemError):
-            rt.quantile(arr, 0, 'lower')
+            rt.quantile(arr, 0, "lower")
 
     def test_one_darray(self):
         arr = np.zeros(shape=(2,), dtype=np.float32)
-        result, _, _ = rt.quantile(arr, 0, 'lower')
+        result, _, _ = rt.quantile(arr, 0, "lower")
         assert result == 0.0
 
     @pytest.mark.xfail(reason="RIP-341: supports shapes (x,), but not (x,0)")
@@ -63,7 +63,7 @@ class TestQuantile:
     )
     def test_one_darray_xfail(self):
         arr = np.zeros(shape=(2, 0), dtype=np.float32)
-        result, _, _ = rt.quantile(arr, 0, 'lower')
+        result, _, _ = rt.quantile(arr, 0, "lower")
         assert result == 0.0
 
 
@@ -72,7 +72,7 @@ class TestSearchSorted:
         return arr % 2 == 0
 
     def test_simple(self):
-        sides = {'left', 'right'}
+        sides = {"left", "right"}
 
         arr = np.arange(10)
         v = arr[self._mask(arr)]
@@ -87,7 +87,7 @@ class TestSearchSorted:
             )
 
     def test_simple_left(self):
-        side = 'left'
+        side = "left"
 
         arr = np.array([0, 0, 0, 1])
         v = arr[self._mask(arr)]
@@ -107,7 +107,7 @@ class TestSearchSorted:
         is_running_in_teamcity(), reason="Please remove alongside xfail removal."
     )
     def test_simple_right_xfail(self):
-        side = 'right'
+        side = "right"
 
         arr = np.array([0, 0, 0, 1])
         v = arr[self._mask(arr)]
@@ -121,7 +121,7 @@ class TestSearchSorted:
         )
 
     def test_simple_right2(self):
-        side = 'right'
+        side = "right"
 
         arr = np.array([0, 2, 2, 2, 2])
         v = arr[self._mask(arr)]
@@ -139,7 +139,7 @@ class TestSearchSorted:
         is_running_in_teamcity(), reason="Please remove alongside xfail removal."
     )
     def test_simple_left2_xfail(self):
-        side = 'left'
+        side = "left"
 
         arr = np.array([0, 2, 2, 2, 2])
         v = arr[self._mask(arr)]
@@ -160,12 +160,12 @@ class TestSearchSorted:
         b[5] = np.nan
         b[2] = 100
         b[1] = -100
-        x1 = np.searchsorted(a, b, side='left')
-        x2 = rt.searchsorted(a, b, side='left')
+        x1 = np.searchsorted(a, b, side="left")
+        x2 = rt.searchsorted(a, b, side="left")
         assert sum(x1 - x2) == 0
 
-        x1 = rt.searchsorted(a, b, side='right')
-        x2 = rt.searchsorted(a, b, side='right')
+        x1 = rt.searchsorted(a, b, side="right")
+        x2 = rt.searchsorted(a, b, side="right")
         assert sum(x1 - x2) == 0
 
         b = b.astype(np.int32)

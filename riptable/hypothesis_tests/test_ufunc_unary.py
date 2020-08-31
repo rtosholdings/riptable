@@ -71,7 +71,7 @@ class NanUnawareTestImpl:
         """
         # Does the input array contain one or more NaNs?
         have_nans = np.any(np.isnan(f_arr._np))
-        event(f'have NaNs = {have_nans}')
+        event(f"have NaNs = {have_nans}")
 
         # Call the function.
         result = func(f_arr)
@@ -91,7 +91,7 @@ class TestMax:
             dtype=floating_dtypes(endianness="=", sizes=(32, 64)),
         )
     )
-    @pytest.mark.parametrize("func_type", ['module', 'member'])
+    @pytest.mark.parametrize("func_type", ["module", "member"])
     def test_isnan_implies_nan_result(self, arr, func_type):
         """
         Check how :func:`rt.max` handles NaN values.
@@ -99,9 +99,9 @@ class TestMax:
         One or more NaNs in the input array should result in the function returning a NaN.
         """
         # Get the function implementation based on how we want to call it.
-        if func_type == 'module':
+        if func_type == "module":
             test_func = lambda x: rt.max(x)
-        elif func_type == 'member':
+        elif func_type == "member":
             test_func = lambda x: x.max()
         else:
             raise ValueError(
@@ -126,7 +126,7 @@ class TestMin:
             dtype=floating_dtypes(endianness="=", sizes=(32, 64)),
         )
     )
-    @pytest.mark.parametrize("func_type", ['module', 'member'])
+    @pytest.mark.parametrize("func_type", ["module", "member"])
     def test_isnan_implies_nan_result(self, arr, func_type):
         """
         Check how :func:`rt.min` handles NaN values.
@@ -134,9 +134,9 @@ class TestMin:
         One or more NaNs in the input array should result in the function returning a NaN.
         """
         # Get the function implementation based on how we want to call it.
-        if func_type == 'module':
+        if func_type == "module":
             test_func = lambda x: rt.min(x)
-        elif func_type == 'member':
+        elif func_type == "member":
             test_func = lambda x: x.min()
         else:
             raise ValueError(
@@ -161,7 +161,7 @@ class TestSum:
             dtype=floating_dtypes(endianness="=", sizes=(32, 64)),
         )
     )
-    @pytest.mark.parametrize("func_type", ['module', 'member'])
+    @pytest.mark.parametrize("func_type", ["module", "member"])
     def test_isnan_implies_nan_result(self, arr, func_type):
         """
         Check how :func:`rt.sum` handles NaN values.
@@ -169,9 +169,9 @@ class TestSum:
         One or more NaNs in the input array should result in the function returning a NaN.
         """
         # Get the function implementation based on how we want to call it.
-        if func_type == 'module':
+        if func_type == "module":
             test_func = lambda x: rt.sum(x)
-        elif func_type == 'member':
+        elif func_type == "member":
             test_func = lambda x: x.sum()
         else:
             raise ValueError(
@@ -216,7 +216,7 @@ class NanAwareTestImpl:
 
         # Does the input array contain one or more NaNs?
         have_nans = np.any(nan_mask)
-        event(f'have NaNs = {have_nans}')
+        event(f"have NaNs = {have_nans}")
 
         # Call the nan-aware function.
         rt_nanresult = nan_aware_func(f_arr)
@@ -249,7 +249,7 @@ class TestNanMax:
             dtype=floating_dtypes(endianness="=", sizes=(32, 64)),
         )
     )
-    @pytest.mark.parametrize("func_type", ['module', 'member'])
+    @pytest.mark.parametrize("func_type", ["module", "member"])
     def test_nan_awareness(self, arr, func_type):
         """
         Check how :func:`rt.nanmax` handles NaN values by comparing it against :func:`rt.max`.
@@ -258,9 +258,9 @@ class TestNanMax:
         :func:`np.max` with the 'clean' array. The results should match.
         """
         # Get the function implementation based on how we want to call it.
-        if func_type == 'module':
+        if func_type == "module":
             test_func = lambda x: rt.nanmax(x)
-        elif func_type == 'member':
+        elif func_type == "member":
             test_func = lambda x: x.nanmax()
         else:
             raise ValueError(
@@ -287,7 +287,7 @@ class TestNanMin:
             dtype=floating_dtypes(endianness="=", sizes=(32, 64)),
         )
     )
-    @pytest.mark.parametrize("func_type", ['module', 'member'])
+    @pytest.mark.parametrize("func_type", ["module", "member"])
     def test_nan_awareness(self, arr, func_type):
         """
         Check how :func:`rt.nanmin` handles NaN values by comparing it against :func:`rt.min`.
@@ -296,9 +296,9 @@ class TestNanMin:
         :func:`np.min` with the 'clean' array. The results should match.
         """
         # Get the function implementation based on how we want to call it.
-        if func_type == 'module':
+        if func_type == "module":
             test_func = lambda x: rt.nanmin(x)
-        elif func_type == 'member':
+        elif func_type == "member":
             test_func = lambda x: x.nanmin()
         else:
             raise ValueError(
@@ -327,7 +327,7 @@ class TestNanSum:
             dtype=floating_dtypes(endianness="=", sizes=(32, 64)),
         )
     )
-    @pytest.mark.parametrize("func_type", ['module', 'member'])
+    @pytest.mark.parametrize("func_type", ["module", "member"])
     def test_nan_awareness(self, arr, func_type):
         """
         Check how :func:`rt.nansum` handles NaN values by comparing it against :func:`rt.sum`.
@@ -336,9 +336,9 @@ class TestNanSum:
         :func:`np.sum` with the 'clean' array. The results should match.
         """
         # Get the function implementation based on how we want to call it.
-        if func_type == 'module':
+        if func_type == "module":
             test_func = lambda x: rt.nansum(x)
-        elif func_type == 'member':
+        elif func_type == "member":
             test_func = lambda x: x.nansum()
         else:
             raise ValueError(

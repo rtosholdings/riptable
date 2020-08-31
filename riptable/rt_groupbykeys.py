@@ -6,7 +6,7 @@ from .rt_numpy import mask_andi, lexsort, hstack
 from .rt_enum import NumpyCharTypes, TypeRegister, INVALID_DICT, FILTERED_LONG_NAME
 
 
-class GroupByKeys():
+class GroupByKeys:
     """Handles masking, appending invalid, and sorting of key columns for a groupby operation.
 
     Parameters
@@ -52,7 +52,15 @@ class GroupByKeys():
     they are requested for display (because they are constructed in a python loop, generating these is expensive).
     """
 
-    def __init__(self, grouping_dict, ifirstkey=None, isortrows=None, sort_display=False, pre_sorted=False, prebinned=False):
+    def __init__(
+        self,
+        grouping_dict,
+        ifirstkey=None,
+        isortrows=None,
+        sort_display=False,
+        pre_sorted=False,
+        prebinned=False,
+    ):
         self._grouping_dict = grouping_dict
         self._gbkeys = None
 
@@ -72,27 +80,29 @@ class GroupByKeys():
         self._sort_display = sort_display
         self._pre_sorted = pre_sorted
 
-        self._sort_applied = False          # sort has been applied to the key columns
-        self._filter_applied = False        # filter bin has been added to the key columns
-        self._filter_applied_labels = False # filter has been added to the multikey labels
-        self._multikey_labels = None        # (lazily generated)
+        self._sort_applied = False  # sort has been applied to the key columns
+        self._filter_applied = False  # filter bin has been added to the key columns
+        self._filter_applied_labels = (
+            False  # filter has been added to the multikey labels
+        )
+        self._multikey_labels = None  # (lazily generated)
 
     @property
     # ------------------------------------------------------------
     def sort_gb_data(self):
-        '''
+        """
         If a sort has been applied to the gbkeys, they do not need to be sorted, however 
         the data resulting from a groupby calculation is naturally unsorted and will still need 
         a sort applied.
-        '''
+        """
         return self._sort_display and self._pre_sorted is False
 
     # ------------------------------------------------------------
     @property
     def isortrows(self):
-        '''
+        """
         Generates isortrows (index to sort groupby keys). Possibly performs a lexsort.
-        '''
+        """
         if self._isortrows is None:
             self._isortrows = self._make_isortrows()
         return self._isortrows
@@ -100,17 +110,17 @@ class GroupByKeys():
     # ------------------------------------------------------------
     @property
     def gbkeys(self):
-        '''
+        """
         Generates groupby keys if necessary. Returns groupby keys.
-        '''
+        """
         return self.keys()
 
     # ------------------------------------------------------------
     @property
     def gbkeys_filtered(self):
-        '''
+        """
         Adds a filter to the gbkeys, or returns the already filtered gbkeys.
-        '''
+        """
         self._insert_filter_bin()
         return self.keys(showfilter=True)
 
@@ -118,7 +128,7 @@ class GroupByKeys():
     def _insert_filter_bin(self):
         if self._filter_applied is False:
             # use the property for the iterator, so they can be generated if necessary
-            for k,v in self.gbkeys.items():
+            for k, v in self.gbkeys.items():
                 filtername = self._get_filter_bin_name(v)
                 self._gbkeys[k] = hstack((filtername, v))
             self._filter_applied = True
@@ -140,7 +150,9 @@ class GroupByKeys():
                 for k, v in self._grouping_dict.items():
                     unique_keys[k] = v[self._ifirstkey]
             else:
-                raise ValueError(f"Groupby keys need to be generated with an iFirstKey array, which the groupby key object does not have.")
+                raise ValueError(
+                    f"Groupby keys need to be generated with an iFirstKey array, which the groupby key object does not have."
+                )
         else:
             unique_keys = self._gbkeys
         return unique_keys
@@ -162,7 +174,7 @@ class GroupByKeys():
                 if self._isortrows is None:
                     self._isortrows = self._make_isortrows()
                 keys = {}
-                for k,v in self._gbkeys.items():
+                for k, v in self._gbkeys.items():
                     keys[k] = v[self._isortrows]
                 self._gbkeys = keys
                 self._sort_applied = True
@@ -188,20 +200,20 @@ class GroupByKeys():
         labels = self.multikey_labels
         if self._filter_applied_labels is False:
             label = (FILTERED_LONG_NAME,) * len(self.gbkeys)
-            self._multikey_labels.insert(0,label)
+            self._multikey_labels.insert(0, label)
             self._filter_applied_labels = True
 
     # ------------------------------------------------------------
     def labels(self, showfilter=False):
-        '''
+        """
         Generates list of tuples from multikey columns.
-        '''
+        """
         if self._multikey_labels is None:
             self._multikey_labels = []
             for i in range(self.unique_count):
                 key = self.get_bin_from_index(i)
                 key = str(key)
-                key.replace("'","")
+                key.replace("'", "")
                 self._multikey_labels.append(key)
 
         if self._filter_applied_labels and showfilter is False:
@@ -210,37 +222,37 @@ class GroupByKeys():
 
     # ------------------------------------------------------------
     def _trim_keys(self, keys):
-        '''
+        """
         Return a trimmed view of the keys so the filtered bin is not included.
         Also trims list of multikey labels
-        '''
+        """
 
         if isinstance(keys, dict):
             trimmed = {}
-            for k,v in keys.items():
-                trimmed[k]=v[1:]
+            for k, v in keys.items():
+                trimmed[k] = v[1:]
         else:
             trimmed = keys[1:]
         return trimmed
 
     # ------------------------------------------------------------
     def _get_filter_bin_name(self, arr):
-        if arr.dtype.char == 'U':
+        if arr.dtype.char == "U":
             filtername = FILTERED_LONG_NAME
-        elif arr.dtype.char == 'S':
+        elif arr.dtype.char == "S":
             filtername = FILTERED_LONG_NAME.encode()
         else:
             # subclasses will use correct invalid and class will be preserved in hstack
             filtername = arr.fill_invalid(shape=1, inplace=False)
         return filtername
-    
+
     # ------------------------------------------------------------
     @property
     def unique_count(self):
-        '''
+        """
         Returns number of unique groupby keys - lazily evaluated and stored.
-        '''
-        #print('unique count hit!')
+        """
+        # print('unique count hit!')
         if self._unique_count is None:
             first_key = list(self.gbkeys.values())[0]
             self._unique_count = len(first_key)
@@ -248,12 +260,12 @@ class GroupByKeys():
 
     # ------------------------------------------------------------
     def _get_index_from_tuple(self, tup):
-        '''
+        """
         If the GroupByKeys object is holding a multikey dictionary, it can be indexed by 
         a tuple. This internal routine (called by get_index_from_bin/__getitem__) will return
         the bin index of matching multikey entries or -1 if not found. Any string/bytes values 
         will be fixed to match the string/bytes column.
-        '''
+        """
         if len(tup) == len(self.gbkeys):
             # build a boolean mask for each item in tuple
             match = []
@@ -261,10 +273,10 @@ class GroupByKeys():
             for colnum, item in enumerate(tup):
                 # match string types if necessary
                 if isinstance(item, bytes):
-                    if dictlist[colnum].dtype.char == 'U':
+                    if dictlist[colnum].dtype.char == "U":
                         item = bytes.decode(item)
                 elif isinstance(item, str):
-                    if dictlist[colnum].dtype.char == 'S':
+                    if dictlist[colnum].dtype.char == "S":
                         item = item.encode()
                 match.append(dictlist[colnum] == item)
             match = mask_andi(match)
@@ -278,21 +290,21 @@ class GroupByKeys():
 
     # ------------------------------------------------------------
     def get_index_from_bin(self, bin):
-        '''
+        """
         :param bin: a tuple of multiple keys or a single key (will be converted to tuple)
 
         :return index: the bin index, or -1 if not found.
-        '''
+        """
         if not isinstance(bin, tuple):
             bin = (bin,)
         return self._get_index_from_tuple(bin)
 
     # ------------------------------------------------------------
     def get_bin_from_index(self, index):
-        '''
+        """
         :param index: int or list of integers
         :return result_bins: matching bins for provided indices or an empty list
-        '''
+        """
         if index >= 0 and index < self.unique_count:
             result_bins = []
             for column in self.gbkeys.values():
@@ -305,17 +317,19 @@ class GroupByKeys():
             else:
                 return tuple(result_bins)
         else:
-            raise ValueError(f"Bin index {index} was out of range for gbkeys of length {self.unique_count}")
+            raise ValueError(
+                f"Bin index {index} was out of range for gbkeys of length {self.unique_count}"
+            )
 
     # ------------------------------------------------------------
     def get_bin(self, index):
-        '''
+        """
         :param index: int or list of integers
         :return result_bins: matching bins for provided indices or an empty list
-        '''
+        """
         if isinstance(index, (int, np.integer)):
             result = self.get_bin_from_index(index)
-            
+
         elif isinstance(index, list):
             if isinstance(index[0], (int, np.integer)):
                 result = []
@@ -324,7 +338,9 @@ class GroupByKeys():
                 if len(result) == 1:
                     result = result[0]
             else:
-                raise TypeError(f"Bins can only be retrieved by lists of integers, not {type(index[0])}")
+                raise TypeError(
+                    f"Bins can only be retrieved by lists of integers, not {type(index[0])}"
+                )
 
         elif isinstance(index, np.ndarray):
             if index.dtype.char in NumpyCharTypes.AllInteger:
@@ -334,7 +350,9 @@ class GroupByKeys():
                 if len(result) == 1:
                     result = result[0]
             else:
-                raise TypeError(f"Bins can only be retrieved by numpy arrays of integer type, not {index.dtype}")
+                raise TypeError(
+                    f"Bins can only be retrieved by numpy arrays of integer type, not {index.dtype}"
+                )
 
         else:
             raise TypeError(f"Bins must be retrieved by integer, not {type(index)}")
@@ -354,28 +372,34 @@ class GroupByKeys():
 
     # ------------------------------------------------------------
     def unsort(self):
-        '''
+        """
         Sets the internal _sort_display flag to False. Will warn the user if the groupby keys are already sorted or were pre-sorted 
         when GroupByKeys were constructed.
-        '''
+        """
         if self._pre_sorted:
             warnings.warn("Groupby keys were naturally sorted.")
         elif self._sort_applied:
-            raise ValueError("Groupby keys were already sorted. Data mis-match will occur.")
+            raise ValueError(
+                "Groupby keys were already sorted. Data mis-match will occur."
+            )
         self._sort_display = False
 
     # ------------------------------------------------------------
     def copy(self, deep=False):
-        '''
+        """
         Creates a deep or shallow copy of the grouping 
-        '''
+        """
         if deep:
-            new_keychain = GroupByKeys(copy.deepcopy(self._grouping_dict), ifirstkey=self._ifirstkey)
+            new_keychain = GroupByKeys(
+                copy.deepcopy(self._grouping_dict), ifirstkey=self._ifirstkey
+            )
             if self._isortrows is not None:
                 new_keychain._isortrows = self._isortrows.copy()
 
         else:
-            new_keychain = GroupByKeys(self._grouping_dict.copy(), ifirstkey=self._ifirstkey)
+            new_keychain = GroupByKeys(
+                self._grouping_dict.copy(), ifirstkey=self._ifirstkey
+            )
             if self._isortrows is not None:
                 new_keychain._isortrows = self._isortrows
 
@@ -388,29 +412,32 @@ class GroupByKeys():
         new_keychain._multikey_labels = self._multikey_labels
 
         return new_keychain
+
     # ------------------------------------------------------------
     def __repr__(self):
         return self._build_string()
+
     # ------------------------------------------------------------
     def __str__(self):
         return self._build_string()
+
     # ------------------------------------------------------------
     def _build_string(self):
         summary_str = []
-        summary_str.append("gbkeys: "+str(self._gbkeys))
-        summary_str.append("isortrows: "+str(self._isortrows))
-        summary_str.append("sort on: "+str(self._sort_display))
-        summary_str.append("naturally sorted: "+str(self._pre_sorted))
-        summary_str.append("sort applied: "+str(self._sort_applied))
-        summary_str.append("filter applied: "+str(self._filter_applied))
+        summary_str.append("gbkeys: " + str(self._gbkeys))
+        summary_str.append("isortrows: " + str(self._isortrows))
+        summary_str.append("sort on: " + str(self._sort_display))
+        summary_str.append("naturally sorted: " + str(self._pre_sorted))
+        summary_str.append("sort applied: " + str(self._sort_applied))
+        summary_str.append("filter applied: " + str(self._filter_applied))
         return "\n".join(summary_str)
-    
+
     # ------------------------------------------------------------
     @property
     def multikey(self):
-        '''
+        """
         Returns True if GroupByKeys object is holding multiple columns in _gbkeys
-        '''
+        """
         if self._gbkeys is not None:
             return len(self._gbkeys) > 1
         return False
@@ -418,9 +445,9 @@ class GroupByKeys():
     # ------------------------------------------------------------
     @property
     def singlekey(self):
-        '''
+        """
         Returns True if GroupByKeys object is holding a single column in _gbkeys
-        '''
+        """
         if self._gbkeys is not None:
             return len(self._gbkeys) == 1
         return False

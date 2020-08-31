@@ -51,14 +51,14 @@ CODES = [1, 44, 44, 133, 75]
 # Tests should not depend on ordering of _RT_DATA_TABLE, see above work item.
 _RT_DATA_TABLE = [
     Categorical(
-        FastArray(['a', 'b', 'c', 'c', 'd', 'a', 'b']),
+        FastArray(["a", "b", "c", "c", "d", "a", "b"]),
         ordered=True,
         base_index=1,
         filter=None,
     ),
     Categorical(CODES, LikertDecision),
     Categorical(CODES, decision_dict),
-    Categorical(['b', 'a', 'a', 'c', 'a', 'b'], ['b', 'a', 'c', 'e'], sort_gb=True),
+    Categorical(["b", "a", "a", "c", "a", "b"], ["b", "a", "c", "e"], sort_gb=True),
     Dataset(
         {
             _k: list(range(_i * 10, (_i + 1) * 10))
@@ -108,7 +108,7 @@ _RT_DATA_TABLE = [
         {
             "alpha": 1,
             "beta": [2, 3],
-            "gamma": ['2', '3'],
+            "gamma": ["2", "3"],
             "delta": arange(10),
             "epsilon": Struct({"theta": Struct({"kappa": 3, "zeta": 4,}), "iota": 2,}),
         }
@@ -153,9 +153,9 @@ def get_completion_text(completion_type) -> str:
     return text
 
 
-@pytest.mark.parametrize('greedy_jedi_config_type', _GREEDY_JEDI_CONFIG_TABLE)
-@pytest.mark.parametrize('completion_type', _COMPLETION_TYPE_TABLE)
-@pytest.mark.parametrize('rt_data', _RT_DATA_TABLE)
+@pytest.mark.parametrize("greedy_jedi_config_type", _GREEDY_JEDI_CONFIG_TABLE)
+@pytest.mark.parametrize("completion_type", _COMPLETION_TYPE_TABLE)
+@pytest.mark.parametrize("rt_data", _RT_DATA_TABLE)
 def test_simple_completion(
     greedy_jedi_config_type: GreedyJediConfigType,
     completion_type: CompletionType,
@@ -216,7 +216,7 @@ class TestIPCompleterIntegration(unittest.TestCase):
     def test_categorical_string_array_key_completion(self):
         ip = get_ipython()
         complete = ip.Completer.complete
-        lst = ['a', 'b', 'c', 'c', 'd', 'a', 'b']  # type: List[str]
+        lst = ["a", "b", "c", "c", "d", "a", "b"]  # type: List[str]
         ip.user_ns["cat"] = Categorical(
             FastArray(lst), ordered=True, base_index=1, filter=None
         )
@@ -259,8 +259,8 @@ class TestIPCompleterIntegration(unittest.TestCase):
         complete = ip.Completer.complete
 
         # note - 'e' is not in first list
-        lst1 = ['b', 'a', 'a', 'c', 'a', 'b']  # type: List[str]
-        lst2 = ['b', 'a', 'c', 'e']  # type: List[str]
+        lst1 = ["b", "a", "a", "c", "a", "b"]  # type: List[str]
+        lst2 = ["b", "a", "c", "e"]  # type: List[str]
         ip.user_ns["cat"] = Categorical(lst1, lst2, sort_gb=True)
         _, matches = complete(line_buffer="cat['")
         for c in lst1:
@@ -274,7 +274,7 @@ class TestIPCompleterIntegration(unittest.TestCase):
 
 # region rt_misc autocomplete
 @pytest.mark.parametrize(
-    'rt_data, text',
+    "rt_data, text",
     [
         # Simple attribute completion tests
         (_RT_DATA_TABLE[4], "d."),
@@ -328,7 +328,7 @@ def test_riptable_autocomplete_keys_ordering(
 
 
 @pytest.mark.parametrize(
-    'rt_data, text',
+    "rt_data, text",
     [
         # Simple attribute completion tests
         (_RT_DATA_TABLE[4], "d."),
@@ -374,7 +374,7 @@ def test_riptable_autocomplete_equivalent_to_ipython_without_ordering(
         # IPython's set of completions should be the same as Riptable's set of completions.
         assert not expected_matches.symmetric_difference(
             matches
-        ), f'expected matches {expected_matches}\ngot matches {matches}'
+        ), f"expected matches {expected_matches}\ngot matches {matches}"
 
 
 # endregion rt_misc autocomplete
@@ -385,7 +385,7 @@ def test_riptable_autocomplete_equivalent_to_ipython_without_ordering(
 # As of 20191218, if ``CUSTOM_COMPLETION`` is toggled on it results in a one-time registration of custom
 # but does not support deregistration.
 @pytest.mark.parametrize(
-    'rt_data, text',
+    "rt_data, text",
     [
         # Simple attribute completion tests
         (_RT_DATA_TABLE[4], "d."),
@@ -436,5 +436,5 @@ def test_monkey_patch_complete_match_ordering(
 # endregion ipython_utils enable_custom_attribute_completion
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

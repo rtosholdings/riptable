@@ -13,8 +13,8 @@ from pymoo.factory import get_sampling, get_crossover, get_mutation
 MetricFunction = Callable[[np.ndarray], float]
 """Type hint describing a function which accepts an ndarray and calculates some metric about it."""
 
-class ArrayMetric:
 
+class ArrayMetric:
     @staticmethod
     @nb.njit(cache=True)
     def inversions(arr: np.ndarray) -> float:
@@ -136,7 +136,8 @@ class ArrayMetric:
     @nb.njit(cache=True)
     def var_ratio(arr: np.ndarray) -> float:
         l = arr.shape[0]
-        if l < 2: return 0
+        if l < 2:
+            return 0
         return np.var(arr) * 4 / np.square(np.max(arr) - np.min(arr))
 
     @staticmethod
@@ -200,7 +201,7 @@ class ArrayMetric:
             total_dist_to_centroid[key] += abs(centroids[key] - i)
 
         # The summation value (added to for each key).
-        summation = 0.
+        summation = 0.0
 
         # Iterate over pairs of keys (direction doesn't matter, so this is a "triangular" nested loop).
         for i in range(key_count - 1):
@@ -362,7 +363,9 @@ class ArrayMetric:
         pass
 
 
-def calculate_metrics(arr: np.ndarray, metrics: Mapping[str, MetricFunction]) -> Mapping[str, float]:
+def calculate_metrics(
+    arr: np.ndarray, metrics: Mapping[str, MetricFunction]
+) -> Mapping[str, float]:
     """
     Given an array and a table of metric/scoring functions, calculates the metrics for the array.
     """
@@ -379,8 +382,9 @@ _metrics: Mapping[str, MetricFunction] = {
     "var_ratio": ArrayMetric.var_ratio,
     "davies_bouldin": ArrayMetric.davies_bouldin,
     "dunn_index": ArrayMetric.dunn,
-    #"silhouette_coeff": ArrayMetric.silhouette_coeff
+    # "silhouette_coeff": ArrayMetric.silhouette_coeff
 }
+
 
 def score_array(arr: np.ndarray) -> Mapping[str, float]:
     """Scores an array based on a pre-defined set of metric functions."""
@@ -393,7 +397,7 @@ def batch_index_gen_error(
     size: Union[int, np.int32, np.int64],
     s_metric: MetricFunction,
     c_metric: MetricFunction,
-    d_metric: MetricFunction
+    d_metric: MetricFunction,
 ) -> None:
     ss = np.linspace(0, 1, 6)
     cs = np.linspace(0, 1, 6)
@@ -404,7 +408,9 @@ def batch_index_gen_error(
     c_error = 0
     d_error = 0
     for (s, c, d,) in mets:
-        indexes = gen_index_MOO(lo, hi, size, s_metric, c_metric, d_metric, sort=s, clustered=c, dispersed=d)
+        indexes = gen_index_MOO(
+            lo, hi, size, s_metric, c_metric, d_metric, sort=s, clustered=c, dispersed=d
+        )
         index_count += indexes.shape[0]
         s_error_curr = 0
         c_error_curr = 0
@@ -426,13 +432,18 @@ def batch_index_gen_error(
             c_error += c_error_curr
             d_error += d_error_curr
 
-        print (f"batch errors -  s: {s_error_curr/indexes.shape[0]}    c: {c_error_curr/indexes.shape[0]}   d: {d_error_curr/indexes.shape[0]}    # indexes: {indexes.shape[0]}")
+        print(
+            f"batch errors -  s: {s_error_curr/indexes.shape[0]}    c: {c_error_curr/indexes.shape[0]}   d: {d_error_curr/indexes.shape[0]}    # indexes: {indexes.shape[0]}"
+        )
 
     s_error /= index_count
     c_error /= index_count
     d_error /= index_count
 
-    print (f"s_metric avg error: {s_error}    c_metric avg error: {c_error}     d_metric avg error: {d_error}")
+    print(
+        f"s_metric avg error: {s_error}    c_metric avg error: {c_error}     d_metric avg error: {d_error}"
+    )
+
 
 class SCDArrayGen(Problem):
     def __init__(self, lo, hi, index_size, s_metric, c_metric, d_metric, s, c, d):
@@ -449,7 +460,9 @@ class SCDArrayGen(Problem):
         xl = np.full(index_size, self.lo)
         xu = np.full(index_size, self.hi)
 
-        super().__init__(n_var=self.index_size, n_constr=2, xl=xl, xu=xu, type_var=np.int)
+        super().__init__(
+            n_var=self.index_size, n_constr=2, xl=xl, xu=xu, type_var=np.int
+        )
 
     def s_error(self, arr):
         return abs(self.s_metric(arr) - self.s)
@@ -462,12 +475,12 @@ class SCDArrayGen(Problem):
 
     def _evaluate(self, x, out, *args, **kwargs):
 
-        #objectives
+        # objectives
         se = np.apply_along_axis(self.s_error, 1, x)
         ce = np.apply_along_axis(self.c_error, 1, x)
         de = np.apply_along_axis(self.d_error, 1, x)
 
-        #constraints
+        # constraints
         g1 = self.lo - x
         g2 = x - self.hi
 
@@ -476,9 +489,22 @@ class SCDArrayGen(Problem):
 
 
 # Evolutionary, Black-Box, Multi-Objective Optimization Algorithm
-def gen_index_MOO(lo, hi, size, s_metric ,c_metric, d_metric, dist=None, sort=0.0, clustered=0.0, dispersed=0.0):
+def gen_index_MOO(
+    lo,
+    hi,
+    size,
+    s_metric,
+    c_metric,
+    d_metric,
+    dist=None,
+    sort=0.0,
+    clustered=0.0,
+    dispersed=0.0,
+):
     max_error = 0.25
-    prob = SCDArrayGen(lo, hi, size, s_metric, c_metric, d_metric, sort, clustered, dispersed)
+    prob = SCDArrayGen(
+        lo, hi, size, s_metric, c_metric, d_metric, sort, clustered, dispersed
+    )
     alg = NSGA2(
         pop_size=100,
         sampling=get_sampling("int_random"),
@@ -487,21 +513,19 @@ def gen_index_MOO(lo, hi, size, s_metric ,c_metric, d_metric, dist=None, sort=0.
     )
     res = minimize(prob, alg, seed=3)
 
-    #optionally screen out solutions that still deviated from the desired values by too much
+    # optionally screen out solutions that still deviated from the desired values by too much
     # mask = res.F < max_error
     # masksum = np.sum(mask, axis=1) == 3
     return res.X
 
+
 if __name__ == "__main__":
     # test
-    #print(gen_index_MOO(0, 150, 500, ArrayMetric.inversions, ArrayMetric.pw_diff_sum, ArrayMetric.mean_abs_dev, sort=0.5, clustered=0.2, dispersed=0.8))
+    # print(gen_index_MOO(0, 150, 500, ArrayMetric.inversions, ArrayMetric.pw_diff_sum, ArrayMetric.mean_abs_dev, sort=0.5, clustered=0.2, dispersed=0.8))
     lo = 0
     hi = 10000
-    size=100
+    size = 100
     s_metric = ArrayMetric.inversions
     c_metric = ArrayMetric.pw_diff_sum
     d_metric = ArrayMetric.mean_abs_dev
     batch_index_gen_error(lo, hi, size, s_metric, c_metric, d_metric)
-
-
-

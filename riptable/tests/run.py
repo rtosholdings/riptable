@@ -16,7 +16,7 @@ def run_all(extra_args=None):
     """
     if extra_args is None:
         extra_args = []
-    pytest.main(extra_args + ['-k', 'test_', os.path.dirname(__file__)])
+    pytest.main(extra_args + ["-k", "test_", os.path.dirname(__file__)])
 
 
 # Usage: "python -m riptable.tests.run"

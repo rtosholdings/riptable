@@ -5,6 +5,7 @@ import pytest
 from .vnu_checker import VNUChecker
 from riptable import Dataset, Struct, Multiset
 
+
 @pytest.mark.xfail(reason="Requires the VNU.jar HTML validator")
 @pytest.mark.parametrize(
     "rt_obj",

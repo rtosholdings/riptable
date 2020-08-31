@@ -8,11 +8,14 @@ import logging
 from typing import List
 
 import numpy as np
+
 try:
     from numpy.random import default_rng
 except:
+
     def default_rng(*args):
         pass
+
 
 from .benchmark import _timestamp_funcs
 from .rand_data import rand_array, rand_fancyindex, rand_keyarray

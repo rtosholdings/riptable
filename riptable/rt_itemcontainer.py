@@ -1,4 +1,6 @@
-__all__ = [ 'ItemContainer', ]
+__all__ = [
+    "ItemContainer",
+]
 import numpy as np
 import warnings
 import re
@@ -10,67 +12,72 @@ ATTRIBUTE_FOOTER = "Footer"
 ATTRIBUTE_MARGIN_COLUMN = "MarginColumn"
 ATTRIBUTE_NUMBER_OF_FOOTER_ROWS = "NumberOfFooterRows"
 
-class ItemAttribute():
-    '''
+
+class ItemAttribute:
+    """
     An attribute about an item which, in turn, contains attributes in the
     form of Python attributes, set and retrieved using setattr() and getattr()
-    '''
-    ATTRIB_EXCLUSION_LIST = 'copy'
+    """
+
+    ATTRIB_EXCLUSION_LIST = "copy"
 
     def __repr__(self, indent=2):
-        result = self.__class__.__name__ + '\n'
-        for k,v in self._attribs():
-            result += ' '*indent + k + ': ' + str(v)
-        result += '\n'
+        result = self.__class__.__name__ + "\n"
+        for k, v in self._attribs():
+            result += " " * indent + k + ": " + str(v)
+        result += "\n"
         return result
 
     def _attribs(self):
-        '''
+        """
         Returns all attributes dynamically set for this ItemAttribute..
 
         NOTE: Add to the ATTRIB_EXCLUSION_LIST all method or property names statically
         added to ItemAttribute that don't begin with '_'.
         :return:
-        '''
-        return [(k, getattr(self, k)) for k in dir(self) if
-                (not k.startswith('_') and k not in ItemAttribute.ATTRIB_EXCLUSION_LIST)]
+        """
+        return [
+            (k, getattr(self, k))
+            for k in dir(self)
+            if (not k.startswith("_") and k not in ItemAttribute.ATTRIB_EXCLUSION_LIST)
+        ]
 
     def copy(self):
-        '''
+        """
         Performs a deep copy of the ItemAttribute, including all values
         of any dynamically added attributes.
         :return:
-        '''
+        """
         attrib = ItemAttribute()
         for k, v in self._attribs():
-            setattr(attrib, k, v.copy() if hasattr(v, 'copy') else v)
+            setattr(attrib, k, v.copy() if hasattr(v, "copy") else v)
         return attrib
 
 
-class ItemContainer():
-    'Container for items in Struct -- all values are tuples with an attribute'
+class ItemContainer:
+    "Container for items in Struct -- all values are tuples with an attribute"
 
     def __init__(self, *args, **kwds):
-        '''Initialize an IC
+        """Initialize an IC
 
-        '''
-        self._items={}
+        """
+        self._items = {}
         self._items.update(*args, **kwds)
 
     def __getitem__(self, key):
         return self._items[key]
 
     def __setitem__(self, key, value):
-        'ic.__setitem__(i, y) <==> ic[i]=y'
+        "ic.__setitem__(i, y) <==> ic[i]=y"
         self._items[key] = value
 
     def __delitem__(self, key):
-        'ic.__delitem__(y) <==> del ic[y]'
+        "ic.__delitem__(y) <==> del ic[y]"
         # Deleting an existing item uses self.__map to find the link which is
         # then removed by updating the links in the predecessor and successor nodes.
         del self._items[key]
 
-    #def __iter__(self):
+    # def __iter__(self):
     #    'od.__iter__() <==> iter(od)'
     #    # Traverse the linked list in order.
     #    root = self.__root
@@ -79,7 +86,7 @@ class ItemContainer():
     #        yield curr[KEY]
     #        curr = curr[NEXT]
 
-    #def __reversed__(self):
+    # def __reversed__(self):
     #    'od.__reversed__() <==> reversed(od)'
     #    # Traverse the linked list in reverse order.
     #    root = self.__root
@@ -88,7 +95,7 @@ class ItemContainer():
     #        yield curr[KEY]
     #        curr = curr[PREV]
 
-    #def __reduce__(self):
+    # def __reduce__(self):
     #    'Return state information for pickling'
     #    items = [[k, self[k]] for k in self]
     #    tmp = self.__map, self.__root
@@ -102,7 +109,7 @@ class ItemContainer():
     def clear(self):
         self._items.clear()
 
-    def __contains__(self,*args):
+    def __contains__(self, *args):
         return self._items.__contains__(*args)
 
     def __next__(self):
@@ -112,7 +119,7 @@ class ItemContainer():
         return self._items.__len__()
 
     def __iter__(self):
-        #return self._items.__iter__()
+        # return self._items.__iter__()
         return iter(self._items)
 
     def items(self):
@@ -134,15 +141,15 @@ class ItemContainer():
     def pop(self, *args):
         return self._items.pop(*args)
 
-    #setdefault = MutableMapping.setdefault
-    #update = MutableMapping.update
-    #pop = MutableMapping.pop
-    #keys = MutableMapping.keys
-    #values = MutableMapping.values
-    #items = MutableMapping.items
-    #__ne__ = MutableMapping.__ne__
+    # setdefault = MutableMapping.setdefault
+    # update = MutableMapping.update
+    # pop = MutableMapping.pop
+    # keys = MutableMapping.keys
+    # values = MutableMapping.values
+    # items = MutableMapping.items
+    # __ne__ = MutableMapping.__ne__
 
-    #def popitem(self, last=True):
+    # def popitem(self, last=True):
     #    '''od.popitem() -> (k, v), return and remove a (key, value) pair.
     #    Pairs are returned in LIFO order if last is true or FIFO order if false.
 
@@ -153,51 +160,51 @@ class ItemContainer():
     #    value = self.pop(key)
     #    return key, value
 
-    #-----------------------------------------
+    # -----------------------------------------
     def __repr__(self):
-        'ic.__repr__() <==> repr(ic)'
+        "ic.__repr__() <==> repr(ic)"
         if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, self._items.items())
+            return "%s()" % (self.__class__.__name__,)
+        return "%s(%r)" % (self.__class__.__name__, self._items.items())
 
-    #-----------------------------------------
+    # -----------------------------------------
     def copy_inplace(self, rowmask):
-        '''
+        """
         inplace rowmask applied
-        '''
+        """
         for v in self._items.values():
             # first item in tuple is the array
             arr = v[0]
             # preserve name when copying inplace
             name = arr.get_name()
-            arr=arr[rowmask]
+            arr = arr[rowmask]
             arr.set_name(name)
             v[0] = arr
 
-    #-----------------------------------------
+    # -----------------------------------------
     def copy(self, cols=None, deep=False):
-        '''
+        """
         Returns a shallow copy of the item container.
         cols list can be provided for specific selection.
-        '''
+        """
 
         newcontainer = ItemContainer()
         if cols is None:
             newcontainer._items = self._items.copy()
-            for k,v in newcontainer._items.items():
+            for k, v in newcontainer._items.items():
                 newcontainer._items[k] = v.copy()
         else:
             for k in cols:
                 newcontainer._items[k] = self._items[k].copy()
         return newcontainer
 
-    #-----------------------------------------
+    # -----------------------------------------
     def copy_apply(self, func, *args, cols=None):
-        '''
+        """
         Returns a copy of the itemcontainer, applying a function to items before swapping them out in the new ItemContainer object.
         Used in Dataset row masking.
-        '''
-        
+        """
+
         newcontainer = ItemContainer()
 
         if cols is None:
@@ -209,17 +216,17 @@ class ItemContainer():
         else:
             for k in cols:
                 # tuple copy
-                v= self._items[k].copy()
+                v = self._items[k].copy()
                 newcontainer._items[k] = v
                 v[0] = func(v[0], *args)
 
         return newcontainer
 
-    #-----------------------------------------
+    # -----------------------------------------
     def apply(self, func, *args, cols=None):
-        '''
+        """
         Performs a possibly inplace operation on items in the itemcontainer
-        '''
+        """
         if cols is None:
             for v in self._items.values():
                 func(v[0], *args)
@@ -228,7 +235,7 @@ class ItemContainer():
                 v = self._items[k]
                 func(v[0], *args)
 
-    #-----------------------------------------
+    # -----------------------------------------
     def __eq__(self, other):
         if isinstance(other, ItemContainer):
             return self._items == other._items
@@ -239,56 +246,57 @@ class ItemContainer():
             return self._items != other._items
         return self._items != other
 
-    #def __del__(self):
+    # def __del__(self):
     #    self._items.clear()                # eliminate cyclical references
 
-    #-----------------------------------------
+    # -----------------------------------------
     def items_as_dict(self):
-        '''
+        """
         Return dictionary of items without attributes.
-        '''
-        return {k:v[0] for k,v in self._items.items()}
+        """
+        return {k: v[0] for k, v in self._items.items()}
 
-    #-----------------------------------------
+    # -----------------------------------------
     def items_tolist(self):
         return [v[0] for v in self._items.values()]
 
-    #-----------------------------------------
+    # -----------------------------------------
     def item_delete(self, key):
         del self._items[key]
 
     # -------------------------------------------------------
     def item_get_dict(self):
-        ''' 
+        """ 
         return the underlying dict
 
         values are stored in the first tuple, attributes in the second tuple
-        '''
+        """
         return self._items
 
     # -------------------------------------------------------
     def iter_values(self):
-        '''
+        """
         This will yield the full values in _items dict (lists with item, attribute)
-        '''
+        """
         for v in self._items.values():
             yield v
 
     # -------------------------------------------------------
     def item_get_value(self, key):
-        ''' 
+        """ 
         return the value for the given key 
 
         NOTE: a good spot to put a counter for debugging
-        '''
+        """
         return self._items[key][0]
+
     # -------------------------------------------------------
     def item_get_values(self, keylist):
-        '''
+        """
         return list of value for the given key
         used for fast dataset slicing/copy with column selection
-        '''
-        return [ self.item_get_value(i) for i in keylist ]
+        """
+        return [self.item_get_value(i) for i in keylist]
 
     # -------------------------------------------------------
     def item_set_value(self, key, value, attr=None):
@@ -304,14 +312,14 @@ class ItemContainer():
 
     # -------------------------------------------------------
     def item_get_attribute(self, key, attrib_name, default=None):
-        '''
+        """
         Params
         ------
         Arg1: key: name of the item
         Arg2: attrib_name: name of the attribute
 
         Retrieves the value of the attribute previously assigned with item_set_attribute
-        '''
+        """
         item = self._items.get(key, None)
         if item is None:
             return None
@@ -320,18 +328,17 @@ class ItemContainer():
             return None
         return getattr(attrib, attrib_name, default)
 
-
     # -------------------------------------------------------
     def _set_attribute(self, item, name, value):
         attrib = item[1]
         if attrib is None:
             attrib = ItemAttribute()
         setattr(attrib, name, value)
-        item[1]=attrib
+        item[1] = attrib
 
     # -------------------------------------------------------
     def item_set_attribute(self, key, attrib_name, attrib_value):
-        '''
+        """
         Params
         ------
         Arg1: key: name of the item
@@ -342,7 +349,7 @@ class ItemContainer():
         Any valid dictionary name and any object can be assigned.
 
         Note: see item_get_attribute to retrieve
-        '''
+        """
 
         # check if already exists...
         if self.item_exists(key):
@@ -360,14 +367,14 @@ class ItemContainer():
 
     # -------------------------------------------------------
     def get_dict_values(self):
-        '''
+        """
         Returns a tuple of items in the item dict. Each item is a list.
-        '''
+        """
         return tuple(self._items.values())
 
     # -------------------------------------------------------
     def item_replace_all(self, newdict, check_exists=True):
-        '''
+        """
         Replace the data for each item in the item dict. Original attributes 
         will be retained.
         
@@ -376,7 +383,7 @@ class ItemContainer():
         newdict : dictionary of item names -> new item data (can also be a dataset)
 
         check_exists : if True, all newdict keys and old item keys will be compared to ensure a match
-        '''
+        """
         # for intenal routines, an existance check can often be skipped
         if check_exists:
             for k in newdict:
@@ -384,7 +391,9 @@ class ItemContainer():
                     raise ValueError(f"Item {k} not found in original item dictionary.")
             for k in self._items:
                 if k not in newdict:
-                    raise ValueError(f"Item {k} in original item dictionary not found in new items.")
+                    raise ValueError(
+                        f"Item {k} in original item dictionary not found in new items."
+                    )
 
         # replace the data, keep any attributes if set
         for k, v in newdict.items():
@@ -402,32 +411,36 @@ class ItemContainer():
         if old == new:
             return None
         if old not in self._items:
-            raise ValueError(f'Invalid column to rename: {old!r} cannot rename column that does not exit in itemcontainer.')
+            raise ValueError(
+                f"Invalid column to rename: {old!r} cannot rename column that does not exit in itemcontainer."
+            )
         if new in self._items:
-            raise ValueError(f'Invalid column name: {new!r}; already exists in itemcontainer, cannot rename to it.')
+            raise ValueError(
+                f"Invalid column name: {new!r}; already exists in itemcontainer, cannot rename to it."
+            )
 
         newdict = self._items.copy()
 
         return_val = None
 
         self._items.clear()
-        for k,v in newdict.items():
+        for k, v in newdict.items():
             if k == old:
                 k = new
 
                 # return the value portion
                 return_val = v[0]
 
-            self._items[k]=v
+            self._items[k] = v
 
         return return_val
 
     # -------------------------------------------------------
     def _get_move_cols(self, cols):
-        '''
+        """
         Possibly convert list/array/dictionary/string/index of items to move
         for item_move_to_front(), item_move_to_back()
-        '''
+        """
         if isinstance(cols, (str, bytes)):
             cols = [cols]
         elif isinstance(cols, (int, np.integer)):
@@ -437,10 +450,14 @@ class ItemContainer():
                 raise ValueError(f"Items could not be indexed by {cols}")
 
         if not isinstance(cols, (np.ndarray, list, tuple, dict)):
-            raise TypeError(f"Item(s) to move must be list, tuple, ndarray, dictionary (keys), single unicode or byte string, or single index. Got {type(cols)}")
+            raise TypeError(
+                f"Item(s) to move must be list, tuple, ndarray, dictionary (keys), single unicode or byte string, or single index. Got {type(cols)}"
+            )
         else:
             if len(cols) > len(self._items):
-                raise ValueError(f"Found {len(cols)} items to move to front - more than {len(self._items)} in container.")
+                raise ValueError(
+                    f"Found {len(cols)} items to move to front - more than {len(self._items)} in container."
+                )
 
         return cols
 
@@ -484,19 +501,18 @@ class ItemContainer():
             else:
                 warnings.warn(f"Column {cn} not found. Could not move to back.")
 
-
     # -------------------------------------------------------
     def item_add_prefix(self, prefix):
-        '''
+        """
         inplace operation.
         adds prefix in front of existing item name
 
         faster than calling rename
-        '''
+        """
         newdict = self._items.copy()
         self._items.clear()
-        for k,v in newdict.items():
-            self._items[f'{prefix}{k}']=v
+        for k, v in newdict.items():
+            self._items[f"{prefix}{k}"] = v
 
     # --------------------------------------------------------
     def item_str_match(self, expression, flags=0):
@@ -512,7 +528,7 @@ class ItemContainer():
         return [bool(match_fun(x)) for x in self._items.keys()]
 
     def item_str_replace(self, old, new, maxr=-1):
-        '''
+        """
         :param old: string to look for within individual names of columns
         :param new: string to replace old string in column names
 
@@ -520,7 +536,7 @@ class ItemContainer():
         If replacing the string conflicts with an existing item name, an error will be raised.
 
         returns True if column names were replaced
-        '''
+        """
         new_names = []
         replace_count = 0
         for item in self._items:
@@ -529,7 +545,9 @@ class ItemContainer():
                 replace_count += 1
                 # prevent name conflict from overwriting existing column
                 if r in self._items:
-                    raise ValueError(f"Item {r} already existed, cannot make replacement in item name {item}.")
+                    raise ValueError(
+                        f"Item {r} already existed, cannot make replacement in item name {item}."
+                    )
             new_names.append(r)
 
         # only do this if necessary
@@ -545,6 +563,7 @@ class ItemContainer():
     # -------------------------------------------------------
     def footer_get_value(self, key):
         return self.item_get_attribute(key, ATTRIBUTE_FOOTER)
+
     def footer_set_value(self, key, value):
         self.item_set_attribute(key, ATTRIBUTE_FOOTER, value)
 
@@ -579,22 +598,22 @@ class ItemContainer():
     # --GENERAL ATTRIBUTE FUNCTIONS--------------------------
     # -------------------------------------------------------
     def _tagged_get_names(self, attrname):
-        '''
+        """
         Returns a list of item names tagged with attrname in order.
-        '''
-        tagged_names=[]
+        """
+        tagged_names = []
         max, tagged_dict = self._tagged_get_dict_max(attrname)
         if max >= 0:
-            for i in range(max+1):
+            for i in range(max + 1):
                 if i in tagged_dict:
                     tagged_names.append(tagged_dict[i])
         return tagged_names
 
     def _tagged_set_names(self, listnames, attrname):
-        '''
+        """
         Removes existing items tagged with attrname.
         If items in listnames exist, they will be tagged with attrname.
-        '''
+        """
         if not isinstance(listnames, list):
             listnames = [listnames]
         self._tagged_remove(attrname)
@@ -603,9 +622,9 @@ class ItemContainer():
                 self._set_attribute(self._items[tagged], attrname, i)
 
     def _tagged_remove(self, attrname):
-        '''
+        """
         Removes existing items tagged with attrname.
-        '''
+        """
         for v in self._items.values():
             # get the attribute tuple
             attr = v[1]
@@ -613,13 +632,13 @@ class ItemContainer():
                 delattr(attr, attrname)
 
     def _tagged_as_dict(self, attrname):
-        '''
+        """
         Returns dictionary of columns tagged with attrname.
-        '''
+        """
         return_dict = {}
         max, tagged_dict = self._tagged_get_dict_max(attrname)
         if max >= 0:
-            for i in range(max+1):
+            for i in range(max + 1):
                 if i in tagged_dict:
                     name = tagged_dict[i]
                     return_dict[name] = self.item_get_value(name)
@@ -628,16 +647,17 @@ class ItemContainer():
         return None
 
     def _tagged_get_dict_max(self, attrname):
-        '''
+        """
         Returns unordered dictionary of columns tagged with attrname, max value for order.
-        '''
-        tagged_dict={}
+        """
+        tagged_dict = {}
         max = -1
         for k, v in self._items.items():
             # get the attribute tuple
             attr = v[1]
             if attr is not None and hasattr(attr, attrname):
                 val = getattr(attr, attrname)
-                if val > max: max = val
+                if val > max:
+                    max = val
                 tagged_dict[val] = k
         return max, tagged_dict

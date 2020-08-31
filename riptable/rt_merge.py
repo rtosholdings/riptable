@@ -1,8 +1,23 @@
-﻿__all__ = ['merge', 'merge2', 'merge_lookup', 'merge_asof',]
+﻿__all__ = [
+    "merge",
+    "merge2",
+    "merge_lookup",
+    "merge_asof",
+]
 
 import logging
 import warnings
-from typing import TYPE_CHECKING, Collection, Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Collection,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import numba as nb
@@ -10,16 +25,26 @@ import numba as nb
 from .rt_utils import alignmk, merge_prebinned, get_default_value
 from .rt_timers import GetNanoTime
 from .rt_numpy import (
-    all, arange,
+    all,
+    arange,
     bool_to_fancy,
     cumsum,
-    empty, empty_like, full,
+    empty,
+    empty_like,
+    full,
     hstack,
-    ismember, isnan, isnotnan, issorted,
-    mask_andi, maximum,
+    ismember,
+    isnan,
+    isnotnan,
+    issorted,
+    mask_andi,
+    maximum,
     putmask,
-    sum, unique, unique32, where
-    )
+    sum,
+    unique,
+    unique32,
+    where,
+)
 from .rt_categorical import Categorical
 from .rt_fastarray import FastArray
 from .rt_enum import TypeRegister, INVALID_DICT, int_dtype_from_len
@@ -39,15 +64,19 @@ def _create_noncompat_join_key_types_errmsg(
     left_key_type: type,
     right_key_name: str,
     right_key_type: type,
-    reason: Optional[str] = None
+    reason: Optional[str] = None,
 ) -> str:
     """Create an error message for two column types which are not compatible as join-keys."""
 
     # If the caller didn't supply a reason, provide a generic explanation
     # that's (maybe) still helpful for new users.
-    _reason = reason if reason is not None else "You may need to convert one of them into a different type before joining."
+    _reason = (
+        reason
+        if reason is not None
+        else "You may need to convert one of them into a different type before joining."
+    )
 
-    return f'The columns \'{left_key_name}\' ({left_key_type}) and \'{right_key_name}\' ({right_key_type}) are not compatible for use as join-keys. {_reason}'
+    return f"The columns '{left_key_name}' ({left_key_type}) and '{right_key_name}' ({right_key_type}) are not compatible for use as join-keys. {_reason}"
 
 
 def _safe_get_colname(column: FastArray) -> str:
@@ -55,15 +84,18 @@ def _safe_get_colname(column: FastArray) -> str:
     column_name = column.get_name()
     return "UNNAMED-COLUMN" if column_name is None else column_name
 
+
 # TODO: Starting in riptable 1.5, certain detected incompatibilities between join keys
 #       will become errors (ValueError) instead of just warnings.
 #       (Some "hard" incompatibilities such as different number of join keys from the
 #       left and right Datasets are already errors since we cannot proceed in those cases.)
-#_key_incompat_exn_type : type = ValueError
-_key_incompat_exn_type : type = FutureWarning
+# _key_incompat_exn_type : type = ValueError
+_key_incompat_exn_type: type = FutureWarning
 
 
-def _verify_join_key_compat(left_key: FastArray, right_key: FastArray, arg_order_swapped:bool=False) -> Optional[List[Exception]]:
+def _verify_join_key_compat(
+    left_key: FastArray, right_key: FastArray, arg_order_swapped: bool = False
+) -> Optional[List[Exception]]:
     """
     Verify whether two columns (ndarray or FastArray) are compatible for use as join-keys in a merge operation.
 
@@ -117,13 +149,23 @@ def _verify_join_key_compat(left_key: FastArray, right_key: FastArray, arg_order
         # and we'll get the same result as if we were merging non-Categorical arrays.
         # TODO: For diagnostic error messages, may need to track the 'path' down through this Categorical (e.g. it's name)
         #       so we can provide a more-accurate message.
-        left_key_cats = left_key.category_dict  # Use .category_dict instead of .categories(); we only care about the type info here, and .categories() allocates a new array
-        left_key_cat_cols = left_key_cats.values() if isinstance(left_key_cats, dict) else [left_key_cats]
+        left_key_cats = (
+            left_key.category_dict
+        )  # Use .category_dict instead of .categories(); we only care about the type info here, and .categories() allocates a new array
+        left_key_cat_cols = (
+            left_key_cats.values()
+            if isinstance(left_key_cats, dict)
+            else [left_key_cats]
+        )
 
         # If both sides are Categoricals, save an extra recursive call by drilling down into it at the same time.
         if isinstance(right_key, Categorical):
             right_key_cats = right_key.category_dict
-            right_key_cat_cols = right_key_cats.values() if isinstance(right_key_cats, dict) else [right_key_cats]
+            right_key_cat_cols = (
+                right_key_cats.values()
+                if isinstance(right_key_cats, dict)
+                else [right_key_cats]
+            )
             return _verify_join_keys_compat(left_key_cat_cols, right_key_cat_cols)
 
         else:
@@ -133,7 +175,11 @@ def _verify_join_key_compat(left_key: FastArray, right_key: FastArray, arg_order
         # TODO: Maybe replace the code below with a self-recursive call here where we utilize the order-swapping logic;
         #       this'll help keep the code simple/compact and means we have less logic to test/maintain.
         right_key_cats = right_key.category_dict
-        right_key_cat_cols = right_key_cats.values() if isinstance(right_key_cats, dict) else [right_key_cats]
+        right_key_cat_cols = (
+            right_key_cats.values()
+            if isinstance(right_key_cats, dict)
+            else [right_key_cats]
+        )
 
         return _verify_join_keys_compat([left_key], right_key_cat_cols)
 
@@ -146,8 +192,13 @@ def _verify_join_key_compat(left_key: FastArray, right_key: FastArray, arg_order
     elif type(left_key) != type(right_key):
         left_key_name = _safe_get_colname(left_key)
         right_key_name = _safe_get_colname(right_key)
-        errmsg = _create_noncompat_join_key_types_errmsg(left_key_name, type(left_key), right_key_name, type(right_key),
-            reason="Columns must be the same Python __class__ to be mergeable.")
+        errmsg = _create_noncompat_join_key_types_errmsg(
+            left_key_name,
+            type(left_key),
+            right_key_name,
+            type(right_key),
+            reason="Columns must be the same Python __class__ to be mergeable.",
+        )
         return [ValueError(errmsg)]
 
     else:
@@ -158,13 +209,19 @@ def _verify_join_key_compat(left_key: FastArray, right_key: FastArray, arg_order
         # (without loss of information or semantic meaning) cast from one dtype to another.
         # TODO: Should we use the casting='same_kind' mode for the np.can_cast() call here? Doing so would prevent int->float conversions.
         # TODO: Refactor this logic so we can give more-specific error reasons when columns are not compatible? E.g. "integer columns cannot be joined against floating-point columns"
-        if np.can_cast(left_key.dtype, right_key.dtype) or np.can_cast(right_key.dtype, left_key.dtype):
+        if np.can_cast(left_key.dtype, right_key.dtype) or np.can_cast(
+            right_key.dtype, left_key.dtype
+        ):
             return None
-        elif issubclass(left_key.dtype.type, np.integer) and issubclass(right_key.dtype.type, np.integer):
+        elif issubclass(left_key.dtype.type, np.integer) and issubclass(
+            right_key.dtype.type, np.integer
+        ):
             return None
-        elif issubclass(left_key.dtype.type, np.floating) and issubclass(right_key.dtype.type, np.floating):
+        elif issubclass(left_key.dtype.type, np.floating) and issubclass(
+            right_key.dtype.type, np.floating
+        ):
             return None
-        elif left_key.dtype.char in ('S', 'U') and right_key.dtype.char in ('S', 'U'):
+        elif left_key.dtype.char in ("S", "U") and right_key.dtype.char in ("S", "U"):
             # Allow string keys of differing character types (ASCII vs. Unicode) to be merged.
             # TODO: At present, `merge` is implemented in such a way (via rt.ismember) that this mismatch causes an implicit
             # conversion of one of the string columns to the type of the other (preferring U->S because the result is more compact),
@@ -174,10 +231,15 @@ def _verify_join_key_compat(left_key: FastArray, right_key: FastArray, arg_order
             left_key_name = _safe_get_colname(left_key)
             right_key_name = _safe_get_colname(right_key)
             return [
-                _key_incompat_exn_type(f'The columns \'{left_key_name}\' (dtype={left_key.dtype}) and \'{right_key_name}\' (dtype={right_key.dtype}) are not compatible for use as join-keys. You may need to convert one of them into a different type before joining.')]
+                _key_incompat_exn_type(
+                    f"The columns '{left_key_name}' (dtype={left_key.dtype}) and '{right_key_name}' (dtype={right_key.dtype}) are not compatible for use as join-keys. You may need to convert one of them into a different type before joining."
+                )
+            ]
 
 
-def _verify_join_keys_compat(left_keys: Collection[FastArray], right_keys: Collection[FastArray]) -> List[Exception]:
+def _verify_join_keys_compat(
+    left_keys: Collection[FastArray], right_keys: Collection[FastArray]
+) -> List[Exception]:
     """
     Inspect the list of column(s) being used as join keys from two Datasets to ensure they're compatible for joining.
 
@@ -196,14 +258,18 @@ def _verify_join_keys_compat(left_keys: Collection[FastArray], right_keys: Colle
     """
     # The left and right side join-keys must be non-empty lists.
     if not left_keys or not right_keys:
-        return [ValueError('The left and/or right join-key lists are empty.')]
+        return [ValueError("The left and/or right join-key lists are empty.")]
 
     # We must have the same number of join keys on the left and right side.
     if len(left_keys) != len(right_keys):
-        return [ValueError(f'Differing numbers of columns used as join-keys for the left ({len(left_keys)}) and right ({len(right_keys)}) Datasets.')]
+        return [
+            ValueError(
+                f"Differing numbers of columns used as join-keys for the left ({len(left_keys)}) and right ({len(right_keys)}) Datasets."
+            )
+        ]
 
     # Iterate over the pairs of keys, checking compatibility for each pair.
-    errors : List[Exception] = []
+    errors: List[Exception] = []
     for left_key, right_key in zip(left_keys, right_keys):
         tmp = _verify_join_key_compat(left_key, right_key)
         if tmp is not None:
@@ -212,8 +278,14 @@ def _verify_join_keys_compat(left_keys: Collection[FastArray], right_keys: Colle
     return errors
 
 
-def _construct_index(left, right, left_on: List[str], right_on: List[str], how: str, hint_size: int=10000
-    ) -> Union[Tuple[FastArray, FastArray, FastArray], Tuple[tuple, tuple, tuple]]:
+def _construct_index(
+    left,
+    right,
+    left_on: List[str],
+    right_on: List[str],
+    how: str,
+    hint_size: int = 10000,
+) -> Union[Tuple[FastArray, FastArray, FastArray], Tuple[tuple, tuple, tuple]]:
     """
     Construct fancy indices for the left and right Datasets to be used for creating new columns in the merged Dataset.
 
@@ -250,9 +322,13 @@ def _construct_index(left, right, left_on: List[str], right_on: List[str], how: 
     # If `left_on` and `right_on` are lists, they must have the same length and be non-empty.
     if isinstance(left_on, list):
         if len(left_on) != len(right_on):
-            raise ValueError(f"`left_on` and `right_on` must have the same length ({len(left_on)} vs. {len(right_on)}).")
+            raise ValueError(
+                f"`left_on` and `right_on` must have the same length ({len(left_on)} vs. {len(right_on)})."
+            )
         elif not left_on:
-            raise ValueError("When specified as lists, `left_on` and `right_on` must be non-empty.")
+            raise ValueError(
+                "When specified as lists, `left_on` and `right_on` must be non-empty."
+            )
 
         # TEMP: Workaround until the code in this function can be adapted to better handle
         #       single-item lists. Before we started normalizing arguments being passed to this function,
@@ -264,17 +340,17 @@ def _construct_index(left, right, left_on: List[str], right_on: List[str], how: 
 
     idx_left = left[left_on]
     idx_right = right[right_on]
-    if how == 'left':
+    if how == "left":
         if isinstance(left_on, list):
-            #tup_left = tuple([left[col].copy() for col in left_on])
-            #tup_right = tuple([right[col].copy() for col in right_on])
+            # tup_left = tuple([left[col].copy() for col in left_on])
+            # tup_right = tuple([right[col].copy() for col in right_on])
             tup_left = tuple([left[col] for col in left_on])
             tup_right = tuple([right[col] for col in right_on])
             return tup_left, tup_left, tup_right
         else:
             return idx_left, idx_left, idx_right
 
-    elif how == 'right':
+    elif how == "right":
         if isinstance(right_on, list):
             # TODO: Use the non-.copy()-based version here as for the 'left' join above?
             tup_left = tuple([left[col].copy() for col in left_on])
@@ -283,11 +359,13 @@ def _construct_index(left, right, left_on: List[str], right_on: List[str], how: 
         else:
             return idx_right, idx_left, idx_right
 
-    elif how == 'outer':
+    elif how == "outer":
         if isinstance(left_on, list):
             idxList = []
             for col_num in range(len(left_on)):
-                idxList.append(np.hstack([left[left_on[col_num]], right[right_on[col_num]]]))
+                idxList.append(
+                    np.hstack([left[left_on[col_num]], right[right_on[col_num]]])
+                )
             idxFilter, _ = unique32(idxList, hint_size)
 
             # TODO: Use the non-.copy()-based version here as for the 'left' join above?
@@ -304,7 +382,7 @@ def _construct_index(left, right, left_on: List[str], right_on: List[str], how: 
             # idx = unique(stacked_idx, sorted=False)
             return idx, idx_left, idx_right
 
-    elif how == 'inner':
+    elif how == "inner":
         if isinstance(left_on, list):
             # TODO: Use the non-.copy()-based version here as for the 'left' join above?
             tup_left = tuple([left[col].copy() for col in left_on])
@@ -320,7 +398,7 @@ def _construct_index(left, right, left_on: List[str], right_on: List[str], how: 
             return idx, idx_left, idx_right
 
     else:
-        raise ValueError(f'The value \'{how}\' is not valid for the \'how\' parameter.')
+        raise ValueError(f"The value '{how}' is not valid for the 'how' parameter.")
 
 
 def _construct_colname_mapping(
@@ -328,8 +406,12 @@ def _construct_colname_mapping(
     right_on: Collection[str],
     suffixes: Optional[Tuple[str, str]],
     columns_left: Collection[str],
-    columns_right: Collection[str]
-) -> Tuple[Tuple[Collection[str], Collection[str]], Tuple[Collection[str], Collection[str]], Set[str]]:
+    columns_right: Collection[str],
+) -> Tuple[
+    Tuple[Collection[str], Collection[str]],
+    Tuple[Collection[str], Collection[str]],
+    Set[str],
+]:
     """
     Resolve column name collisions in the set of columns being merged from the left and right Datasets.
 
@@ -366,9 +448,11 @@ def _construct_colname_mapping(
     col_overlap = col_left_only_set & col_right_only_set
     if col_overlap:
         if suffixes is None:
-            raise ValueError(f'columns overlap but no suffix specified: {col_overlap}')
+            raise ValueError(f"columns overlap but no suffix specified: {col_overlap}")
         if suffixes[0] == suffixes[1]:
-            raise ValueError(f'columns overlap but suffixes are the same: {suffixes[0]}')
+            raise ValueError(
+                f"columns overlap but suffixes are the same: {suffixes[0]}"
+            )
 
     ##
     # Column name collision can happen after we apply the suffixes.
@@ -376,14 +460,21 @@ def _construct_colname_mapping(
     ##
 
     # Check for self-overlap within each Dataset.
-    def check_self_overlap(renamed_cols: Set[str], original_cols: Set[str], dataset_name: str) -> None:
+    def check_self_overlap(
+        renamed_cols: Set[str], original_cols: Set[str], dataset_name: str
+    ) -> None:
         if not renamed_cols.isdisjoint(original_cols):
             raise ValueError(
-                f"Column name self-collision(s) in the '{dataset_name}' Dataset after applying suffixes. Columns={renamed_cols & original_cols}")
+                f"Column name self-collision(s) in the '{dataset_name}' Dataset after applying suffixes. Columns={renamed_cols & original_cols}"
+            )
 
     def create_suffixed_remapped_cols(
-        on_col_set: Set[str], only_cols: List[str], only_cols_set: Set[str],
-        col_overlap: Set[str], dataset_name: str, suffix: Optional[str]
+        on_col_set: Set[str],
+        only_cols: List[str],
+        only_cols_set: Set[str],
+        col_overlap: Set[str],
+        dataset_name: str,
+        suffix: Optional[str],
     ) -> List[str]:
         if suffix is None or not suffix:
             # Return the original column list, since we're not going to do any remapping for it.
@@ -399,42 +490,61 @@ def _construct_colname_mapping(
         # or the original name.
         return [(col + suffix if col in col_overlap else col) for col in only_cols]
 
-    left_suffix = '' if suffixes is None else suffixes[0]
-    right_suffix = '' if suffixes is None else suffixes[1]
+    left_suffix = "" if suffixes is None else suffixes[0]
+    right_suffix = "" if suffixes is None else suffixes[1]
 
-    new_col_left = create_suffixed_remapped_cols(left_on_set, col_left_only, col_left_only_set, col_overlap, 'left', left_suffix)
-    new_col_right = create_suffixed_remapped_cols(right_on_set, col_right_only, col_right_only_set, col_overlap, 'right', right_suffix)
+    new_col_left = create_suffixed_remapped_cols(
+        left_on_set, col_left_only, col_left_only_set, col_overlap, "left", left_suffix
+    )
+    new_col_right = create_suffixed_remapped_cols(
+        right_on_set,
+        col_right_only,
+        col_right_only_set,
+        col_overlap,
+        "right",
+        right_suffix,
+    )
 
     # Are there still overlaps between the two sets of columns after renaming?
     new_col_left_set = set(new_col_left)
     new_col_right_set = set(new_col_right)
     if not new_col_left_set.isdisjoint(new_col_right_set):
         col_collision = new_col_left_set & new_col_right_set
-        raise ValueError(f'column name collision after applying suffixes: {col_collision}')
+        raise ValueError(
+            f"column name collision after applying suffixes: {col_collision}"
+        )
 
     # TODO: Consider returning the left and right tuples as dictionaries instead (mapping new names to old names or vice versa).
     #       If we do this, we don't need to separately return 'intersection_cols', and the 'on' columns can be included
     #       in the dictionaries (they'll just be mapped to themselves like any other column that's not renamed).
     #       This will make it easier to restructure the code that consumes these results so that it places the columns
     #       in the correct/expected ordering in the merged (result) Dataset.
-    return (col_left_only, new_col_left), (col_right_only, new_col_right), intersection_cols
+    return (
+        (col_left_only, new_col_left),
+        (col_right_only, new_col_right),
+        intersection_cols,
+    )
 
 
-def _get_keep_ifirstlastkey(grouping: 'Grouping', keep: Optional[str]) -> Optional[FastArray]:
+def _get_keep_ifirstlastkey(
+    grouping: "Grouping", keep: Optional[str]
+) -> Optional[FastArray]:
     """
     Use the side-specific form of the 'keep' parameter to fetch ifirstkey or ilastkey from a Grouping instance.
     """
     if keep is None:
         return None
-    elif keep == 'first':
+    elif keep == "first":
         return grouping.ifirstkey
-    elif keep == 'last':
+    elif keep == "last":
         return grouping.ilastkey
     else:
         raise ValueError(f"Invalid argument value passed for the `keep` parameter.")
 
 
-def _get_keep_ifirstlastkey_with_null(grouping: 'Grouping', keep: Optional[str]) -> Optional[FastArray]:
+def _get_keep_ifirstlastkey_with_null(
+    grouping: "Grouping", keep: Optional[str]
+) -> Optional[FastArray]:
     """
     Use the side-specific form of the 'keep' parameter to fetch ifirstkey or ilastkey from a Grouping instance,
     or an ifirstkey/ilastkey-like array that also includes an entry for the invalid/NA group if any such entries
@@ -442,7 +552,7 @@ def _get_keep_ifirstlastkey_with_null(grouping: 'Grouping', keep: Optional[str])
     """
     if keep is None:
         return None
-    elif keep == 'first':
+    elif keep == "first":
         # Does the original data contain any null/invalid/NA entries?
         if grouping.base_index > 0 and grouping.ncountgroup[0] > 0:
             # Create a new array like ifirstkey but with an additional entry for the invalid/NA group.
@@ -452,10 +562,14 @@ def _get_keep_ifirstlastkey_with_null(grouping: 'Grouping', keep: Optional[str])
             #       invalid/NA which first occurs in the last element of the array -- if we want to represent that
             #       index we'd need to use a wider dtype.
             orig_ifirstkey = grouping.ifirstkey
-            invalid_key_first_idx = grouping.igroup[0]  # This works because the invalid group is always first (i.e. ifirstgroup[0] == 0).
+            invalid_key_first_idx = grouping.igroup[
+                0
+            ]  # This works because the invalid group is always first (i.e. ifirstgroup[0] == 0).
 
             # Determine the dtype needed to hold the result.
-            ifirstkey_dtype = np.promote_types(orig_ifirstkey.dtype, int_dtype_from_len(invalid_key_first_idx))
+            ifirstkey_dtype = np.promote_types(
+                orig_ifirstkey.dtype, int_dtype_from_len(invalid_key_first_idx)
+            )
 
             ifirstkey = empty(len(orig_ifirstkey) + 1, dtype=ifirstkey_dtype)
             ifirstkey[1:] = orig_ifirstkey
@@ -465,7 +579,7 @@ def _get_keep_ifirstlastkey_with_null(grouping: 'Grouping', keep: Optional[str])
         else:
             return grouping.ifirstkey
 
-    elif keep == 'last':
+    elif keep == "last":
         # Does the original data contain any null/invalid/NA entries?
         if grouping.base_index > 0 and grouping.ncountgroup[0] > 0:
             # Create a new array like ilastkey but with an additional entry for the invalid/NA group.
@@ -474,10 +588,14 @@ def _get_keep_ifirstlastkey_with_null(grouping: 'Grouping', keep: Optional[str])
             #       keys appear in the first ~30k rows so we use an int16 for the ilastkey dtype, but there's an invalid/NA
             #       in the last element of the array -- if we want to represent that index we'd need to use a wider dtype.
             orig_ilastkey = grouping.ilastkey
-            invalid_key_last_idx = grouping.igroup[grouping.ncountgroup[0] - 1]  # This works because the invalid group is group 0 (as long as base_index > 0).
+            invalid_key_last_idx = grouping.igroup[
+                grouping.ncountgroup[0] - 1
+            ]  # This works because the invalid group is group 0 (as long as base_index > 0).
 
             # Determine the dtype needed to hold the result.
-            ilastkey_dtype = np.promote_types(orig_ilastkey.dtype, int_dtype_from_len(invalid_key_last_idx))
+            ilastkey_dtype = np.promote_types(
+                orig_ilastkey.dtype, int_dtype_from_len(invalid_key_last_idx)
+            )
 
             ilastkey = empty(len(orig_ilastkey) + 1, dtype=ilastkey_dtype)
             ilastkey[1:] = orig_ilastkey
@@ -491,7 +609,7 @@ def _get_keep_ifirstlastkey_with_null(grouping: 'Grouping', keep: Optional[str])
         raise ValueError(f"Invalid argument value passed for the `keep` parameter.")
 
 
-def _get_keep_ikey(grouping: 'Grouping', keep: Optional[str]) -> FastArray:
+def _get_keep_ikey(grouping: "Grouping", keep: Optional[str]) -> FastArray:
     """
     TODO: Add description
     """
@@ -505,7 +623,7 @@ def _get_keep_ikey(grouping: 'Grouping', keep: Optional[str]) -> FastArray:
         return new_ikey
 
 
-def _get_keep_ikey_with_null(grouping: 'Grouping', keep: Optional[str]) -> FastArray:
+def _get_keep_ikey_with_null(grouping: "Grouping", keep: Optional[str]) -> FastArray:
     """
     TODO: Add description
     """
@@ -519,7 +637,7 @@ def _get_keep_ikey_with_null(grouping: 'Grouping', keep: Optional[str]) -> FastA
         return new_ikey
 
 
-def _get_keep_ncountgroup(grouping: 'Grouping', keep: Optional[str]) -> FastArray:
+def _get_keep_ncountgroup(grouping: "Grouping", keep: Optional[str]) -> FastArray:
     """
     Use the side-specific form of the 'keep' parameter to fetch the ``Grouping.ncountgroup``
     from a Grouping instance and adjust it if necessary.
@@ -532,7 +650,7 @@ def _get_keep_ncountgroup(grouping: 'Grouping', keep: Optional[str]) -> FastArra
     """
     if keep is None:
         return grouping.ncountgroup
-    elif keep == 'first' or keep == 'last':
+    elif keep == "first" or keep == "last":
         return maximum(grouping.ifirstkey, 1)
     else:
         raise ValueError(f"Invalid argument value passed for the `keep` parameter.")
@@ -548,7 +666,8 @@ def _build_right_fancyindex_impl(
     right_iGroup: np.ndarray,
     row_cumcount: np.ndarray,
     invalid_index: int,
-    right_fancyindex: np.ndarray):
+    right_fancyindex: np.ndarray,
+):
     """
     Each row of 'left' is expanded in-place the number of times that
     key occurs in right; then we copy the entries for that key from the right-side iGroup to the array elements
@@ -594,11 +713,18 @@ def _build_right_fancyindex_impl(
 
                 # Copy the right-row-indices for this group from the iGroup to the fancy array.
                 for i in range(curr_group_nCount):
-                    right_fancyindex[fancy_row_offset + i] = right_iGroup[curr_group_offset + i]
+                    right_fancyindex[fancy_row_offset + i] = right_iGroup[
+                        curr_group_offset + i
+                    ]
 
 
 @nb.njit(parallel=True, cache=True, nogil=True)
-def _fancy_index_fetch_keymap(left_keyid_to_right_keyid_map: np.ndarray, left_ikey: np.ndarray, invalid_value: int, output: np.ndarray):
+def _fancy_index_fetch_keymap(
+    left_keyid_to_right_keyid_map: np.ndarray,
+    left_ikey: np.ndarray,
+    invalid_value: int,
+    output: np.ndarray,
+):
     """
     This function is a temporary, performance-oriented workaround for the left<->right key mappings being
     created as 0-indexed rather than 1-indexed (which would allow them to be used directly as fancy
@@ -663,10 +789,10 @@ def _fancy_index_fetch_keymap(left_keyid_to_right_keyid_map: np.ndarray, left_ik
 
 def _build_right_fancyindex(
     left_keyid_to_right_keyid_map: FastArray,
-    left_keygroup: 'Grouping',
-    right_keygroup: 'Grouping',
+    left_keygroup: "Grouping",
+    right_keygroup: "Grouping",
     is_inner_join: bool,
-    keep: Tuple[Optional[str], Optional[str]]
+    keep: Tuple[Optional[str], Optional[str]],
 ) -> FastArray:
     """
     Build the fancy index array to be used for transforming columns of the 'right' Dataset
@@ -702,14 +828,27 @@ def _build_right_fancyindex(
     # Unpack 'keep' for later use.
     keep_left, keep_right = keep
 
-    left_ikey = left_keygroup.ikey if keep_left is None else left_keygroup.ikey[_get_keep_ifirstlastkey_with_null(left_keygroup, keep_left)]
+    left_ikey = (
+        left_keygroup.ikey
+        if keep_left is None
+        else left_keygroup.ikey[
+            _get_keep_ifirstlastkey_with_null(left_keygroup, keep_left)
+        ]
+    )
 
     # Create an array with the same shape as the 'left' keygroup.
     # Populate each element with the 1-based keyid of the matching key from 'right';
     # if there is no matching key in 'right', the element is populated with the invalid value.
-    left_rows_with_right_keyids = empty_like(left_ikey, dtype=left_keyid_to_right_keyid_map.dtype)
+    left_rows_with_right_keyids = empty_like(
+        left_ikey, dtype=left_keyid_to_right_keyid_map.dtype
+    )
     invalid_index_val = get_default_value(left_rows_with_right_keyids)
-    _fancy_index_fetch_keymap(left_keyid_to_right_keyid_map, left_ikey, invalid_index_val, left_rows_with_right_keyids)
+    _fancy_index_fetch_keymap(
+        left_keyid_to_right_keyid_map,
+        left_ikey,
+        invalid_index_val,
+        left_rows_with_right_keyids,
+    )
 
     # When duplicate rows (per key) are being dropped from the *right* Dataset, it means we don't
     # need to expand the key multiplicities for the left Dataset; we're then either preserving or
@@ -720,25 +859,37 @@ def _build_right_fancyindex(
             if keep_left is None:
                 # Dropping duplicates in right, preserving key multiplicity from left, keeping only keys in both left and right.
                 valid_left_row_mask = isnotnan(left_rows_with_right_keyids)
-                valid_left_rows_with_right_keyids = left_rows_with_right_keyids[valid_left_row_mask]
-                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[valid_left_rows_with_right_keyids - 1]
+                valid_left_rows_with_right_keyids = left_rows_with_right_keyids[
+                    valid_left_row_mask
+                ]
+                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[
+                    valid_left_rows_with_right_keyids - 1
+                ]
 
             else:
                 # Dropping duplicates in both left and right; key multiplicity is 1, keeping only keys in both left and right.
                 valid_left_row_mask = isnotnan(left_rows_with_right_keyids)
-                valid_left_rows_with_right_keyids = left_rows_with_right_keyids[valid_left_row_mask]
-                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[valid_left_rows_with_right_keyids - 1]
+                valid_left_rows_with_right_keyids = left_rows_with_right_keyids[
+                    valid_left_row_mask
+                ]
+                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[
+                    valid_left_rows_with_right_keyids - 1
+                ]
 
         else:
             if keep_left is None:
                 # Dropping duplicates in right, preserving key multiplicity from left, keeping all keys in left (need to
                 # put in invalids/NA in the fancyindex corresponding to the rows in left with keys that aren't in right).
-                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[left_rows_with_right_keyids - 1]
+                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[
+                    left_rows_with_right_keyids - 1
+                ]
 
             else:
                 # Dropping duplicates in both left and right; key multiplicity is 1, keeping all keys in left (need to
                 # put in invalids/NA in the fancyindex corresponding to the rows in left with keys that aren't in right).
-                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[left_rows_with_right_keyids - 1]
+                return _get_keep_ifirstlastkey(right_keygroup, keep_right)[
+                    left_rows_with_right_keyids - 1
+                ]
 
     # Create an array which matches up to the left rows and contains for each row the right-multiplicity
     # for that row's key.
@@ -762,7 +913,9 @@ def _build_right_fancyindex(
     #       is a riptable sentinel value.
     # TODO: Implement an rt.min_scalar_type() function to handle this automatically.
     shuffled_group_cumcount_dtype = np.min_scalar_type(total_row_group_count + 1)
-    shuffled_group_cumcount = cumsum(shuffled_group_count, dtype=shuffled_group_cumcount_dtype)
+    shuffled_group_cumcount = cumsum(
+        shuffled_group_count, dtype=shuffled_group_cumcount_dtype
+    )
 
     # Allocate the array which'll hold our fancy index for the 'right' Dataset.
     # Derive the dtype to use from the length of the 'right' Dataset; that's because
@@ -775,7 +928,14 @@ def _build_right_fancyindex(
     # Pass the invalid value for the fancy index so we ensure it always matches (e.g. don't want
     # to have an int32 invalid in an int64 array or vice versa).
     invalid_right_index_val = INVALID_DICT[right_fancyindex_dtype.num]
-    _build_right_fancyindex_impl(left_rows_with_right_keyids, right_keygroup.ifirstgroup, right_keygroup.igroup, shuffled_group_cumcount, invalid_right_index_val, right_fancyindex)
+    _build_right_fancyindex_impl(
+        left_rows_with_right_keyids,
+        right_keygroup.ifirstgroup,
+        right_keygroup.igroup,
+        shuffled_group_cumcount,
+        invalid_right_index_val,
+        right_fancyindex,
+    )
 
     # Return the constructed fancy index.
     return right_fancyindex
@@ -875,8 +1035,8 @@ def _fused_arange_repeat(repeats_cumsum: np.ndarray, output: np.ndarray):
 def _build_left_fancyindex(
     right_keyid_to_left_keyid_map: FastArray,
     right_key_exists_in_left: FastArray,
-    left_keygroup: 'Grouping',
-    right_keygroup: 'Grouping',
+    left_keygroup: "Grouping",
+    right_keygroup: "Grouping",
     is_inner_join: bool,
     keep: Tuple[Optional[str], Optional[str]],
 ) -> Optional[FastArray]:
@@ -941,8 +1101,12 @@ def _build_left_fancyindex(
             # TODO: As in code further down in this function, the creation of this array requires some workarounds to
             #       handle the difference between 0-based "key index" values and 1-based key ids that work more naturally
             #       with grouping arrays. This causes some additional allocations (and complexity) so should be cleaned up.
-            left_group_exists_in_right = full(left_keygroup.ncountgroup.shape, False, dtype=np.bool)
-            left_group_exists_in_right[1:][right_keyid_to_left_keyid_map[right_key_exists_in_left]] = True
+            left_group_exists_in_right = full(
+                left_keygroup.ncountgroup.shape, False, dtype=np.bool
+            )
+            left_group_exists_in_right[1:][
+                right_keyid_to_left_keyid_map[right_key_exists_in_left]
+            ] = True
 
             if keep_left is None:
                 # We're not dropping duplicates from the left Dataset.
@@ -959,7 +1123,7 @@ def _build_left_fancyindex(
                 #       we can just keep returning the mask here and having the caller check the dtype of the array and
                 #       deciding themselves whether to call where() or bool_to_fancy().
                 left_row_mask = left_group_exists_in_right[left_keygroup.ikey]
-                #return left_row_mask  # TODO: Some downstream stuff doesn't work properly with boolean masks; convert to a fancy index until they're fixed.
+                # return left_row_mask  # TODO: Some downstream stuff doesn't work properly with boolean masks; convert to a fancy index until they're fixed.
                 return bool_to_fancy(left_row_mask)
 
             else:
@@ -969,7 +1133,9 @@ def _build_left_fancyindex(
                 # right Datasets to keep just those entries of the .ifirstkey/.ilastkey.
                 # We have to slice off the first element of the mask (corresponding to the invalid bin) so it
                 # matches the length of the ifirstkey/ilastkey.
-                return _get_keep_ifirstlastkey(left_keygroup, keep_left)[left_group_exists_in_right[1:]]
+                return _get_keep_ifirstlastkey(left_keygroup, keep_left)[
+                    left_group_exists_in_right[1:]
+                ]
 
         else:
             # This is a "left outer join" and we're not dropping duplicates from the left Dataset
@@ -1010,9 +1176,12 @@ def _build_left_fancyindex(
     # PERF: Consider writing a numba loop to fuse the next couple of lines together to avoid the intermediate array
     #       creation caused by the fancy-indexing.
     nonmatched_row_group_count = 0 if is_inner_join else 1
-    right_group_multiplicity_as_left = full(left_keygroup.ncountgroup.shape, nonmatched_row_group_count, dtype=np.int64)
-    right_group_multiplicity_as_left[1:][right_keyid_to_left_keyid_map[right_key_exists_in_left]] =\
-        right_keygroup.ncountgroup[1:][right_key_exists_in_left]
+    right_group_multiplicity_as_left = full(
+        left_keygroup.ncountgroup.shape, nonmatched_row_group_count, dtype=np.int64
+    )
+    right_group_multiplicity_as_left[1:][
+        right_keyid_to_left_keyid_map[right_key_exists_in_left]
+    ] = right_keygroup.ncountgroup[1:][right_key_exists_in_left]
 
     # Each row in 'left' (the original Dataset) having gbkey value K needs to be repeated in-place M times,
     # where M is the multiplicity of that row's key within the *right* Grouping. If the key K from the left Grouping
@@ -1020,12 +1189,12 @@ def _build_left_fancyindex(
     left_ikey = _get_keep_ikey(left_keygroup, keep_left)
     left_repeats = right_group_multiplicity_as_left[left_ikey]
     assert all(isnotnan(left_repeats)), "Invalid entries found in 'left_repeats'."
-    #assert not hasanynan(left_repeats), "Invalid entries found in 'left_repeats'."
+    # assert not hasanynan(left_repeats), "Invalid entries found in 'left_repeats'."
     assert min(left_repeats) >= 0, "Negative entries found in 'left_repeats'."
 
     # EXPERIMENTAL :: For support of outer merge with keep='first'/'last' for left side.
-    #left_ikey_with_null = _get_keep_ikey_with_null(left_keygroup, keep_left)
-    #left_repeats_with_null = right_group_multiplicity_as_left[left_ikey_with_null]
+    # left_ikey_with_null = _get_keep_ikey_with_null(left_keygroup, keep_left)
+    # left_repeats_with_null = right_group_multiplicity_as_left[left_ikey_with_null]
 
     # Determine the total number of rows (as a scalar) -- we use this to determine the most compact dtype
     # we can use for the cumulative row count array.
@@ -1042,16 +1211,24 @@ def _build_left_fancyindex(
     # Perform a cumsum on the 'left_repeats' array, so we know for each element which index
     # (in the resulting array) to start repeating at.
     left_repeats_cumsum = cumsum(left_repeats, dtype=left_repeats_cumsum_dtype)
-    assert np.all(isnotnan(left_repeats_cumsum)), "Invalid entries found in 'left_repeats_cumsum'."
+    assert np.all(
+        isnotnan(left_repeats_cumsum)
+    ), "Invalid entries found in 'left_repeats_cumsum'."
     # assert not hasanynan(left_repeats_cumsum), "Invalid entries found in 'left_repeats_cumsum'."
-    assert np.min(left_repeats_cumsum) >= 0, "Negative entries found in 'left_repeats_cumsum'."
+    assert (
+        np.min(left_repeats_cumsum) >= 0
+    ), "Negative entries found in 'left_repeats_cumsum'."
 
     # Allocate the array which'll hold our fancy index for the 'left' Dataset.
     # Derive the dtype to use from the length of the 'left' Dataset; that's because
     # the values in the fancy index array can't be any larger than that (since they're
     # element/row indices into the 'left' Dataset).
-    left_fancyindex_dtype = int_dtype_from_len(len(left_keygroup.ikey))     # Yes, use the full, real ikey here -- it's a proxy for the number of rows in the left Dataset.
-    left_fancyindex = empty(left_repeats_cumsum[-1], dtype=left_fancyindex_dtype) # TODO: Just replace with dtype=left_keygroup.ikey.dtype if we can trust this to be the most-compact possible dtype.
+    left_fancyindex_dtype = int_dtype_from_len(
+        len(left_keygroup.ikey)
+    )  # Yes, use the full, real ikey here -- it's a proxy for the number of rows in the left Dataset.
+    left_fancyindex = empty(
+        left_repeats_cumsum[-1], dtype=left_fancyindex_dtype
+    )  # TODO: Just replace with dtype=left_keygroup.ikey.dtype if we can trust this to be the most-compact possible dtype.
 
     # Create the fancy index for columns of the 'left' Dataset; when used to index into the columns,
     # the result will be the corresponding column for the joined/merged Dataset.
@@ -1132,11 +1309,11 @@ class JoinIndices(NamedTuple):
 
 
 def _create_merge_fancy_indices(
-    left_keygroup: 'Grouping',
-    right_keygroup: 'Grouping',
-    right_groupby_keygroup: Optional['Grouping'],
+    left_keygroup: "Grouping",
+    right_keygroup: "Grouping",
+    right_groupby_keygroup: Optional["Grouping"],
     how: str,
-    keep: Tuple[Optional[str], Optional[str]]
+    keep: Tuple[Optional[str], Optional[str]],
 ) -> JoinIndices:
     """
     Create two fancy indices -- for the left and right Datasets, respectively -- to be used to index the columns
@@ -1181,7 +1358,8 @@ def _create_merge_fancy_indices(
     per tuple (row key) in the 'right' Dataset; that requires the unique keys to be determined according to
     SQL ``GROUP BY`` rather than ``JOIN`` semantics -- which is what `right_groupby_keygroup` provides.
     """
-    def gbkeys_extract(g : 'Grouping') -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+
+    def gbkeys_extract(g: "Grouping") -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
         """
         Extract unique groupby-keys values from a Grouping object for passing to ismember.
 
@@ -1196,7 +1374,12 @@ def _create_merge_fancy_indices(
         else:
             return tuple(gbkeys)
 
-    def left_or_inner_join(left_keygroup: 'Grouping', right_keygroup: 'Grouping', is_inner_join: bool, keep: Tuple[Optional[str], Optional[str]]) -> JoinIndices:
+    def left_or_inner_join(
+        left_keygroup: "Grouping",
+        right_keygroup: "Grouping",
+        is_inner_join: bool,
+        keep: Tuple[Optional[str], Optional[str]],
+    ) -> JoinIndices:
         # TODO: Replace the next few lines here with a call to `Grouping.ismember`, it's implementing the same operation.
         #       However, Grouping.ismember doesn't currently support the values being passed in as another Grouping
         #       -- that would need to be implemented first in order to get the same result here.
@@ -1210,7 +1393,9 @@ def _create_merge_fancy_indices(
         # key will be smaller-than-or-equal to the length of the original data column, and in most
         # cases will be significantly smaller (so using ismember on the gbkeys will be significantly faster).
         # TODO: Pass 'hint_size' here to speed up the 'ismember' call?
-        right_key_exists_in_left, right_keyid_to_left_keyid_map = ismember(right_grouping_gbkey, left_grouping_gbkey)
+        right_key_exists_in_left, right_keyid_to_left_keyid_map = ismember(
+            right_grouping_gbkey, left_grouping_gbkey
+        )
 
         # Determine which keys in 'right' are also in 'left'.
         # We can compute this relatively inexpensively from the boolean mask we created earlier
@@ -1222,28 +1407,49 @@ def _create_merge_fancy_indices(
         #      to create the same array without having to re-run the hashing/sorting code.
         # PERF: It seems like there should be a better, faster way to implement this fancy-indexing operation;
         #       if there's not (in the riptable / numpy API), consider moving this to a numba or C++ function.
-        left_keyid_to_right_keyid_dtype: np.dtype = int_dtype_from_len(len(right_keygroup.ncountgroup))
-        left_keyid_to_right_keyid_map = full(left_keygroup.ncountgroup.shape, INVALID_DICT[left_keyid_to_right_keyid_dtype.num], dtype=left_keyid_to_right_keyid_dtype)
-        left_keyid_to_right_keyid_map[right_keyid_to_left_keyid_map[right_key_exists_in_left]] = bool_to_fancy(right_key_exists_in_left)
+        left_keyid_to_right_keyid_dtype: np.dtype = int_dtype_from_len(
+            len(right_keygroup.ncountgroup)
+        )
+        left_keyid_to_right_keyid_map = full(
+            left_keygroup.ncountgroup.shape,
+            INVALID_DICT[left_keyid_to_right_keyid_dtype.num],
+            dtype=left_keyid_to_right_keyid_dtype,
+        )
+        left_keyid_to_right_keyid_map[
+            right_keyid_to_left_keyid_map[right_key_exists_in_left]
+        ] = bool_to_fancy(right_key_exists_in_left)
 
         # Create the fancy index for the left Dataset.
-        left_fancy_index = _build_left_fancyindex(right_keyid_to_left_keyid_map, right_key_exists_in_left, left_keygroup, right_keygroup, is_inner_join, keep)
+        left_fancy_index = _build_left_fancyindex(
+            right_keyid_to_left_keyid_map,
+            right_key_exists_in_left,
+            left_keygroup,
+            right_keygroup,
+            is_inner_join,
+            keep,
+        )
 
         # Use the information we've already computed + what's in the Grouping instances
         # to construct the fancy-index for the right Dataset.
         # We use a numba function for this because although the index construction is relatively
         # straightforward, there's no straightforward and/or efficient way to express it with the
         # numpy API.
-        right_fancy_index = _build_right_fancyindex(left_keyid_to_right_keyid_map, left_keygroup, right_keygroup, is_inner_join, keep)
+        right_fancy_index = _build_right_fancyindex(
+            left_keyid_to_right_keyid_map,
+            left_keygroup,
+            right_keygroup,
+            is_inner_join,
+            keep,
+        )
 
         # Return the constructed fancy indices for the left and right Datasets.
         return JoinIndices(left_fancy_index, right_fancy_index)
 
     def outer_join(
-        left_keygroup: 'Grouping',
-        right_keygroup: 'Grouping',
-        right_groupby_keygroup: Optional['Grouping'],
-        keep: Tuple[Optional[str], Optional[str]]
+        left_keygroup: "Grouping",
+        right_keygroup: "Grouping",
+        right_groupby_keygroup: Optional["Grouping"],
+        keep: Tuple[Optional[str], Optional[str]],
     ) -> JoinIndices:
         # TODO: The core logic in this function is the same as for the left_or_inner_join() function above.
         #       Once we have tests in place for exercising the logic and all code paths within this function
@@ -1262,7 +1468,9 @@ def _create_merge_fancy_indices(
         # key will be smaller-than-or-equal to the length of the original data column, and in most
         # cases will be significantly smaller (so using ismember on the gbkeys will be significantly faster).
         # TODO: Pass 'hint_size' here to speed up the 'ismember' call?
-        right_key_exists_in_left, right_keyid_to_left_keyid_map = ismember(right_grouping_gbkey, left_grouping_gbkey)
+        right_key_exists_in_left, right_keyid_to_left_keyid_map = ismember(
+            right_grouping_gbkey, left_grouping_gbkey
+        )
 
         # Determine which keys in 'right' are also in 'left'.
         # We can compute this relatively inexpensively from the boolean mask we created earlier
@@ -1274,9 +1482,17 @@ def _create_merge_fancy_indices(
         #      to create the same array without having to re-run the hashing/sorting code.
         # PERF: It seems like there should be a better, faster way to implement this fancy-indexing operation;
         #       if there's not (in the riptable / numpy API), consider moving this to a numba or C++ function.
-        left_keyid_to_right_keyid_dtype: np.dtype = int_dtype_from_len(len(right_keygroup.ncountgroup))
-        left_keyid_to_right_keyid_map = full(left_keygroup.ncountgroup.shape, INVALID_DICT[left_keyid_to_right_keyid_dtype.num], dtype=left_keyid_to_right_keyid_dtype)
-        left_keyid_to_right_keyid_map[right_keyid_to_left_keyid_map[right_key_exists_in_left]] = bool_to_fancy(right_key_exists_in_left)
+        left_keyid_to_right_keyid_dtype: np.dtype = int_dtype_from_len(
+            len(right_keygroup.ncountgroup)
+        )
+        left_keyid_to_right_keyid_map = full(
+            left_keygroup.ncountgroup.shape,
+            INVALID_DICT[left_keyid_to_right_keyid_dtype.num],
+            dtype=left_keyid_to_right_keyid_dtype,
+        )
+        left_keyid_to_right_keyid_map[
+            right_keyid_to_left_keyid_map[right_key_exists_in_left]
+        ] = bool_to_fancy(right_key_exists_in_left)
 
         # Get the rows from 'right' which have keys that aren't in 'left'.
         right_only_group_mask = empty(right_keygroup.ncountgroup.shape, dtype=np.bool)
@@ -1286,35 +1502,57 @@ def _create_merge_fancy_indices(
 
         if keep[1] is None:
             right_only_group_rows = Grouping.extract_groups(
-                right_only_group_mask, right_keygroup.igroup, right_keygroup.ncountgroup, ifirstgroup=right_keygroup.ifirstgroup)
+                right_only_group_mask,
+                right_keygroup.igroup,
+                right_keygroup.ncountgroup,
+                ifirstgroup=right_keygroup.ifirstgroup,
+            )
         else:
             if right_groupby_keygroup is not None and right_keygroup.ncountgroup[0] > 0:
                 # Find the rows in 'right' which have the null JOIN key.
-                join_invalid_rows = right_keygroup.igroup[:right_keygroup.ncountgroup[0]]
+                join_invalid_rows = right_keygroup.igroup[
+                    : right_keygroup.ncountgroup[0]
+                ]
 
                 # What GROUP BY groups do each of these rows belong to?
-                join_invalid_groupby_groups = right_groupby_keygroup.ikey[join_invalid_rows]
+                join_invalid_groupby_groups = right_groupby_keygroup.ikey[
+                    join_invalid_rows
+                ]
 
                 # Keep only the unique GROUP BY groups.
-                join_invalid_groupby_groups = unique(join_invalid_groupby_groups, sorted=False)
+                join_invalid_groupby_groups = unique(
+                    join_invalid_groupby_groups, sorted=False
+                )
 
                 # Get the first/last row for each group.
-                keep_ifirstlastkey = _get_keep_ifirstlastkey_with_null(right_groupby_keygroup, keep[1])
-                join_invalid_groupby_rows = keep_ifirstlastkey[join_invalid_groupby_groups]
+                keep_ifirstlastkey = _get_keep_ifirstlastkey_with_null(
+                    right_groupby_keygroup, keep[1]
+                )
+                join_invalid_groupby_rows = keep_ifirstlastkey[
+                    join_invalid_groupby_groups
+                ]
 
                 # Get the other right-only rows (those with valid join keys).
                 ifirstlastkey_mask = right_only_group_mask[1:]
                 keep_ifirstlastkey = _get_keep_ifirstlastkey(right_keygroup, keep[1])
                 join_valid_groupby_rows = keep_ifirstlastkey[ifirstlastkey_mask]
-                right_only_group_rows = hstack([join_invalid_groupby_rows, join_valid_groupby_rows])
+                right_only_group_rows = hstack(
+                    [join_invalid_groupby_rows, join_valid_groupby_rows]
+                )
 
             else:
                 # _get_keep_ifirstlastkey_with_null returns an array which will include an entry for the
                 # NA/invalid group if there are any rows assigned to that group; otherwise, it does not
                 # include an entry for it -- so we need to slice the mask indicating the right-only groups
                 # to account for that before using it to index the first/last key array.
-                ifirstlastkey_mask = right_only_group_mask if right_only_group_mask[0] else right_only_group_mask[1:]
-                keep_ifirstlastkey = _get_keep_ifirstlastkey_with_null(right_keygroup, keep[1])
+                ifirstlastkey_mask = (
+                    right_only_group_mask
+                    if right_only_group_mask[0]
+                    else right_only_group_mask[1:]
+                )
+                keep_ifirstlastkey = _get_keep_ifirstlastkey_with_null(
+                    right_keygroup, keep[1]
+                )
                 right_only_group_rows = keep_ifirstlastkey[ifirstlastkey_mask]
 
         # The rows (row indices) with right-only groups should always be in sorted
@@ -1325,14 +1563,23 @@ def _create_merge_fancy_indices(
             right_only_group_rows.sort()
 
         # Create the fancy index for the left Dataset.
-        left_fancy_index = _build_left_fancyindex(right_keyid_to_left_keyid_map, right_key_exists_in_left, left_keygroup, right_keygroup, False, keep)
+        left_fancy_index = _build_left_fancyindex(
+            right_keyid_to_left_keyid_map,
+            right_key_exists_in_left,
+            left_keygroup,
+            right_keygroup,
+            False,
+            keep,
+        )
 
         # Use the information we've already computed + what's in the Grouping instances
         # to construct the fancy-index for the right Dataset.
         # We use a numba function for this because although the index construction is relatively
         # straightforward, there's no straightforward and/or efficient way to express it with the
         # numpy API.
-        right_fancy_index = _build_right_fancyindex(left_keyid_to_right_keyid_map, left_keygroup, right_keygroup, False, keep)
+        right_fancy_index = _build_right_fancyindex(
+            left_keyid_to_right_keyid_map, left_keygroup, right_keygroup, False, keep
+        )
 
         # Fill in the additional entries, if needed, in the fancy indices for the rows with right-only keys.
         # Make sure to account for the possibilities that the fancy indices could be e.g. None or a boolean mask,
@@ -1345,11 +1592,14 @@ def _create_merge_fancy_indices(
             # with a value that covers the total number of rows, then overwriting the entries representing
             # the right-only rows with the invalid value.
             left_rowcount = len(left_keygroup.ikey)
-            left_fancy_index = arange(left_rowcount + len(right_only_group_rows), dtype=left_keygroup.ikey.dtype)
+            left_fancy_index = arange(
+                left_rowcount + len(right_only_group_rows),
+                dtype=left_keygroup.ikey.dtype,
+            )
             left_fancy_index[left_rowcount:] = left_fancy_index.inv
 
         else:
-            if left_fancy_index.dtype.char == '?':
+            if left_fancy_index.dtype.char == "?":
                 # The boolean mask must be converted to a fancy index, because a boolean mask must match
                 # the length of the array it's used to index into -- attempting to extend it here would make it
                 # incompatible for use with the 'left' Dataset.
@@ -1362,9 +1612,13 @@ def _create_merge_fancy_indices(
 
             # Create an extended version of the fancy index for 'left'; for the new elements representing
             # rows with right-only keys, write invalid/NA values into them since they don't match any left rows.
-            extended_left_fancy_index = empty(extended_left_rowcount, dtype=left_keygroup.ikey.dtype)
-            extended_left_fancy_index[:len(left_fancy_index)] = left_fancy_index
-            extended_left_fancy_index[len(left_fancy_index):] = extended_left_fancy_index.inv
+            extended_left_fancy_index = empty(
+                extended_left_rowcount, dtype=left_keygroup.ikey.dtype
+            )
+            extended_left_fancy_index[: len(left_fancy_index)] = left_fancy_index
+            extended_left_fancy_index[
+                len(left_fancy_index) :
+            ] = extended_left_fancy_index.inv
             left_fancy_index = extended_left_fancy_index
 
         if right_fancy_index is None:
@@ -1375,62 +1629,74 @@ def _create_merge_fancy_indices(
             right_fancy_index[right_rowcount:] = right_only_group_rows
 
         else:
-            if right_fancy_index.dtype.char == '?':
+            if right_fancy_index.dtype.char == "?":
                 right_fancy_index = bool_to_fancy(right_fancy_index)
 
-            extended_right_rowcount = len(right_fancy_index) + len(right_only_group_rows)
+            extended_right_rowcount = len(right_fancy_index) + len(
+                right_only_group_rows
+            )
 
             # Create an extended version of the fancy index for 'right'; for the new elements representing
             # rows with right-only keys, we write in the indices of those rows (which we extracted earlier).
-            extended_right_fancy_index = empty(extended_right_rowcount, dtype=right_keygroup.ikey.dtype)
-            extended_right_fancy_index[:len(right_fancy_index)] = right_fancy_index
-            extended_right_fancy_index[len(right_fancy_index):] = right_only_group_rows
+            extended_right_fancy_index = empty(
+                extended_right_rowcount, dtype=right_keygroup.ikey.dtype
+            )
+            extended_right_fancy_index[: len(right_fancy_index)] = right_fancy_index
+            extended_right_fancy_index[len(right_fancy_index) :] = right_only_group_rows
             right_fancy_index = extended_right_fancy_index
 
         # Return the constructed fancy indices for the left and right Datasets.
-        return JoinIndices(left_fancy_index, right_fancy_index, len(right_only_group_rows))
-
+        return JoinIndices(
+            left_fancy_index, right_fancy_index, len(right_only_group_rows)
+        )
 
     # Calculate based on the join type.
-    if how == 'left':
+    if how == "left":
         # For left and right joins, we only use the keys from the left or right key, respectively.
         # All we need to do here is calculate the multiplicity for each value in the key column.
         return left_or_inner_join(left_keygroup, right_keygroup, False, keep)
 
-    elif how == 'right':
+    elif how == "right":
         # Right join is just left join with the order of the arguments swapped.
         # We must also swap the order of the 'keep' tuple to match.
         keep = keep[1], keep[0]
-        join_indices = left_or_inner_join(
-            right_keygroup, left_keygroup, False, keep)
+        join_indices = left_or_inner_join(right_keygroup, left_keygroup, False, keep)
         return JoinIndices(join_indices.right_index, join_indices.left_index, None)
 
-    elif how == 'inner':
+    elif how == "inner":
         # Inner join computes the intersection of the left and right keysets and keeps only rows
         # whose key belongs to the intersection set.
         return left_or_inner_join(left_keygroup, right_keygroup, True, keep)
 
-    elif how == 'outer':
+    elif how == "outer":
         return outer_join(left_keygroup, right_keygroup, right_groupby_keygroup, keep)
 
     else:
-        raise ValueError(f"Unsupported value ({how}) specified for the 'how' parameter.")
+        raise ValueError(
+            f"Unsupported value ({how}) specified for the 'how' parameter."
+        )
 
 
-def _normalize_keep(keep: Optional[Union[str, Tuple[Optional[str], Optional[str]]]]) -> Tuple[Optional[str], Optional[str]]:
+def _normalize_keep(
+    keep: Optional[Union[str, Tuple[Optional[str], Optional[str]]]]
+) -> Tuple[Optional[str], Optional[str]]:
     """Convert a value passed for the 'keep' parameter to a normalized form."""
     if keep is None:
         return (None, None)
     elif isinstance(keep, (str, bytes)):
-        if keep == 'first' or keep == 'last':
+        if keep == "first" or keep == "last":
             return (keep, keep)
         else:
-            raise ValueError(f"Unsupported value '{keep}' passed for the `keep` parameter.")
+            raise ValueError(
+                f"Unsupported value '{keep}' passed for the `keep` parameter."
+            )
     elif isinstance(keep, tuple):
         if len(keep) == 2:
             return keep
         else:
-            raise ValueError(f"Invalid tuple (length={len(keep)}) passed for the `keep` parameter.")
+            raise ValueError(
+                f"Invalid tuple (length={len(keep)}) passed for the `keep` parameter."
+            )
     else:
         raise ValueError(f"Invalid argument value passed for the `keep` parameter.")
 
@@ -1440,7 +1706,7 @@ def _extract_on_columns(
     side_on: Optional[Union[str, List[str]]],
     for_left: bool,
     on_param_name: str,
-    is_optional: bool
+    is_optional: bool,
 ) -> List[str]:
     """
     Extract a list of column name(s) from either the 'on' or 'left_on'/'right_on' arguments
@@ -1481,8 +1747,10 @@ def _extract_on_columns(
             if is_optional:
                 return []
             else:
-                side_name = 'left' if for_left else 'right'
-                raise ValueError(f"`{on_param_name}` and `{side_name}_{on_param_name}` cannot both be None.")
+                side_name = "left" if for_left else "right"
+                raise ValueError(
+                    f"`{on_param_name}` and `{side_name}_{on_param_name}` cannot both be None."
+                )
         else:
             # Parse the 'on' argument to extract a list of column names for this side.
             if isinstance(on, (bytes, str)):
@@ -1496,7 +1764,9 @@ def _extract_on_columns(
                     side_idx = 0 if for_left else 1
                     side_on = on[side_idx]
                 else:
-                    raise ValueError(f'Unsupported tuple of length {arity} provided for the `{on_param_name}` argument. Tuples must contain either one or two elements.')
+                    raise ValueError(
+                        f"Unsupported tuple of length {arity} provided for the `{on_param_name}` argument. Tuples must contain either one or two elements."
+                    )
 
             elif isinstance(on, list):
                 side_on = []
@@ -1511,20 +1781,28 @@ def _extract_on_columns(
                             side_idx = 0 if for_left else 1
                             side_on.append(val[side_idx])
                         else:
-                            raise ValueError(f'Unsupported tuple of length {arity} found at index {idx} of the list provided for the `{on_param_name}` argument. Tuples must contain either one or two elements.')
+                            raise ValueError(
+                                f"Unsupported tuple of length {arity} found at index {idx} of the list provided for the `{on_param_name}` argument. Tuples must contain either one or two elements."
+                            )
                     else:
-                        raise ValueError(f'Unsupported argument type {type(val)} found at index {idx} of the list provided for the `{on_param_name}` argument.')
+                        raise ValueError(
+                            f"Unsupported argument type {type(val)} found at index {idx} of the list provided for the `{on_param_name}` argument."
+                        )
 
             else:
-                raise ValueError(f'Unsupported argument type {type(on)} provided for the `{on_param_name}` argument.')
+                raise ValueError(
+                    f"Unsupported argument type {type(on)} provided for the `{on_param_name}` argument."
+                )
     else:
         # 'on' and 'left_on'/'right_on' are not allowed to be specified together,
         # as it's unclear which one should take precedence.
         # If we want to define which one does take precedence, we could drop this down to
         # a Warning to let the user know part of what they've specified will be ignored.
         if on is not None:
-            side_name = 'left' if for_left else 'right'
-            raise ValueError(f"The `{on_param_name}` and `{side_name}_{on_param_name}` parameters cannot be specified together; exactly one of them should be specified.")
+            side_name = "left" if for_left else "right"
+            raise ValueError(
+                f"The `{on_param_name}` and `{side_name}_{on_param_name}` parameters cannot be specified together; exactly one of them should be specified."
+            )
 
     #
     # TODO: Handle case where 'side_on' is an empty string -- raise an Error
@@ -1540,11 +1818,18 @@ def _extract_on_columns(
     if side_on:
         return side_on
     else:
-        side_name = 'left' if for_left else 'right'
-        raise ValueError(f"Unable to extract column names for {side_name} Dataset from either `{on_param_name}` or `{side_name}_{on_param_name}`.")
+        side_name = "left" if for_left else "right"
+        raise ValueError(
+            f"Unable to extract column names for {side_name} Dataset from either `{on_param_name}` or `{side_name}_{on_param_name}`."
+        )
 
 
-def _validate_groupings(left_keygroup: 'Grouping', right_keygroup: 'Grouping', validate: str, keep: Tuple[Optional[str], Optional[str]]):
+def _validate_groupings(
+    left_keygroup: "Grouping",
+    right_keygroup: "Grouping",
+    validate: str,
+    keep: Tuple[Optional[str], Optional[str]],
+):
     """
     Perform the validation specified by the 'validate' parameter (for merge).
 
@@ -1567,7 +1852,7 @@ def _validate_groupings(left_keygroup: 'Grouping', right_keygroup: 'Grouping', v
     keep_left, keep_right = keep
     drop_dups_left, drop_dups_right = (keep_left is not None), (keep_right is not None)
 
-    if validate == '1:1' or validate == 'one_to_one':
+    if validate == "1:1" or validate == "one_to_one":
         # 1-to-1
 
         # Only validate the key multiplicities when the user has *not* specified
@@ -1575,7 +1860,7 @@ def _validate_groupings(left_keygroup: 'Grouping', right_keygroup: 'Grouping', v
         require_unique_left = not drop_dups_left
         require_unique_right = not drop_dups_right
 
-    elif validate == '1:m' or validate == 'one_to_many':
+    elif validate == "1:m" or validate == "one_to_many":
         # 1-to-many
 
         # Only validate the key multiplicities when the user has *not* specified
@@ -1583,7 +1868,7 @@ def _validate_groupings(left_keygroup: 'Grouping', right_keygroup: 'Grouping', v
         require_unique_left = not drop_dups_left
         require_unique_right = False
 
-    elif validate == 'm:1' or validate == 'many_to_one':
+    elif validate == "m:1" or validate == "many_to_one":
         # many-to-1
 
         # Only validate the key multiplicities when the user has *not* specified
@@ -1591,7 +1876,7 @@ def _validate_groupings(left_keygroup: 'Grouping', right_keygroup: 'Grouping', v
         require_unique_left = False
         require_unique_right = not drop_dups_right
 
-    elif validate == 'm:m' or validate == 'many_to_many':
+    elif validate == "m:m" or validate == "many_to_many":
         # many-to-many
 
         # At present, we don't perform any validation for this step.
@@ -1599,10 +1884,11 @@ def _validate_groupings(left_keygroup: 'Grouping', right_keygroup: 'Grouping', v
         require_unique_right = False
 
     else:
-        raise ValueError(f"Unsupported value '{validate}' specified for the `validate` parameter.")
+        raise ValueError(
+            f"Unsupported value '{validate}' specified for the `validate` parameter."
+        )
 
-
-    def _perform_validation(grouping:'Grouping', name:str):
+    def _perform_validation(grouping: "Grouping", name: str):
         # N.B. It's important we use Grouping.ncountkey instead of .ncountgroup here;
         #      invalid/null values shouldn't be considered since they're always dropped.
         max_key_multiplicity = grouping.ncountkey.max()
@@ -1613,14 +1899,15 @@ def _validate_groupings(left_keygroup: 'Grouping', right_keygroup: 'Grouping', v
             #       then use that index to fetch the gbkey value(s) for that index from the Grouping.gbkeys;
             #       based on the keyid, we could also get the Grouping.igroupfirst which'll tell us the first index
             #       (within the keycol(s)) where the key occurs.
-            raise ValueError(f"Validation ({validate}) failed. The {name} Dataset has one or more keys which occur more than once.")
-
+            raise ValueError(
+                f"Validation ({validate}) failed. The {name} Dataset has one or more keys which occur more than once."
+            )
 
     if require_unique_left:
-        _perform_validation(left_keygroup, 'left')
+        _perform_validation(left_keygroup, "left")
 
     if require_unique_right:
-        _perform_validation(right_keygroup, 'right')
+        _perform_validation(right_keygroup, "right")
 
 
 def _create_column_valid_mask(arr: FastArray) -> Optional[FastArray]:
@@ -1638,7 +1925,9 @@ def _create_column_valid_mask(arr: FastArray) -> Optional[FastArray]:
     if isinstance(arr, Categorical):
         # TODO: What's the correct way to handle the case of a base_index=0 Categorical?
         if arr.base_index == 0:
-            raise NotImplementedError("This function does not yet support Categoricals with base_index=0.")
+            raise NotImplementedError(
+                "This function does not yet support Categoricals with base_index=0."
+            )
         else:
             # Assume this is a Categorical with base_index == 1, so a 0 in the underlying array indicates the invalid bin.
             return arr._np != 0
@@ -1647,13 +1936,13 @@ def _create_column_valid_mask(arr: FastArray) -> Optional[FastArray]:
         # FIXME #2: rt.isnan/rt.isnotnan currently fail when invoked with a string array.
         # Until they can be fixed to return an array of all False/True or an array scalar,
         # check for them here and create the Grouping without the filter.
-        return None if arr.dtype.char in 'US' else isnotnan(arr)
+        return None if arr.dtype.char in "US" else isnotnan(arr)
 
 
-def _normalize_selected_columns(ds: 'Dataset', column_names) -> Collection[str]:
+def _normalize_selected_columns(ds: "Dataset", column_names) -> Collection[str]:
     if column_names is None:
         return ds.keys()
-    elif column_names == '':
+    elif column_names == "":
         return []
     elif isinstance(column_names, list):
         return column_names
@@ -1662,7 +1951,9 @@ def _normalize_selected_columns(ds: 'Dataset', column_names) -> Collection[str]:
         return [column_names]
 
 
-def _require_columns_present(keyset: Set[str], dataset_name:str, param_name:str, col_names: Collection[str]) -> None:
+def _require_columns_present(
+    keyset: Set[str], dataset_name: str, param_name: str, col_names: Collection[str]
+) -> None:
     """Verify that column(s) specified in 'left_on', 'right_on', 'columns_left' and 'columns_right' are all present in their respective Datasets."""
     missing_cols: Optional[List[str]] = None
     for col_name in col_names:
@@ -1676,29 +1967,33 @@ def _require_columns_present(keyset: Set[str], dataset_name:str, param_name:str,
     # missing column names -- this provides more diagnostic info to the user compared to just
     # reporting the first missing column we found.
     if missing_cols is not None:
-        joined_colnames = ", ".join(map(lambda x: f'\'{x}\'', missing_cols))
-        raise ValueError(f'The column(s) {joined_colnames} specified in the `{param_name}` argument are not present in the `{dataset_name}` Dataset.')
+        joined_colnames = ", ".join(map(lambda x: f"'{x}'", missing_cols))
+        raise ValueError(
+            f"The column(s) {joined_colnames} specified in the `{param_name}` argument are not present in the `{dataset_name}` Dataset."
+        )
 
 
-#TODO: Clean-up column overlap
+# TODO: Clean-up column overlap
 def merge2(
-    left: 'Dataset',
-    right: 'Dataset',
+    left: "Dataset",
+    right: "Dataset",
     on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
     left_on: Optional[Union[str, List[str]]] = None,
     right_on: Optional[Union[str, List[str]]] = None,
-    how: str = 'left',
+    how: str = "left",
     suffixes: Optional[Tuple[str, str]] = None,
     copy: bool = True,
     indicator: Union[bool, str] = False,
     columns_left: Optional[Union[str, List[str]]] = None,
     columns_right: Optional[Union[str, List[str]]] = None,
-    validate: Optional[str] = None,   # TODO: Consider changing this to require_unique: Union[bool, Tuple[bool, bool]] -- the semantics would be clearer to users
+    validate: Optional[
+        str
+    ] = None,  # TODO: Consider changing this to require_unique: Union[bool, Tuple[bool, bool]] -- the semantics would be clearer to users
     keep: Optional[Union[str, Tuple[Optional[str], Optional[str]]]] = None,
     high_card: Optional[Union[bool, Tuple[Optional[bool], Optional[bool]]]] = None,
     hint_size: Optional[Union[int, Tuple[Optional[int], Optional[int]]]] = None,
-    **kwargs
-) -> 'Dataset':
+    **kwargs,
+) -> "Dataset":
     """
     Merge Dataset by performing a database-style join operation by columns.
 
@@ -1791,7 +2086,9 @@ def merge2(
     merge_asof
     """
     # Process keyword arguments.
-    require_match = bool(kwargs.pop("require_match")) if "require_match" in kwargs else False
+    require_match = (
+        bool(kwargs.pop("require_match")) if "require_match" in kwargs else False
+    )
     if kwargs:
         # There were remaining keyword args passed here which we don't understand.
         first_kwarg = next(iter(kwargs.keys()))
@@ -1805,16 +2102,17 @@ def merge2(
     keep = _normalize_keep(keep)
 
     # Validate and normalize the 'on' column lists for each Dataset.
-    left_on = _extract_on_columns(on, left_on, True, 'on', is_optional=False)
-    right_on = _extract_on_columns(on, right_on, False, 'on', is_optional=False)
+    left_on = _extract_on_columns(on, left_on, True, "on", is_optional=False)
+    right_on = _extract_on_columns(on, right_on, False, "on", is_optional=False)
 
     # TEMP: Disallow callers to pass a 'keep' value for the 'left' Dataset when performing
     #       an outer merge. There's a bug in the join algorithm which prevents this from working
     #       so it's better to give users an informative error message until it can be fixed.
-    if how == 'outer' and keep[0] is not None:
+    if how == "outer" and keep[0] is not None:
         raise ValueError(
             "Specifying a 'keep' value for the left Dataset (or both) with an outer merge is "
-            "temporarily not permitted due to a bug in the implementation.")
+            "temporarily not permitted due to a bug in the implementation."
+        )
 
     # Normalize 'columns_left' and 'columns_right' first to simplify some logic later on
     # (by allowing us to assume they're a non-optional-but-maybe-empty List[str]).
@@ -1823,16 +2121,25 @@ def merge2(
 
     # PERF: Revisit this -- it could be made faster if ItemContainer.keys() returned a set-like object such as KeysView instead of a list; then we wouldn't need to create the sets here.
     left_keyset = set(left.keys())
-    _require_columns_present(left_keyset, 'left', 'left_on', left_on)
-    _require_columns_present(left_keyset, 'left', 'columns_left', columns_left)  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
+    _require_columns_present(left_keyset, "left", "left_on", left_on)
+    _require_columns_present(
+        left_keyset, "left", "columns_left", columns_left
+    )  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
     right_keyset = set(right.keys())
-    _require_columns_present(right_keyset, 'right', 'right_on', right_on)
-    _require_columns_present(right_keyset, 'right', 'columns_right', columns_right)  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
+    _require_columns_present(right_keyset, "right", "right_on", right_on)
+    _require_columns_present(
+        right_keyset, "right", "columns_right", columns_right
+    )  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
 
     # Make sure there aren't any column name collision _before_ we do the heavy lifting of merging;
     # if there are name collisions, attempt to resolve them by suffixing the colliding column names.
-    col_left_tuple, col_right_tuple, intersection_cols = \
-        _construct_colname_mapping(left_on, right_on, suffixes=suffixes, columns_left=columns_left, columns_right=columns_right)
+    col_left_tuple, col_right_tuple, intersection_cols = _construct_colname_mapping(
+        left_on,
+        right_on,
+        suffixes=suffixes,
+        columns_left=columns_left,
+        columns_right=columns_right,
+    )
 
     # Validate the pair(s) of columns from the left and right join keys have compatible types.
     left_on_arrs = [left[col_name] for col_name in left_on]
@@ -1842,7 +2149,7 @@ def merge2(
         # If the list of errors is non-empty, we have some join-key compatibility issues.
         # Some of the "errors" may just be warnings; filter those out of the list and raise
         # them to notify the user.
-        actual_errors : List[Exception] = []
+        actual_errors: List[Exception] = []
         for err in key_compat_errs:
             if isinstance(err, Warning):
                 warnings.warn(err)
@@ -1854,14 +2161,18 @@ def merge2(
         # raise a ValueError; in the future we might use something like a .NET AggregateException
         # to wrap multiple errors into one instead to allow for different error types.
         if actual_errors:
-            flat_errs = '\n'.join(map(str, actual_errors))  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
-            raise ValueError(f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}")
+            flat_errs = "\n".join(
+                map(str, actual_errors)
+            )  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
+            raise ValueError(
+                f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}"
+            )
 
     if logger.isEnabledFor(logging.INFO):
         delta = GetNanoTime() - start
         logger.info("Validation complete. nanos='%d'", delta)
 
-    def get_perf_hint(hint, index: int, _default = None):
+    def get_perf_hint(hint, index: int, _default=None):
         if hint is None:
             return _default
         elif isinstance(hint, tuple):
@@ -1875,8 +2186,8 @@ def merge2(
         force_invalids: bool,
         create_groupby_grouping: bool,
         high_card,
-        hint_size
-    ) -> Tuple['Grouping', Optional[FastArray]]:
+        hint_size,
+    ) -> Tuple["Grouping", Optional[FastArray]]:
         """
         Given the key columns (i.e. the columns being joined on) from a Dataset, get or create a `Grouping` object to be passed to the join algorithm.
 
@@ -1954,18 +2265,32 @@ def merge2(
             if isinstance(single_keycol, Categorical):
                 # TODO: Consider emitting a warning if any perf hints have been supplied (above), since in
                 #       this case they're ignored (because we're using the existing Grouping instead of creating one).
-                cat_grouping: 'Grouping' = single_keycol.grouping
+                cat_grouping: "Grouping" = single_keycol.grouping
 
                 # If unused categories are present, call .regroup() to create a new Grouping with those
                 # categories removed. (See the 'Notes' section in the docstring for details.)
-                return (cat_grouping if all(cat_grouping.ncountkey > 0) else cat_grouping.regroup()), None
+                return (
+                    (
+                        cat_grouping
+                        if all(cat_grouping.ncountkey > 0)
+                        else cat_grouping.regroup()
+                    ),
+                    None,
+                )
 
             else:
                 # HACK: For non-Categorical single-key columns, we need to use rt.isnotnan to create
                 #       a filter for the Grouping. This is due to rt.ismember not handling NaN/invalids
                 #       in the expected way (i.e. where NaN != NaN).
-                isvalid = _create_column_valid_mask(single_keycol) if force_invalids else None
-                return TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=isvalid), None
+                isvalid = (
+                    _create_column_valid_mask(single_keycol) if force_invalids else None
+                )
+                return (
+                    TypeRegister.Grouping(
+                        keycols, lex=_lex, hint_size=_hint_size, filter=isvalid
+                    ),
+                    None,
+                )
 
         else:
             # HACK: For multiple keys, we apply the same approach as for single-key non-Categoricals where
@@ -2000,8 +2325,19 @@ def merge2(
 
             # Create the Grouping, passing in the mask we created so NaN/invalid values are handled
             # in the way we need them to be for merging.
-            join_grouping = TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=valid_join_tuples_mask)
-            groupby_grouping = TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=valid_groupby_tuples_mask) if create_groupby_grouping else None
+            join_grouping = TypeRegister.Grouping(
+                keycols, lex=_lex, hint_size=_hint_size, filter=valid_join_tuples_mask
+            )
+            groupby_grouping = (
+                TypeRegister.Grouping(
+                    keycols,
+                    lex=_lex,
+                    hint_size=_hint_size,
+                    filter=valid_groupby_tuples_mask,
+                )
+                if create_groupby_grouping
+                else None
+            )
             return join_grouping, groupby_grouping
 
     # Construct the Grouping object for each of the join keys.
@@ -2013,9 +2349,12 @@ def merge2(
     #       Note, there *may* be something to passing False for the left and right grouping, when performing a
     #       left or right join, respectively -- before making the change to always pass True, verify all the
     #       optimized cases where we can return e.g. None for the fancy index aren't affected by the change.
-    left_grouping, _ = get_or_create_keygroup(left_on_arrs, 0, how != 'left', False, high_card, hint_size)
-    right_grouping, right_groupby_grouping =\
-        get_or_create_keygroup(right_on_arrs, 1, how != 'right', how == 'outer', high_card, hint_size)
+    left_grouping, _ = get_or_create_keygroup(
+        left_on_arrs, 0, how != "left", False, high_card, hint_size
+    )
+    right_grouping, right_groupby_grouping = get_or_create_keygroup(
+        right_on_arrs, 1, how != "right", how == "outer", high_card, hint_size
+    )
 
     if logger.isEnabledFor(logging.INFO):
         delta = GetNanoTime() - start
@@ -2029,7 +2368,9 @@ def merge2(
     # Construct fancy indices for the left/right Datasets; these will be used to index into
     # columns of the respective datasets to produce new arrays/columns for the merged Dataset.
     start = GetNanoTime()
-    join_indices = _create_merge_fancy_indices(left_grouping, right_grouping, right_groupby_grouping, how, keep)
+    join_indices = _create_merge_fancy_indices(
+        left_grouping, right_grouping, right_groupby_grouping, how, keep
+    )
     left_fancyindex = join_indices.left_index
     right_fancyindex = join_indices.right_index
 
@@ -2041,16 +2382,16 @@ def merge2(
     # verify the fancy indices will result in the same output lengths.
     # If they're not, we'll end up with an error right towards the end of this function when
     # everything's combined into the new Dataset instance.
-#    if __debug__:
-#        left_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.left_index, len(left))
-#        right_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.right_index, len(right))
-#        assert left_fancyindex_rowcount == right_fancyindex_rowcount,\
-#            f'Left and right rowcount differ ({left_fancyindex_rowcount} vs. {right_fancyindex_rowcount}).'
+    #    if __debug__:
+    #        left_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.left_index, len(left))
+    #        right_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.right_index, len(right))
+    #        assert left_fancyindex_rowcount == right_fancyindex_rowcount,\
+    #            f'Left and right rowcount differ ({left_fancyindex_rowcount} vs. {right_fancyindex_rowcount}).'
 
     # DEBUG: Print the constructed indices.
     if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f'left_fancyindex ({type(left_fancyindex)}): {left_fancyindex}')
-        logger.debug(f'right_fancyindex ({type(right_fancyindex)}): {right_fancyindex}')
+        logger.debug(f"left_fancyindex ({type(left_fancyindex)}): {left_fancyindex}")
+        logger.debug(f"right_fancyindex ({type(right_fancyindex)}): {right_fancyindex}")
 
     #
     # TODO: Before using the constructed fancy indices to create the new "merged" columns
@@ -2071,7 +2412,9 @@ def merge2(
 
     if logger.isEnabledFor(logging.INFO):
         # The number of rows that'll be in the merged Dataset.
-        result_num_rows = len(right_fancyindex) if left_fancyindex is None else len(left_fancyindex)
+        result_num_rows = (
+            len(right_fancyindex) if left_fancyindex is None else len(left_fancyindex)
+        )
 
         # The estimated size, in bytes, of the merged Dataset.
         # "alloc size" here indicates the amount of newly-allocated memory that will be required for the result.
@@ -2094,7 +2437,9 @@ def merge2(
 
         est_result_total_size_tmp = 0
         for old_name in col_right_tuple[0]:
-            est_result_total_size_tmp += right[old_name].dtype.itemsize * result_num_rows
+            est_result_total_size_tmp += (
+                right[old_name].dtype.itemsize * result_num_rows
+            )
         est_result_total_size += est_result_total_size_tmp
         if right_fancyindex is not None:
             est_result_alloc_size += est_result_total_size_tmp
@@ -2102,7 +2447,11 @@ def merge2(
         # For now, just write the estimated size to the logger.
         # TODO: Check the estimated size against the current free memory size available
         #       and fail (or emit a warning) if it like's like we hit an OOM error and crash.
-        logger.info("Estimated merged result size. alloc_size='%d'\ttotal_size='%d'", est_result_alloc_size, est_result_total_size)
+        logger.info(
+            "Estimated merged result size. alloc_size='%d'\ttotal_size='%d'",
+            est_result_alloc_size,
+            est_result_total_size,
+        )
 
     # Begin creating the column data for the 'merged' Dataset.
     out: Dict[str, FastArray] = {}
@@ -2127,7 +2476,7 @@ def merge2(
         # If we did an outer join but there aren't any rows whose keys only exist in the right Dataset,
         # we don't need special handling -- we can fall through to the code used for e.g. left join to
         # handle the intersecting columns.
-        if how == 'outer' and join_indices.right_only_rowcount > 0:
+        if how == "outer" and join_indices.right_only_rowcount > 0:
             for field in intersection_cols:
                 # Effectively, this is performing an hstack with the left 'on' column (after indexing into it with the
                 # fancy index from the join) and the right 'on' column (after indexing into that with the right fancy
@@ -2142,8 +2491,18 @@ def merge2(
                 #   the output type but we compute the output length from the fancy indices; then, when copying to the
                 #   result, we use the fancy indices to pull from the source arrays rather than a straight 1-to-1 copy.
                 #   This function would allow for a few array allocations + operations to be elided here.
-                left_data = left[field] if left_fancyindex is None else left[field][left_fancyindex[:len(left_fancyindex) - join_indices.right_only_rowcount]]
-                right_data = right[field][right_fancyindex[-join_indices.right_only_rowcount:]]
+                left_data = (
+                    left[field]
+                    if left_fancyindex is None
+                    else left[field][
+                        left_fancyindex[
+                            : len(left_fancyindex) - join_indices.right_only_rowcount
+                        ]
+                    ]
+                )
+                right_data = right[field][
+                    right_fancyindex[-join_indices.right_only_rowcount :]
+                ]
                 out[field] = hstack((left_data, right_data))
 
         # If we're missing one of the fancy indices, it means we can just copy the columns
@@ -2164,7 +2523,9 @@ def merge2(
             # Applying the fancy index to transform each column to the correct shape for the resulting Dataset.
             # N.B. This is an arbitrary choice, we could just as easily default to fetching
             #      from the right Dataset instead.
-            ds, fancyindex = (right, right_fancyindex) if how == 'right' else (left, left_fancyindex)
+            ds, fancyindex = (
+                (right, right_fancyindex) if how == "right" else (left, left_fancyindex)
+            )
             for field in intersection_cols:
                 out[field] = ds[field][fancyindex]
 
@@ -2211,9 +2572,14 @@ def merge2(
             # The index array could either be a boolean mask or a integer-based fancy index, so handle both.
             # PERF: For the fancy-index case, use the isallnan(...) function once it's implemented, it'll be faster.
             right_is_missing_keys = not (
-                all(right_fancyindex) if right_fancyindex.dtype.char == '?' else all(isnotnan(right_fancyindex)))
+                all(right_fancyindex)
+                if right_fancyindex.dtype.char == "?"
+                else all(isnotnan(right_fancyindex))
+            )
             if right_is_missing_keys:
-                raise ValueError('One or more keys from the left Dataset was missing from the right Dataset.')
+                raise ValueError(
+                    "One or more keys from the left Dataset was missing from the right Dataset."
+                )
 
         for old_name, new_name in zip(*col_right_tuple):
             out[new_name] = right[old_name][right_fancyindex]
@@ -2227,9 +2593,11 @@ def merge2(
         start = GetNanoTime()
 
         if indicator == True:
-            indicator = 'merge_indicator'
+            indicator = "merge_indicator"
         if indicator in out:
-            raise ValueError(f'indicator column name collision with existing columns: {indicator}')
+            raise ValueError(
+                f"indicator column name collision with existing columns: {indicator}"
+            )
 
         # PERF: Revisit this code -- it works, but could be greatly optimized by constructing it
         #       from the left<->right key mappings we have available when building the left or right
@@ -2243,8 +2611,12 @@ def merge2(
         is_good_left = True if left_fancyindex is None else isnotnan(left_fancyindex)
         is_good_right = True if right_fancyindex is None else isnotnan(right_fancyindex)
 
-        indicator_category_index = where(is_good_left, 1, 0) + where(is_good_right, 2, 0)
-        out[indicator] = Categorical(indicator_category_index, ['left_only', 'right_only', 'both'])
+        indicator_category_index = where(is_good_left, 1, 0) + where(
+            is_good_right, 2, 0
+        )
+        out[indicator] = Categorical(
+            indicator_category_index, ["left_only", "right_only", "both"]
+        )
 
         if logger.isEnabledFor(logging.INFO):
             delta = GetNanoTime() - start
@@ -2256,20 +2628,21 @@ def merge2(
     return datasetclass(out)
 
 
-#TODO: Clean-up column overlap and outer merge
+# TODO: Clean-up column overlap and outer merge
 def merge(
-    left: 'Dataset',
-    right: 'Dataset',
+    left: "Dataset",
+    right: "Dataset",
     on: Optional[Union[str, List[str]]] = None,
     left_on: Optional[Union[str, List[str]]] = None,
     right_on: Optional[Union[str, List[str]]] = None,
-    how: str = 'left',
-    suffixes: Tuple[str, str] = ('_x', '_y'),
+    how: str = "left",
+    suffixes: Tuple[str, str] = ("_x", "_y"),
     indicator: Union[bool, str] = False,
     columns_left: Optional[Union[str, List[str]]] = None,
     columns_right: Optional[Union[str, List[str]]] = None,
     verbose: bool = False,
-    hint_size: int = 0):
+    hint_size: int = 0,
+):
     """
     Merge Dataset by performing a database-style join operation by columns.
 
@@ -2343,12 +2716,16 @@ def merge(
     merge_asof
     """
     # Collect timing stats on how long various stages of the merge operation take.
-    start=GetNanoTime()
+    start = GetNanoTime()
 
-    if (len(left) != len(right)) and how == 'outer':    # TODO: Is this check still functioning correctly after the change to len(Dataset) in riptable 1.2.x?
+    if (
+        len(left) != len(right)
+    ) and how == "outer":  # TODO: Is this check still functioning correctly after the change to len(Dataset) in riptable 1.2.x?
         if verbose:
             # TODO: Should this raise an actual Warning that's more visible to the end-user?
-            print("Warning: outer merge produces unstable results for Datasets of different sizes.")
+            print(
+                "Warning: outer merge produces unstable results for Datasets of different sizes."
+            )
     datasetclass = type(left)
 
     if left_on is None:
@@ -2361,7 +2738,9 @@ def merge(
         # If we want to define which one does take precedence, we could drop this down to
         # a Warning to let the user know part of what they've specified will be ignored.
         if on is not None:
-            raise ValueError("The `on` and `left_on` parameters cannot be specified together; exactly one of them should be specified.")
+            raise ValueError(
+                "The `on` and `left_on` parameters cannot be specified together; exactly one of them should be specified."
+            )
 
     if right_on is None:
         if on is None:
@@ -2373,7 +2752,9 @@ def merge(
         # If we want to define which one does take precedence, we could drop this down to
         # a Warning to let the user know part of what they've specified will be ignored.
         if on is not None:
-            raise ValueError("The `on` and `right_on` parameters cannot be specified together; exactly one of them should be specified.")
+            raise ValueError(
+                "The `on` and `right_on` parameters cannot be specified together; exactly one of them should be specified."
+            )
 
     #
     # TODO: Handle case where left_on / right_on was an empty string -- raise an Error
@@ -2392,7 +2773,9 @@ def merge(
     columns_right = _normalize_selected_columns(right, columns_right)
 
     # Verify that column(s) specified in 'left_on', 'right_on', 'columns_left' and 'columns_right' are all present in their respective Datasets.
-    def require_columns_present(keyset: Set[str], dataset_name:str, param_name:str, col_names: Collection[str]) -> None:
+    def require_columns_present(
+        keyset: Set[str], dataset_name: str, param_name: str, col_names: Collection[str]
+    ) -> None:
         missing_cols: Optional[List[str]] = None
         for col_name in col_names:
             if col_name not in keyset:
@@ -2405,22 +2788,33 @@ def merge(
         # missing column names -- this provides more diagnostic info to the user compared to just
         # reporting the first missing column we found.
         if missing_cols is not None:
-            joined_colnames = ", ".join(map(lambda x: f'\'{x}\'', missing_cols))
-            raise ValueError(f'The column(s) {joined_colnames} specified in the `{param_name}` argument are not present in the `{dataset_name}` Dataset.')
+            joined_colnames = ", ".join(map(lambda x: f"'{x}'", missing_cols))
+            raise ValueError(
+                f"The column(s) {joined_colnames} specified in the `{param_name}` argument are not present in the `{dataset_name}` Dataset."
+            )
 
     # PERF: Revisit this -- it could be made faster if ItemContainer.keys() returned a set-like object such as KeysView instead of a list; then we wouldn't need to create the sets here.
     left_keyset = set(left.keys())
-    require_columns_present(left_keyset, 'left', 'left_on', left_on)
-    require_columns_present(left_keyset, 'left', 'columns_left', columns_left)  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
+    require_columns_present(left_keyset, "left", "left_on", left_on)
+    require_columns_present(
+        left_keyset, "left", "columns_left", columns_left
+    )  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
     right_keyset = set(right.keys())
-    require_columns_present(right_keyset, 'right', 'right_on', right_on)
-    require_columns_present(right_keyset, 'right', 'columns_right', columns_right)  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
+    require_columns_present(right_keyset, "right", "right_on", right_on)
+    require_columns_present(
+        right_keyset, "right", "columns_right", columns_right
+    )  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
 
     # Make sure there aren't any column name collision _before_ we do the heavy lifting of merging;
     # if there are name collisions, attempt to resolve them by suffixing the colliding column names.
     _suffixes = None if (not suffixes[0]) and (not suffixes[1]) else suffixes
-    col_left_tuple, col_right_tuple, intersection_cols = \
-        _construct_colname_mapping(left_on, right_on, suffixes=_suffixes, columns_left=columns_left, columns_right=columns_right)
+    col_left_tuple, col_right_tuple, intersection_cols = _construct_colname_mapping(
+        left_on,
+        right_on,
+        suffixes=_suffixes,
+        columns_left=columns_left,
+        columns_right=columns_right,
+    )
 
     # Validate the pair(s) of columns from the left and right join keys have compatible types.
     left_on_arrs = [left[col_name] for col_name in left_on]
@@ -2430,7 +2824,7 @@ def merge(
         # If the list of errors is non-empty, we have some join-key compatibility issues.
         # Some of the "errors" may just be warnings; filter those out of the list and raise
         # them to notify the user.
-        actual_errors : List[Exception] = []
+        actual_errors: List[Exception] = []
         for err in key_compat_errs:
             if isinstance(err, Warning):
                 warnings.warn(err)
@@ -2442,8 +2836,12 @@ def merge(
         # raise a ValueError; in the future we might use something like a .NET AggregateException
         # to wrap multiple errors into one instead to allow for different error types.
         if actual_errors:
-            flat_errs = '\n'.join(map(str, actual_errors))  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
-            raise ValueError(f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}")
+            flat_errs = "\n".join(
+                map(str, actual_errors)
+            )  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
+            raise ValueError(
+                f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}"
+            )
 
     if verbose:
         delta = GetNanoTime() - start
@@ -2451,101 +2849,105 @@ def merge(
 
     # Construct the join indices. That is, arrays for use as fancy indices into columns of the
     # left and right datasets to produce new arrays/columns for the merged Dataset.
-    start=GetNanoTime()
+    start = GetNanoTime()
     if hint_size <= 0:
         hint_size = max(left.shape[0], right.shape[0])
-    idx, idx_left, idx_right = _construct_index(left, right, left_on, right_on, how, hint_size)
+    idx, idx_left, idx_right = _construct_index(
+        left, right, left_on, right_on, how, hint_size
+    )
 
     if verbose:
         delta = GetNanoTime() - start
         print("_construct_index took ", delta / 1000000000.0)
 
     # DEBUG: Print the constructed indices.
-    #print(f'idx ({type(idx)}): {idx}')
-    #print(f'idx_left ({type(idx_left)}): {idx_left}')
-    #print(f'idx_right ({type(idx_right)}): {idx_right}')
+    # print(f'idx ({type(idx)}): {idx}')
+    # print(f'idx_left ({type(idx_left)}): {idx_left}')
+    # print(f'idx_right ({type(idx_right)}): {idx_right}')
 
-    start=GetNanoTime()
+    start = GetNanoTime()
 
-    if how == 'left':
-        #print('how was left')
+    if how == "left":
+        # print('how was left')
         p_left = np.arange(left.shape[0])
-        is_good_left = np.full(p_left.shape,True)
-        #print('p_left',p_left)
-        #print('is_good_left',is_good_left)
+        is_good_left = np.full(p_left.shape, True)
+        # print('p_left',p_left)
+        # print('is_good_left',is_good_left)
     else:
         is_good_left, p_left = ismember(idx, idx_left, hint_size=hint_size)
-        #print('p_left',p_left)
-        #print('is_good_left',is_good_left)
+        # print('p_left',p_left)
+        # print('is_good_left',is_good_left)
 
-    if how == 'right':
+    if how == "right":
         p_right = np.arange(right.shape[0])
-        is_good_right = np.full(p_right.shape,True)
+        is_good_right = np.full(p_right.shape, True)
     else:
         is_good_right, p_right = ismember(idx, idx_right, hint_size=hint_size)
-        #print('p_right',p_right)
-        #print('is_good_right',is_good_right)
+        # print('p_right',p_right)
+        # print('is_good_right',is_good_right)
 
     if verbose:
         delta = GetNanoTime() - start
         print("ismember took ", delta / 1000000000.0)
 
     # DEBUG: Print the constructed indices.
-    #print(f'p_left ({type(p_left)}): {p_left}')
-    #print(f'is_good_left ({type(is_good_left)}): {is_good_left}')
-    #print()
-    #print(f'p_right ({type(p_right)}): {p_right}')
-    #print(f'is_good_right ({type(is_good_right)}): {is_good_right}')
+    # print(f'p_left ({type(p_left)}): {p_left}')
+    # print(f'is_good_left ({type(is_good_left)}): {is_good_left}')
+    # print()
+    # print(f'p_right ({type(p_right)}): {p_right}')
+    # print(f'is_good_right ({type(is_good_right)}): {is_good_right}')
 
     # Begin creating the column data for the 'merged' Dataset.
-    out : Dict[str, FastArray] = {}
-    start=GetNanoTime()
+    out: Dict[str, FastArray] = {}
+    start = GetNanoTime()
 
     if intersection_cols:
-        if how == 'inner':
+        if how == "inner":
             for field in intersection_cols:
                 out[field] = left[field][p_left]
-        elif how == 'left':
+        elif how == "left":
             for field in intersection_cols:
                 out[field] = left[field]
-        elif how == 'right':
+        elif how == "right":
             for field in intersection_cols:
                 out[field] = right[field]
-        elif how == 'outer':
+        elif how == "outer":
             in_right_not_in_left = mask_andi(isnan(p_left), isnotnan(p_right))
             for field in intersection_cols:
                 out[field] = left[field][p_left]
-                out[field][in_right_not_in_left] = right[field][p_right[in_right_not_in_left]]
+                out[field][in_right_not_in_left] = right[field][
+                    p_right[in_right_not_in_left]
+                ]
         else:
-            raise ValueError(f'The value \'{how}\' is not valid for the \'how\' parameter.')
+            raise ValueError(f"The value '{how}' is not valid for the 'how' parameter.")
 
     if verbose:
         delta = GetNanoTime() - start
         print("copying took ", delta / 1000000000.0)
 
-    start=GetNanoTime()
+    start = GetNanoTime()
 
     for old_name, new_name in zip(*col_left_tuple):
         if how == "inner" or how == "right":
-            #print('mbget hit in col_left.keys() right with')
-            #print(left[col_left[fld]], p_left)
+            # print('mbget hit in col_left.keys() right with')
+            # print(left[col_left[fld]], p_left)
             out[new_name] = left[old_name][p_left]
 
         elif how == "outer":
             out[new_name] = left[old_name][p_left]
 
         else:
-            #print('col left fld',col_left[fld])
-            #print('left col left fld',left[col_left[fld]])
+            # print('col left fld',col_left[fld])
+            # print('left col left fld',left[col_left[fld]])
             out[new_name] = left[old_name]
 
     for old_name, new_name in zip(*col_right_tuple):
-        #for fld2 in out.keys():
+        # for fld2 in out.keys():
         #    print(fld2, 'address = ',out[fld2].__array_interface__['data'][0])
         if how == "inner" or how == "left":
-            #print('pright from ismember',p_right)
+            # print('pright from ismember',p_right)
             out[new_name] = right[old_name][p_right]
-            #print('mbget', out[fld])
+            # print('mbget', out[fld])
 
         elif how == "outer":
             out[new_name] = right[old_name][p_right]
@@ -2557,15 +2959,21 @@ def merge(
         print("indexing took ", delta / 1000000000.0)
 
     if indicator:
-        start=GetNanoTime()
+        start = GetNanoTime()
 
         if indicator is True:
-            indicator = 'merge_indicator'
+            indicator = "merge_indicator"
         if indicator in out:
-            raise ValueError(f'indicator column name collision with existing columns: {indicator}')
+            raise ValueError(
+                f"indicator column name collision with existing columns: {indicator}"
+            )
 
-        indicator_category_index = where(is_good_left, 1, 0) + where(is_good_right, 2, 0)
-        out[indicator] = Categorical(indicator_category_index, ['left_only', 'right_only', 'both'])
+        indicator_category_index = where(is_good_left, 1, 0) + where(
+            is_good_right, 2, 0
+        )
+        out[indicator] = Categorical(
+            indicator_category_index, ["left_only", "right_only", "both"]
+        )
 
         if verbose:
             delta = GetNanoTime() - start
@@ -2577,8 +2985,8 @@ def merge(
 
 
 def merge_lookup(
-    left: 'Dataset',
-    right: 'Dataset',
+    left: "Dataset",
+    right: "Dataset",
     on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
     left_on: Optional[Union[str, List[str]]] = None,
     right_on: Optional[Union[str, List[str]]] = None,
@@ -2589,8 +2997,8 @@ def merge_lookup(
     columns_right: Optional[Union[str, List[str]]] = None,
     keep: Optional[str] = None,
     high_card: Optional[Union[bool, Tuple[Optional[bool], Optional[bool]]]] = None,
-    hint_size: Optional[Union[int, Tuple[Optional[int], Optional[int]]]] = None
-) -> 'Dataset':
+    hint_size: Optional[Union[int, Tuple[Optional[int], Optional[int]]]] = None,
+) -> "Dataset":
     """
     Merge Dataset by performing a database-style left-join operation by columns.
 
@@ -2666,23 +3074,32 @@ def merge_lookup(
     # If keep is None, that means we want an exception to be raised if
     # there are any keys in 'right' occurring more than once. Do that via
     # merge2's 'validate' parameter.
-    validate = 'm:1' if keep is None else None
+    validate = "m:1" if keep is None else None
 
     return merge2(
-        left, right,
-        on=on, left_on=left_on, right_on=right_on,
-        how='left', suffixes=suffixes, copy=copy, indicator=False,
-        columns_left=columns_left, columns_right=columns_right,
+        left,
+        right,
+        on=on,
+        left_on=left_on,
+        right_on=right_on,
+        how="left",
+        suffixes=suffixes,
+        copy=copy,
+        indicator=False,
+        columns_left=columns_left,
+        columns_right=columns_right,
         validate=validate,
-        keep=(None, keep), high_card=high_card, hint_size=hint_size,
+        keep=(None, keep),
+        high_card=high_card,
+        hint_size=hint_size,
         # kwargs
-        require_match=require_match
+        require_match=require_match,
     )
 
 
 def merge_asof(
-    left: 'Dataset',
-    right: 'Dataset',
+    left: "Dataset",
+    right: "Dataset",
     on: Optional[Union[str, Tuple[str, str]]] = None,
     left_on: Optional[str] = None,
     right_on: Optional[str] = None,
@@ -2693,14 +3110,14 @@ def merge_asof(
     copy: bool = True,
     columns_left: Optional[Union[str, List[str]]] = None,
     columns_right: Optional[Union[str, List[str]]] = None,
-    tolerance: Optional[Union[int, 'timedelta']] = None,
+    tolerance: Optional[Union[int, "timedelta"]] = None,
     allow_exact_matches: bool = True,
     direction: str = "backward",
     verbose: bool = False,
     check_sorted: bool = True,
     matched_on: Union[bool, str] = False,
-    **kwargs
-) -> 'Dataset':
+    **kwargs,
+) -> "Dataset":
     """
     Perform an as-of merge. This is similar to a left-join except that we
     match on nearest key rather than equal keys.
@@ -2906,7 +3323,9 @@ def merge_asof(
         # Emit warning about 'left_index' and 'right_index' only being present for compatibility
         # with the pandas merge signature. They don't actually do anything in riptable since our
         # indexing is external (not internal) to Datasets.
-        warnings.warn("The 'left_index' and 'right_index' parameters are only present for pandas compatibility. They are not applicable for riptable and will have no effect.")
+        warnings.warn(
+            "The 'left_index' and 'right_index' parameters are only present for pandas compatibility. They are not applicable for riptable and will have no effect."
+        )
 
     #
     # TODO: Validate the 'direction' -- needs to be in {'forward', 'backward', 'nearest'};
@@ -2930,7 +3349,8 @@ def merge_asof(
         # a Warning to let the user know part of what they've specified will be ignored.
         if on is not None:
             raise ValueError(
-                "The `on` and `left_on` parameters cannot be specified together; exactly one of them should be specified.")
+                "The `on` and `left_on` parameters cannot be specified together; exactly one of them should be specified."
+            )
 
     if right_on is None:
         if on is None:
@@ -2948,12 +3368,13 @@ def merge_asof(
         # a Warning to let the user know part of what they've specified will be ignored.
         if on is not None:
             raise ValueError(
-                "The `on` and `right_on` parameters cannot be specified together; exactly one of them should be specified.")
+                "The `on` and `right_on` parameters cannot be specified together; exactly one of them should be specified."
+            )
 
     # Validate and normalize the 'by' column name lists for each Dataset.
     # Note that for 'merge_asof', specifying any 'by' columns are optional -- unlike the 'on' columns, which are required.
-    left_by = _extract_on_columns(by, left_by, True, 'by', is_optional=True)
-    right_by = _extract_on_columns(by, right_by, False, 'by', is_optional=True)
+    left_by = _extract_on_columns(by, left_by, True, "by", is_optional=True)
+    right_by = _extract_on_columns(by, right_by, False, "by", is_optional=True)
 
     #
     # TODO: Disallow a column to be specified as both an 'on' and 'by' column (for each Dataset)?
@@ -2969,13 +3390,17 @@ def merge_asof(
 
     # PERF: Revisit this -- it could be made faster if ItemContainer.keys() returned a set-like object such as KeysView instead of a list; then we wouldn't need to create the sets here.
     left_keyset = set(left.keys())
-    _require_columns_present(left_keyset, 'left', 'left_on', [left_on])
-    _require_columns_present(left_keyset, 'left', 'left_by', left_by)
-    _require_columns_present(left_keyset, 'left', 'columns_left', columns_left)  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
+    _require_columns_present(left_keyset, "left", "left_on", [left_on])
+    _require_columns_present(left_keyset, "left", "left_by", left_by)
+    _require_columns_present(
+        left_keyset, "left", "columns_left", columns_left
+    )  # PERF: Fix this -- if columns_left isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
     right_keyset = set(right.keys())
-    _require_columns_present(right_keyset, 'right', 'right_on', [right_on])
-    _require_columns_present(right_keyset, 'right', 'right_by', right_by)
-    _require_columns_present(right_keyset, 'right', 'columns_right', columns_right)  # PERF: Fix this -- if columns_right isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
+    _require_columns_present(right_keyset, "right", "right_on", [right_on])
+    _require_columns_present(right_keyset, "right", "right_by", right_by)
+    _require_columns_present(
+        right_keyset, "right", "columns_right", columns_right
+    )  # PERF: Fix this -- if columns_right isn't populated initially it'll be normalized to the whole keyset above so this call is irrelevant
 
     # Validate the pair(s) of columns from the left and right join keys have compatible types.
     left_on_arrs = [left[left_on]]
@@ -2999,9 +3424,13 @@ def merge_asof(
         # raise a ValueError; in the future we might use something like a .NET AggregateException
         # to wrap multiple errors into one instead to allow for different error types.
         if actual_errors:
-            flat_errs = '\n'.join(map(str, actual_errors))  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
+            flat_errs = "\n".join(
+                map(str, actual_errors)
+            )  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
             # TEMP: Until riptable 1.5, make this a warning instead of an error for backwards-compatibility with existing code -- users need time to fix any type mismatches.
-            warnings.warn(f"Found one or more compatibility issues with the specified 'on' keys (these will become errors in a future major release):\n{flat_errs}")
+            warnings.warn(
+                f"Found one or more compatibility issues with the specified 'on' keys (these will become errors in a future major release):\n{flat_errs}"
+            )
             # raise ValueError(f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}")
 
     #
@@ -3011,26 +3440,30 @@ def merge_asof(
     #
 
     return _AsOfMerge.get_result(
-        left, right,
-        left_on=left_on, right_on=right_on,
-        left_by=left_by, right_by=right_by,
+        left,
+        right,
+        left_on=left_on,
+        right_on=right_on,
+        left_by=left_by,
+        right_by=right_by,
         suffixes=suffixes,
         copy=copy,
-        columns_left=columns_left, columns_right=columns_right,
+        columns_left=columns_left,
+        columns_right=columns_right,
         tolerance=tolerance,
         allow_exact_matches=allow_exact_matches,
         direction=direction,
         verbose=verbose,
         check_sorted=check_sorted,
-        matched_on=matched_on
+        matched_on=matched_on,
     )
 
 
 class _AsOfMerge:
     @staticmethod
     def get_result(
-        left: 'Dataset',
-        right: 'Dataset',
+        left: "Dataset",
+        right: "Dataset",
         left_on: str,
         right_on: str,
         left_by: Collection[str],
@@ -3039,18 +3472,20 @@ class _AsOfMerge:
         columns_left: Collection[str],
         columns_right: Collection[str],
         copy: bool,
-        tolerance: Optional[Union[int, 'timedelta']],
+        tolerance: Optional[Union[int, "timedelta"]],
         allow_exact_matches: bool,
         direction: str,
         verbose: bool,
         check_sorted: bool,
-        matched_on: Union[bool, str]
-    ) -> 'Dataset':
+        matched_on: Union[bool, str],
+    ) -> "Dataset":
         # TEMP: Emit a warning if `tolerance` is specified until we actually implement it.
         if tolerance is not None:
-            warnings.warn("merge_asof: The `tolerance` parameter is not implemented yet and will have no effect.")
+            warnings.warn(
+                "merge_asof: The `tolerance` parameter is not implemented yet and will have no effect."
+            )
 
-        #FastArray._ROFF()  # temporary hack to protect against data corruption
+        # FastArray._ROFF()  # temporary hack to protect against data corruption
         datasetclass = type(left)
 
         # Make sure there aren't any column name collision _before_ we do the heavy lifting of merging;
@@ -3061,8 +3496,13 @@ class _AsOfMerge:
         left_keys.extend(left_by)
         right_keys = [right_on]
         right_keys.extend(right_by)
-        col_left_tuple, col_right_tuple, intersection_cols = \
-            _construct_colname_mapping(left_keys, right_keys, suffixes=suffixes, columns_left=columns_left, columns_right=columns_right)
+        col_left_tuple, col_right_tuple, intersection_cols = _construct_colname_mapping(
+            left_keys,
+            right_keys,
+            suffixes=suffixes,
+            columns_left=columns_left,
+            columns_right=columns_right,
+        )
 
         left_on_col = left[left_on]
         right_on_col = right[right_on]
@@ -3080,7 +3520,9 @@ class _AsOfMerge:
 
             # If the left 'on' column isn't sorted, raise an exception.
             if not left_on_sorted:
-                raise ValueError(f"The column '{left_on}' from the `left` Dataset is not sorted.")
+                raise ValueError(
+                    f"The column '{left_on}' from the `left` Dataset is not sorted."
+                )
 
             # Check whether the right_on column is sorted.
             start = GetNanoTime()
@@ -3092,26 +3534,48 @@ class _AsOfMerge:
 
             # If the right 'on' column isn't sorted, raise an exception.
             if not right_on_sorted:
-                raise ValueError(f"The column '{right_on}' from the `right` Dataset is not sorted.")
+                raise ValueError(
+                    f"The column '{right_on}' from the `right` Dataset is not sorted."
+                )
 
         # Construct fancy indices for the left/right Datasets; these will be used to index into
         # columns of the respective datasets to produce new arrays/columns for the merged Dataset.
         start = GetNanoTime()
-        if direction == 'nearest':
+        if direction == "nearest":
             # Recursively call forward/backward, choose the min. Note backward wins ties.
             # TODO: This could be done more efficiently (without having to run the join-index creation twice + combine the results)
             #       once the key-alignment / join index creation implements support for the 'nearest' direction.
-            left_fancyindex_backward, right_fancyindex_backward = \
-                _AsOfMerge._create_merge_fancy_indices(
-                    left, right, left_on_col, right_on_col, left_by, right_by,
-                    tolerance=tolerance, allow_exact_matches=allow_exact_matches,
-                    direction='backward', verbose=verbose)
+            (
+                left_fancyindex_backward,
+                right_fancyindex_backward,
+            ) = _AsOfMerge._create_merge_fancy_indices(
+                left,
+                right,
+                left_on_col,
+                right_on_col,
+                left_by,
+                right_by,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction="backward",
+                verbose=verbose,
+            )
 
-            left_fancyindex_forward, right_fancyindex_forward = \
-                _AsOfMerge._create_merge_fancy_indices(
-                    left, right, left_on_col, right_on_col, left_by, right_by,
-                    tolerance=tolerance, allow_exact_matches=allow_exact_matches,
-                    direction='forward', verbose=verbose)
+            (
+                left_fancyindex_forward,
+                right_fancyindex_forward,
+            ) = _AsOfMerge._create_merge_fancy_indices(
+                left,
+                right,
+                left_on_col,
+                right_on_col,
+                left_by,
+                right_by,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction="forward",
+                verbose=verbose,
+            )
 
             # Create a filter (bool array) indicating the rows where the 'forward' direction was closer ("nearest")
             # than the 'backward' direction, making sure to account for NaN/NA values.
@@ -3124,26 +3588,44 @@ class _AsOfMerge:
             #     f_forward = isnan(backward_distance)
             #     f_forward |= (forward_distance < backward_distance)
             #     f_forward &= isnotnan(forward_distance)
-            f_forward_closer = full(len(right_fancyindex_backward), False, dtype=np.bool)
+            f_forward_closer = full(
+                len(right_fancyindex_backward), False, dtype=np.bool
+            )
 
             # Determine the distance between the left_on and right_on columns in both the forward and backwards directions.
             # TODO: What should we do when the 'on' columns are integers and operations below underflow/overflow?
             #       This is especially problematic if the 'on' columns are unsigned integer dtypes.
             # NOTE: Indexing into an ndarray/FastArray with None returns the original data but reshaped; so handle that case specially here.
-            left_on_backward = left_on_col if left_fancyindex_backward is None else left_on_col[left_fancyindex_backward]
+            left_on_backward = (
+                left_on_col
+                if left_fancyindex_backward is None
+                else left_on_col[left_fancyindex_backward]
+            )
             f_forward_closer |= isnan(left_on_backward)
-            right_on_backward = right_on_col if right_fancyindex_backward is None else right_on_col[right_fancyindex_backward]
+            right_on_backward = (
+                right_on_col
+                if right_fancyindex_backward is None
+                else right_on_col[right_fancyindex_backward]
+            )
             f_forward_closer |= isnan(right_on_backward)
             backward_distance = abs(left_on_backward - right_on_backward)
             del left_on_backward
             del right_on_backward
             f_forward_closer |= isnan(backward_distance)
 
-            left_on_forward = left_on_col if left_fancyindex_forward is None else left_on_col[left_fancyindex_forward]
-            right_on_forward = right_on_col if right_fancyindex_forward is None else right_on_col[right_fancyindex_forward]
+            left_on_forward = (
+                left_on_col
+                if left_fancyindex_forward is None
+                else left_on_col[left_fancyindex_forward]
+            )
+            right_on_forward = (
+                right_on_col
+                if right_fancyindex_forward is None
+                else right_on_col[right_fancyindex_forward]
+            )
             forward_distance = abs(left_on_forward - right_on_forward)
 
-            f_forward_closer |= (forward_distance < backward_distance)
+            f_forward_closer |= forward_distance < backward_distance
             del backward_distance
             f_forward_closer &= isnotnan(left_on_forward)
             f_forward_closer &= isnotnan(right_on_forward)
@@ -3158,18 +3640,27 @@ class _AsOfMerge:
             #       so we don't need to do any processing for it here.
             assert left_fancyindex_backward is None
             assert left_fancyindex_forward is None
-            putmask(right_fancyindex_backward, f_forward_closer, right_fancyindex_forward)
+            putmask(
+                right_fancyindex_backward, f_forward_closer, right_fancyindex_forward
+            )
 
             # Set the same variables for fancy indices as used by the normal 'forward'/'backward' code path.
             left_fancyindex = left_fancyindex_backward
             right_fancyindex = right_fancyindex_backward
 
         else:
-            left_fancyindex, right_fancyindex = \
-                _AsOfMerge._create_merge_fancy_indices(
-                    left, right, left_on_col, right_on_col, left_by, right_by,
-                    tolerance=tolerance, allow_exact_matches=allow_exact_matches,
-                    direction=direction, verbose=verbose)
+            left_fancyindex, right_fancyindex = _AsOfMerge._create_merge_fancy_indices(
+                left,
+                right,
+                left_on_col,
+                right_on_col,
+                left_by,
+                right_by,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction=direction,
+                verbose=verbose,
+            )
 
         if logger.isEnabledFor(logging.INFO):
             delta = GetNanoTime() - start
@@ -3218,7 +3709,9 @@ class _AsOfMerge:
 
         if logger.isEnabledFor(logging.INFO):
             delta = GetNanoTime() - start
-            logger.info("Transformed columns. cols='%s'\tnanos='%d'", "intersection", delta)
+            logger.info(
+                "Transformed columns. cols='%s'\tnanos='%d'", "intersection", delta
+            )
 
         # Transform the columns from the left Dataset and store to the new, merged Dataset.
         # If we don't have a left fancy index, it means the fancy index (if present) would simply create
@@ -3260,9 +3753,11 @@ class _AsOfMerge:
             start = GetNanoTime()
 
             if matched_on == True:
-                matched_on = 'matched_on'
+                matched_on = "matched_on"
             if matched_on in out:
-                raise ValueError(f'`matched_on` column name collision with existing columns: {matched_on}')
+                raise ValueError(
+                    f"`matched_on` column name collision with existing columns: {matched_on}"
+                )
 
             # Use the right_fancyindex to expand the 'on' column from the right Dataset and add it to the output.
             out[matched_on] = right_on_col[right_fancyindex]
@@ -3271,21 +3766,21 @@ class _AsOfMerge:
                 delta = GetNanoTime() - start
                 logger.info("matched_on column created. nanos='%d'", delta)
 
-        #FastArray._RON()  # temporary hack to protect against data corruption
+        # FastArray._RON()  # temporary hack to protect against data corruption
         return datasetclass(out)
 
     @staticmethod
     def _create_merge_fancy_indices(
-        left: 'Dataset',
-        right: 'Dataset',
+        left: "Dataset",
+        right: "Dataset",
         left_on_col: FastArray,
         right_on_col: FastArray,
         left_by: Collection[str],
         right_by: Collection[str],
-        tolerance: Optional[Union[int, 'timedelta']],
+        tolerance: Optional[Union[int, "timedelta"]],
         allow_exact_matches: bool,
         direction: str,
-        verbose: bool
+        verbose: bool,
     ) -> Tuple[Optional[FastArray], Optional[FastArray]]:
         # check for categoricals first
         # TODO: Finish implementing/testing this. If we re-use the code from merge2() for creating the Grouping objects,
@@ -3298,7 +3793,7 @@ class _AsOfMerge:
             # TJD: when both left and right are prebinned and left_on_col, right_on_col are sorted and are int32/64/float32/float64
             # this is a future fast path to merge_asof
             start = GetNanoTime()
-            #pright = merge_prebinned(left_by, right_by, left_on_col, right_on_col, total_unique + 1)
+            # pright = merge_prebinned(left_by, right_by, left_on_col, right_on_col, total_unique + 1)
 
             if verbose:
                 delta = GetNanoTime() - start
@@ -3310,7 +3805,9 @@ class _AsOfMerge:
             left_by_col_count = len(left_by)
             right_by_col_count = len(right_by)
             if left_by_col_count != right_by_col_count:
-                raise ValueError(f"Different number of 'by' columns for the left and right Datasets. ({left_by_col_count} vs. {right_by_col_count})")
+                raise ValueError(
+                    f"Different number of 'by' columns for the left and right Datasets. ({left_by_col_count} vs. {right_by_col_count})"
+                )
 
             if left_by_col_count == 0:
                 # TODO: Can we modify alignmk so we can pass None (or an empty list) instead of allocating arrays here?
@@ -3325,11 +3822,14 @@ class _AsOfMerge:
 
             start = GetNanoTime()
             pright = alignmk(
-                left_by_cols, right_by_cols,
-                left_on_col, right_on_col,
+                left_by_cols,
+                right_by_cols,
+                left_on_col,
+                right_on_col,
                 direction=direction,
                 allow_exact_matches=allow_exact_matches,
-                verbose=verbose)
+                verbose=verbose,
+            )
 
             if verbose:
                 delta = GetNanoTime() - start

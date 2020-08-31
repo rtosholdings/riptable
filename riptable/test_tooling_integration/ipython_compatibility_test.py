@@ -123,15 +123,15 @@ class TestCompleter(unittest.TestCase):
         """Test that errors from custom attribute completers are silenced."""
         ip = get_ipython()
 
-        _, matches = ip.complete('in')
-        assert matches.index('input') < matches.index('int')
+        _, matches = ip.complete("in")
+        assert matches.index("input") < matches.index("int")
 
         def complete_example(a):
-            return ['example2', 'example1']
+            return ["example2", "example1"]
 
-        ip.Completer.custom_completers.add_re('ex*', complete_example)
-        _, matches = ip.complete('ex')
-        assert matches.index('example2') < matches.index('example1')
+        ip.Completer.custom_completers.add_re("ex*", complete_example)
+        _, matches = ip.complete("ex")
+        assert matches.index("example2") < matches.index("example1")
 
     def test_unicode_completions(self):
         ip = get_ipython()
@@ -339,11 +339,11 @@ class TestCompleter(unittest.TestCase):
             with provisionalcompleter():
                 ip.Completer.use_jedi = jedi_status
                 matches = c.all_completions("TestCl")
-                assert matches == ['TestClass'], jedi_status
+                assert matches == ["TestClass"], jedi_status
                 matches = c.all_completions("TestClass.")
                 assert len(matches) > 2, jedi_status
                 matches = c.all_completions("TestClass.a")
-                assert matches == ['TestClass.a', 'TestClass.a1'], jedi_status
+                assert matches == ["TestClass.a", "TestClass.a1"], jedi_status
 
     def test_jedi(self):
         """
@@ -456,31 +456,31 @@ class TestCompleter(unittest.TestCase):
                 5, 10, "from_bytes"
             )
 
-#    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
-#    @pytest.mark.skipif(
-#        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-#    )
-#    def test_omit__names(self):
-# deleted due to lint failure
+    #    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
+    #    @pytest.mark.skipif(
+    #        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
+    #    )
+    #    def test_omit__names(self):
+    # deleted due to lint failure
 
-#    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
-#    @pytest.mark.skipif(
-#        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-#    )
-#    def test_limit_to__all__False_ok(self):
-#        """
-#        Limit to all is deprecated, once we remove it this test can go away.
-#        """
-#        ip = get_ipython()
-#        c = ip.Completer
-#        c.use_jedi = False
-#        ip.ex("class D: x=24")
-#        ip.ex("d=D()")
-#        cfg = Config()
-#        cfg.IPCompleter.limit_to__all__ = False
-#        c.update_config(cfg)
-#        s, matches = c.complete("d.")
-#        nt.assert_in("d.x", matches)
+    #    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
+    #    @pytest.mark.skipif(
+    #        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
+    #    )
+    #    def test_limit_to__all__False_ok(self):
+    #        """
+    #        Limit to all is deprecated, once we remove it this test can go away.
+    #        """
+    #        ip = get_ipython()
+    #        c = ip.Completer
+    #        c.use_jedi = False
+    #        ip.ex("class D: x=24")
+    #        ip.ex("d=D()")
+    #        cfg = Config()
+    #        cfg.IPCompleter.limit_to__all__ = False
+    #        c.update_config(cfg)
+    #        s, matches = c.complete("d.")
+    #        nt.assert_in("d.x", matches)
 
     def test_get__all__entries_ok(self):
         class A:
@@ -1024,5 +1024,5 @@ class TestCompleter(unittest.TestCase):
 # endregion IPython/core/tests/test_completer.py
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

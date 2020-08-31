@@ -4,21 +4,21 @@ import pandas as pd
 import unittest
 
 functions_str = [
-    'count',
-    'sum',
-    'mean',
-    'median',
-    'min',
-    'max',
+    "count",
+    "sum",
+    "mean",
+    "median",
+    "min",
+    "max",
     # 'prod',
-    'var',
+    "var",
     # 'quantile',
-    'cumsum',
-    'cumprod',
+    "cumsum",
+    "cumprod",
     # 'cummax',
     # 'cummin'
-    'first',
-    'last',
+    "first",
+    "last",
     # 'mode'
 ]
 
@@ -67,16 +67,16 @@ class GroupbyFunctions_Test(unittest.TestCase):
     def test_single_col_groupby_tests(self):
 
         Values = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
-        Keys = ['a', 'b', 'c', 'a', 'b', 'c', 'd', 'e', 'f']
+        Keys = ["a", "b", "c", "a", "b", "c", "d", "e", "f"]
         for type_ in type_list:
 
-            data = {'Vs': rt.FastArray(Values, dtype=type_), 'Ks': Keys}
+            data = {"Vs": rt.FastArray(Values, dtype=type_), "Ks": Keys}
 
             pd_data = pd.DataFrame(data)
             sfw_data = rt.Dataset(data)
 
-            key = 'Ks'
-            val = 'Vs'
+            key = "Ks"
+            val = "Vs"
 
             pd_gb = pd_data.groupby(key)
             sfw_gb = sfw_data.groupby(key)
@@ -90,34 +90,34 @@ class GroupbyFunctions_Test(unittest.TestCase):
                 sfw_out = sfw_func()
 
                 pd_col = pd_out[val]._values
-                if name == 'count':
-                    sfw_col = sfw_out['Count']
+                if name == "count":
+                    sfw_col = sfw_out["Count"]
                 else:
                     sfw_col = sfw_out[val]
 
                 is_integer_subttype = np.issubdtype(type_, np.integer)
-                is_median = name != 'median'
+                is_median = name != "median"
                 if not safe_equal(pd_col, sfw_col) and (
                     not is_integer_subttype and not is_median
                 ):
-                    print('data_type_t = ', type_)
-                    print('function =', name)
-                    print('pandas output =', pd_col)
-                    print('sfw    output =', sfw_col)
+                    print("data_type_t = ", type_)
+                    print("function =", name)
+                    print("pandas output =", pd_col)
+                    print("sfw    output =", sfw_col)
                     # TODO move as error message following assert
                     self.assertTrue(False)
 
     # TODO pytest parameterize type_list
     def test_multi_col_groupby_tests(self, numb_keys_and_values=5, numb_rows=20):
-        col_val_names = ['alpha', 'beta', 'gamma', 'sigma', 'zeta']
-        col_key_names = ['lions', 'tigers', 'bears', 'oh', 'my']
+        col_val_names = ["alpha", "beta", "gamma", "sigma", "zeta"]
+        col_key_names = ["lions", "tigers", "bears", "oh", "my"]
 
         MAX_LENGTH = min(len(col_val_names), len(col_key_names))
         assert numb_keys_and_values <= MAX_LENGTH
         for type_ in type_list:
 
             vals = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
-            keys = 'a b c d e f g'.split(' ')
+            keys = "a b c d e f g".split(" ")
 
             vs = []
             ks = []
@@ -148,14 +148,14 @@ class GroupbyFunctions_Test(unittest.TestCase):
                 pd_out = getattr(pd_gb, name)()
                 sfw_out = getattr(sfw_gb, name)()
 
-                if name == 'count':
+                if name == "count":
                     # only compare one column for count
-                    pd_col = pd_out['alpha']
+                    pd_col = pd_out["alpha"]
                     sfw_col = sfw_out.Count
                     if not safe_equal(pd_col, sfw_col):
-                        print('function =', name)
-                        print('pandas output =', pd_col)
-                        print('sfw    output =', sfw_col)
+                        print("function =", name)
+                        print("pandas output =", pd_col)
+                        print("sfw    output =", sfw_col)
                         self.assertTrue(False)
                 else:
                     for val in col_val_names:
@@ -164,12 +164,12 @@ class GroupbyFunctions_Test(unittest.TestCase):
                         sfw_col = sfw_out[val]
 
                         is_integer_subttype = np.issubdtype(type_, np.integer)
-                        is_median = name != 'median'
+                        is_median = name != "median"
                         if not safe_equal(pd_col, sfw_col) and (
                             not is_integer_subttype and not is_median
                         ):
-                            print('function =', name)
-                            print('pandas output =', pd_col)
+                            print("function =", name)
+                            print("pandas output =", pd_col)
                             assert False
 
 

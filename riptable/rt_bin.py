@@ -1,4 +1,4 @@
-__all__ = ['cut', 'qcut', 'quantile' ]
+__all__ = ["cut", "qcut", "quantile"]
 
 
 import numpy as np
@@ -9,7 +9,7 @@ from .rt_categorical import Categorical
 
 
 # ------------------------------------------------------------------------------------
-def quantile(x, q, interpolation_method: str='fraction'):
+def quantile(x, q, interpolation_method: str = "fraction"):
     """
     Compute sample quantile or quantiles of the input array. For example, q=0.5 computes the median.
 
@@ -49,7 +49,7 @@ def quantile(x, q, interpolation_method: str='fraction'):
 
     # make sure contiguous
     if not x.flags.contiguous:
-        x=np.ascontiguousarray(x).view(TypeRegister.FastArray)
+        x = np.ascontiguousarray(x).view(TypeRegister.FastArray)
 
     # indirect sort and pass this back...
     # print("lexsort", x, x.shape)
@@ -62,7 +62,7 @@ def quantile(x, q, interpolation_method: str='fraction'):
     infcount = counts[1]
     neginfcount = counts[2]
 
-    #print("**counts", nancount, infcount, neginfcount)
+    # print("**counts", nancount, infcount, neginfcount)
 
     # now make a window into the section of the array that contains good values
     # windowX = x[neginfcount:(x.shape[0] - (nancount + infcount))]
@@ -73,12 +73,12 @@ def quantile(x, q, interpolation_method: str='fraction'):
         # count how many good values
         datalen = x.shape[0] - (nancount + infcount + neginfcount)
 
-        #print(nancount, infcount, neginfcount)
-        #print("**windowI", windowI)
-        windowI = lsort[neginfcount:(x.shape[0] - (nancount + infcount))]
-        #print("**windowI", windowI)
+        # print(nancount, infcount, neginfcount)
+        # print("**windowI", windowI)
+        windowI = lsort[neginfcount : (x.shape[0] - (nancount + infcount))]
+        # print("**windowI", windowI)
 
-    #print("**count result", counts)
+    # print("**count result", counts)
 
     ## TJD NOTE:
     ## do not need to mask -- a sort will put nans at the end
@@ -103,20 +103,22 @@ def quantile(x, q, interpolation_method: str='fraction'):
             return np.nan
 
         idx = at * (datalen - 1)
-        #print("***idx",idx)
+        # print("***idx",idx)
         if idx % 1 == 0:
             score = _val(int(idx))
         else:
-            if interpolation_method == 'fraction':
+            if interpolation_method == "fraction":
                 score = _interpolate(_val(int(idx)), _val(int(idx) + 1), idx % 1)
-            elif interpolation_method == 'lower':
+            elif interpolation_method == "lower":
                 score = _val(np.floor(idx))
-            elif interpolation_method == 'higher':
+            elif interpolation_method == "higher":
                 score = _val(np.ceil(idx))
             else:
-                raise ValueError("interpolation_method can only be 'fraction', 'lower' or 'higher'")
+                raise ValueError(
+                    "interpolation_method can only be 'fraction', 'lower' or 'higher'"
+                )
 
-        #print("score", score)
+        # print("score", score)
         return score
 
     if np.isscalar(q):
@@ -134,12 +136,13 @@ def quantile(x, q, interpolation_method: str='fraction'):
         return result, lsort, counts
 
 
-
 def _cut_result(fac, labels, bins, retbins):
     """Final cut / qcut return."""
     if labels is not False:
         labels = TypeRegister.FastArray(labels)
-        grp = TypeRegister.Grouping(fac, labels, base_index=1, ordered=False, sort_display=False, _trusted=True)
+        grp = TypeRegister.Grouping(
+            fac, labels, base_index=1, ordered=False, sort_display=False, _trusted=True
+        )
         cat = Categorical(grp)
         if not retbins:
             return cat
@@ -151,7 +154,7 @@ def _cut_result(fac, labels, bins, retbins):
 
 
 # ------------------------------------------------------------------------------------
-def qcut(x, q, labels=True, retbins=False, precision=3, duplicates='raise'):
+def qcut(x, q, labels=True, retbins=False, precision=3, duplicates="raise"):
     """
     Quantile-based discretization function.
 
@@ -219,7 +222,7 @@ def qcut(x, q, labels=True, retbins=False, precision=3, duplicates='raise'):
 
     # make sure contiguous
     if not x.flags.contiguous:
-        x=np.ascontiguousarray(x).view(TypeRegister.FastArray)
+        x = np.ascontiguousarray(x).view(TypeRegister.FastArray)
 
     dtype = x.dtype
 
@@ -237,10 +240,18 @@ def qcut(x, q, labels=True, retbins=False, precision=3, duplicates='raise'):
     # get the bins on the WINDOWED data
     bins, lsort, counts = quantile(x, quantiles)
 
-    #print("**bins", bins, '**lsort', lsort, "**counts", counts, x, x[lsort])
-    fac, bins, ret_labels = _bins_to_cuts_new(x, bins, lsort, counts, labels=labels,
-                                          precision=precision, include_lowest=True,
-                                          dtype=dtype, duplicates=duplicates)
+    # print("**bins", bins, '**lsort', lsort, "**counts", counts, x, x[lsort])
+    fac, bins, ret_labels = _bins_to_cuts_new(
+        x,
+        bins,
+        lsort,
+        counts,
+        labels=labels,
+        precision=precision,
+        include_lowest=True,
+        dtype=dtype,
+        duplicates=duplicates,
+    )
 
     labels = ret_labels if labels is not False else labels
     return _cut_result(fac, labels, bins, retbins)
@@ -272,10 +283,11 @@ def _infer_precision(base_precision, bins):
 
 # ------------------------------------------------------------------------------------
 # will always create a clipped
-def _format_labels(bins, precision, right=True,
-                   include_lowest=False, dtype=None, clipped=False):
+def _format_labels(
+    bins, precision, right=True, include_lowest=False, dtype=None, clipped=False
+):
     """Based on the dtype, return our labels."""
-    closed = 'right' if right else 'left'
+    closed = "right" if right else "left"
 
     precision = _infer_precision(precision, bins)
     formatter = lambda x: _round_frac(x, precision)
@@ -284,7 +296,6 @@ def _format_labels(bins, precision, right=True,
     breaks = [formatter(b) for b in bins]
     # print("**breaks:", breaks)
 
-
     if clipped:
         # first label is always clipped
         labels = [CLIPPED_LONG_NAME]
@@ -292,9 +303,9 @@ def _format_labels(bins, precision, right=True,
         labels = []
 
     for i in range(1, len(breaks)):
-        #labels.append(str(breaks[i - 1]) + "\U00002192" + str(breaks[i]))
-        #labels.append(str(breaks[i - 1]) + "\U000021E8" + str(breaks[i]))
-        #labels.append(str(breaks[i - 1]) + "\U000027A1" + str(breaks[i]))
+        # labels.append(str(breaks[i - 1]) + "\U00002192" + str(breaks[i]))
+        # labels.append(str(breaks[i - 1]) + "\U000021E8" + str(breaks[i]))
+        # labels.append(str(breaks[i - 1]) + "\U000027A1" + str(breaks[i]))
         labels.append(str(breaks[i - 1]) + "->" + str(breaks[i]))
 
     # labels = IntervalIndex.from_breaks(breaks, closed=closed)
@@ -314,22 +325,35 @@ def _format_labels(bins, precision, right=True,
 # TJD: Needs to be rewritten
 # windowX == view into valid X data
 # windowI == view into sorted indexing of X
-def _bins_to_cuts_new(x, bins, lsort=None, counts=None, right=True, labels=None,
-                      precision=3, include_lowest=False,
-                      dtype=None, duplicates='raise'):
-    if duplicates not in ['raise', 'drop']:
-        raise ValueError("invalid value for 'duplicates' parameter, valid options are: raise, drop")
+def _bins_to_cuts_new(
+    x,
+    bins,
+    lsort=None,
+    counts=None,
+    right=True,
+    labels=None,
+    precision=3,
+    include_lowest=False,
+    dtype=None,
+    duplicates="raise",
+):
+    if duplicates not in ["raise", "drop"]:
+        raise ValueError(
+            "invalid value for 'duplicates' parameter, valid options are: raise, drop"
+        )
 
     # TOD=O: if sorted, can take fast path
     unique_bins = unique(bins)
 
-    #print("after unique", bins, unique_bins)
+    # print("after unique", bins, unique_bins)
 
     if len(unique_bins) < len(bins) != 2:
-        if duplicates == 'raise':
+        if duplicates == "raise":
             raise ValueError(
                 "Bin edges must be unique: {bins!r}.\nYou can drop duplicate edges by setting the 'duplicates' kwarg".format(
-                    bins=bins))
+                    bins=bins
+                )
+            )
         else:
             bins = unique_bins
 
@@ -340,10 +364,10 @@ def _bins_to_cuts_new(x, bins, lsort=None, counts=None, right=True, labels=None,
 
     if lsort is not None:
         ids = rc.BinsToCutsSorted(x, bins, lsort, counts, mode)
-        #print("bins sorted",ids, x, bins)
+        # print("bins sorted",ids, x, bins)
     else:
         ids = rc.BinsToCutsBSearch(x, bins, mode)
-        #print("bins bsearch",ids, x, bins)
+        # print("bins bsearch",ids, x, bins)
 
     # if include_lowest:
     #    # Numpy 1.9 support: ensure this mask is a Numpy array
@@ -351,12 +375,19 @@ def _bins_to_cuts_new(x, bins, lsort=None, counts=None, right=True, labels=None,
 
     if labels is not False:
         if labels is None:
-            labels = _format_labels(bins, precision, right=right,
-                                    include_lowest=include_lowest,
-                                    dtype=dtype, clipped=lsort is not None)
+            labels = _format_labels(
+                bins,
+                precision,
+                right=right,
+                include_lowest=include_lowest,
+                dtype=dtype,
+                clipped=lsort is not None,
+            )
         else:
             if len(labels) != len(bins) - 1:
-                raise ValueError('Bin labels must be one fewer than the number of bin edges')
+                raise ValueError(
+                    "Bin labels must be one fewer than the number of bin edges"
+                )
 
             # first label is always clipped
             if lsort is not None:
@@ -382,8 +413,9 @@ def _bins_to_cuts_new(x, bins, lsort=None, counts=None, right=True, labels=None,
 
 
 # ------------------------------------------------------------------------------------
-def cut(x, bins, labels=True, right=True, retbins=False, precision=3,
-        include_lowest=False):
+def cut(
+    x, bins, labels=True, right=True, retbins=False, precision=3, include_lowest=False
+):
     """
     Bin values into discrete intervals.
 
@@ -479,14 +511,14 @@ def cut(x, bins, labels=True, right=True, retbins=False, precision=3,
 
     # make sure contiguous
     if not x.flags.contiguous:
-        x=np.ascontiguousarray(x).view(TypeRegister.FastArray)
+        x = np.ascontiguousarray(x).view(TypeRegister.FastArray)
 
     if not np.iterable(bins):
         if np.isscalar(bins) and bins < 1:
             raise ValueError("`bins` should be a positive integer.")
 
         if x.size == 0:
-            raise ValueError('Cannot cut empty array')
+            raise ValueError("Cannot cut empty array")
 
         # todo range function
         rng = (0, 0)
@@ -513,16 +545,21 @@ def cut(x, bins, labels=True, right=True, retbins=False, precision=3,
         bins = np.asarray(bins)
         # bins = _convert_bin_to_numeric_type(bins, dtype)
         if (np.diff(bins) < 0).any():
-            raise ValueError('bins must increase monotonically.')
+            raise ValueError("bins must increase monotonically.")
 
     dtype = x.dtype
 
     labels = None if labels is True else labels
 
-    fac, bins, ret_labels = _bins_to_cuts_new(x, bins, right=right, labels=labels,
-                                          precision=precision,
-                                          include_lowest=include_lowest,
-                                          dtype=dtype)
+    fac, bins, ret_labels = _bins_to_cuts_new(
+        x,
+        bins,
+        right=right,
+        labels=labels,
+        precision=precision,
+        include_lowest=include_lowest,
+        dtype=dtype,
+    )
 
     labels = ret_labels if labels is not False else labels
 

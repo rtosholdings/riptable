@@ -2,39 +2,39 @@ import numpy as np
 import riptable as rt
 
 arithmetic_functions = [
-    '__add__',
-    '__iadd__',
-    '__sub__',
-    '__isub__',
-    '__mul__',
-    '__imul__',
-    '__floordiv__',
-    '__ifloordiv__',
-    '__truediv__',
-    '__itruediv__',
-    '__mod__',
-    '__imod__',
-    '__pow__',
-    '__ipow__',
+    "__add__",
+    "__iadd__",
+    "__sub__",
+    "__isub__",
+    "__mul__",
+    "__imul__",
+    "__floordiv__",
+    "__ifloordiv__",
+    "__truediv__",
+    "__itruediv__",
+    "__mod__",
+    "__imod__",
+    "__pow__",
+    "__ipow__",
 ]
 
-comparison_functions = ['__lt__', '__gt__', '__ge__', '__le__', '__eq__', '__ne__']
+comparison_functions = ["__lt__", "__gt__", "__ge__", "__le__", "__eq__", "__ne__"]
 
 ##accepts array as param
 trig_functions = [
-    'sin',
-    'cos',
-    'tan',
-    'arcsin',
-    'arccos',
-    'arctan',
-    'hypot',
-    'arctan2',
-    'degrees',
-    'radians',
-    'unwrap' 'sinh',
-    'deg2rad',
-    'deg2deg',
+    "sin",
+    "cos",
+    "tan",
+    "arcsin",
+    "arccos",
+    "arctan",
+    "hypot",
+    "arctan2",
+    "degrees",
+    "radians",
+    "unwrap" "sinh",
+    "deg2rad",
+    "deg2deg",
 ]
 
 ##accepts array as param
@@ -49,28 +49,28 @@ trig_functions = [
 #
 
 reduction_functions = [
-    'prod',
-    'sum',
-    'nanprod',
-    'nansum',
-    'cumprod',
-    'cumsum',
-    'nancumprod',
-    'diff',
-    'ediff1d',
-    'gradient',
+    "prod",
+    "sum",
+    "nanprod",
+    "nansum",
+    "cumprod",
+    "cumsum",
+    "nancumprod",
+    "diff",
+    "ediff1d",
+    "gradient",
     # 'cross',
     # 'trapz'
 ]
 
 exponent_log_functions = [
-    'exp',
-    'expm1',
-    'exp2',
-    'log',
-    'log10',
-    'log2',
-    'log1p',
+    "exp",
+    "expm1",
+    "exp2",
+    "log",
+    "log10",
+    "log2",
+    "log1p",
     # 'logaddexp',
     # 'logaddexp2'
 ]
@@ -185,7 +185,7 @@ def test_duplicated_keep(keep, expected):
             0.5,
             None,
             None,
-            'float64',
+            "float64",
             rt.FA(
                 [
                     1.0,
@@ -349,7 +349,7 @@ class test_numpy_functions(unittest.TestCase):
             else:
                 assert l == r
 
-        if hasattr(lv, '__len__'):
+        if hasattr(lv, "__len__"):
             assert len(lv) == len(rv)
             length = len(lv)
             for i in range(0, length):
@@ -374,7 +374,7 @@ class test_numpy_functions(unittest.TestCase):
                     # print('function - ', function)
                     if (
                         not np.issubdtype(a.dtype, np.integer)
-                        and function == '__truediv__'
+                        and function == "__truediv__"
                     ):
                         np_out = getattr(a, function)(b)
                         sf_out = getattr(x, function)(y)
@@ -481,14 +481,14 @@ class test_numpy_functions(unittest.TestCase):
                 )
 
             rounding_fuctions = [
-                '__abs__',
-                'around',
-                'round_',
-                'rint',
-                'fix',
-                'floor',
-                'ceil',
-                'trunc',
+                "__abs__",
+                "around",
+                "round_",
+                "rint",
+                "fix",
+                "floor",
+                "ceil",
+                "trunc",
             ]
 
             a = rand_ary()

@@ -1,8 +1,8 @@
 from .rt_groupbyops import GroupByOps
 from .rt_groupby import GroupBy
 
-#=====================================================================================================
-#=====================================================================================================
+# =====================================================================================================
+# =====================================================================================================
 class PGroupBy(GroupBy):
     """
     Parameters
@@ -35,14 +35,15 @@ class PGroupBy(GroupBy):
     isortrows: sorted index or None
 
     """
-    DebugMode=False
-    ShowEmpty =True
+
+    DebugMode = False
+    ShowEmpty = True
 
     TestCatGb = True
 
     def __init__(self, *args, **kwargs):
         super()._init(self, *args, **kwargs)
 
-    #---------------------------------------------------------------
-    def copy(self, deep = True):
+    # ---------------------------------------------------------------
+    def copy(self, deep=True):
         pass

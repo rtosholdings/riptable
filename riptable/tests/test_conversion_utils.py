@@ -15,7 +15,7 @@ from riptable.Utils.conversion_utils import (
 class Conversion_Utility_Test(unittest.TestCase):
     def test_as_matrix(self):
         error_tol = 0.00001
-        ds = Dataset({'A': [1.2, 3.1, 9.6], 'B': [-1.6, 2.7, 4.6]})
+        ds = Dataset({"A": [1.2, 3.1, 9.6], "B": [-1.6, 2.7, 4.6]})
         X, _ = dataset_as_matrix(ds)
         self.assertIsInstance(X, numpy.ndarray)
         self.assertEqual(X.shape[0], ds.shape[0])
@@ -27,32 +27,36 @@ class Conversion_Utility_Test(unittest.TestCase):
         error_tol = 0.00001
         ds = Dataset(
             {
-                'A': ['EXCH1', 'EXCH2', 'EXCH1', 'EXCH3', 'EXCH3'],
-                'B': [-1.6, 2.7, 4.6, 5.7, 8.9],
-                'C': Categorical([0, 0, 1, 0, 2], ['CPTYA', 'CPTYB', 'CPTYC']),
+                "A": ["EXCH1", "EXCH2", "EXCH1", "EXCH3", "EXCH3"],
+                "B": [-1.6, 2.7, 4.6, 5.7, 8.9],
+                "C": Categorical([0, 0, 1, 0, 2], ["CPTYA", "CPTYB", "CPTYC"]),
             }
         )
         X, X_data = dataset_as_matrix(ds)
         self.assertIsInstance(X, numpy.ndarray)
         self.assertEqual(X.shape[0], ds.shape[0])
         self.assertEqual(X.shape[1], ds.shape[1])  # we may break this later
-        self.assertEqual(X_data['A']['dtype'], ds.A.dtype)
-        self.assertEqual(X_data['B']['dtype'], ds.B.dtype)
-        self.assertEqual(X_data['C']['dtype'], ds.C.dtype)
-        self.assertEqual(X_data['A']['is_categorical'], False)
-        self.assertEqual(X_data['B']['is_categorical'], False)
-        self.assertEqual(X_data['C']['is_categorical'], True)
+        self.assertEqual(X_data["A"]["dtype"], ds.A.dtype)
+        self.assertEqual(X_data["B"]["dtype"], ds.B.dtype)
+        self.assertEqual(X_data["C"]["dtype"], ds.C.dtype)
+        self.assertEqual(X_data["A"]["is_categorical"], False)
+        self.assertEqual(X_data["B"]["is_categorical"], False)
+        self.assertEqual(X_data["C"]["is_categorical"], True)
         self.assertTrue(
-            (numpy.abs(X[:, 0] - numpy.array([0., 1., 0., 2., 2.])) < error_tol).all(),
-            msg=f"got {X[:, 0]}"
+            (
+                numpy.abs(X[:, 0] - numpy.array([0.0, 1.0, 0.0, 2.0, 2.0])) < error_tol
+            ).all(),
+            msg=f"got {X[:, 0]}",
         )
         self.assertTrue(
             (numpy.abs(X[:, 2] - numpy.array([0, 0, 1, 0, 2])) < error_tol).all(),
-            msg=f"got {X[:, 2]}"
+            msg=f"got {X[:, 2]}",
         )
         self.assertTrue(
-            (X_data['A']['category_values'][numpy.array([0, 1, 0, 2, 2])] == ds.A).all(),
-            msg=f"X_data {X_data['A']['category_values'][numpy.array([0, 1, 0, 2, 2])]}\nds.A {ds.A}"
+            (
+                X_data["A"]["category_values"][numpy.array([0, 1, 0, 2, 2])] == ds.A
+            ).all(),
+            msg=f"X_data {X_data['A']['category_values'][numpy.array([0, 1, 0, 2, 2])]}\nds.A {ds.A}",
         )
 
     def test_as_matrix_int(self):
@@ -60,7 +64,7 @@ class Conversion_Utility_Test(unittest.TestCase):
         ds = Dataset(
             {
                 _k: list(range(_i * 10, (_i + 1) * 10))
-                for _i, _k in enumerate('ABCDEFGHIJKLMNOP')
+                for _i, _k in enumerate("ABCDEFGHIJKLMNOP")
             }
         )
         X, _ = dataset_as_matrix(ds)
@@ -72,77 +76,77 @@ class Conversion_Utility_Test(unittest.TestCase):
 
     def test_numpy_array_to_dict(self):
         arr = numpy.arange(12).reshape((3, 4)).transpose()
-        cols = ['A', 'C', 'B']
+        cols = ["A", "C", "B"]
         dd = numpy_array_to_dict(arr, cols)
         self.assertEqual(list(dd), cols)
-        self.assertTrue((dd['A'] == numpy.arange(0, 4)).all())
-        self.assertTrue((dd['C'] == numpy.arange(4, 8)).all())
-        self.assertTrue((dd['B'] == numpy.arange(8, 12)).all())
+        self.assertTrue((dd["A"] == numpy.arange(0, 4)).all())
+        self.assertTrue((dd["C"] == numpy.arange(4, 8)).all())
+        self.assertTrue((dd["B"] == numpy.arange(8, 12)).all())
         arr = numpy.array(
-            [(1.0, 'Q'), (-3.0, 'Z')], dtype=[('x', numpy.float64), ('y', 'S1')]
+            [(1.0, "Q"), (-3.0, "Z")], dtype=[("x", numpy.float64), ("y", "S1")]
         )
         dd = numpy_array_to_dict(arr)
-        self.assertEqual(list(dd), ['x', 'y'])
+        self.assertEqual(list(dd), ["x", "y"])
         self.assertTrue(
-            (dd['x'] == numpy.array([1.0, -3.0], dtype=numpy.float64)).all()
+            (dd["x"] == numpy.array([1.0, -3.0], dtype=numpy.float64)).all()
         )
-        self.assertTrue((dd['y'] == numpy.array(['Q', 'Z'], dtype='S1')).all())
+        self.assertTrue((dd["y"] == numpy.array(["Q", "Z"], dtype="S1")).all())
 
     # TODO: Remove this? -CLH
     def test_numpy2d_to_dict(self):
         arr = numpy.arange(12).reshape((3, 4)).transpose()
-        cols = ['A', 'C', 'B']
+        cols = ["A", "C", "B"]
         dd = numpy2d_to_dict(arr, cols)
         self.assertEqual(list(dd), cols)
-        self.assertTrue((dd['A'] == numpy.arange(0, 4)).all())
-        self.assertTrue((dd['C'] == numpy.arange(4, 8)).all())
-        self.assertTrue((dd['B'] == numpy.arange(8, 12)).all())
+        self.assertTrue((dd["A"] == numpy.arange(0, 4)).all())
+        self.assertTrue((dd["C"] == numpy.arange(4, 8)).all())
+        self.assertTrue((dd["B"] == numpy.arange(8, 12)).all())
 
     def test_dset_dict_to_list(self):
         ds = Dataset(
             {
                 _k: list(range(_i * 10, (_i + 1) * 10))
-                for _i, _k in enumerate('abcdefghijklmnop')
+                for _i, _k in enumerate("abcdefghijklmnop")
             }
         )
         ds0 = ds[:3].copy()
         ds1 = ds[6:9].copy()
         ds2 = ds[11:15].copy()
-        dd = {'one': ds0, 'two': ds1, 'μεαν': ds2}
+        dd = {"one": ds0, "two": ds1, "μεαν": ds2}
         with self.assertRaises(ValueError):
-            _ = dset_dict_to_list(dd, 'keyfield')
-        dd = {'one': ds0, 'two': ds1, 3: ds2}
+            _ = dset_dict_to_list(dd, "keyfield")
+        dd = {"one": ds0, "two": ds1, 3: ds2}
         with self.assertRaises(ValueError):
-            _ = dset_dict_to_list(dd, 'keyfield')
-        dd = {'one': ds0, 'two': ds1, 'three': ds2}
+            _ = dset_dict_to_list(dd, "keyfield")
+        dd = {"one": ds0, "two": ds1, "three": ds2}
         with self.assertRaises(ValueError):
-            _ = dset_dict_to_list(dd, 'a')
-        lst1 = dset_dict_to_list(dd, 'keyfield')
+            _ = dset_dict_to_list(dd, "a")
+        lst1 = dset_dict_to_list(dd, "keyfield")
         self.assertEqual(id(ds0), id(lst1[0]))
         self.assertEqual(id(ds1), id(lst1[1]))
         self.assertEqual(id(ds2), id(lst1[2]))
-        self.assertEqual(list(ds0.keys()), ['a', 'b', 'c', 'keyfield'])
+        self.assertEqual(list(ds0.keys()), ["a", "b", "c", "keyfield"])
         self.assertTrue((ds0.a == list(range(10))).all())
-        self.assertTrue((ds0.keyfield == 'one').all())
-        lst2 = dset_dict_to_list(dd, 'a', allow_overwrite=True)
+        self.assertTrue((ds0.keyfield == "one").all())
+        lst2 = dset_dict_to_list(dd, "a", allow_overwrite=True)
         self.assertEqual(id(ds0), id(lst1[0]))
-        self.assertEqual(list(ds0.keys()), ['a', 'b', 'c', 'keyfield'])
-        self.assertTrue((ds0.a == 'one').all())
+        self.assertEqual(list(ds0.keys()), ["a", "b", "c", "keyfield"])
+        self.assertTrue((ds0.a == "one").all())
         self.assertTrue((ds0.b == list(range(10, 20))).all())
-        self.assertTrue((ds0.keyfield == 'one').all())
+        self.assertTrue((ds0.keyfield == "one").all())
 
     def test_append_dataset_dict(self):
         ds = Dataset(
             {
                 _k: list(range(_i * 10, (_i + 1) * 10))
-                for _i, _k in enumerate('abcdefghijklmnop')
+                for _i, _k in enumerate("abcdefghijklmnop")
             }
         )
         ds0 = ds[:3].copy()
         ds1 = ds[6:9].copy()
         ds2 = ds[11:15].copy()
-        dd = {'one': ds0, 'two': ds1, 'three': ds2}
-        ds = append_dataset_dict(dd, 'keyfield')
+        dd = {"one": ds0, "two": ds1, "three": ds2}
+        ds = append_dataset_dict(dd, "keyfield")
         ucols = set()
         for _d in dd.values():
             ucols.update(_d)

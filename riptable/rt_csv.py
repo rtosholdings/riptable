@@ -1,6 +1,8 @@
 from typing import Optional, List
 
-__all__ = ['load_csv_as_dataset', ]
+__all__ = [
+    "load_csv_as_dataset",
+]
 
 
 import csv
@@ -8,7 +10,15 @@ import numpy as np
 from .rt_dataset import Dataset
 
 
-def load_csv_as_dataset(path_or_file, column_names: Optional[List[str]] = None, converters: Optional[dict] = None, skip_rows: int = 0, version: Optional[int] = None, encoding: str = 'utf-8', **kwargs) -> Dataset:
+def load_csv_as_dataset(
+    path_or_file,
+    column_names: Optional[List[str]] = None,
+    converters: Optional[dict] = None,
+    skip_rows: int = 0,
+    version: Optional[int] = None,
+    encoding: str = "utf-8",
+    **kwargs
+) -> Dataset:
     """
     Load a Dataset from a comma-separated value (CSV) file.
 
@@ -57,20 +67,27 @@ def load_csv_as_dataset(path_or_file, column_names: Optional[List[str]] = None, 
     if version is None:
         version = 4 if pd is not None else 1
     if pd is None and version == 4:
-        raise RuntimeError('load_csv_as_dataset(version=4) is not allowed if pandas is not available.')
+        raise RuntimeError(
+            "load_csv_as_dataset(version=4) is not allowed if pandas is not available."
+        )
     if version == 4:
         # BUG: pd.read_csv does some sort of import that breaks the unit tester. the csv test succeeds but the next test that runs will raise an error.
-        return _load_rows_via_pandas(pd, path_or_file, column_names, converters, skip_rows, encoding=encoding)
-    if hasattr(path_or_file, 'read'):
+        return _load_rows_via_pandas(
+            pd, path_or_file, column_names, converters, skip_rows, encoding=encoding
+        )
+    if hasattr(path_or_file, "read"):
         infile = path_or_file
     else:
-        infile = open(path_or_file, 'r', encoding=encoding)
-    for _ in range(skip_rows): _ = infile.readline()
+        infile = open(path_or_file, "r", encoding=encoding)
+    for _ in range(skip_rows):
+        _ = infile.readline()
     reader = csv.reader(infile, **kwargs)
     if column_names is None or len(column_names) == 0:
         column_names = list(next(reader))
     if not all(_k.isidentifier() for _k in column_names):
-        raise ValueError('load_csv_as_dataset: column names must be legal python identifiers')
+        raise ValueError(
+            "load_csv_as_dataset: column names must be legal python identifiers"
+        )
     if version == 0:
         data = _load_rows_to_dict_conv_by_col(reader, column_names, converters)
     elif version == 1:
@@ -80,7 +97,7 @@ def load_csv_as_dataset(path_or_file, column_names: Optional[List[str]] = None, 
     elif version == 3:
         data = _load_rows_to_rows_and_cols(reader, column_names, converters)
     else:
-        raise NotImplementedError('load_csv_as_dataset(version=[0|1|2|3|4]) only.')
+        raise NotImplementedError("load_csv_as_dataset(version=[0|1|2|3|4]) only.")
     if infile != path_or_file:
         infile.close()
     return data
@@ -133,12 +150,20 @@ def _load_rows_to_rows_and_cols(reader, column_names, converters):
     return Dataset.from_rows(rawd, column_names)
 
 
-def _load_rows_via_pandas(pd, fname, column_names, converters, skip_rows, encoding='utf-8'):
+def _load_rows_via_pandas(
+    pd, fname, column_names, converters, skip_rows, encoding="utf-8"
+):
     if column_names is None or len(column_names) == 0:
         column_names = None
         convs = converters
     else:
         _ident = lambda _x: _x
         convs = {_cname: converters.get(_cname, _ident) for _cname in column_names}
-    df = pd.read_csv(fname, converters=convs, names=column_names, skiprows=skip_rows, encoding=encoding)
+    df = pd.read_csv(
+        fname,
+        converters=convs,
+        names=column_names,
+        skiprows=skip_rows,
+        encoding=encoding,
+    )
     return Dataset(df)

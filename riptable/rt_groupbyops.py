@@ -1,13 +1,20 @@
-__all__ = ['GroupByOps']
+__all__ = ["GroupByOps"]
 import warnings
 import numpy as np
 import riptide_cpp as rc
-from .rt_enum import GB_FUNCTIONS, GB_STRING_ALLOWED, GB_FUNC_COUNT, GB_PACKUNPACK, TypeRegister, ApplyType
+from .rt_enum import (
+    GB_FUNCTIONS,
+    GB_STRING_ALLOWED,
+    GB_FUNC_COUNT,
+    GB_PACKUNPACK,
+    TypeRegister,
+    ApplyType,
+)
 from .rt_numpy import zeros_like, bool_to_fancy, empty_like, groupbyhash
 from .rt_timers import tt
 
-#=====================================================================================================
-#=====================================================================================================
+# =====================================================================================================
+# =====================================================================================================
 class GroupByOps(object):
     """
     Holds all the functions for groupby
@@ -20,85 +27,85 @@ class GroupByOps(object):
     Child class must have its own _calculate_all
     """
 
-    DebugMode=False
-    AggNames = {'count',
-                'cumsum',
-                'first',
-                'last',
-                'max',
-                'mean',
-                'median',
-                'min',
-                'nanmax',
-                'nanmean',
-                'nanmedian',
-                'nanmin',
-                'nanstd',
-                'nansum',
-                'nanvar',
-                'nth',
-                'std',
-                'sum',
-                'var'}
+    DebugMode = False
+    AggNames = {
+        "count",
+        "cumsum",
+        "first",
+        "last",
+        "max",
+        "mean",
+        "median",
+        "min",
+        "nanmax",
+        "nanmean",
+        "nanmedian",
+        "nanmin",
+        "nanstd",
+        "nansum",
+        "nanvar",
+        "nth",
+        "std",
+        "sum",
+        "var",
+    }
 
     # after pulling name from numpy method, route to different groupbyops method
     NumpyAggNames = {
-        'amin' : 'min',
-        'amax' : 'max',
+        "amin": "min",
+        "amax": "max",
     }
-
 
     def __init__(self):
         self._gbkeys = None
         self._groups = None
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     @classmethod
     def register_functions(cls, functable):
-        '''
+        """
         Registration should follow the NUMBA_REVERSE_TABLE layout at the bottom of rt_groupbynumba.py
         If we register again, the last to register will be executed.
         NUMBA_REVERSE_TABLE[i + GB_FUNC_NUMBA]={'name': k,  'packing': v[0], 'func_front': v[1], 'func_back': v[2],  'func_gb':v[3],  'func_dtype': v[4], 'return_full': v[5]}
-        '''
+        """
         for v in functable.values():
             # dict looks like --> name : {packing, func_front, func_back, ...}
             # use the func_frontend
-            setattr(cls, v['name'], v['func_front'])
+            setattr(cls, v["name"], v["func_front"])
 
-
-    #---------------------------------------------------------------
-    def as_filter(self,index):
-        ''' return an index filter for a given unique key'''
+    # ---------------------------------------------------------------
+    def as_filter(self, index):
+        """ return an index filter for a given unique key"""
         return self.grouping.as_filter(index)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     @property
     def groups(self):
-        '''
+        """
         Returns a dictionary of unique key values -> their fancy indices of occurrence in the original data.
-        '''
+        """
         # make sure we get the unsorted list
-        #gbkeys = self.gb_keychain.gbkeys
+        # gbkeys = self.gb_keychain.gbkeys
         gbkeys = self.grouping.gbkeys
         col = list(gbkeys.values())
         unique_count = self.grouping.unique_count
 
         # make tuples from multikey values
         if len(gbkeys) > 1:
-            col = [ tuple( c[i] for c in col ) for i in range(unique_count) ]
+            col = [tuple(c[i] for c in col) for i in range(unique_count)]
         # use single values from array
         else:
             col = col[0]
-        fancy_idx = [self.as_filter(i+1) for i in range(unique_count)]
+        fancy_idx = [self.as_filter(i + 1) for i in range(unique_count)]
         return dict(zip(col, fancy_idx))
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def _dict_val_at_index(self, index):
-        '''
+        """
         Returns the value of the group label for a given index.
         A single-key grouping will return a single value.
         A multi-key grouping will return a tuple of values.
-        '''
+        """
         keycols = list(self.grouping.gbkeys.values())
         labels = []
         for c in keycols:
@@ -108,49 +115,49 @@ class GroupByOps(object):
         else:
             return tuple(labels)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def key_from_bin(self, bin):
-        '''
+        """
         Returns the value of the group label for a given index. (uses zero-based indexing)
         A single-key grouping will return a single value.
         A multi-key grouping will return a tuple of values.
-        '''
+        """
         return self._dict_val_at_index(bin)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def iter_groups(self):
-        '''
+        """
         Very similar to the 'groups' property, but uses a generator instead of building the entire dictionary.
         Returned pairs will be group label value (or tuple of multikey group label values) --> fancy index for that group (base-0).
-        '''
+        """
         return self._iter_internal()
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def _iter_internal(self, dataset=None):
-        '''
+        """
         Generates pairs of labels and the stored dataset sliced by their fancy indices.
         Right now, this is only called by categorical. Groupby has a faster way of return dataset slices.
-        '''
+        """
         self.grouping.pack_by_group()
         igroup = self.grouping.iGroup
         ifirstgroup = self.grouping.iFirstGroup
         ncountgroup = self.grouping.nCountGroup
         for i in range(self.grouping.unique_count):
             key = self.key_from_bin(i)
-            first=ifirstgroup[i+1]
-            last=first + ncountgroup[i+1]
+            first = ifirstgroup[i + 1]
+            last = first + ncountgroup[i + 1]
             fancy_idx = igroup[first:last]
             if dataset is None:
                 yield key, fancy_idx
             else:
-                yield key, dataset[fancy_idx,:]
+                yield key, dataset[fancy_idx, :]
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def _iter_internal_contiguous(self):
-        '''
+        """
         Sorts the data by group to create contiguous memory.
         Returns key + dataset view of key's rows for each group.
-        '''
+        """
 
         self.grouping.pack_by_group()
         sortidx = self.grouping.iGroup
@@ -158,7 +165,7 @@ class GroupByOps(object):
         ncountgroup = self.grouping.nCountGroup[1:]
 
         # perform a sort up front so the dataset can be sliced contiguously
-        cds = self._dataset[sortidx,:]
+        cds = self._dataset[sortidx, :]
 
         # the original columns, to make the views (no copies will be made)
         full_columns = list(cds.values())
@@ -178,9 +185,9 @@ class GroupByOps(object):
             cds._nrows = glen
             yield self.key_from_bin(i), cds
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def get_groupings(self, filter=None):
-        '''
+        """
         Parameters
         ----------
         filter : ndarray of bools, optional
@@ -192,15 +199,19 @@ class GroupByOps(object):
             iGroup - the fancy indices for all groups, sorted by group. see iFirstGroup and nCountGroup for how to walk this.
             iFirstGroup - first index for each group in the igroup array. the first index is invalid
             nCountGroup - count for each unique group. the first count in this array is the invalid count.
-        '''
+        """
         self.grouping.pack_by_group(filter=filter, mustrepack=True)
-        return_dict = {'iGroup' : self.grouping.iGroup, 'iFirstGroup': self.grouping.iFirstGroup, 'nCountGroup':self.grouping.nCountGroup}
+        return_dict = {
+            "iGroup": self.grouping.iGroup,
+            "iFirstGroup": self.grouping.iFirstGroup,
+            "nCountGroup": self.grouping.nCountGroup,
+        }
         return return_dict
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     @property
     def first_fancy(self):
-        '''
+        """
         Return a fancy index mask of the first occurrence
 
         Notes
@@ -217,16 +228,16 @@ class GroupByOps(object):
         >>> c=Cat(['this','this','that','that','this'], ordered=False)
         >>> c.first
         FastArray([2, 0])
-        '''
+        """
         # note, cache this value?
         # fancy index
         self.grouping.pack_by_group()
         return self.grouping.iGroup[self.grouping.iFirstGroup[1:]]
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     @property
     def first_bool(self):
-        '''
+        """
         Return a boolean mask of the first occurrence.
 
         Examples
@@ -234,42 +245,42 @@ class GroupByOps(object):
         >>> c = rt.Cat(['this','this','that','that','this'])
         >>> c.first_bool
         FastArray([ True, False,  True, False, False])
-        '''
+        """
         # boolean mask set to False
         fancy = self.first_fancy
-        result=zeros_like(self.grouping.iGroup,dtype='?')
+        result = zeros_like(self.grouping.iGroup, dtype="?")
 
         # set boolean mask to True for only the first occurrence
-        result[fancy]=True
+        result[fancy] = True
         return result
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def _possibly_transform(self, gb_ds, label_keys=None, **kwargs):
-        '''
+        """
         Called after a reduce operation to possibly re-expand back.
         Check transform flag.
-        '''
+        """
         transform = kwargs.get("transform", False)
 
         # check if transform was called earlier
-        if getattr(self, '_transform', False) or transform:
-            ikey=self.grouping.ikey
+        if getattr(self, "_transform", False) or transform:
+            ikey = self.grouping.ikey
             showfilter = kwargs.get("showfilter", False)
             if not showfilter and self.grouping.base_index == 1:
                 ikey = ikey - 1
             # use fancy indexing to pull the values from the cells, back to original array
-            newds= { }
+            newds = {}
             isort = None
 
             # a two key groupby (not gbu) often has display sort turned on
-            if hasattr(self,'_sort_display'):
+            if hasattr(self, "_sort_display"):
                 if self._sort_display:
                     # transform will put numbers back in original order
                     isort = rc.ReverseShuffle(self.isortrows)
                     ikey = isort[ikey]
 
             # no need to re-expand the labels keys or return them
-            for colname,arr in gb_ds.items():
+            for colname, arr in gb_ds.items():
                 if colname not in label_keys:
                     newds[colname] = arr[ikey]
 
@@ -278,9 +289,20 @@ class GroupByOps(object):
             return TypeRegister.Dataset(newds)
         return gb_ds
 
-    #---------------------------------------------------------------
-    def apply_reduce(self, userfunc, *args, dataset=None, label_keys=None, nokeys=False, func_param=None, dtype=None, transform=False, **kwargs):
-        '''
+    # ---------------------------------------------------------------
+    def apply_reduce(
+        self,
+        userfunc,
+        *args,
+        dataset=None,
+        label_keys=None,
+        nokeys=False,
+        func_param=None,
+        dtype=None,
+        transform=False,
+        **kwargs,
+    ):
+        """
         GroupByOps:apply_reduce calls Grouping:apply_reduce
 
         Parameters
@@ -331,26 +353,55 @@ class GroupByOps(object):
         >>> def mycumprodsum(arr):
         >>>     return arr.cumprod().sum()
         >>> ds.Symbol.apply_reduce(mycumprodsum, ds.TradeSize, dtype=np.float32)
-        '''
+        """
         if not callable(userfunc):
-            raise TypeError(f'the first argument to apply_reduce must be callable not type {type(userfunc)!r}')
-        args, kwargs, origdict, tups = self._pop_gb_data('apply_reduce'+type(self).__name__, userfunc, *args, **kwargs, dataset=dataset)
+            raise TypeError(
+                f"the first argument to apply_reduce must be callable not type {type(userfunc)!r}"
+            )
+        args, kwargs, origdict, tups = self._pop_gb_data(
+            "apply_reduce" + type(self).__name__,
+            userfunc,
+            *args,
+            **kwargs,
+            dataset=dataset,
+        )
 
         # accum2 does not want any keys, it will set nokeys to True
         if label_keys is None and not nokeys:
             label_keys = self.gb_keychain
 
-        #NOTE: apply_helper will take a filter= and use it
-        result= self.grouping.apply_helper(True, origdict, userfunc, *args, tups=tups, label_keys=label_keys, func_param=func_param, dtype=dtype, **kwargs)
+        # NOTE: apply_helper will take a filter= and use it
+        result = self.grouping.apply_helper(
+            True,
+            origdict,
+            userfunc,
+            *args,
+            tups=tups,
+            label_keys=label_keys,
+            func_param=func_param,
+            dtype=dtype,
+            **kwargs,
+        )
         if transform:
-            kwargs['transform']=True
-            return self._possibly_transform(result, label_keys=label_keys.keys(), **kwargs)
+            kwargs["transform"] = True
+            return self._possibly_transform(
+                result, label_keys=label_keys.keys(), **kwargs
+            )
         else:
             return result
 
-    #---------------------------------------------------------------
-    def apply_nonreduce(self, userfunc, *args, dataset=None, label_keys=None, func_param=None, dtype=None, **kwargs):
-        '''
+    # ---------------------------------------------------------------
+    def apply_nonreduce(
+        self,
+        userfunc,
+        *args,
+        dataset=None,
+        label_keys=None,
+        func_param=None,
+        dtype=None,
+        **kwargs,
+    ):
+        """
         GroupByOps:apply_nonreduce calls Grouping:apply_reduce
 
         Parameters
@@ -394,16 +445,34 @@ class GroupByOps(object):
         >>> def mycumprodsum(arr):
         >>>     return arr.cumprod().sum()
         >>> ds.Symbol.apply_reduce(mycumprodsum, ds.TradeSize, dtype=np.float32)
-        '''
+        """
         if not callable(userfunc):
-            raise TypeError(f'the first argument to apply_nonreduce must be callable not type {type(userfunc)!r}')
+            raise TypeError(
+                f"the first argument to apply_nonreduce must be callable not type {type(userfunc)!r}"
+            )
 
-        args, kwargs, origdict, tups = self._pop_gb_data('apply_nonreduce'+type(self).__name__, userfunc, *args, **kwargs, dataset=dataset)
-        return self.grouping.apply_helper(False, origdict, userfunc, *args, tups=tups, label_keys=self.gb_keychain, func_param=func_param, dtype=dtype, **kwargs)
+        args, kwargs, origdict, tups = self._pop_gb_data(
+            "apply_nonreduce" + type(self).__name__,
+            userfunc,
+            *args,
+            **kwargs,
+            dataset=dataset,
+        )
+        return self.grouping.apply_helper(
+            False,
+            origdict,
+            userfunc,
+            *args,
+            tups=tups,
+            label_keys=self.gb_keychain,
+            func_param=func_param,
+            dtype=dtype,
+            **kwargs,
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def apply(self, userfunc, *args, dataset=None, label_keys=None, **kwargs):
-        '''
+        """
         GroupByOps:apply calls Grouping:apply
 
         Parameters
@@ -412,16 +481,24 @@ class GroupByOps(object):
             userfunction to call
         dataset: None
         label_keys: None
-        '''
+        """
         # pop inplace data args first, put in dataset kwarg (might use groupby's stored dataset)
         if not callable(userfunc):
-            raise TypeError(f'the first argument to apply must be callable not type {type(userfunc)!r}')
+            raise TypeError(
+                f"the first argument to apply must be callable not type {type(userfunc)!r}"
+            )
 
-        args, kwargs, origdict,tups = self._pop_gb_data('apply'+type(self).__name__, userfunc, *args, **kwargs, dataset=dataset)
-        result= self.grouping.apply(origdict, userfunc, *args, tups=tups, label_keys=self.gb_keychain, **kwargs)
-        return self._possibly_transform(result, label_keys=self.gb_keychain.keys(), **kwargs)
+        args, kwargs, origdict, tups = self._pop_gb_data(
+            "apply" + type(self).__name__, userfunc, *args, **kwargs, dataset=dataset
+        )
+        result = self.grouping.apply(
+            origdict, userfunc, *args, tups=tups, label_keys=self.gb_keychain, **kwargs
+        )
+        return self._possibly_transform(
+            result, label_keys=self.gb_keychain.keys(), **kwargs
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def _keys_as_list(self):
         gbkeys = self.grouping.uniquedict
         # return tuple of column values for multikey
@@ -429,17 +506,18 @@ class GroupByOps(object):
             return list(zip(*gbkeys.values()))
         return list(gbkeys.values())[0]
 
-    #---------------------------------------------------------------
-    def _calculate_all(self, funcNum, *args, func_param=0, gbkeys=None, isortrows=None, **kwargs):
+    # ---------------------------------------------------------------
+    def _calculate_all(
+        self, funcNum, *args, func_param=0, gbkeys=None, isortrows=None, **kwargs
+    ):
         raise TypeError("_calculate_all should have been overriden!")
 
-
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     @staticmethod
     def contains_np_arrays(container):
-        '''
+        """
         Check to see if all items in a list-like container are numpy arrays.
-        '''
+        """
         has_np = False
         if len(container) > 0:
             container_instance = [isinstance(item, np.ndarray) for item in container]
@@ -447,12 +525,11 @@ class GroupByOps(object):
                 has_np = True
         return has_np
 
-
     # ------------------------------------------------------------
     @classmethod
-    def get_header_names(cls, columns, default='col_'):
+    def get_header_names(cls, columns, default="col_"):
 
-        #---------------------------------------------------------------
+        # ---------------------------------------------------------------
         def get_array_name(arr, default, i):
             name = None
             try:
@@ -461,14 +538,14 @@ class GroupByOps(object):
                 pass
 
             if name is None:
-                return default+str(i)
+                return default + str(i)
             return name
 
         if isinstance(columns, dict):
             final_headers = list(columns.keys())
         else:
             # user friendly names for fast arrays if present
-            headers = [ get_array_name(c, default, i) for i, c in enumerate(columns) ]
+            headers = [get_array_name(c, default, i) for i, c in enumerate(columns)]
 
             # make sure there are no conflicts in friendly names, fix them up (columns only, shouldn't be too slow)
             # TODO: find a faster way of doing this
@@ -478,17 +555,17 @@ class GroupByOps(object):
                 new_name = name
                 if name in unique_dict:
                     counter = unique_dict[name]
-                    new_name = name+str(counter)
+                    new_name = name + str(counter)
 
                     # make sure name+number is not also in the dict
-                    while(new_name in headers):
-                        counter+=1
-                        new_name = name+str(counter)
+                    while new_name in headers:
+                        counter += 1
+                        new_name = name + str(counter)
 
                     # adjust the counter for that name
-                    unique_dict[name]=counter+1
+                    unique_dict[name] = counter + 1
                 else:
-                    unique_dict[name]=1
+                    unique_dict[name] = 1
                 final_headers.append(new_name)
 
         return final_headers
@@ -516,14 +593,16 @@ class GroupByOps(object):
         --------
         GroupByOps.agg()
         """
-        kwargs['dataset'], user_args, tups = self._prepare_gb_data(calledfrom, userfunc, *args, **kwargs)
+        kwargs["dataset"], user_args, tups = self._prepare_gb_data(
+            calledfrom, userfunc, *args, **kwargs
+        )
 
-        origdict = kwargs.pop('dataset')
+        origdict = kwargs.pop("dataset")
         return user_args, kwargs, origdict, tups
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def _prepare_gb_data(self, calledfrom, userfunc, *args, dataset=None, **kwargs):
-        '''
+        """
         Parameters
         ----------
         calledfrom: 'Accum2', 'Categorical','GroupBy','apply_reduce','apply_nonreduce','apply','agg'
@@ -557,7 +636,7 @@ class GroupByOps(object):
         ------
         ValueError
 
-        '''
+        """
 
         # Autodetect what is in args
         # if dataset exists (from a groupby) and the first param in args
@@ -585,27 +664,32 @@ class GroupByOps(object):
         if len(args) >= 1:
             user_args = args[1:]
             # pop off first argument
-            first_arg=args[0]
+            first_arg = args[0]
             if isinstance(first_arg, (list, tuple)):
-                if len(first_arg) ==0:
+                if len(first_arg) == 0:
                     # backout
                     first_arg = None
                     user_args = args
                 if isinstance(first_arg, tuple):
                     # user_args has moved over
-                    tups=1
+                    tups = 1
 
         if first_arg is not None:
             if isinstance(first_arg, (list, tuple)):
                 first_element = first_arg[0]
                 if isinstance(first_element, np.ndarray):
-                    #print('first_arg was list/tuple of ndarrays')
-                    if len(first_arg)>=1 and tups > 0 and (self._dataset is not None) and calledfrom.endswith('GroupBy'):
-                        #print("special mode", dataset, ds, self._dataset)
-                        #first_arg = None
-                        #user_args = args
-                        tups=2
-                        #zip_dict = True
+                    # print('first_arg was list/tuple of ndarrays')
+                    if (
+                        len(first_arg) >= 1
+                        and tups > 0
+                        and (self._dataset is not None)
+                        and calledfrom.endswith("GroupBy")
+                    ):
+                        # print("special mode", dataset, ds, self._dataset)
+                        # first_arg = None
+                        # user_args = args
+                        tups = 2
+                        # zip_dict = True
                     else:
                         zip_dict = True
                 elif isinstance(first_element, list):
@@ -613,21 +697,21 @@ class GroupByOps(object):
                     first_arg = [np.asarray(v) for v in first_arg]
                     zip_dict = True
                 elif isinstance(first_element, TypeRegister.Dataset):
-                    #print('first_element was single dataset')
-                    ds = {name:arr for name,arr in first_element.items()}
+                    # print('first_element was single dataset')
+                    ds = {name: arr for name, arr in first_element.items()}
 
                 elif isinstance(first_element, dict):
                     # shallow copy, might be modified by key later
                     ds = first_element.copy()
                 elif np.isscalar(first_element):
-                    if dataset is None or not calledfrom.startswith('apply'):
+                    if dataset is None or not calledfrom.startswith("apply"):
                         zip_dict = True
                         # assume a list or tuple of scalars
                         first_arg = [np.asarray(first_arg)]
 
             elif isinstance(first_arg, np.ndarray):
-                #print('first_arg was single ndarray')
-                if dataset is None or not calledfrom.startswith('apply'):
+                # print('first_arg was single ndarray')
+                if dataset is None or not calledfrom.startswith("apply"):
                     zip_dict = True
                     first_arg = [first_arg]
                 else:
@@ -635,8 +719,8 @@ class GroupByOps(object):
                     pass
 
             elif isinstance(first_arg, TypeRegister.Dataset):
-                #print('first_arg was single dataset')
-                ds = {name:arr for name,arr in first_arg.items()}
+                # print('first_arg was single dataset')
+                ds = {name: arr for name, arr in first_arg.items()}
 
             elif isinstance(first_arg, dict):
                 # shallow copy, might be modified by key later
@@ -644,20 +728,20 @@ class GroupByOps(object):
 
             # check for a tuple passed as second argument
             # check if we ate the first argument
-            if (ds is not None or zip_dict) and tups ==0:
+            if (ds is not None or zip_dict) and tups == 0:
                 # move over one argument, we ate it
-                args= args[1:]
+                args = args[1:]
                 user_args = args
                 if len(user_args) > 0:
                     # check for tuples
                     # pop off first argument
-                    addl_arg=user_args[0]
+                    addl_arg = user_args[0]
                     if isinstance(addl_arg, tuple) and len(addl_arg) > 0:
-                        tups=1
+                        tups = 1
                         first_element = addl_arg[0]
                         if isinstance(first_element, np.ndarray):
                             # passing in array constants after a list or dict or dataset
-                            tups=2
+                            tups = 2
 
         if ds is None and not zip_dict and first_arg is not None:
             # recombine
@@ -668,9 +752,9 @@ class GroupByOps(object):
             ds = dict(zip(headers, first_arg))
 
         if dataset is not None:
-            final_dict = {name:col for name,col in dataset.items()}
+            final_dict = {name: col for name, col in dataset.items()}
             # in special mode, remove the arrays in the user arguments names
-            if tups ==2:
+            if tups == 2:
                 # remove extra names
                 for ua in user_args[0]:
                     try:
@@ -687,10 +771,12 @@ class GroupByOps(object):
                 for name, col in ds.items():
                     # if calling from a groupby, and the user created a tuple then we are in tups==2 mode
                     # in this mode, the arguments are constants that are passed in for each column
-                    # so we want to remove the constant arrays 
+                    # so we want to remove the constant arrays
                     alreadyexists = name in final_dict
                     if alreadyexists:
-                        warnings.warn(f'Found conflicting items for name {name}. Using item from arguments.')
+                        warnings.warn(
+                            f"Found conflicting items for name {name}. Using item from arguments."
+                        )
                     final_dict[name] = col
         else:
             # extra data only, already a dict
@@ -712,23 +798,25 @@ class GroupByOps(object):
                 if np.isscalar(funcname):
                     funcname = str(userfunc)
                 else:
-                    funcname = 'somefunc'
+                    funcname = "somefunc"
 
             errorstring = f"Useable data for the function {calledfrom!r} has not been specified in {args!r}. Pass in array data to operate on.\n"
-            if calledfrom.startswith('apply'):
-                errorstring+=f"For example: call .{calledfrom}({funcname}, array_data)"
+            if calledfrom.startswith("apply"):
+                errorstring += (
+                    f"For example: call .{calledfrom}({funcname}, array_data)"
+                )
             else:
-                errorstring+=f"For example: call {calledfrom}.{funcname}(array_data)"
+                errorstring += f"For example: call {calledfrom}.{funcname}(array_data)"
 
             raise ValueError(errorstring)
 
         return final_dict, user_args, tups
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def aggregate(self, func):
         return self.agg(func)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def _get_agg_func(self, item):
         """
         Translates user input into name and method for groupby aggregations.
@@ -755,7 +843,7 @@ class GroupByOps(object):
             return item, getattr(self.__class__, item)
         raise ValueError(f"{item} is not a valid function to aggregate.")
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def agg(self, func=None, *args, dataset=None, **kwargs):
         """
         Parameters
@@ -803,30 +891,34 @@ class GroupByOps(object):
         """
         if dataset is None:
             try:
-                dataset=self._dataset
+                dataset = self._dataset
             except Exception:
                 pass
 
         # tups will be false since we pass in a list as first argument
-        args, kwargs, data, tups = self._pop_gb_data('agg', func, [*args], **kwargs, dataset=dataset)
+        args, kwargs, data, tups = self._pop_gb_data(
+            "agg", func, [*args], **kwargs, dataset=dataset
+        )
 
         # put back in dataset that got popped because kwargs is passed to aggfunc
-        kwargs['dataset'] = data
+        kwargs["dataset"] = data
 
         if func is None or len(func) == 0:
-            raise ValueError("The first argument to the agg function is a dictionary or list, such as gb.agg({'data':np.sum})")
+            raise ValueError(
+                "The first argument to the agg function is a dictionary or list, such as gb.agg({'data':np.sum})"
+            )
 
         # create blank multiset class
         multiset = TypeRegister.Multiset({})
 
-        if isinstance(func,str):
+        if isinstance(func, str):
             func = [func]
 
-        if isinstance(func,list):
+        if isinstance(func, list):
             # run through list -- we do not check for duplicates
             for item in func:
                 name, aggfunc = self._get_agg_func(item)
-                caps=name.capitalize()
+                caps = name.capitalize()
                 multiset[caps] = aggfunc(self, *args, **kwargs)
 
         elif isinstance(func, dict):
@@ -837,7 +929,7 @@ class GroupByOps(object):
                     if not isinstance(operations, (list, tuple)):
                         operations = [operations]
 
-                    if isinstance(operations,(list,tuple)):
+                    if isinstance(operations, (list, tuple)):
                         for op in operations:
                             name, aggfunc = self._get_agg_func(op)
                             f_list = func_dict.setdefault(aggfunc, [])
@@ -854,9 +946,9 @@ class GroupByOps(object):
         multiset._gbkeys = self.gb_keychain.gbkeys
         return multiset
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def null(self, showfilter=False):
-        '''
+        """
         Performs a reduced no-op.  No operation is performed.
 
         Parameters
@@ -870,10 +962,16 @@ class GroupByOps(object):
         Examples
         --------
         >>> rt.Cat(np.random.choice(['SPY','IBM'], 100)).null(showfilter=True)
-        '''
-        return self.grouping._finalize_dataset(TypeRegister.Dataset({}),self.gb_keychain, None, addkeys=True, showfilter=showfilter)
+        """
+        return self.grouping._finalize_dataset(
+            TypeRegister.Dataset({}),
+            self.gb_keychain,
+            None,
+            addkeys=True,
+            showfilter=showfilter,
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def count_uniques(self, *args, **kwargs):
         """
         Compute unique count of group
@@ -900,105 +998,107 @@ class GroupByOps(object):
         SPY       AMEX                3            2
         .         NYSE                1            2
         """
-        origdict, user_args, tups = self._prepare_gb_data('count_uniques', None, *args, **kwargs)
+        origdict, user_args, tups = self._prepare_gb_data(
+            "count_uniques", None, *args, **kwargs
+        )
 
         label_keys = self.gb_keychain
-        g=self.grouping
+        g = self.grouping
 
         # get way to make groups contiguous
-        igroup=g.igroup
-        cutoffs =g.ncountgroup.cumsum(dtype=np.int64)[1:]
-        newdict={}
+        igroup = g.igroup
+        cutoffs = g.ncountgroup.cumsum(dtype=np.int64)[1:]
+        newdict = {}
         for colname, arr in origdict.items():
-            gbk= label_keys.gbkeys
+            gbk = label_keys.gbkeys
             if colname not in gbk:
-                ifirstkey = groupbyhash(arr[igroup], cutoffs=cutoffs)['iFirstKey'][1]
+                ifirstkey = groupbyhash(arr[igroup], cutoffs=cutoffs)["iFirstKey"][1]
                 # the cutoffs will generate iFirstKey cutoffs that help us determine the unique counts
-                result=ifirstkey.diff()
-                result[0]=ifirstkey[0]
-                newdict[colname]= result
-        return g._finalize_dataset(newdict,label_keys, None, addkeys=True, **kwargs)
+                result = ifirstkey.diff()
+                result[0] = ifirstkey[0]
+                newdict[colname] = result
+        return g._finalize_dataset(newdict, label_keys, None, addkeys=True, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def count(self):
         """Compute count of group"""
         raise ValueError("subclass must take over count")
         # make a new dataset with the same number of rows
-        #origdict = self._dataset.as_ordered_dictionary()
-        #return self.grouping.count(gbkeys, isortrows)
+        # origdict = self._dataset.as_ordered_dictionary()
+        # return self.grouping.count(gbkeys, isortrows)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def sum(self, *args, **kwargs):
         """Compute sum of group"""
         return self._calculate_all(GB_FUNCTIONS.GB_SUM, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def mean(self, *args, **kwargs):
         """
         Compute mean of groups
         """
         return self._calculate_all(GB_FUNCTIONS.GB_MEAN, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def mode(self, *args, **kwargs):
         """
         Compute mode of groups (auto handles nan)
         """
         return self._calculate_all(GB_FUNCTIONS.GB_MODE, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def trimbr(self, *args, **kwargs):
         """
         Compute trimmed mean br of groups (auto handles nan)
         """
         return self._calculate_all(GB_FUNCTIONS.GB_TRIMBR, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def nanmean(self, *args, **kwargs):
         """Compute mean of group, excluding missing values"""
         return self._calculate_all(GB_FUNCTIONS.GB_NANMEAN, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def nanmedian(self, *args, **kwargs):
         """Compute median of group, excluding missing values"""
         return self._calculate_all(GB_FUNCTIONS.GB_MEDIAN, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def nanmin(self, *args, **kwargs):
         """Compute min of group, excluding missing values"""
         return self._calculate_all(GB_FUNCTIONS.GB_NANMIN, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def nanmax(self, *args, **kwargs):
         """Compute max of group, excluding missing values"""
         return self._calculate_all(GB_FUNCTIONS.GB_NANMAX, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def nansum(self, *args, **kwargs):
         """Compute sum of group, excluding missing values"""
         return self._calculate_all(GB_FUNCTIONS.GB_NANSUM, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def min(self, *args, **kwargs):
         """Compute min of group"""
         return self._calculate_all(GB_FUNCTIONS.GB_MIN, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def max(self, *args, **kwargs):
         """Compute max of group"""
         return self._calculate_all(GB_FUNCTIONS.GB_MAX, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def first(self, *args, **kwargs):
         """First value in the group"""
         return self._calculate_all(GB_FUNCTIONS.GB_FIRST, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def last(self, *args, **kwargs):
         """Last value in the group"""
         return self._calculate_all(GB_FUNCTIONS.GB_LAST, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def median(self, *args, **kwargs):
         """
         Compute median of groups
@@ -1006,7 +1106,7 @@ class GroupByOps(object):
         """
         return self._calculate_all(GB_FUNCTIONS.GB_MEDIAN, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def std(self, *args, **kwargs):
         """
         Compute standard deviation of groups
@@ -1019,7 +1119,7 @@ class GroupByOps(object):
         """
         return self._calculate_all(GB_FUNCTIONS.GB_STD, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def nanstd(self, *args, **kwargs):
         """
         Compute standard deviation of groups, excluding missing values
@@ -1027,7 +1127,7 @@ class GroupByOps(object):
 
         return self._calculate_all(GB_FUNCTIONS.GB_NANSTD, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def var(self, *args, **kwargs):
         """
         Compute variance of groups
@@ -1040,7 +1140,7 @@ class GroupByOps(object):
         """
         return self._calculate_all(GB_FUNCTIONS.GB_VAR, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def nanvar(self, *args, **kwargs):
         """
         Compute variance of groups, excluding missing values
@@ -1048,7 +1148,7 @@ class GroupByOps(object):
         """
         return self._calculate_all(GB_FUNCTIONS.GB_NANVAR, *args, **kwargs)
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def rolling_sum(self, *args, window=3, **kwargs):
         """rolling sum for each group
 
@@ -1060,9 +1160,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_SUM, *args, func_param=(window), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_SUM, *args, func_param=(window), **kwargs
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def rolling_nansum(self, *args, window=3, **kwargs):
         """rolling nan sum for each group
 
@@ -1074,9 +1176,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_NANSUM, *args, func_param=(window), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_NANSUM, *args, func_param=(window), **kwargs
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def rolling_mean(self, *args, window=3, **kwargs):
         """rolling mean for each group
 
@@ -1088,9 +1192,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_MEAN, *args, func_param=(window), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_MEAN, *args, func_param=(window), **kwargs
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def rolling_nanmean(self, *args, window=3, **kwargs):
         """rolling nan mean for each group
 
@@ -1102,10 +1208,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_NANMEAN, *args, func_param=(window), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_NANMEAN, *args, func_param=(window), **kwargs
+        )
 
-
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def rolling_count(self, *args, window=3, **kwargs):
         """rolling count for each group
 
@@ -1117,9 +1224,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_COUNT, *args, func_param=(window), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_COUNT, *args, func_param=(window), **kwargs
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def rolling_shift(self, *args, window=1, **kwargs):
         """rolling shift for each group
 
@@ -1132,10 +1241,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_SHIFT, *args, func_param=(window), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_SHIFT, *args, func_param=(window), **kwargs
+        )
 
-
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def rolling_diff(self, *args, window=1, **kwargs):
         """rolling diff for each group
 
@@ -1147,9 +1257,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_DIFF, *args, func_param=(window), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_DIFF, *args, func_param=(window), **kwargs
+        )
 
-    #---------------------------------------------------------------
+    # ---------------------------------------------------------------
     def cumcount(self, *args, ascending=True, **kwargs):
         """rolling count for each group
         Number each item in each group from 0 to the length of that group - 1.
@@ -1163,17 +1275,23 @@ class GroupByOps(object):
         A single array, same size as the original grouping dict/categorical.
         If a filter was applied, integer sentinels will appear in those slots.
         """
-        param=1
+        param = 1
 
         if not ascending:
-            param=-1
+            param = -1
 
         # cumcount doesn't need an origdict, pass it in empty
-        result= self.grouping._calculate_all({}, GB_FUNCTIONS.GB_ROLLING_COUNT, func_param=(param), keychain=self.gb_keychain, **kwargs)
+        result = self.grouping._calculate_all(
+            {},
+            GB_FUNCTIONS.GB_ROLLING_COUNT,
+            func_param=(param),
+            keychain=self.gb_keychain,
+            **kwargs,
+        )
         return result
 
-    #---------------------------------------------------------------
-    def cumsum(self, *args, filter = None, reset_filter=None, **kwargs):
+    # ---------------------------------------------------------------
+    def cumsum(self, *args, filter=None, reset_filter=None, **kwargs):
         """Cumulative sum for each group
 
         Parameters
@@ -1188,10 +1306,15 @@ class GroupByOps(object):
         if filter is None:
             filter = self._filter
 
-        return self._calculate_all(GB_FUNCTIONS.GB_CUMSUM, *args, func_param=(0.0, None, filter, reset_filter),**kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_CUMSUM,
+            *args,
+            func_param=(0.0, None, filter, reset_filter),
+            **kwargs,
+        )
 
-    #---------------------------------------------------------------
-    def cumprod(self, *args, filter = None, reset_filter=None, **kwargs):
+    # ---------------------------------------------------------------
+    def cumprod(self, *args, filter=None, reset_filter=None, **kwargs):
         """Cumulative product for each group
 
         Parameters
@@ -1206,11 +1329,15 @@ class GroupByOps(object):
         if filter is None:
             filter = self._filter
 
-        return self._calculate_all(GB_FUNCTIONS.GB_CUMPROD, *args, func_param=(0.0, None, filter, reset_filter),**kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_CUMPROD,
+            *args,
+            func_param=(0.0, None, filter, reset_filter),
+            **kwargs,
+        )
 
-
-    #---------------------------------------------------------------
-    def findnth(self, *args, filter = None, **kwargs):
+    # ---------------------------------------------------------------
+    def findnth(self, *args, filter=None, **kwargs):
         """FindNth
 
         Parameters
@@ -1225,10 +1352,24 @@ class GroupByOps(object):
         if filter is None:
             filter = self._filter
 
-        return self._calculate_all(GB_FUNCTIONS.GB_FINDNTH, *args, func_param=(0.0, None, filter, None),**kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_FINDNTH,
+            *args,
+            func_param=(0.0, None, filter, None),
+            **kwargs,
+        )
 
-    #---------------------------------------------------------------
-    def _ema_op(self, function, *args, time=None, decay_rate = 1.0, filter = None, reset_filter=None, **kwargs):
+    # ---------------------------------------------------------------
+    def _ema_op(
+        self,
+        function,
+        *args,
+        time=None,
+        decay_rate=1.0,
+        filter=None,
+        reset_filter=None,
+        **kwargs,
+    ):
         """
         Ema base function for time based ema functions
 
@@ -1257,12 +1398,27 @@ class GroupByOps(object):
 
         if filter is not None:
             if len(time) != len(filter):
-                raise ValueError(f"The 'time' array length {len(time)} must match the length of the filter")
+                raise ValueError(
+                    f"The 'time' array length {len(time)} must match the length of the filter"
+                )
 
-        return self._calculate_all(function, *args, func_param=(decay_rate, time, filter, reset_filter), **kwargs)
+        return self._calculate_all(
+            function,
+            *args,
+            func_param=(decay_rate, time, filter, reset_filter),
+            **kwargs,
+        )
 
-    #---------------------------------------------------------------
-    def ema_decay(self, *args, time=None, decay_rate = None, filter = None, reset_filter=None, **kwargs):
+    # ---------------------------------------------------------------
+    def ema_decay(
+        self,
+        *args,
+        time=None,
+        decay_rate=None,
+        filter=None,
+        reset_filter=None,
+        **kwargs,
+    ):
         """
         Ema decay for each group
 
@@ -1301,12 +1457,30 @@ class GroupByOps(object):
         FastArray([ -3.11271882, 207.42784495, 257.39155897])
         """
         if decay_rate is None:
-            raise ValueError("ema_decay function requires a kwarg 'decay_rate' floating point value as input")
+            raise ValueError(
+                "ema_decay function requires a kwarg 'decay_rate' floating point value as input"
+            )
 
-        return self._ema_op(GB_FUNCTIONS.GB_EMADECAY, *args, time=time,  decay_rate=decay_rate, filter=filter, reset_filter=reset_filter, **kwargs)
+        return self._ema_op(
+            GB_FUNCTIONS.GB_EMADECAY,
+            *args,
+            time=time,
+            decay_rate=decay_rate,
+            filter=filter,
+            reset_filter=reset_filter,
+            **kwargs,
+        )
 
-    #---------------------------------------------------------------
-    def ema_normal(self, *args, time=None, decay_rate = None, filter = None, reset_filter=None, **kwargs):
+    # ---------------------------------------------------------------
+    def ema_normal(
+        self,
+        *args,
+        time=None,
+        decay_rate=None,
+        filter=None,
+        reset_filter=None,
+        **kwargs,
+    ):
         """
         Ema decay for each group
 
@@ -1355,22 +1529,36 @@ class GroupByOps(object):
         ema_decay
         """
         if decay_rate is None:
-            raise ValueError('ema_normal function requires a decay_rate floating point value')
+            raise ValueError(
+                "ema_normal function requires a decay_rate floating point value"
+            )
 
         if time is None:
-            raise ValueError('ema_normal function requires a time array.  Use the "time" kwarg')
+            raise ValueError(
+                'ema_normal function requires a time array.  Use the "time" kwarg'
+            )
 
         if not isinstance(time, np.ndarray):
-            raise ValueError('ema_normal function requires a time numpy array.')
+            raise ValueError("ema_normal function requires a time numpy array.")
 
         # cannot support int16/uint16
         if time.dtype.num < 5:
             time = time.astype(np.int32)
 
-        return self._ema_op(GB_FUNCTIONS.GB_EMANORMAL, *args, time=time,  decay_rate=decay_rate, filter=filter, reset_filter=reset_filter, **kwargs)
+        return self._ema_op(
+            GB_FUNCTIONS.GB_EMANORMAL,
+            *args,
+            time=time,
+            decay_rate=decay_rate,
+            filter=filter,
+            reset_filter=reset_filter,
+            **kwargs,
+        )
 
-    #---------------------------------------------------------------
-    def ema_weighted(self, *args, decay_rate = None, filter = None, reset_filter=None, **kwargs):
+    # ---------------------------------------------------------------
+    def ema_weighted(
+        self, *args, decay_rate=None, filter=None, reset_filter=None, **kwargs
+    ):
         """
         Ema decay for each group with constant decay value (no time parameter)
 
@@ -1417,13 +1605,23 @@ class GroupByOps(object):
         ema_decay
         """
         if decay_rate is None:
-            raise ValueError('ema_weighted function requires a decay_rate floating point value')
+            raise ValueError(
+                "ema_weighted function requires a decay_rate floating point value"
+            )
 
         # put in fake time array
         time_array = np.arange(self._dataset.shape[0])
-        return self._ema_op(GB_FUNCTIONS.GB_EMAWEIGHTED, *args, time=time_array,  decay_rate=decay_rate, filter=filter, reset_filter=reset_filter, **kwargs)
+        return self._ema_op(
+            GB_FUNCTIONS.GB_EMAWEIGHTED,
+            *args,
+            time=time_array,
+            decay_rate=decay_rate,
+            filter=filter,
+            reset_filter=reset_filter,
+            **kwargs,
+        )
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def sem(self, **kwargs):
         """
         Compute standard error of the mean of groups
@@ -1435,38 +1633,38 @@ class GroupByOps(object):
             degrees of freedom
         """
         raise NotImplementedError
-        #return self.std(ddof=ddof) / np.sqrt(self.count())
+        # return self.std(ddof=ddof) / np.sqrt(self.count())
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def ohlc(self, **kwargs):
         """
         Compute sum of values, excluding missing values
         For multiple groupings, the result index will be a MultiIndex
         """
         raise NotImplementedError
-        #return self._apply_to_column_groupbys(
+        # return self._apply_to_column_groupbys(
         #    lambda x: x._cython_agg_general('ohlc'))
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def describe(self, **kwargs):
         raise NotImplementedError
-        #self._set_group_selection()
-        #result = self.apply(lambda x: x.describe(**kwargs))
-        #if self.axis == 1:
+        # self._set_group_selection()
+        # result = self.apply(lambda x: x.describe(**kwargs))
+        # if self.axis == 1:
         #    return result.T
-        #return result.unstack()
+        # return result.unstack()
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def resample(self, rule, *args, **kwargs):
         """
         Provide resampling when using a TimeGrouper
         Return a new grouper with our resampler appended
         """
         raise NotImplementedError
-        #from pandas.core.resample import get_resampler_for_grouping
-        #return get_resampler_for_grouping(self, rule, *args, **kwargs)
+        # from pandas.core.resample import get_resampler_for_grouping
+        # return get_resampler_for_grouping(self, rule, *args, **kwargs)
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def nth(self, *args, n=1, **kwargs):
         """
         Take the nth row from each group if `n` is an int, or a subset of rows if `n` is a list of ints.
@@ -1539,7 +1737,7 @@ class GroupByOps(object):
         4  2  5.0
         """
         return self._calculate_all(GB_FUNCTIONS.GB_NTH, *args, func_param=(n), **kwargs)
-        #raise NotImplementedError
+        # raise NotImplementedError
 
     ##-------------------------------------------------------
     def diff(self, period=1, **kwargs):
@@ -1553,9 +1751,11 @@ class GroupByOps(object):
         -------
         Dataset same rows as original dataset
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_DIFF, tuple(), func_param=(period), **kwargs)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_DIFF, tuple(), func_param=(period), **kwargs
+        )
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def ngroup(self, ascending=True, **kwargs):
         """
         Number each group from 0 to the number of groups - 1.
@@ -1614,17 +1814,24 @@ class GroupByOps(object):
         """
         raise NotImplementedError
 
-        #self._set_group_selection()
+        # self._set_group_selection()
 
-        #index = self._selected_obj.index
-        #result = Series(self.grouper.group_info[0], index)
-        #if not ascending:
+        # index = self._selected_obj.index
+        # result = Series(self.grouper.group_info[0], index)
+        # if not ascending:
         #    result = self.ngroups - 1 - result
-        #return result
+        # return result
 
-    #-------------------------------------------------------
-    def rank(self, method='average', ascending=True, na_option='keep',
-             pct=False, axis=0, **kwargs):
+    # -------------------------------------------------------
+    def rank(
+        self,
+        method="average",
+        ascending=True,
+        na_option="keep",
+        pct=False,
+        axis=0,
+        **kwargs,
+    ):
         """
         Provides the rank of values within each group
 
@@ -1651,18 +1858,17 @@ class GroupByOps(object):
         """
         raise NotImplementedError
 
-
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def cummin(self, axis=0, **kwargs):
         """Cumulative min for each group"""
         raise NotImplementedError
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def cummax(self, axis=0, **kwargs):
         """Cumulative max for each group"""
         raise NotImplementedError
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def shift(self, window=1, **kwargs):
         """
         Shift each group by periods observations
@@ -1672,10 +1878,12 @@ class GroupByOps(object):
         periods: optional support, same as window
         """
         # support for pandas periods keyword
-        window = kwargs.get('periods',window)
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_SHIFT, tuple(), func_param=(window), **kwargs)
+        window = kwargs.get("periods", window)
+        return self._calculate_all(
+            GB_FUNCTIONS.GB_ROLLING_SHIFT, tuple(), func_param=(window), **kwargs
+        )
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def head(self, n=5, **kwargs):
         """
         Returns first n rows of each group.
@@ -1697,11 +1905,11 @@ class GroupByOps(object):
         2  5  6
         """
         raise NotImplementedError
-        #self._reset_group_selection()
-        #mask = self._cumcount_array() < n
-        #return self._selected_obj[mask]
+        # self._reset_group_selection()
+        # mask = self._cumcount_array() < n
+        # return self._selected_obj[mask]
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def tail(self, n=5, **kwargs):
         """
         Returns last n rows of each group
@@ -1722,67 +1930,274 @@ class GroupByOps(object):
         2  b  1
         """
         raise NotImplementedError
-        #self._reset_group_selection()
-        #mask = self._cumcount_array(ascending=False) < n
-        #return self._selected_obj[mask]
+        # self._reset_group_selection()
+        # mask = self._cumcount_array(ascending=False) < n
+        # return self._selected_obj[mask]
 
 
-#------------------------------------------------------------
+# ------------------------------------------------------------
 #     cppnum     name:      (basic/packing,       func_frontend,             func_backend,          gb_function,  dtype,              return_full True/False)
 #     -----     ------      -------------------   ------------------         ------------------     -----------   ----------------    ------------------
 GBF = GB_FUNCTIONS
 
 # GB_FUNC_COUNT is special right now
-CPP_GB_TABLE= [
-   (GBF.GB_SUM,     'sum',    GB_PACKUNPACK.UNPACK, GroupByOps.sum,      None,  None, None, False),
-   (GBF.GB_MEAN,    'mean',   GB_PACKUNPACK.UNPACK, GroupByOps.mean,     None,  None, None, False),
-   (GBF.GB_MIN,     'min',    GB_PACKUNPACK.UNPACK, GroupByOps.min,      None,  None, None, False),
-   (GBF.GB_MAX,     'max',    GB_PACKUNPACK.UNPACK, GroupByOps.max,      None,  None, None, False),
-
-   # STD uses VAR with the param set to 1
-   (GBF.GB_VAR,     'var',    GB_PACKUNPACK.UNPACK, GroupByOps.var,      None,  None, None, False),
-   (GBF.GB_STD,     'std',    GB_PACKUNPACK.UNPACK, GroupByOps.std,     None,  None, None, False),
-
-   (GBF.GB_NANSUM,  'nansum', GB_PACKUNPACK.UNPACK,  GroupByOps.nansum,   None,  None, None, False),
-   (GBF.GB_NANMEAN, 'nanmean', GB_PACKUNPACK.UNPACK, GroupByOps.nanmean,  None,  None, None, False),
-   (GBF.GB_NANMIN,  'nanmin', GB_PACKUNPACK.UNPACK,  GroupByOps.nanmin,   None,  None, None, False),
-   (GBF.GB_NANMAX,  'nanmax', GB_PACKUNPACK.UNPACK,  GroupByOps.nanmax,   None,  None, None, False),
-   (GBF.GB_NANVAR,  'nanvar', GB_PACKUNPACK.UNPACK,  GroupByOps.nanvar,   None,  None, None, False),
-   (GBF.GB_NANSTD,  'nanstd', GB_PACKUNPACK.UNPACK,  GroupByOps.nanstd,   None,  None, None, False),
-
-   (GBF.GB_FIRST,   'first',  GB_PACKUNPACK.PACK,   GroupByOps.first,   None,  None, None, False),
-   (GBF.GB_NTH,     'nth',    GB_PACKUNPACK.PACK,   GroupByOps.nth,     None,  None, None, False),
-   (GBF.GB_LAST,    'last',   GB_PACKUNPACK.PACK,   GroupByOps.last,    None,  None, None, False),
-
-   # requires parallel qsort
-   (GBF.GB_MEDIAN,  'median', GB_PACKUNPACK.PACK,   GroupByOps.median,  None,  None, None, False), # auto handles nan
-   (GBF.GB_MODE,    'mode',   GB_PACKUNPACK.PACK,   GroupByOps.mode,    None,  None, None, False), # auto handles nan
-   (GBF.GB_TRIMBR,  'trimbr', GB_PACKUNPACK.PACK,   GroupByOps.trimbr,  None,  None, None, False), # auto handles nan
-
-
-   # All int/uints output upgraded to INT64
-   # Output is all elements (not just grouped)
-   # takes window= as parameter
-   (GBF.GB_ROLLING_SUM,    'rolling_sum',       GB_PACKUNPACK.PACK,   GroupByOps.rolling_sum,      None,  None, None, True),
-   (GBF.GB_ROLLING_NANSUM, 'rolling_nansum',    GB_PACKUNPACK.PACK,   GroupByOps.rolling_nansum,   None,  None, None, True),
-   (GBF.GB_ROLLING_DIFF,   'rolling_diff',      GB_PACKUNPACK.PACK,   GroupByOps.rolling_diff,     None,  None, None, True),
-   (GBF.GB_ROLLING_SHIFT,  'rolling_shift',     GB_PACKUNPACK.PACK,   GroupByOps.rolling_shift,    None,  None, None, True),
-   (GBF.GB_ROLLING_COUNT,  'rolling_count',     GB_PACKUNPACK.PACK,   GroupByOps.rolling_count,    None,  None, None, True),
-   (GBF.GB_ROLLING_MEAN,   'rolling_mean',      GB_PACKUNPACK.PACK,   GroupByOps.rolling_mean,     None,  None, None, True),
-   (GBF.GB_ROLLING_NANMEAN,'rolling_nanmean',   GB_PACKUNPACK.PACK,   GroupByOps.rolling_nanmean,  None,  None, None, True),
-
-   # In ema.cpp
-   (GBF.GB_CUMSUM,         'cumsum',            GB_PACKUNPACK.PACK,   GroupByOps.cumsum,      None,  None, None, True),
-   (GBF.GB_CUMPROD,        'cumprod',           GB_PACKUNPACK.PACK,   GroupByOps.cumprod,     None,  None, None, True),
-
-   # returns x elements ahead
-   (GBF.GB_FINDNTH,        'findnth',           GB_PACKUNPACK.PACK,   GroupByOps.findnth,     None,  None, None, True),
-
-   # takes
-   (GBF.GB_EMADECAY,       'ema_decay',          GB_PACKUNPACK.PACK,   GroupByOps.ema_decay,      None,  None, None, True),
-   (GBF.GB_EMANORMAL,      'ema_normal',         GB_PACKUNPACK.PACK,   GroupByOps.ema_normal,     None,  None, None, True),
-   (GBF.GB_EMAWEIGHTED,    'ema_weighted',       GB_PACKUNPACK.PACK,   GroupByOps.ema_weighted,   None,  None, None, True),
-   ]
+CPP_GB_TABLE = [
+    (GBF.GB_SUM, "sum", GB_PACKUNPACK.UNPACK, GroupByOps.sum, None, None, None, False),
+    (
+        GBF.GB_MEAN,
+        "mean",
+        GB_PACKUNPACK.UNPACK,
+        GroupByOps.mean,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (GBF.GB_MIN, "min", GB_PACKUNPACK.UNPACK, GroupByOps.min, None, None, None, False),
+    (GBF.GB_MAX, "max", GB_PACKUNPACK.UNPACK, GroupByOps.max, None, None, None, False),
+    # STD uses VAR with the param set to 1
+    (GBF.GB_VAR, "var", GB_PACKUNPACK.UNPACK, GroupByOps.var, None, None, None, False),
+    (GBF.GB_STD, "std", GB_PACKUNPACK.UNPACK, GroupByOps.std, None, None, None, False),
+    (
+        GBF.GB_NANSUM,
+        "nansum",
+        GB_PACKUNPACK.UNPACK,
+        GroupByOps.nansum,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (
+        GBF.GB_NANMEAN,
+        "nanmean",
+        GB_PACKUNPACK.UNPACK,
+        GroupByOps.nanmean,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (
+        GBF.GB_NANMIN,
+        "nanmin",
+        GB_PACKUNPACK.UNPACK,
+        GroupByOps.nanmin,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (
+        GBF.GB_NANMAX,
+        "nanmax",
+        GB_PACKUNPACK.UNPACK,
+        GroupByOps.nanmax,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (
+        GBF.GB_NANVAR,
+        "nanvar",
+        GB_PACKUNPACK.UNPACK,
+        GroupByOps.nanvar,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (
+        GBF.GB_NANSTD,
+        "nanstd",
+        GB_PACKUNPACK.UNPACK,
+        GroupByOps.nanstd,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (
+        GBF.GB_FIRST,
+        "first",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.first,
+        None,
+        None,
+        None,
+        False,
+    ),
+    (GBF.GB_NTH, "nth", GB_PACKUNPACK.PACK, GroupByOps.nth, None, None, None, False),
+    (GBF.GB_LAST, "last", GB_PACKUNPACK.PACK, GroupByOps.last, None, None, None, False),
+    # requires parallel qsort
+    (
+        GBF.GB_MEDIAN,
+        "median",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.median,
+        None,
+        None,
+        None,
+        False,
+    ),  # auto handles nan
+    (
+        GBF.GB_MODE,
+        "mode",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.mode,
+        None,
+        None,
+        None,
+        False,
+    ),  # auto handles nan
+    (
+        GBF.GB_TRIMBR,
+        "trimbr",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.trimbr,
+        None,
+        None,
+        None,
+        False,
+    ),  # auto handles nan
+    # All int/uints output upgraded to INT64
+    # Output is all elements (not just grouped)
+    # takes window= as parameter
+    (
+        GBF.GB_ROLLING_SUM,
+        "rolling_sum",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_sum,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_ROLLING_NANSUM,
+        "rolling_nansum",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_nansum,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_ROLLING_DIFF,
+        "rolling_diff",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_diff,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_ROLLING_SHIFT,
+        "rolling_shift",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_shift,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_ROLLING_COUNT,
+        "rolling_count",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_count,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_ROLLING_MEAN,
+        "rolling_mean",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_mean,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_ROLLING_NANMEAN,
+        "rolling_nanmean",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_nanmean,
+        None,
+        None,
+        None,
+        True,
+    ),
+    # In ema.cpp
+    (
+        GBF.GB_CUMSUM,
+        "cumsum",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.cumsum,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_CUMPROD,
+        "cumprod",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.cumprod,
+        None,
+        None,
+        None,
+        True,
+    ),
+    # returns x elements ahead
+    (
+        GBF.GB_FINDNTH,
+        "findnth",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.findnth,
+        None,
+        None,
+        None,
+        True,
+    ),
+    # takes
+    (
+        GBF.GB_EMADECAY,
+        "ema_decay",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.ema_decay,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_EMANORMAL,
+        "ema_normal",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.ema_normal,
+        None,
+        None,
+        None,
+        True,
+    ),
+    (
+        GBF.GB_EMAWEIGHTED,
+        "ema_weighted",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.ema_weighted,
+        None,
+        None,
+        None,
+        True,
+    ),
+]
 
 # NOT DONE YET
 # cummin
@@ -1796,18 +2211,17 @@ CPP_GB_TABLE= [
 # rank
 # ngroup
 
-CPP_REVERSE_TABLE={}
+CPP_REVERSE_TABLE = {}
 
 # Build CPP funcnum table
 for v in CPP_GB_TABLE:
     funcnum = int(v[0])
-    CPP_REVERSE_TABLE[funcnum]={
-        'name': v[1],
-        'packing': v[2],
-        'func_front': v[3],
-        'func_back': v[4],
-        'func_gb':v[5],
-        'func_dtype': v[6],
-        'return_full': v[7]
-        }
-
+    CPP_REVERSE_TABLE[funcnum] = {
+        "name": v[1],
+        "packing": v[2],
+        "func_front": v[3],
+        "func_back": v[4],
+        "func_gb": v[5],
+        "func_dtype": v[6],
+        "return_full": v[7],
+    }

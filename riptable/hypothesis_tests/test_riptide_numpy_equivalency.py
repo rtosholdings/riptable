@@ -487,22 +487,22 @@ class TestRiptableNumpyEquivalency:
             shape=ndarray_shape_strategy(),
             dtype=ints_floats_or_complex_dtypes(),
             # If not specified, np.diff uses -1 as the default axis.
-            default_axis=-1
+            default_axis=-1,
         ),
         # 'diff_iters': the number of differencing iterations the 'diff' function will perform.
         # This is kind of like the "divided differences" algorithm in that it's recursive, but
         # there's no division step. Specifying a large number of iterations for this is prohibitively
         # expensive and will cause the test to time out; we can test with a small-ish number of
         # iterations and still have good confidence we're covering all the important code paths.
-        diff_iters=integers(min_value=0, max_value=8)
+        diff_iters=integers(min_value=0, max_value=8),
     )
     def test_diff(self, array_and_axis, diff_iters: int):
         arr, axis = array_and_axis
 
         # Record some events so when hypothesis reports test statistics we'll be able
         # to see roughly which parts of the search space were covered.
-        event(f'dtype = {np.dtype(arr.dtype).name}')
-        event(f'ndim = {len(arr.shape)}')
+        event(f"dtype = {np.dtype(arr.dtype).name}")
+        event(f"ndim = {len(arr.shape)}")
 
         # If we'll have to clamp the number of differences below for any of the array's axes,
         # record that as an event too -- so we'll know if we're running into that too often.
@@ -517,7 +517,9 @@ class TestRiptableNumpyEquivalency:
         #  Draw the kwargs values (or None) from hypothesis strategies and let it
         #  decide how to search through the parameter space.
 
-        rt_diff = rt.diff(arr, axis=axis, n=num_diffs)  # as of 20200303 defers to numpy (i.e. no riptable-specific implementation)
+        rt_diff = rt.diff(
+            arr, axis=axis, n=num_diffs
+        )  # as of 20200303 defers to numpy (i.e. no riptable-specific implementation)
         np_diff = np.diff(arr, axis=axis, n=num_diffs)
         assert isinstance(rt_diff, FastArray)
         assert_array_equal_(np.array(rt_diff), np_diff)

@@ -6,13 +6,13 @@ import random as rand
 class MultiKeyGroupBy_Test:
     ##data generation code
     def test_multkey(self):
-        alpha = 'Q W E R T Y U I O P A S D F G H J K L Z X C V B N M'.split(' ')
+        alpha = "Q W E R T Y U I O P A S D F G H J K L Z X C V B N M".split(" ")
         digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
 
         sz = 4000
         numbers = [0] * sz
-        keys1 = [''] * sz
-        keys2 = [''] * sz
+        keys1 = [""] * sz
+        keys2 = [""] * sz
 
         for i in range(0, sz):
             numbers[i] = digits[rand.randint(0, 1000) % len(digits)]
@@ -21,30 +21,30 @@ class MultiKeyGroupBy_Test:
 
         ary = rt.FastArray(numbers)
 
-        data = {'k1': keys1, 'k2': keys2, 'beta': numbers}
+        data = {"k1": keys1, "k2": keys2, "beta": numbers}
 
         # print('SFW--------------------------------------------------------------')
         mset = rt.Dataset(data)
 
         # t = time.time()
-        s_group = rt.GroupBy(mset, keys=['k1', 'k2']).sum()
+        s_group = rt.GroupBy(mset, keys=["k1", "k2"]).sum()
         # print(time.time() - t, 'SFW GROUP BY ')
 
         # print('PANDAS--------------------------------------------------------------')
         df2 = pd.DataFrame(data)
 
         # t = time.time()
-        p_group = df2.groupby(['k1', 'k2']).sum()
+        p_group = df2.groupby(["k1", "k2"]).sum()
         # print(time.time() - t, 'PANDAS GROUP BY ')
         # print('compare out--------------------------------------------------------------')
 
-        pandas = list(p_group['beta'])
-        sfw = list(s_group['beta'])
+        pandas = list(p_group["beta"])
+        sfw = list(s_group["beta"])
         assert pandas == sfw
 
     def test_advanced_multikey(self):
         ##data generation code
-        alpha = 'Q W E R T Y U I O P A S D F G H J K L Z X C V B N M'.split(' ')
+        alpha = "Q W E R T Y U I O P A S D F G H J K L Z X C V B N M".split(" ")
         digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
 
         sz = 200
@@ -52,7 +52,7 @@ class MultiKeyGroupBy_Test:
 
         # 2d array of keys/values
         vals = [[0] * sz] * numb_kvs
-        keys = [[''] * sz] * numb_kvs
+        keys = [[""] * sz] * numb_kvs
 
         # random initialization for them
         for n in range(0, numb_kvs):

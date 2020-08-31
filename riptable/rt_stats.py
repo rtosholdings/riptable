@@ -1,5 +1,15 @@
-__all__ = ['class_error', 'groupScatter', 'linear_spline', 'lm', 'mae',
-           'plotPrediction', 'plot_hist', 'r2', 'statx', 'winsorize',]
+__all__ = [
+    "class_error",
+    "groupScatter",
+    "linear_spline",
+    "lm",
+    "mae",
+    "plotPrediction",
+    "plot_hist",
+    "r2",
+    "statx",
+    "winsorize",
+]
 
 import riptable as rt
 import numpy as np
@@ -14,39 +24,56 @@ import pandas as pd
 from bokeh.plotting import output_notebook, figure, show
 from bokeh.models import Label
 
-#TODO: Organize the functions in here better
-#TODO: Add documentation
-#TODO: Replace pandas dependence with display util
+# TODO: Organize the functions in here better
+# TODO: Add documentation
+# TODO: Replace pandas dependence with display util
 def statx(X):
     if not isinstance(X, np.ndarray):
         X = np.array(X)
     pVals = [0.1, 1, 10, 25, 50, 75, 90, 99, 99.9]
-    pValNames = ['min', '0.1%', '1%', '10%', '25%', '50%', '75%', '90%','99%','99.9%' , 'max' , 'Mean', 'StdDev', 'Count', 'NaN_Count']
+    pValNames = [
+        "min",
+        "0.1%",
+        "1%",
+        "10%",
+        "25%",
+        "50%",
+        "75%",
+        "90%",
+        "99%",
+        "99.9%",
+        "max",
+        "Mean",
+        "StdDev",
+        "Count",
+        "NaN_Count",
+    ]
     filt = np.isfinite(X)
     X_sub = X[filt]
-    vals = np.percentile(X_sub,pVals)
-    vals =np.insert(vals,0,np.min(X_sub))
-    vals =np.append(vals,np.max(X_sub))
-    vals = np.append(vals,np.mean(X_sub))
-    vals = np.append(vals,np.std(X_sub))
+    vals = np.percentile(X_sub, pVals)
+    vals = np.insert(vals, 0, np.min(X_sub))
+    vals = np.append(vals, np.max(X_sub))
+    vals = np.append(vals, np.mean(X_sub))
+    vals = np.append(vals, np.std(X_sub))
     validcount = np.sum(filt)
 
     # plain count
     vals = np.append(vals, X.size)
 
-    #nancount
+    # nancount
     vals = np.append(vals, np.sum(np.isnan(X)))
-    out = pd.DataFrame({'Stat' : pValNames ,'Value' : vals})
+    out = pd.DataFrame({"Stat": pValNames, "Value": vals})
     return out
 
-#NOTE: people might prefer name clip/bound?
+
+# NOTE: people might prefer name clip/bound?
 def winsorize(Y, lb, ub):
     out = np.maximum(np.minimum(Y, ub), lb)
     return out
 
 
 def plot_hist(Y, bins):
-    df = pd.DataFrame({'Y': Y})
+    df = pd.DataFrame({"Y": Y})
     df.hist(bins=bins)
 
 
@@ -73,7 +100,7 @@ def class_error(X, Y):
 
 
 def lm(X, Y, intercept=True, removeNaN=True, displayStats=True):
-    #TODO: Better display for stats
+    # TODO: Better display for stats
     X0 = X.copy()
     Y0 = Y.copy()
     if len(X0.shape) == 1:
@@ -81,7 +108,7 @@ def lm(X, Y, intercept=True, removeNaN=True, displayStats=True):
     if len(Y0.shape) == 1:
         Y0 = Y0.reshape(Y0.shape[0], 1)
     if intercept:
-        X0 = np.hstack([np.ones((X0.shape[0],1)), X0])
+        X0 = np.hstack([np.ones((X0.shape[0], 1)), X0])
 
     if removeNaN:
         goodData = ~np.isnan(np.sum(X0, axis=1)) & ~np.isnan(np.sum(Y0, axis=1))
@@ -103,15 +130,15 @@ def lm(X, Y, intercept=True, removeNaN=True, displayStats=True):
         R = np.mean(YHat * Y0) / (np.std(YHat) * np.std(Y0))
         R2 = R * R
 
-        print('R2 = ', R2)
-        print('RMSE = ', RMS)
-        print('MAE = ', MAE)
-        print('tStats: ')
+        print("R2 = ", R2)
+        print("RMSE = ", RMS)
+        print("MAE = ", MAE)
+        print("tStats: ")
         print(tStat)
     return coeff
 
 
-def linear_spline(X0, Y0, knots, display = True):
+def linear_spline(X0, Y0, knots, display=True):
     X = X0.copy()
     Y = Y0.copy()
     X = X.reshape(X.shape[0], 1)
@@ -137,21 +164,27 @@ def linear_spline(X0, Y0, knots, display = True):
 
     output_notebook()
     # create a new plot
-    p = figure(tools="pan,box_zoom,reset,save",
-               title="example",
-               x_axis_label='sections',
-               y_axis_label='particles')
+    p = figure(
+        tools="pan,box_zoom,reset,save",
+        title="example",
+        x_axis_label="sections",
+        y_axis_label="particles",
+    )
 
-    p.circle(X_uniq.flatten(), YHat_uniq.flatten(), legend="y", fill_color="red", size=8)
+    p.circle(
+        X_uniq.flatten(), YHat_uniq.flatten(), legend="y", fill_color="red", size=8
+    )
     if display:
         show(p)
     return knots, coeff
 
-#TODO: Make formatting aware of environment, e.g., Spyder, jupyter, etc. in groupScatter and plotPrediction
-#NOTE: Can we use regPlot from seaborn
-#won't display in jupyter lab
-#better auto-detect bounds
-#suppress nan warnings
+
+# TODO: Make formatting aware of environment, e.g., Spyder, jupyter, etc. in groupScatter and plotPrediction
+# NOTE: Can we use regPlot from seaborn
+# won't display in jupyter lab
+# better auto-detect bounds
+# suppress nan warnings
+
 
 def plotPrediction(X, Yhat, Y, N, lb=None, ub=None):
 
@@ -165,22 +198,30 @@ def plotPrediction(X, Yhat, Y, N, lb=None, ub=None):
     else:
         upperBound = ub
 
-    goodFilt = np.isfinite(X) & np.isfinite(Y) & (X <= upperBound) & (X >= lowerBound) & \
-               np.isfinite(Yhat) & np.isfinite(Y)
+    goodFilt = (
+        np.isfinite(X)
+        & np.isfinite(Y)
+        & (X <= upperBound)
+        & (X >= lowerBound)
+        & np.isfinite(Yhat)
+        & np.isfinite(Y)
+    )
 
-    dF = pd.DataFrame({'X': X[goodFilt], 'Y': Y[goodFilt], 'Yhat': Yhat[goodFilt]})
-    dF.sort_values('X', inplace=True)
+    dF = pd.DataFrame({"X": X[goodFilt], "Y": Y[goodFilt], "Yhat": Yhat[goodFilt]})
+    dF.sort_values("X", inplace=True)
     dF.reset_index(drop=True, inplace=True)
     groupSize = np.floor(dF.shape[0] / N)
-    dF['Bucket'] = np.int32(np.floor(dF.index.values / groupSize))
-    out = dF.groupby('Bucket')[['X', 'Y', 'Yhat']].agg(np.nanmean)
+    dF["Bucket"] = np.int32(np.floor(dF.index.values / groupSize))
+    out = dF.groupby("Bucket")[["X", "Y", "Yhat"]].agg(np.nanmean)
 
     output_notebook()
     # output_file("test.html")
-    p = figure(tools="pan,box_zoom,reset,save",
-               title="example",
-               x_axis_label='sections',
-               y_axis_label='particles')
+    p = figure(
+        tools="pan,box_zoom,reset,save",
+        title="example",
+        x_axis_label="sections",
+        y_axis_label="particles",
+    )
 
     p.circle(out.X, out.Y, legend="y", fill_color="red", size=8)
     p.circle(out.X, out.Yhat, legend="yhat", fill_color="blue", size=8)
@@ -191,12 +232,8 @@ def plotPrediction(X, Yhat, Y, N, lb=None, ub=None):
     # plt.text(xloc,yloc,r'$r^2 =$ {0:.2e}'.format(r2Val),fontsize=16)
 
 
-
-
-
-
-def polyFit(x,y,d=1, filter=None):
-    '''
+def polyFit(x, y, d=1, filter=None):
+    """
     Fits a polynimial least-squares regression.
     
     Parameters
@@ -215,20 +252,19 @@ def polyFit(x,y,d=1, filter=None):
     c : ndarray
         The array of coefficients of the polynomial (constant term first).
     
-    '''
+    """
     if filter is not None:
         x = x[filter]
         y = y[filter]
-    A = np.vander(x, d+1, increasing=True)
-    AtA = np.matmul( A.transpose(), A )
+    A = np.vander(x, d + 1, increasing=True)
+    AtA = np.matmul(A.transpose(), A)
     Ay = np.matmul(A.transpose(), y)
-    c = np.linalg.solve( AtA, Ay )
+    c = np.linalg.solve(AtA, Ay)
     return c
 
 
 def groupScatter(*arg, **kwarg):
-    '''
+    """
     This function has been moved to playa.stats.
-    '''
-    raise NotImplementedError('This function has been moved to playa.plot')
-
+    """
+    raise NotImplementedError("This function has been moved to playa.plot")

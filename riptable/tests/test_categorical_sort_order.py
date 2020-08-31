@@ -41,36 +41,36 @@ sorted_codes = FastArray(
 enum_codes = (sorted_codes + 1) * 10
 str_fa = FastArray(
     [
-        'c',
-        'e',
-        'e',
-        'd',
-        'c',
-        'b',
-        'd',
-        'c',
-        'a',
-        'b',
-        'd',
-        'e',
-        'c',
-        'a',
-        'e',
-        'd',
-        'b',
-        'a',
-        'b',
-        'c',
-        'd',
-        'b',
-        'e',
-        'c',
-        'c',
-        'd',
-        'e',
-        'c',
-        'a',
-        'c',
+        "c",
+        "e",
+        "e",
+        "d",
+        "c",
+        "b",
+        "d",
+        "c",
+        "a",
+        "b",
+        "d",
+        "e",
+        "c",
+        "a",
+        "e",
+        "d",
+        "b",
+        "a",
+        "b",
+        "c",
+        "d",
+        "b",
+        "e",
+        "c",
+        "c",
+        "d",
+        "e",
+        "c",
+        "a",
+        "c",
     ]
 )
 flt_fa = FastArray(
@@ -107,10 +107,10 @@ flt_fa = FastArray(
         61.12,
     ]
 )
-flt_fa.set_name('floats')
-complete_unique_cats = FastArray(['a', 'b', 'c', 'd', 'e'])
-unsorted_unique_cats = FastArray(['c', 'e', 'd', 'b', 'a'])
-big_cats = FastArray(['string' + str(i) for i in range(2000)])
+flt_fa.set_name("floats")
+complete_unique_cats = FastArray(["a", "b", "c", "d", "e"])
+unsorted_unique_cats = FastArray(["c", "e", "d", "b", "a"])
+big_cats = FastArray(["string" + str(i) for i in range(2000)])
 matlab_codes = (sorted_codes + 1).astype(np.float32)
 
 sorted_float_sum = FastArray([205.09, 242.9, 454.25, 337.27, 325.84])
@@ -179,7 +179,7 @@ class Categorical_first_order_Test(unittest.TestCase):
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
         self.assertTrue(result)
-        first_arr = c.category_dict['key_0']
+        first_arr = c.category_dict["key_0"]
         result = bool(np.all(first_arr == unsorted_unique_cats))
         self.assertTrue(result)
 
@@ -192,7 +192,7 @@ class Categorical_first_order_Test(unittest.TestCase):
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
         self.assertTrue(result)
-        first_arr = c.category_dict['key_0']
+        first_arr = c.category_dict["key_0"]
         result = bool(np.all(first_arr == unsorted_unique_cats))
         self.assertTrue(result)
 
@@ -209,7 +209,7 @@ class Categorical_first_order_Test(unittest.TestCase):
 
     def test_lex(self):
         # string sort test
-        a = arange(100).astype('S')
+        a = arange(100).astype("S")
         c1 = Cat(a, lex=True)
         c2 = Cat(a, ordered=True)
         self.assertTrue(np.all(c1._fa == c2._fa))
@@ -247,10 +247,10 @@ class Categorical_first_order_Test(unittest.TestCase):
         self.assertTrue(np.all(r1._fa == r2._fa))
 
         # multikey strings
-        r = np.random.randint(0, 80, 200).astype('U')
+        r = np.random.randint(0, 80, 200).astype("U")
         q = np.random.randint(0, 80, 200)
         q = q + 999_000
-        q = q.astype('U')
+        q = q.astype("U")
 
         r1 = Cat([q, r], lex=True)
         r2 = Cat([q, r], ordered=True)
@@ -273,5 +273,5 @@ class Categorical_first_order_Test(unittest.TestCase):
         self.assertTrue(np.all(p == srt))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

@@ -72,17 +72,17 @@ functions = [
 ]
 
 functions_str = [
-    'count',
-    'sum',
-    'mean',
-    'median',
-    'min',
-    'max',
+    "count",
+    "sum",
+    "mean",
+    "median",
+    "min",
+    "max",
     # 'prod',
-    'var',
+    "var",
     # 'quantile',
-    'cumsum',
-    'cumprod',
+    "cumsum",
+    "cumprod",
     # 'cummax',
     # 'cummin'
 ]
@@ -128,26 +128,26 @@ class SimpleGroupByCatTest(unittest.TestCase):
     # TODO pytest parameterize across type_list and functions
     def test_single_col_categoricals(self):
         values = [0, 1, 1, 2, 2, 2, 3, 3, 3, 4]
-        bin_ids = ['a', 'b', 'c', 'd', 'e']
+        bin_ids = ["a", "b", "c", "d", "e"]
         data = np.random.rand(10) + np.random.randint(0, 10, size=10)
 
         for type_ in type_list:
             data = rt.FastArray(data, dtype=type_)
 
-            map = {'vs': data, 'ks': values}
+            map = {"vs": data, "ks": values}
 
-            pd_data = pd.DataFrame(map).groupby(by='ks')
+            pd_data = pd.DataFrame(map).groupby(by="ks")
             sfw_data = rt.Categorical(values=values, categories=bin_ids, base_index=0)
 
             for function in range(0, len(functions)):
                 pd_out = self.groupby_func(pd_data, function)
                 sfw_out = self.groupby_func(sfw_data, function, data)
 
-                col_index = 'Count' if functions_str[function] == 'count' else 0
+                col_index = "Count" if functions_str[function] == "count" else 0
 
                 if (
-                    not safe_equal(list(sfw_out[col_index]), list(pd_out['vs']))
-                    and function != 'median'
+                    not safe_equal(list(sfw_out[col_index]), list(pd_out["vs"]))
+                    and function != "median"
                     and not np.issubdtype(type_, np.integer)
                 ):
                     print(sfw_out)
@@ -155,8 +155,8 @@ class SimpleGroupByCatTest(unittest.TestCase):
 
                     # TODO - rework this so assert messages are used
                     print(list(sfw_out[col_index]))
-                    print(list(pd_out['vs']))
-                    print('Function failed on - ', functions_str[function])
+                    print(list(pd_out["vs"]))
+                    print("Function failed on - ", functions_str[function])
                     assert False
 
 

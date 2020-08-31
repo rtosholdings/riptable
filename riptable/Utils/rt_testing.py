@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 name = lambda obj: obj.__class__.__name__
 
 
-def assert_equal_(actual, expected, decimal=7, err_msg='', verbose=True):
+def assert_equal_(actual, expected, decimal=7, err_msg="", verbose=True):
     """
     A wrapper around numpy testing helpers for assertions that defer to an exact or approximate assertion
     depending on the type.
@@ -63,7 +63,7 @@ def assert_equal_(actual, expected, decimal=7, err_msg='', verbose=True):
         assert_almost_equal(actual, expected, decimal, err_msg, verbose)
 
 
-def assert_array_equal_(actual, expected, decimal=6, err_msg='', verbose=True):
+def assert_array_equal_(actual, expected, decimal=6, err_msg="", verbose=True):
     """
     A wrapper around numpy testing helpers for array assertion that are aware of dtypes and dispatch
     to exact or approximate equality assertions.
@@ -138,7 +138,7 @@ def assert_categorical_equal(
     is derived from. It may be sufficient to check the underlying ``FastArray`` as well as
     the categories.
     """
-    fn = 'assert_categorical_equal'
+    fn = "assert_categorical_equal"
     try:
         # check actual and expected types
         if not isinstance(expected, Categorical):
@@ -153,7 +153,7 @@ def assert_categorical_equal(
         # check category_mode
         assert (
             actual.category_mode == expected.category_mode
-        ), f'{fn}: category mode mismatch\nactual {repr(rt.rt_enum.CategoryMode(actual.category_mode))}\nexpected {repr(rt.rt_enum.CategoryMode(expected.category_mode))}'
+        ), f"{fn}: category mode mismatch\nactual {repr(rt.rt_enum.CategoryMode(actual.category_mode))}\nexpected {repr(rt.rt_enum.CategoryMode(expected.category_mode))}"
 
         # check category_array
         if (
@@ -161,14 +161,18 @@ def assert_categorical_equal(
             or expected.category_mode == rt.rt_enum.CategoryMode.NumericArray
         ):
             assert_array_equal(
-                actual.category_array, expected.category_array, err_msg=f'{fn}: mismatch in "category_array"'
+                actual.category_array,
+                expected.category_array,
+                err_msg=f'{fn}: mismatch in "category_array"',
             )
             assert_array_equal(
-                actual.category_array, expected.category_array, err_msg=f'{fn}: mismatch in "category_array"'
+                actual.category_array,
+                expected.category_array,
+                err_msg=f'{fn}: mismatch in "category_array"',
             )
         else:  # TODO implement category_mode checks for MultiKey, Dict, and IntEnum.
             warnings.warn(
-                f'{fn}: category_array checks not implemented for {repr(rt.rt_enum.CategoryMode(expected.category_mode))} '
+                f"{fn}: category_array checks not implemented for {repr(rt.rt_enum.CategoryMode(expected.category_mode))} "
             )
 
         # check underlying FastArray
@@ -177,19 +181,25 @@ def assert_categorical_equal(
             or expected.category_mode == rt.rt_enum.CategoryMode.NumericArray
         ):
             assert_array_equal(
-                actual._fa, expected._fa, err_msg=f'{fn}: mismatch in underlying FastArray'
+                actual._fa,
+                expected._fa,
+                err_msg=f"{fn}: mismatch in underlying FastArray",
             )
 
         # check expand_array
         if check_expanded_array:
             assert_array_equal(
-                actual.expand_array, expected.expand_array, err_msg=f'{fn}: mismatch in "expand_array"'
+                actual.expand_array,
+                expected.expand_array,
+                err_msg=f'{fn}: mismatch in "expand_array"',
             )
 
         # check category_dict
         for k, fa in expected.category_dict.items():
             assert_array_equal(
-                actual.category_dict.get(k, None), fa, err_msg=f'{fn}: mismatch "category_dict" for item "{k}"\nactual keys {actual.category_dict.keys()}\nexpected keys {expected.category_dict.keys()}'
+                actual.category_dict.get(k, None),
+                fa,
+                err_msg=f'{fn}: mismatch "category_dict" for item "{k}"\nactual keys {actual.category_dict.keys()}\nexpected keys {expected.category_dict.keys()}',
             )
 
         # TODO check CategoryMode Dictionary category_mapping and category_codes
@@ -197,8 +207,8 @@ def assert_categorical_equal(
     except Exception:
         if verbose:
             print(
-                f'{fn}: expected\n{verbose_categorical(expected)}\n'
-                f'{fn}: actual\n{verbose_categorical(actual)}\n'
+                f"{fn}: expected\n{verbose_categorical(expected)}\n"
+                f"{fn}: actual\n{verbose_categorical(actual)}\n"
             )
         raise
 
@@ -221,7 +231,7 @@ def get_common_and_diff_members(
     tuple
         A tuple of two sets of strings where the first is the commonalities and second is the differences.
     """
-    is_public = lambda name: not (name.startswith('__') or name.startswith('_'))
+    is_public = lambda name: not (name.startswith("__") or name.startswith("_"))
     obj_a_dir, obj_b_dir = (
         set(filter(is_public, dir(obj_a))),
         set(filter(is_public, dir(obj_b))),

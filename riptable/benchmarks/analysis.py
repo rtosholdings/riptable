@@ -193,7 +193,7 @@ def _analyze_results(run_nano_times: np.ndarray) -> RunResult:
 
     # TEMP: While developing the estimator code for benchmarking, make it easy to enable/disable
 
-    #if enable_bench_estimators:
+    # if enable_bench_estimators:
     #    # Calculate the cumulative sums of the timing samples, then perform
     #    # a linear regression to fit a line to the cumsums. The more stable
     #    # the timing results, the higher (closer to 1) the R^2 value will be.

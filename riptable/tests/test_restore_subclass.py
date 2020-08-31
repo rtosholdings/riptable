@@ -38,7 +38,7 @@ class RestoreSubclass_Test(unittest.TestCase):
         self.assertTrue(isinstance(ds2, DateSpan))
         self.assertTrue(arr_eq(nptile, ds2._fa))
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         c2 = tile(c, 2)
         nptile = tile(c._np, 2)
         self.assertTrue(isinstance(c2, Categorical))
@@ -86,7 +86,7 @@ class RestoreSubclass_Test(unittest.TestCase):
         self.assertTrue(isinstance(ds2, DateSpan))
         self.assertTrue(arr_eq(nprep, ds2._fa))
 
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = Categorical(["a", "a", "b", "c", "a"])
         c2 = repeat(c, 2)
         nprep = repeat(c._np, 2)
         self.assertTrue(isinstance(c2, Categorical))
@@ -100,21 +100,21 @@ class RestoreSubclass_Test(unittest.TestCase):
         length = 20
         ds = Dataset(
             {
-                'CAT': Categorical(np.random.choice(['a', 'b', 'c'], length)),
-                'DTN': DateTimeNano.random(length),
-                'DATE': Date(np.random.randint(15000, 20000, length)),
-                'TSPAN': TimeSpan(
+                "CAT": Categorical(np.random.choice(["a", "b", "c"], length)),
+                "DTN": DateTimeNano.random(length),
+                "DATE": Date(np.random.randint(15000, 20000, length)),
+                "TSPAN": TimeSpan(
                     np.random.randint(
                         0, 1_000_000_000 * 60 * 60 * 24, length, dtype=np.int64
                     )
                 ),
-                'DSPAN': DateSpan(np.random.randint(0, 365, length)),
+                "DSPAN": DateSpan(np.random.randint(0, 365, length)),
             }
         )
 
         for k, v in ds.items():
             result = ds.gb(k).count()
-            if k != 'CAT':
+            if k != "CAT":
                 self.assertEqual(type(result[k]), type(v))
             self.assertTrue(arr_eq([k], result.label_get_names()))
 
@@ -122,15 +122,15 @@ class RestoreSubclass_Test(unittest.TestCase):
         length = 20
         ds = Dataset(
             {
-                'CAT': Categorical(np.random.choice(['a', 'b', 'c'], length)),
-                'DTN': DateTimeNano.random(length),
-                'DATE': Date(np.random.randint(15000, 20000, length)),
-                'TSPAN': TimeSpan(
+                "CAT": Categorical(np.random.choice(["a", "b", "c"], length)),
+                "DTN": DateTimeNano.random(length),
+                "DATE": Date(np.random.randint(15000, 20000, length)),
+                "TSPAN": TimeSpan(
                     np.random.randint(
                         0, 1_000_000_000 * 60 * 60 * 24, length, dtype=np.int64
                     )
                 ),
-                'DSPAN': DateSpan(np.random.randint(0, 365, length)),
+                "DSPAN": DateSpan(np.random.randint(0, 365, length)),
             }
         )
         for k, v in ds.items():
@@ -138,17 +138,17 @@ class RestoreSubclass_Test(unittest.TestCase):
             self.assertEqual(type(result), type(v))
 
     def test_cat_grouping(self):
-        c = Categorical(['a', 'a', 'b', 'c', 'a'])
-        ds = Dataset({'catcol': c, 'data': FA([1, 1, 2, 3, 1])})
-        ds2 = ds.drop_duplicates('data')
+        c = Categorical(["a", "a", "b", "c", "a"])
+        ds = Dataset({"catcol": c, "data": FA([1, 1, 2, 3, 1])})
+        ds2 = ds.drop_duplicates("data")
 
         c2 = ds2.catcol
         self.assertTrue(isinstance(c2, Categorical))
-        self.assertTrue(arr_eq(['a', 'b', 'c'], c2))
+        self.assertTrue(arr_eq(["a", "b", "c"], c2))
         self.assertTrue(arr_eq([1, 2, 3], c2.grouping.ikey))
         self.assertTrue(c2.grouping.isdirty)
-        self.assertTrue(arr_eq(c2[[0]], ['a']))
+        self.assertTrue(arr_eq(c2[[0]], ["a"]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

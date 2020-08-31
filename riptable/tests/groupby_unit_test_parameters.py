@@ -3,13 +3,13 @@ import random as rand
 
 functions_str = [
     # 'count',
-    'sum',
-    'mean',
-    'median',
-    'min',
-    'max',
+    "sum",
+    "mean",
+    "median",
+    "min",
+    "max",
     # 'prod',
-    'var',
+    "var",
     # 'quantile',
     # 'cumsum',
     # 'cumprod',
@@ -17,8 +17,8 @@ functions_str = [
     # 'cummin'
 ]
 
-KEY_COLUMN_NAMES = 'a b c d e g h i j k l m n o p r s t u v w x y z'.split(' ')
-VAL_COLUMN_NAMES = ['val' + char.upper() for char in KEY_COLUMN_NAMES]
+KEY_COLUMN_NAMES = "a b c d e g h i j k l m n o p r s t u v w x y z".split(" ")
+VAL_COLUMN_NAMES = ["val" + char.upper() for char in KEY_COLUMN_NAMES]
 
 VAL_COLUMNS_MAX = 8
 VAL_COLUMNS_MIN = 1
@@ -117,10 +117,10 @@ class groupby_parameters:
                         update_aggs(self)
         else:
             switch = {
-                'aggs': update_aggs,
-                'syms': update_symbs,
-                'vals': update_val_cols,
-                'keys': update_key_cols,
+                "aggs": update_aggs,
+                "syms": update_symbs,
+                "vals": update_val_cols,
+                "keys": update_key_cols,
             }
 
             switch[parameter]()
@@ -150,7 +150,7 @@ class groupby_everything:
 
         for i in range(0, self.key_columns):
             self.data[KEY_COLUMN_NAMES[i]] = [
-                'k' + str(rand.randint(0, self.symbol_ratio_count))
+                "k" + str(rand.randint(0, self.symbol_ratio_count))
                 for i in np.random.randint(self.size, size=self.size)
             ]
 

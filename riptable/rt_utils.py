@@ -1,8 +1,19 @@
-__all__ = [# misc riptable utility funcs
-           'get_default_value', 'merge_prebinned', 'alignmk', 'normalize_keys',
-           'bytes_to_str', 'findTrueWidth', 'ischararray', 'islogical', 'mbget', 'str_to_bytes', 'to_str', 'describe',
-           # h5 -> riptable
-           'load_h5']
+__all__ = [  # misc riptable utility funcs
+    "get_default_value",
+    "merge_prebinned",
+    "alignmk",
+    "normalize_keys",
+    "bytes_to_str",
+    "findTrueWidth",
+    "ischararray",
+    "islogical",
+    "mbget",
+    "str_to_bytes",
+    "to_str",
+    "describe",
+    # h5 -> riptable
+    "load_h5",
+]
 
 from typing import Optional, List, Union
 import os
@@ -17,15 +28,52 @@ import warnings
 import keyword
 
 from .rt_hstack import merge_cats
-from .rt_numpy import zeros, issorted, ismember, sort, tile, arange, unique, crc64, bool_to_fancy, empty, hstack, lexsort, get_common_dtype
-from .rt_enum import TypeRegister, INVALID_DICT, NumpyCharTypes, TypeId, CompressionMode, CompressionType, INVALID_FILE_CHARS, SDSFlag, SDSFileType, CategoryMode, SDS_EXTENSION, SDS_EXTENSION_BYTES
+from .rt_numpy import (
+    zeros,
+    issorted,
+    ismember,
+    sort,
+    tile,
+    arange,
+    unique,
+    crc64,
+    bool_to_fancy,
+    empty,
+    hstack,
+    lexsort,
+    get_common_dtype,
+)
+from .rt_enum import (
+    TypeRegister,
+    INVALID_DICT,
+    NumpyCharTypes,
+    TypeId,
+    CompressionMode,
+    CompressionType,
+    INVALID_FILE_CHARS,
+    SDSFlag,
+    SDSFileType,
+    CategoryMode,
+    SDS_EXTENSION,
+    SDS_EXTENSION_BYTES,
+)
 from .rt_timers import tic, toc, utcnow
 from .Utils.rt_metadata import MetaData
+
 # from .rt_enum import INVALID_POINTER_32, INVALID_POINTER_64
 
 
-#-----------------------------------------------------------------------------------------
-def load_h5(filepath : str, name='/', columns='', format=None, fixblocks:bool=False, drop_short:bool=False, verbose=0, **kwargs):
+# -----------------------------------------------------------------------------------------
+def load_h5(
+    filepath: str,
+    name="/",
+    columns="",
+    format=None,
+    fixblocks: bool = False,
+    drop_short: bool = False,
+    verbose=0,
+    **kwargs,
+):
     """
     Load from h5 file and flip hdf5.io objects to riptable structures.
 
@@ -59,15 +107,21 @@ def load_h5(filepath : str, name='/', columns='', format=None, fixblocks:bool=Fa
     Returns a Dataset or a Struct with all workspace contents.
     """
     import hdf5
+
     if format is None:
         format = hdf5.Format.NDARRAY
 
-    if verbose > 0: print(f'starting h5 load {filepath}')
+    if verbose > 0:
+        print(f"starting h5 load {filepath}")
     ws = hdf5.load(filepath, name=name, columns=columns, format=format, **kwargs)
-    if verbose > 0: print(f'finished h5 load {filepath}')
+    if verbose > 0:
+        print(f"finished h5 load {filepath}")
 
     if isinstance(ws, dict):
-        if verbose > 0: print(f'h5 file loaded into dictionary. Possibly returning dataset from dictinoary, otherwise struct.')
+        if verbose > 0:
+            print(
+                f"h5 file loaded into dictionary. Possibly returning dataset from dictinoary, otherwise struct."
+            )
         return _possibly_create_dataset(ws)
 
     ws = h5io_to_struct(ws)
@@ -76,9 +130,9 @@ def load_h5(filepath : str, name='/', columns='', format=None, fixblocks:bool=Fa
         ws = ws[0]
         final_dict = {}
         for k, v in ws.items():
-            if k.endswith('_items'):
-                names = v.astype('U')
-                rows = ws[k[:-5]+'values']
+            if k.endswith("_items"):
+                names = v.astype("U")
+                rows = ws[k[:-5] + "values"]
                 t_dict = dict(zip(names, rows.transpose()))
                 for t_k, t_v in t_dict.items():
                     final_dict[t_k] = t_v
@@ -96,14 +150,16 @@ def load_h5(filepath : str, name='/', columns='', format=None, fixblocks:bool=Fa
             if len(v) == maxrow:
                 final_dict[k] = v
             else:
-                warnings.warn(f"load_h5: drop_short, dropping col {k!r} with len {len(v)} vs {maxrow}")
+                warnings.warn(
+                    f"load_h5: drop_short, dropping col {k!r} with len {len(v)} vs {maxrow}"
+                )
 
         ws = TypeRegister.Dataset(final_dict)
 
     return ws
 
 
-#-----------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------
 def _possibly_create_dataset(itemdict):
     """
     Useful for iterating through dicts/other structures with items().
@@ -129,7 +185,8 @@ def _possibly_create_dataset(itemdict):
         result = TypeRegister.Struct(itemdict)
     return result
 
-#-----------------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------------------
 def _possibly_escape_colname(parent_name, container, name):
     """
     If loading from h5, column names may need to change to valid riptable column names.
@@ -138,12 +195,12 @@ def _possibly_escape_colname(parent_name, container, name):
 
     # escape leading underscores
     old = name
-    while name.startswith('_'):
+    while name.startswith("_"):
         name = name[1:]
     if name in keyword.kwlist:
-        name = name + '_'
-        while(name in container):
-            name = name + '_'
+        name = name + "_"
+        while name in container:
+            name = name + "_"
         warnings.warn(f"changed name {old} to {name} in {parent_name}")
     # capitalize names of existing attributes in dataset
     elif name in dir(TypeRegister.Dataset):
@@ -153,12 +210,13 @@ def _possibly_escape_colname(parent_name, container, name):
 
     return name
 
-#-----------------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------------------
 def _possibly_convert_rec_array(item):
     """
     h5 often loads data into a numpy record array (void type). Flip these before converting to a dataset.
     """
-    if item.dtype.char == 'V':
+    if item.dtype.char == "V":
         warnings.warn(f"Converting numpy record array. Performance may suffer.")
         # flip row-major to column-major
         d = {}
@@ -167,7 +225,8 @@ def _possibly_convert_rec_array(item):
         return d
     return item
 
-#-----------------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------------------
 def h5io_to_struct(io):
     """
     Utility for crawling/flipping hdf5.io objects to Dataset/Struct.
@@ -177,16 +236,20 @@ def h5io_to_struct(io):
     If anyone has use cases please send them my way, thanks - Sam Kachel
     """
     if isinstance(io, np.ndarray):
-        if io.dtype.char == 'V':
+        if io.dtype.char == "V":
             io = _possibly_convert_rec_array(io)
         else:
-            print('Loaded a single numpy array from h5. Returning struct of single array.')
+            print(
+                "Loaded a single numpy array from h5. Returning struct of single array."
+            )
         return _possibly_create_dataset(io)
-    if io.__module__ != 'hdf5.io':
-        raise TypeError(f"This routine attempts to interpret H5 data from classes in the hdf5.io module. Got {io.__module__} module instead.")
+    if io.__module__ != "hdf5.io":
+        raise TypeError(
+            f"This routine attempts to interpret H5 data from classes in the hdf5.io module. Got {io.__module__} module instead."
+        )
     itemdict = {}
     for itemname in dir(io):
-        if not itemname.startswith('_'):
+        if not itemname.startswith("_"):
             item = getattr(io, itemname)
             # need to check for record array
             if isinstance(item, np.ndarray):
@@ -208,9 +271,11 @@ def h5io_to_struct(io):
                 itemdict[itemname] = _possibly_create_dataset(itemdict[itemname])
 
             # crawl the h5io object
-            elif item.__module__ == 'hdf5.io':
-                if item.__class__.__name__ == 'Categorical':
-                    print(f"FOUND A CATEGORICAL: {itemname}\nPlease let Sam Kachel know where this file is.")
+            elif item.__module__ == "hdf5.io":
+                if item.__class__.__name__ == "Categorical":
+                    print(
+                        f"FOUND A CATEGORICAL: {itemname}\nPlease let Sam Kachel know where this file is."
+                    )
                 itemdict[itemname] = h5io_to_struct(item)
 
             else:
@@ -250,8 +315,9 @@ def findTrueWidth(string):
         if string[i]:
             break
         else:
-            trailing+=1
-    return width-trailing
+            trailing += 1
+    return width - trailing
+
 
 def merge_prebinned(key1: np.ndarray, key2: np.ndarray, val1, val2, totalUniqueSize):
     """
@@ -278,8 +344,9 @@ def merge_prebinned(key1: np.ndarray, key2: np.ndarray, val1, val2, totalUniqueS
 
     return rc.MergeBinnedAndSorted(key1, key2, val1, val2, totalUniqueSize)
 
-#------------------------------------------------------------------------------------------------------
-def normalize_keys(key1, key2, verbose =False):
+
+# ------------------------------------------------------------------------------------------------------
+def normalize_keys(key1, key2, verbose=False):
     """
     Helper function to make two different lists of keys the same itemsize. Handles categoricals.
 
@@ -305,6 +372,7 @@ def normalize_keys(key1, key2, verbose =False):
     -----
     TODO: integer, float and string upcasting can be done while rotating.
     """
+
     def check_key(key):
         if not isinstance(key, (TypeRegister.Struct, dict)):
             if not isinstance(key, (tuple, list)):
@@ -342,7 +410,8 @@ def normalize_keys(key1, key2, verbose =False):
     key1 = check_key(key1)
     key2 = check_key(key2)
 
-    if verbose: print("check_key keys", key1, key2)
+    if verbose:
+        print("check_key keys", key1, key2)
 
     arrays1 = []
     arrays2 = []
@@ -351,7 +420,9 @@ def normalize_keys(key1, key2, verbose =False):
     for arr1, arr2 in zip(key1, key2):
 
         # if either one is Categorical or both are, make sure they are aligned
-        if isinstance(arr1,TypeRegister.Categorical) or isinstance(arr2,TypeRegister.Categorical):
+        if isinstance(arr1, TypeRegister.Categorical) or isinstance(
+            arr2, TypeRegister.Categorical
+        ):
             arr1, arr2 = TypeRegister.Categorical.align([arr1, arr2])
             # even if categoricals were aligned we might have int16 vs int32 (so fall thru to check)
 
@@ -365,8 +436,16 @@ def normalize_keys(key1, key2, verbose =False):
     return arrays1, arrays2
 
 
-#------------------------------------------------------------------------------------------------------
-def alignmk(key1, key2, time1, time2, direction:str='backward', allow_exact_matches:bool=True, verbose:bool=False):
+# ------------------------------------------------------------------------------------------------------
+def alignmk(
+    key1,
+    key2,
+    time1,
+    time2,
+    direction: str = "backward",
+    allow_exact_matches: bool = True,
+    verbose: bool = False,
+):
     """
     Core routine for merge_asof.
     Takes a key1 on the left and a key2 on the right (multikey is allowed).
@@ -421,28 +500,38 @@ def alignmk(key1, key2, time1, time2, direction:str='backward', allow_exact_matc
     if not isinstance(time2, np.ndarray):
         raise TypeError(f"time2 must be a numpy array not {time2}")
 
-    if verbose: print("alignmk keys", key1, key2, time1, time2, direction, allow_exact_matches)
+    if verbose:
+        print("alignmk keys", key1, key2, time1, time2, direction, allow_exact_matches)
 
-    if direction == 'nearest':
-        backward= rc.MultiKeyAlign32((key1,), (key2,), time1, time2, False, allow_exact_matches)
-        forward= rc.MultiKeyAlign32((key1,), (key2,), time1, time2, True, allow_exact_matches)
-        if verbose: print("forward", forward, 'backward', backward)
+    if direction == "nearest":
+        backward = rc.MultiKeyAlign32(
+            (key1,), (key2,), time1, time2, False, allow_exact_matches
+        )
+        forward = rc.MultiKeyAlign32(
+            (key1,), (key2,), time1, time2, True, allow_exact_matches
+        )
+        if verbose:
+            print("forward", forward, "backward", backward)
         # TODO combine forward and backward
         return forward
     else:
-        if direction == 'backward':
+        if direction == "backward":
             isForward = False
-        elif direction == 'forward':
+        elif direction == "forward":
             isForward = True
         else:
             raise ValueError("unsupported direction in alignmk")
 
-        #TODO: Update C++ code to take a list
-        result= rc.MultiKeyAlign32((key1,), (key2,), time1, time2, isForward, allow_exact_matches)
-    if verbose: print("result", result)
+        # TODO: Update C++ code to take a list
+        result = rc.MultiKeyAlign32(
+            (key1,), (key2,), time1, time2, isForward, allow_exact_matches
+        )
+    if verbose:
+        print("result", result)
     return result
 
-#------------------------------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------------------------------
 def _mbget_2dims(arr, idx):
     """
     2-dimensional arrays are flattened, and index is repeated/expanded before going through
@@ -475,8 +564,13 @@ def _mbget_2dims(arr, idx):
 
     return result.view(TypeRegister.FastArray)
 
-#------------------------------------------------------------------------------------------------------
-def mbget(aValues: np.ndarray, aIndex: np.ndarray, d: Optional[Union[int, float, bytes]]=None) -> np.ndarray:
+
+# ------------------------------------------------------------------------------------------------------
+def mbget(
+    aValues: np.ndarray,
+    aIndex: np.ndarray,
+    d: Optional[Union[int, float, bytes]] = None,
+) -> np.ndarray:
     """
     This function is meant to mimic the mbget function in MATLab.
 
@@ -547,9 +641,9 @@ def mbget(aValues: np.ndarray, aIndex: np.ndarray, d: Optional[Union[int, float,
     >>> print(vout)                                         #MATLab: vout
     [10  -2147483648  50  40 -2147483648  20  30]    #MATLab: [10.00  NaN  50.00  40.00  NaN  20.00  30.00]
     """
-    #for now, always use the default d value
-    d=None
-    #make sure a aValues and aIndex are both numpy arrays
+    # for now, always use the default d value
+    d = None
+    # make sure a aValues and aIndex are both numpy arrays
 
     if isinstance(aValues, (list, tuple)):
         aValues = TypeRegister.FastArray(aValues)
@@ -558,11 +652,13 @@ def mbget(aValues: np.ndarray, aIndex: np.ndarray, d: Optional[Union[int, float,
         aIndex = TypeRegister.FastArray(aIndex)
 
     if isinstance(aValues, np.ndarray) and isinstance(aIndex, np.ndarray):
-        if aValues.dtype.char == 'O':
+        if aValues.dtype.char == "O":
             raise TypeError(f"mbget does not support object types")
 
         if aIndex.dtype.char not in NumpyCharTypes.AllInteger:
-            raise TypeError(f"indices provided to mbget must be an integer type not {aIndex.dtype}")
+            raise TypeError(
+                f"indices provided to mbget must be an integer type not {aIndex.dtype}"
+            )
 
         if aValues.ndim == 2:
             return _mbget_2dims(aValues, aIndex)
@@ -572,23 +668,28 @@ def mbget(aValues: np.ndarray, aIndex: np.ndarray, d: Optional[Union[int, float,
         result = TypeRegister.newclassfrominstance(result, aValues)
 
     else:
-        raise TypeError(f"Values and index must be numpy arrays. Got {type(aValues)} {type(aIndex)}")
+        raise TypeError(
+            f"Values and index must be numpy arrays. Got {type(aValues)} {type(aIndex)}"
+        )
 
     return result
 
-#------------------------------------------------------
+
+# ------------------------------------------------------
 def str_to_bytes(s):
     if isinstance(s, str):
         s = s.encode()
     return s
 
-#------------------------------------------------------
+
+# ------------------------------------------------------
 def bytes_to_str(b):
-    if isinstance(b,bytes):
+    if isinstance(b, bytes):
         b = b.decode()
     return str(b)
 
-#------------------------------------------------------
+
+# ------------------------------------------------------
 def to_str(s):
     if isinstance(s, bytes):
         return s.decode()
@@ -596,39 +697,48 @@ def to_str(s):
         return s
     return str(s)
 
-#----------------------------------------------------------
+
+# ----------------------------------------------------------
 # Checks for numpy array logical or just python bool
 def islogical(a):
-    if isinstance(a, np.ndarray): return a.dtype.char == '?'
-    return isinstance(a,bool)
+    if isinstance(a, np.ndarray):
+        return a.dtype.char == "?"
+    return isinstance(a, bool)
 
-#----------------------------------------------------------
+
+# ----------------------------------------------------------
 # similar to matlab ischar or iscellstr
 # return True for both char and string arrays
 def ischararray(a):
-    if isinstance(a, np.ndarray): return a.dtype.char in 'SU'
+    if isinstance(a, np.ndarray):
+        return a.dtype.char in "SU"
     return False
 
-#----------------------------------------------------------
+
+# ----------------------------------------------------------
 # from sacore.core_utils import interpolate
 # from apexqr_math.dataBox import dataBox
 def interpolate(data, floatIndex):
-   frac, whole = modf(floatIndex)
-   whole = int(whole)
+    frac, whole = modf(floatIndex)
+    whole = int(whole)
 
-   if floatIndex < 0.0:
-      raise ValueError("interpolate: cannot call with negative index: %r" % floatIndex)
-   if floatIndex > len(data) - 1:
-      return np.nan, whole
-      #raise ValueError("interpolate: cannot call with index greater than length-1: %r > %r" %
-      #                 (floatIndex, len(data) - 1))
+    if floatIndex < 0.0:
+        raise ValueError(
+            "interpolate: cannot call with negative index: %r" % floatIndex
+        )
+    if floatIndex > len(data) - 1:
+        return np.nan, whole
+        # raise ValueError("interpolate: cannot call with index greater than length-1: %r > %r" %
+        #                 (floatIndex, len(data) - 1))
 
-   if not frac:
-      return data[whole], whole
+    if not frac:
+        return data[whole], whole
 
-   return (1.0 - frac) * data[whole] + frac * data[whole + 1], whole
-#----------------------------------------------------------
-def quantile(arr: Optional[np.ndarray], q:List[float]=None):
+    return (1.0 - frac) * data[whole] + frac * data[whole + 1], whole
+
+
+# ----------------------------------------------------------
+def quantile(arr: Optional[np.ndarray], q: List[float] = None):
     """
     Parameters
     ----------
@@ -655,7 +765,7 @@ def quantile(arr: Optional[np.ndarray], q:List[float]=None):
         # make a fast copy first
         arr_sort = arr.copy()
 
-        #inplace sort
+        # inplace sort
         arr_sort.sort()
 
         if cvalid == count:
@@ -673,10 +783,10 @@ def quantile(arr: Optional[np.ndarray], q:List[float]=None):
         # this interpolate call is the same as numpy.percentile, which doesn't exist until a recent version of numpy
         # ## interpolate( data, pp / 100.0 * ( len( data ) - 1 ) ) == percentile( data, pp ) for pp \in [ 0, 100 ]
         # it also avoids multiple sorts...
-        cvalidm1 =  cvalid -1
+        cvalidm1 = cvalid - 1
 
         # calculate the quantiles
-        quantiles=[]
+        quantiles = []
         for percent in q:
             interp, _ = interpolate(valid, percent * cvalidm1)
             quantiles.append(interp)
@@ -687,19 +797,21 @@ def quantile(arr: Optional[np.ndarray], q:List[float]=None):
     return TypeRegister.FastArray(retvals, dtype=np.float64)
 
 
-#----------------------------------------------------------
-def describe_helper(arr: Optional[np.ndarray], q: Optional[List[float]] = None) -> Union[List[str], np.ndarray]:
+# ----------------------------------------------------------
+def describe_helper(
+    arr: Optional[np.ndarray], q: Optional[List[float]] = None
+) -> Union[List[str], np.ndarray]:
     """
     pass in None to get labels
     otherwise returns an array matching the labels
     """
     if q is None:
         q = [0.10, 0.25, 0.50, 0.75, 0.90]
-    preamble = 'Count Valid Nans Mean Std Min '
-    body = ''
+    preamble = "Count Valid Nans Mean Std Min "
+    body = ""
     for percent in q:
-        body += 'P' + str(int(percent*100)) + ' '
-    postamble = 'Max MeanM'
+        body += "P" + str(int(percent * 100)) + " "
+    postamble = "Max MeanM"
 
     # Do I want to allow for optionally adding more pctls?
     if arr is None:
@@ -718,7 +830,7 @@ def describe_helper(arr: Optional[np.ndarray], q: Optional[List[float]] = None) 
         # make a fast copy first
         arr_sort = arr.copy()
 
-        #inplace sort
+        # inplace sort
         arr_sort.sort()
 
         if cvalid == count:
@@ -736,12 +848,12 @@ def describe_helper(arr: Optional[np.ndarray], q: Optional[List[float]] = None) 
         # this interpolate call is the same as numpy.percentile, which doesn't exist until a recent version of numpy
         # ## interpolate( data, pp / 100.0 * ( len( data ) - 1 ) ) == percentile( data, pp ) for pp \in [ 0, 100 ]
         # it also avoids multiple sorts...
-        cvalidm1 =  cvalid -1
+        cvalidm1 = cvalid - 1
         d1, d1break = interpolate(valid, 0.10 * cvalidm1)
-        d9, d9break = interpolate(valid, 0.90 *  cvalidm1)
+        d9, d9break = interpolate(valid, 0.90 * cvalidm1)
 
         # calculate the quantiles
-        quantiles=[]
+        quantiles = []
         for percent in q:
             interp, _ = interpolate(valid, percent * cvalidm1)
             quantiles.append(interp)
@@ -749,7 +861,7 @@ def describe_helper(arr: Optional[np.ndarray], q: Optional[List[float]] = None) 
         # get nice data in the middle 80%
         # the mean calculation includes the low which gets truncated
         # the high needs to move up if it was truncated
-        frac, whole = modf(0.90 *  cvalidm1)
+        frac, whole = modf(0.90 * cvalidm1)
         if frac:
             d9break = d9break + 1
 
@@ -762,16 +874,16 @@ def describe_helper(arr: Optional[np.ndarray], q: Optional[List[float]] = None) 
 
         m0 = validm.mean() if len(validm) > 0 else np.nan
         vmean = valid.mean()
-        retvals = [count, cvalid, notvalid, vmean, valid.std(),
-                   valid[0]]
+        retvals = [count, cvalid, notvalid, vmean, valid.std(), valid[0]]
         retvals += quantiles
         retvals += [valid[-1], m0]
         # help recycler
         del arr_sort
     return TypeRegister.FastArray(retvals, dtype=np.float64)
 
-#--------------------------------------------------------------------------
-def describe(arr, q: Optional[List[float]] = None, fill_value = None):
+
+# --------------------------------------------------------------------------
+def describe(arr, q: Optional[List[float]] = None, fill_value=None):
     """
     Similar to pandas describe; columns remain stable, with extra column (Stats) added for names.
 
@@ -821,22 +933,25 @@ def describe(arr, q: Optional[List[float]] = None, fill_value = None):
         fill_value = [fill_value] * len(labels)
 
     if isinstance(arr, TypeRegister.Dataset):
-        retval = arr.reduce(describe_helper, q=q, as_dataset=True, fill_value=fill_value)
+        retval = arr.reduce(
+            describe_helper, q=q, as_dataset=True, fill_value=fill_value
+        )
     else:
-        if not isinstance (arr, TypeRegister.FastArray):
+        if not isinstance(arr, TypeRegister.FastArray):
             arr = TypeRegister.FastArray(arr)
         name = arr.get_name()
-        if name is None: name = 'Col0'
+        if name is None:
+            name = "Col0"
 
         retval = TypeRegister.Dataset({name: describe_helper(arr)})
 
     retval.Stats = labels
-    retval.col_move_to_front(['Stats'])
-    retval.label_set_names(['Stats'])
+    retval.col_move_to_front(["Stats"])
+    retval.label_set_names(["Stats"])
     return retval
 
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 def is_list_like(obj):
     """
     Check if the object is list-like.
@@ -871,10 +986,10 @@ def is_list_like(obj):
     >>> is_list_like(1)
     False
     """
-    return (isinstance(obj, Iterable) and
-            not isinstance(obj, (str, bytes)))
+    return isinstance(obj, Iterable) and not isinstance(obj, (str, bytes))
 
-#----------------------------------------------------------
+
+# ----------------------------------------------------------
 def get_default_value(arr):
     t = type(arr)
     if isinstance(arr, np.ndarray):
@@ -883,8 +998,9 @@ def get_default_value(arr):
         return INVALID_DICT[arr.dtype.num]
     return np.nan
 
-#----------------------------------------------------------
-def str_replace(arr, old, new, missing=''):
+
+# ----------------------------------------------------------
+def str_replace(arr, old, new, missing=""):
     """
 
     Parameters
@@ -905,7 +1021,7 @@ def str_replace(arr, old, new, missing=''):
 
     for i in [arr, old, new]:
         if isinstance(i, np.ndarray):
-            if i.dtype.char not in 'US':
+            if i.dtype.char not in "US":
                 raise TypeError(f"str_replace input must be arrays of strings")
         else:
             raise TypeError(f"str_replace input must be numpy array")
@@ -919,7 +1035,7 @@ def str_replace(arr, old, new, missing=''):
 
 
 # -------------------------------------------------------
-def sample(obj, N: int=10, filter=None):
+def sample(obj, N: int = 10, filter=None):
     """
     Select N random samples from Dataset or FastArray.
 
@@ -939,7 +1055,7 @@ def sample(obj, N: int=10, filter=None):
         M = obj.shape[0]
         N = min(N, obj.shape[0])
     else:
-        if filter.dtype.char == '?':  # Bool
+        if filter.dtype.char == "?":  # Bool
             M = bool_to_fancy(filter)
         else:
             M = filter
