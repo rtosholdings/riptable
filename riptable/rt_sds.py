@@ -21,6 +21,7 @@ from .rt_numpy import zeros, issorted, ismember, sort, tile, arange, unique, crc
 from .rt_enum import TypeRegister, INVALID_DICT, NumpyCharTypes, TypeId, CompressionMode, CompressionType, INVALID_FILE_CHARS, SDSFlag, SDSFileType, CategoryMode, SDS_EXTENSION, SDS_EXTENSION_BYTES
 from .rt_timers import tic, toc, utcnow, GetTSC, ticp, tocp, GetNanoTime
 from .Utils.rt_metadata import MetaData
+from .rt_utils import h5io_to_struct
 # from .rt_enum import INVALID_POINTER_32, INVALID_POINTER_64
 
 

@@ -2105,7 +2105,7 @@ class Categorical(GroupByOps, FastArray):
             if inplace is True:
                 # inplace must have same length and dtype
                 if shape != self.shape:
-                   raise ValueError(f"Inplace fill invalid cannot be different number of rows than existing categorical. Got {nrows} vs. length {len(self)}")
+                   raise ValueError(f"Inplace fill invalid cannot be different number of rows than existing categorical. Got {shape} vs. length {len(self)}")
                 if dtype != self.dtype:
                     raise ValueError(f"Inplace fill invalid cannot be different dtype than existing categorical. Got {dtype} vs. {len(self.dtype)}")
                 self._fa.fill(0)
@@ -4295,19 +4295,6 @@ class Categorical(GroupByOps, FastArray):
             elif item is False:
                 tf_string[idx] = "False"
         return "".join(tf_string)
-
-    # ------------------------------------------------------------
-    def unique(self, *args, **kwargs):
-        """
-        Returns the unique elements of this Categorical.
-
-        See Also
-        --------
-        rt_numpy.unique
-            ``unique`` doc shows the acceptable positional and keyword arguments.
-        """
-        return unique(self.filter(), *args, **kwargs)
-    
 
     @property
     def unique_repr(self):
