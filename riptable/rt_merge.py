@@ -3298,7 +3298,7 @@ class _AsOfMerge:
             # TJD: when both left and right are prebinned and left_on_col, right_on_col are sorted and are int32/64/float32/float64
             # this is a future fast path to merge_asof
             start = GetNanoTime()
-            pright = merge_prebinned(left_by, right_by, left_on_col, right_on_col, total_unique + 1)
+            #pright = merge_prebinned(left_by, right_by, left_on_col, right_on_col, total_unique + 1)
 
             if verbose:
                 delta = GetNanoTime() - start
