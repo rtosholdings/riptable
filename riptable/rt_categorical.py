@@ -1,26 +1,31 @@
-__all__ = ['Categorical', 'categorical_convert', 'categorical_merge_dict', 'Categories', 'CatZero']
-import numpy as np
-import weakref
-import warnings
-import sys
-import os
-import json
-from enum import IntEnum, EnumMeta
-from typing import Mapping, Optional, Collection, Tuple, List, Union
+__all__ = [
+    # Classes/types
+    'Categorical',
+    'Categories',
+    # functions
+    'CatZero',
+    'categorical_convert',
+    'categorical_merge_dict',
+]
 
-import riptide_cpp as rc
+from enum import IntEnum, EnumMeta
+from typing import Any, Collection, Dict, List, Mapping, Optional, Tuple, Union, TYPE_CHECKING
+import warnings
+
+import numpy as np
+
 from .rt_fastarray import FastArray
-from .rt_grouping import Grouping, GroupingEnum
-from .rt_utils import mbget, str_to_bytes, bytes_to_str
+from .rt_grouping import Grouping, GroupingEnum, merge_cats
+from .rt_utils import bytes_to_str, crc_match
 from .rt_enum import (
     NumpyCharTypes, TypeRegister, TypeId, DisplayLength,
     INVALID_SHORT_NAME, DisplayJustification, INVALID_DICT, FILTERED_LONG_NAME,
     int_dtype_from_len,
     CategoryMode, CategoryStringMode, CategoricalOrigin, CategoricalConstructor, SDSFlag, GB_FUNCTIONS)
 from .rt_numpy import (
-    mask_or, mask_and, mask_ori, mask_andi, sort, unique32, ismember, unique, lexsort, arange, combine_filter, argsort, zeros,
-    bool_to_fancy, full, empty, sum, putmask, nan_to_zero, issorted, crc64, combine_accum1_filter, hstack, isnan, ones)
-from .rt_hstack import hstack_any, merge_cats
+    mask_or, mask_and, mask_ori, mask_andi, sort, unique32, ismember, unique, argsort, zeros,
+    bool_to_fancy, full, empty, sum, putmask, nan_to_zero, issorted, crc64, hstack, isnan, ones)
+from .rt_hstack import hstack_any
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .Utils.rt_metadata import MetaData
 
@@ -30,12 +35,13 @@ from .rt_groupbykeys import GroupByKeys
 from .rt_str import FAString
 from .rt_fastarraynumba import fill_forward, fill_backward
 
-#testing
-from .rt_timers import tt
+if TYPE_CHECKING:
+    import pandas as pd
+    from .rt_dataset import Dataset
 
 
 # ------------------------------------------------------------
-def _copy_name(src, dst):
+def _copy_name(src: FastArray, dst: FastArray) -> None:
     """Copy a name from FastArray if it has been set.
     If not a FastArray, no name will be set.
     """
@@ -52,7 +58,7 @@ def _copy_name(src, dst):
 
 
 # ------------------------------------------------------------
-def categorical_convert(v, base_index=0):
+def categorical_convert(v: 'pd.Categorical', base_index: int = 0) -> Tuple[FastArray, np.ndarray]:
     '''
     Parameters
     ----------
@@ -149,9 +155,7 @@ def make_string_array(categories):
     return string_array
 
 
-# ------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-class Categories():
+class Categories:
     '''
     Holds categories for each Categorical instance. This adds a layer of abstraction to Categorical.
 
@@ -892,8 +896,7 @@ class Categories():
             as_dict = self._column_dict
 
         elif self.mode in Categories.dict_modes:
-            as_dict = { self.default_colname : list(self.str2intdict.keys()) }
-            pass
+            as_dict = { self.default_colname : FastArray(list(self.str2intdict.keys())) }
 
         elif self.mode in Categories.list_modes:
             name = self._list.get_name()
@@ -1054,8 +1057,6 @@ class Categories():
                     if len(new_exists) == 1:
                         return replace_idx+self.base_index, new_exists[0]
                     else:
-                        # must make a copy incase any references
-                        self._list = self._list.copy()
                         self._list[replace_idx] = new_value
                         self._ordered = False
                         self._sorted = False
@@ -1181,7 +1182,7 @@ class Categorical(GroupByOps, FastArray):
 
     Parameters
     ----------
-    values:
+    values
         * list or array of string values. the list will be made unique, and an integer array will be constructed to index into it
         * list or array of numeric values. the list will be made unique with a groupby operation and an integer array will be constructed to index into it
         * list or array of float values. (matlab indexing) categories must be set to a unique array, and from_matlab must be set to True.
@@ -1191,35 +1192,37 @@ class Categorical(GroupByOps, FastArray):
         * pandas Categorical object - a deep copy is performed. indices will be incremented by 1 to translate pandas invalids
         * list of numpy arrays. the keys will be made unique with a groupby operation and an integer array will be constructed to index into it
         * dictionary of numpy arrays. the keys will be made unique with a groupby operation and an integer array will be constructed to index into it
-    categories:
+    categories
         * list or array of unique categories
         * intenum or dictionary of integer code mapping to string values. must be paired with integer array of codes
-    ordered: bool defaults to None
+    ordered : bool, optional, default None
         If a categorical's ordered flag is set to True, a sort will be performed when the categorical is made,
-        otherwise the categorical's display order is dependent on lex=True/False.  if lex=False, the display order is first appearance.
-        Sorted groupby operations can be requested by setting the sort_gb keyword to True (see below).
-    sort_display/sort_gb: bool defaults to None
-        By default, groupby operations will be unsorted. If sort_gb is set to True in the constructor, a sort will be performed (lazily) and
+        otherwise the categorical's display order is dependent on `lex`==True/False. If `lex`==False, the display order is first appearance.
+        Sorted groupby operations can be requested by setting the `sort_gb` keyword to True (see below).
+    sort_display : bool, optional, default None
+        See `sort_gb`.
+    sort_gb : bool, optional, default None
+        By default, groupby operations will be unsorted. If `sort_gb` is set to True in the constructor, a sort will be performed (lazily) and
         applied. If the categorical is naturally sorted (see above), no sort will be performed or applied.
-    lex: bool defaults to None
+    lex : bool, optional, default None
         By default hashing will be used to discover unique elements in the arrays.  If lex is set to True, a lexsort is used instead.
         For high unique counts (more than 50% of the elements are unique), lex=True maybe faster.
-    locked: (False)
+    locked : bool, default False
         When set to True, prevents categories from being added. The locked flag is automatically set to True after a groupby operation
         to prevent unexpected data corruption in operations to follow. If categories are added after a groupby operation, the groupby indexing
         may no longer be accurate.
-    from_matlab: (False)
+    from_matlab : bool, default False
         When set to True, allows floating point indexing into unique categories. The indices will be flipped to an integer type and the base
         index will always be set to 1. 0 is always an invalid index in matlab, so the indices are already compatible with the rt base-1 default.
-    _from_categorical: (None)
+    _from_categorical : (None)
         flag for internal routines to skip checking/sorting/uniquifying values and categories. Categories will be passed through this internal keyword.
         NOTE: this does not perform a deep copy of the categorical's categories or underlying array
-    dtype: (None)
+    dtype : np.dtype or str, optional
         force the dtype of the underlying integer array. by default, the constructor will opt for the smallest type based on
         the size of the unique categories
-    invalid: (None)
+    invalid : str, optional
         specify a string to use when an invalid category is returned or displayed
-    auto_add: (False)
+    auto_add : bool, default False
         when set to True, categories that do not exist in the unique categories can be added with the setitem method. by default an error is raised.
 
     Examples
@@ -1393,11 +1396,28 @@ class Categorical(GroupByOps, FastArray):
     TestIsMemberVerbose = False
     _test_cat_ismember = ""
 
-    def __new__(cls, values, categories=None,                    # main data
-                ordered=None, sort_gb=None, sort_display=None, lex=None,           # sorting/hashing
-                base_index=None, filter=None,                    # priority options
-                dtype=None, unicode=None, invalid=None, auto_add=False, # misc options
-                from_matlab=False, _from_categorical=None):      # origin, possible fast track
+    def __new__(
+        cls,
+        # main data
+        values,
+        categories=None,
+        # sorting/hashing
+        ordered: Optional[bool] = None,
+        sort_gb: Optional[bool] = None,
+        sort_display: Optional[bool] = None,
+        lex: Optional[bool] = None,
+        # priority options
+        base_index: Optional[int] = None,
+        filter: Optional[np.ndarray] = None,
+        # misc options
+        dtype: Optional[Union[np.dtype, str]] = None,
+        unicode: Optional[bool] = None,
+        invalid: Optional[str] = None,
+        auto_add: bool = False,
+        # origin, possible fast track
+        from_matlab: bool = False,
+        _from_categorical = None
+    ):
 
         invalid_category=invalid
         # possibly set categories with defaults
@@ -1433,8 +1453,7 @@ class Categorical(GroupByOps, FastArray):
 
         # default to 1-based indexing (filtering, etc. fully supported in this mode)
         if base_index is None:
-            base_index=1
-
+            base_index = 1
 
         # pop all single items from lists, or wrap in array
         if isinstance(values, list):
@@ -1454,7 +1473,6 @@ class Categorical(GroupByOps, FastArray):
                     pass
                     # TJD  want to force default sort in future
                     #ordered = True
-
 
         # from categorical, deep copy - send to regular categorical.copy() to correctly preserve attributes
         if isinstance(values, Categorical):
@@ -1610,7 +1628,7 @@ class Categorical(GroupByOps, FastArray):
                         if cls.DebugMode: print('will perform ordered after unique')
 
                     # single array of non-unique values
-                    grouping = TypeRegister.Grouping(values, sort_display=_sort_gb, ordered=ordered, base_index=base_index, filter=filter, lex=lex, categorical=True, dtype=dtype, unicode=unicode)
+                    grouping = Grouping(values, sort_display=_sort_gb, ordered=ordered, base_index=base_index, filter=filter, lex=lex, categorical=True, dtype=dtype, unicode=unicode)
                     result = cls(grouping, invalid=invalid_category)
                     _copy_name(values, result)
                     return result
@@ -1952,8 +1970,13 @@ class Categorical(GroupByOps, FastArray):
 
         Parameters
         ----------
-        showfilter : If True (default), the invalid category will be prepended to the returned array or multikey columns.
-                     Does not apply when mapping is returned.
+        showfilter : bool, defaults to True
+            If True (default), the invalid category will be prepended to the returned array or multikey columns.
+            Does not apply when mapping is returned.
+
+        Returns
+        -------
+        np.ndarray or dict
 
         Examples
         --------
@@ -2057,7 +2080,7 @@ class Categorical(GroupByOps, FastArray):
         """
         return self._categories_wrap._invalid_category
 
-    def invalid_set(self, inv):
+    def invalid_set(self, inv: Union[bytes, str]) -> None:
         """
         Set a new string to be displayed for invalid items.
         """
@@ -2349,7 +2372,7 @@ class Categorical(GroupByOps, FastArray):
             # now get expected uniques
             unumbers=FastArray(list(self.categories().keys()))
             ustrings=FastArray(list(self.categories().values()))
-            
+
             # find out which values still remain
             mask, index = ismember(unumbers, uniques)
             newdict = {k:v for k,v in zip(unumbers[mask], ustrings[mask])}
@@ -2825,9 +2848,9 @@ class Categorical(GroupByOps, FastArray):
         mapper : dictionary or numpy.array or FastArray
             - dictionary maps existing categories -> new categories
             - array must be the same size as the existing category array
-
-        invalid : optionally specify an invalid value to insert for existing categories that were not found in the new mapping
-                  if no invalid is set, the default invalid for the result's dtype will be used
+        invalid
+            Optionally specify an invalid value to insert for existing categories that were not found in the new mapping.
+            If no invalid is set, the default invalid for the result's dtype will be used.
 
         Returns
         -------
@@ -3032,7 +3055,7 @@ class Categorical(GroupByOps, FastArray):
         Notes
         -----
         Behavior differs from pandas in the following ways:
-        * Riptable favors bytestrings, and will make conversions from unicode/bytes to match for operations as necessary.
+        * Riptide favors bytestrings, and will make conversions from unicode/bytes to match for operations as necessary.
         * We also accept single scalars for `values`.
         * Pandas series will return another series - we have no series, and will return a FastArray.
 
@@ -3083,7 +3106,7 @@ class Categorical(GroupByOps, FastArray):
 
         # LEFT SIDE
         if isinstance(key, list):
-            key = TypeRegister.FastArray(key)
+            key = FastArray(key)
 
         # let boolean, fancy, or single index pass through
         if not (isinstance(key, np.ndarray) and key.dtype.char in NumpyCharTypes.AllInteger+'?') and \
@@ -3235,7 +3258,7 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @property
-    def category_mode(self):
+    def category_mode(self) -> CategoryMode:
         """
         Returns the category mode of the Categorical's Categories object.
         List modes are when the categorical has gone through the unique/mbget process of binning.
@@ -3651,7 +3674,6 @@ class Categorical(GroupByOps, FastArray):
         func = getattr(caller, func_name)
         return func(other)
 
-
     # -------------------COMPARISONS------------------------------
     # ------------------------------------------------------------
     def __ne__(self, other):
@@ -3856,11 +3878,20 @@ class Categorical(GroupByOps, FastArray):
         return self._gb_keychain
 
     # ------------------------------------------------------------
-    def count(self, filter=None, transform=False):
+    def count(self, filter: Optional[np.ndarray] = None, transform: bool = False) -> 'Dataset':
         """
         Returns the counts for each unique category. Unlike other groupby operations, does not take a parameter for data.
 
         By default, invalid categories will be hidden from the result. The showfilter keyword can be set to display them.
+
+        Parameters
+        ----------
+        filter : np.ndarray of bool, optional
+        transform : bool, defaults to False
+
+        Returns
+        -------
+        Dataset
 
         Examples
         --------
@@ -3998,7 +4029,7 @@ class Categorical(GroupByOps, FastArray):
     def as_singlekey(self, ordered=False, sep='_'):
         '''
         Normalizes categoricals by returning a base 1 single key categorical.
-        
+
         Enum or dict based categoricals will be converted to single key categoricals.
         Multikey categoricals will be converted to single key categoricals.
         If the categorical is already single key, base 0 it will be returned as base 1.
@@ -4017,7 +4048,7 @@ class Categorical(GroupByOps, FastArray):
         >>> d=c.as_singlekey()
         >>> c._fa
         FastArray([ 5, -3,  7])
-        
+
         >>> d._fa
         FastArray([3, 2, 1], dtype=int8)
 
@@ -4041,7 +4072,7 @@ class Categorical(GroupByOps, FastArray):
                 return c
             else:
                 ikey+=1
-                # mark all invalids as 0 
+                # mark all invalids as 0
                 ikey[mask]= 0
                 return Categorical(ikey, strings, ordered=ordered)
 
@@ -4102,31 +4133,36 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @property
-    def expand_array(self):
+    def expand_array(self) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
         """
         Returns
         -------
-        A re-expanded array or return instance array of mapping codes.
-        Will warn the user if a large categorical ( > 100,000 items ) is being re-expanded.
-        Filtered items will use the filtered string for stringlike columns, or numeric sentinel value for numeric columns.
+        FastArray or tuple of FastArray
+            A re-expanded array or return instance array of mapping codes.
+            Filtered items will use the filtered string for stringlike columns, or numeric sentinel value for numeric columns.
 
         Notes
         -----
+        Will warn the user if a large categorical ( > 100,000 items ) is being re-expanded.
+
         If strings are held, the result column's itemsize will be large of the categories or the invalid category.
 
         Examples
         --------
         Singlekey categorical:
+
         >>> c = rt.Categorical(['a','a','b','c','a'])
         >>> c.expand_array
         FastArray([b'a', b'a', b'b', b'c', b'a'], dtype='|S3')
 
         Multikey:
+
         >>> c = rt.Categorical([rt.FastArray(['a','b','c','a']), rt.FastArray([1,2,3,1])])
         >>> c.expand_array
         (FastArray([b'a', b'b', b'c', b'a'], dtype='|S8'), FastArray([1, 2, 3, 1]))
 
         Enum:
+
         >>> c = rt.Categorical([2, 2, 2, 1, 3], {'a':1,'b':2,'c':3})
         >>> c.expand_array
         FastArray([2, 2, 2, 1, 3])
@@ -4146,17 +4182,25 @@ class Categorical(GroupByOps, FastArray):
             else:
                 index_arr = self._fa
             expanded = [ self._expand_array( unique_arr, index_arr ) for unique_arr in self.grouping.uniquelist ]
+
+            # TODO: Should we iterate through the list of expanded arrays and for each one that's a
+            #       FastArray (likely all of them) set the array name to the name of the corresponding key?
+
             if len(expanded) == 1:
                 return expanded[0]
             return tuple(expanded)
 
     # ------------------------------------------------------------
     @property
-    def expand_dict(self):
+    def expand_dict(self) -> Dict['str', FastArray]:
         """
         Returns
         -------
-        A dictionary of expanded single or multikey columns.
+        dict
+            A dictionary of expanded single or multikey columns.
+
+        Notes
+        -----
         Will warn the user if a large categorical ( > 100,000 items ) is being re-expanded.
 
         Examples
@@ -4238,7 +4282,7 @@ class Categorical(GroupByOps, FastArray):
         return arr
 
     # ------------------------------------------------------------
-    def _expand_array(self, arr, index=None):
+    def _expand_array(self, arr, index: Optional[np.ndarray] = None):
         """
         Internal routine to h-stack an invalid with an array for re-expanding single or multikey categoricals.
         This allows invalids to be retained in the re-expanded array(s)
@@ -4329,7 +4373,7 @@ class Categorical(GroupByOps, FastArray):
         return "\n".join(repr_strings)
 
     # ------------------------------------------------------------
-    def info(self):
+    def info(self) -> None:
         """
         The three arrays in info:
         Categories mapped to their indices, often making the categorical appear to be a string array. Length of array.
@@ -4384,16 +4428,29 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @classmethod
-    def categories_equal(cls, cats) -> Tuple[bool, List['Categorical']]:
+    def categories_equal(
+        cls,
+        cats: List[Union['Categorical', np.ndarray, Tuple[np.ndarray, ...]]]
+     ) -> Tuple[bool, List['Categorical']]:
         """
-        Cats must be a list of categoricals or an array that can be converted to a categorical.
+        Check if all `Categorical`s or arrays have the same categories (same unique values in the same order).
+
+        Parameters
+        ----------
+        cats : list of Categorical or np.ndarray or tuple of np.ndarray
+            `cats` must be a list of `Categorical`s or arrays that can be converted to a `Categorical`.
 
         Returns
         -------
-        2 items: Bool, list of cats which may have been fixed up
+        match : bool
+            True if all the `Categorical`s have the same categories (same unique values in same order),
+            otherwise False.
+        fixed_cats : list of Categorical
+            List of `Categorical`s which may have been fixed up.
 
-        True if all the categoricals have the same categories (same unique strings in same order)
-        False otherwise
+        Notes
+        -----
+        TODO: Can the type annotation for `cats` be relaxed to Collection instead of List?
         """
 
         crc_list= []
@@ -4417,12 +4474,17 @@ class Categorical(GroupByOps, FastArray):
 
         cats = newcats
         if len(mkcheck)==1 and len(lencheck)==1:
+            # TODO: The CRC-based check we're doing here won't consider two arrays which otherwise have the same
+            #       categories in the same order but different dtypes (e.g. int8 vs. int16) to be the same.
+            #       Do we want to consider those arrays/Categoricals to be equal?
             crc_check=set()
             # might not need to hstack anything
             for arr_list in crc_list:
-                # could be multikey
-                # TODO: Apply same fix here to also check arr.shape as in the rt_hstack.crc_check function.
+                # Could be multikey, so compute the CRC/hash per key array.
+                # The logic here is similar to that of the crc_match() function in rt_utils.py;
+                # that handles some edge cases this does not, while this implementation handles lists/tuples.
                 crc_check.add(tuple([crc64(arr) for arr in arr_list]))
+
             if len(crc_check) == 1:
                 return True, cats
 
@@ -4478,7 +4540,7 @@ def categorical_merge_dict(list_categories, return_is_safe:bool=False, return_ty
     '''
     # ensure all items are categorical in dict mode
     for c in list_categories:
-        if not isinstance(c, TypeRegister.Categorical):
+        if not isinstance(c, Categorical):
             raise TypeError(f"Categorical merge dict is for categoricals, not {type(c)}")
         else:
             if not c.isenum:

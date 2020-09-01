@@ -1,96 +1,298 @@
-__all__ = [# misc riptable utility funcs
-           # public .sds methods
-           'load_sds', 'save_sds', 'load_sds_mem', 'sds_tree', 'sds_info', 'sds_flatten', 'sds_concat',
-           # private .sds methods
-           'save_struct', 'container_from_filetype', 'compress_dataset_internal', 'decompress_dataset_internal',
-           # debugging
-           'SDSMakeDirsOn', 'SDSMakeDirsOff', 'SDSVerboseOn', 'SDSVerboseOff', 'SDSRebuildRootOn', 'SDSRebuildRootOff']
+__all__ = [
+    # misc riptable utility funcs
+    # public .sds methods
+    'load_sds', 'save_sds', 'load_sds_mem', 'sds_tree', 'sds_info', 'sds_flatten', 'sds_concat',
+    # private .sds methods
+    'save_struct', 'container_from_filetype', 'compress_dataset_internal', 'decompress_dataset_internal',
+    # debugging
+    'SDSMakeDirsOn', 'SDSMakeDirsOff',
+    'SDSVerboseOn', 'SDSVerboseOff',
+    'SDSRebuildRootOn', 'SDSRebuildRootOff'
+]
 
 import os
-from pathlib import Path
+# from pathlib import Path
 import sys
 import shutil
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union, Callable, Any
 import warnings
+#import logging
 
 import numpy as np
 import riptide_cpp as rc
 
-from .rt_hstack import merge_cats
-from .rt_numpy import zeros, issorted, ismember, sort, tile, arange, unique, crc64, bool_to_fancy, empty, hstack
-from .rt_enum import TypeRegister, INVALID_DICT, NumpyCharTypes, TypeId, CompressionMode, CompressionType, INVALID_FILE_CHARS, SDSFlag, SDSFileType, CategoryMode, SDS_EXTENSION, SDS_EXTENSION_BYTES
-from .rt_timers import tic, toc, utcnow, GetTSC, ticp, tocp, GetNanoTime
+from .rt_grouping import merge_cats
+from .rt_numpy import zeros, ismember, arange, empty
+from .rt_enum import (
+    TypeRegister, INVALID_DICT, CategoryMode,
+    CompressionMode, CompressionType, INVALID_FILE_CHARS, SDSFlag, SDSFileType, SDS_EXTENSION
+)
+from .rt_timers import utcnow
 from .Utils.rt_metadata import MetaData
-from .rt_utils import h5io_to_struct
-# from .rt_enum import INVALID_POINTER_32, INVALID_POINTER_64
-
 
 if TYPE_CHECKING:
     from .rt_dataset import Dataset
     from .rt_struct import Struct
+    from .rt_datetime import TimeSpan
 
 
-COMPRESSION_TYPE_NONE = 0
-COMPRESSION_TYPE_ZSTD = 1
+# TODO: Replace these two COMPRESSION_TYPE_ constants with the CompressionType enum?
 
-# when set to True will call os.makedirs to make one or more subdirs
-# otherwise will one create a directory one level deep when there is nesting
+COMPRESSION_TYPE_NONE: int = 0
+"""Designator for not using compression when saving data to SDS file."""
+COMPRESSION_TYPE_ZSTD: int = 1
+"""Designator for using ZSTD compression when saving data to SDS file."""
+
+
 # TODO: Consider a global mode variable to be used when a directory is created
 SDSMakeDirs = True
+"""
+When ``SDSMakeDirs`` is set to ``True``, ``rt_sds`` will call ``os.makedirs`` to make one or more subdirectories,
+otherwise ``rt_sds`` will create a directory one level deep when there is nesting.
+"""
 SDSVerbose = False
+"""
+If enabled, the SDS module will include verbose logging.
+"""
 SDSRebuildRoot = False
+"""
+If enabled, SDS will rebuilds the root SDS file, ``_root.sds``, in the event that a dataset is saved to an existing
+directory that was part of a previous ``Struct`` save.
+"""
 
 #-----------------------------------------------------------------------------------------
-def SDSMakeDirsOn():
+def SDSMakeDirsOn() -> None:
+    """Enables ``SDSMakeDirs``."""
     global SDSMakeDirs
     SDSMakeDirs = True
-def SDSMakeDirsOff():
+
+
+def SDSMakeDirsOff() -> None:
+    """Disables ``SDSMakeDirs``."""
     global SDSMakeDirs
     SDSMakeDirs = False
+
+
 #-----------------------------------------------------------------------------------------
-def SDSVerboseOn():
+def SDSVerboseOn() -> None:
+    """Enables ``SDSVerbose``."""
     global SDSVerbose
     SDSVerbose = True
-def SDSVerboseOff():
+
+
+def SDSVerboseOff() -> None:
+    """Disables ``SDSVerbose``."""
     global SDSVerbose
     SDSVerbose = False
-def VerbosePrint(s, time=True):
+
+
+def VerbosePrint(s: str, time: bool = True) -> Optional['TimeSpan']:
+    """
+    Prints a message `s` and an optional timestamp to a stream, or to sys.stdout by default.
+    If `time` is enabled, print the message with the current time and return the time.
+
+    Parameters
+    ----------
+    s: str
+        Message to print.
+    time: bool
+        Whether to include a timestamp (defaults True).
+
+    Returns
+    -------
+    TimeSpan, optional
+
+    See Also
+    --------
+    VerbosePrintElapsed: Prints a message along with the elapsed time.
+    """
     if time:
         t = utcnow().hour_span
         print(f'{t} '+s)
         return t
     else:
         print(s)
-def VerbosePrintElapsed(s, start):
+
+
+def VerbosePrintElapsed(s: str, start: 'TimeSpan') -> None:
+    """
+    Prints a message `s` and includes the elapsed time since `start`.
+
+    Parameters
+    ----------
+    s: str
+        Message to print.
+    start: TimeSpan
+        The start time that will be used to calculate the elapsed time span.
+
+    See Also
+    --------
+    VerbosePrint: Prints a message and an optional timestamp.
+    """
     end = utcnow().hour_span
     print(f'{end} '+s+f' elapsed time: {(end-start).seconds[0]} seconds')
+
+
 #-----------------------------------------------------------------------------------------
-def SDSRebuildRootOn():
+def SDSRebuildRootOn() -> None:
+    """Enables ``SDSRebuildRoot``."""
     global SDSRebuildRoot
     print(f'Setting SDSRebuildRoot to True. Currently set to {SDSRebuildRoot}.')
     SDSRebuildRoot = True
-def SDSRebuildRootOff():
+
+
+def SDSRebuildRootOff() -> None:
+    """Disables ``SDSRebuildRoot``."""
     global SDSRebuildRoot
     print(f'Setting SDSRebuildRoot to False. Currently set to {SDSRebuildRoot}.')
     SDSRebuildRoot = False
 
+
 #-----------------------------------------------------------------------------------------
-def sds_os(func, path):
-    '''
-    Funnel all os and os.path functions into here for timing and logging.
-    '''
+def sds_os(func: Callable, path: Union[str, bytes]) -> Any:
+    """
+    Wrapper around Python ``os`` and ``os.path`` functions that has SDS related logic (for instance
+    verbose printing, if enabled in ``rt_sds``).
+
+    Parameters
+    ----------
+    func: callable
+        Python function to call that accepts a path-like parameter.
+    path: str, or bytes
+        The pathname that `func` operates on.
+
+    Returns
+    -------
+    Any
+        The return value(s) of the called callable.
+
+    See Also
+    --------
+    SDSVerboseOn: Enables SDS Verbose mode.
+    SDSVerboseOff: Disables SDS Verbose mode.
+    VerbosePrintElapsed: Prints a message along with the elapsed time.
+    VerbosePrint: Prints a message and an optional timestamp.
+    """
     if SDSVerbose: start = VerbosePrint(f'calling {func.__name__} on {path}')
     d = func(path)
     if SDSVerbose: VerbosePrintElapsed(f'finished {func.__name__}', start)
     return d
 
-def sds_isdir(path): return sds_os(os.path.isdir, path)
-def sds_isfile(path): return sds_os(os.path.isfile, path)
-def sds_exists(path): return sds_os(os.path.exists, path)
-def sds_listdir(path): return sds_os(os.listdir, path)
 
-def sds_endswith(path, add=False):
-    """If a path ends with .sds, add it or return True or False.
+def sds_isdir(path: Union[str, bytes]) -> bool:
+    """
+    Return ``True`` if pathname `path` refers to an existing directory.
+
+    Parameters
+    ----------
+    path: str or bytes
+
+    Returns
+    -------
+    bool
+
+    See Also
+    --------
+    SDSVerboseOn: Enables SDS Verbose mode.
+    SDSVerboseOff: Disables SDS Verbose mode.
+
+    Notes
+    -----
+    If SDS verbose mode is toggled, verbose logging will appear.
+    """
+    return sds_os(os.path.isdir, path)
+
+
+def sds_isfile(path: Union[str, bytes]) -> bool:
+    """
+    Return ``True`` if pathname `path` refers to an existing file.
+
+    Parameters
+    ----------
+    path: str or bytes
+
+    Returns
+    -------
+    bool
+
+    See Also
+    --------
+    SDSVerboseOn: Enables SDS Verbose mode.
+    SDSVerboseOff: Disables SDS Verbose mode.
+
+    Notes
+    -----
+    If SDS verbose mode is toggled, verbose logging will appear.
+    """
+    return sds_os(os.path.isfile, path)
+
+
+def sds_exists(path: Union[str, bytes]) -> bool:
+    """
+    Return ``True`` if pathname `path` exists.
+
+    Parameters
+    ----------
+    path: str or bytes
+
+    Returns
+    -------
+    bool
+
+    See Also
+    --------
+    SDSVerboseOn: Enables SDS Verbose mode.
+    SDSVerboseOff: Disables SDS Verbose mode.
+
+    Notes
+    -----
+    If SDS verbose mode is toggled, verbose logging will appear.
+    """
+    return sds_os(os.path.exists, path)
+
+
+def sds_listdir(path: Union[str, bytes]) -> List[str]:
+    """
+    Returns a list of pathnames referred to by directory path `path`.
+
+    Parameters
+    ----------
+    path: str or bytes
+
+    Returns
+    -------
+    list of str
+
+    See Also
+    --------
+    SDSVerboseOn: Enables SDS Verbose mode.
+    SDSVerboseOff: Disables SDS Verbose mode.
+
+    Notes
+    -----
+    If SDS verbose mode is toggled, verbose logging will appear.
+    """
+    return sds_os(os.listdir, path)
+
+
+def sds_endswith(path: Union[bytes, str, List[Union[bytes, str]]], add: bool = False) -> Union[bool, str, List[Union[str]]]:
+    """
+    Returns true if the pathname ends with SDS extension, ``.sds``, unless `add` is enabled then it returns
+    the SDS pathname.
+
+    Parameters
+    ----------
+    path: bytes, str, or list of str or bytes
+        Pathname or list of pathnames to check if they are SDS file types.
+
+    Returns
+    -------
+    bool, str, or list of str
+
+    Notes
+    -----
+    Although a list of pathnames is accepted, the current implementation assumes these are SDS pathnames and returns
+    them as is.
     """
     endswith = False
     if isinstance(path, bytes):
@@ -112,30 +314,30 @@ def sds_endswith(path, add=False):
 
 
 #-----------------------------------------------------------------------------------------
-def sds_flatten(rootpath):
-    '''
-    Bring all structs / nested structures in sub-directories into the main directory.
-    Currently only crawls one subdirectory.
-    TODO: make this recursive
-          check file permissions for final move before starting
-          any other safeguard to stop directories from being half-flattened
+def sds_flatten(rootpath: Union[str, bytes]) -> None:
+    """
+    `sds_flatten` brings all structs and nested structures in sub-directories into the main directory.
 
-    If a nested directory contains items that are not sds files, the flatten will be skipped for the nested directory.
-    If a there is a name conflict with items already in the base directory, the flatten will be skipped for the nested directory.
-    No files will be moved or renamed until all conflicts are checked.
-    If there were directories that couldn't be flattened, lists them at the end.
+    Parameters
+    ----------
+    rootpath: str or bytes
+        The pathname to the SDS root directory.
 
-    Parameters:
-    -----------
-    root : full path to root directory
-
-    Should there be more parameters?
-
-    Example:
+    Examples
     --------
     >>> sds_flatten(r'D:\junk\PYTHON_SDS')
 
-    '''
+    Notes
+    -----
+    - The current implementation of `sds_flatten`  crawls one subdirectory.
+    - If a nested directory contains items that are not sds files, the flatten will be skipped for the nested directory.
+    - If a there is a name conflict with items already in the base directory, the flatten will be skipped for the nested directory.
+    - No files will be moved or renamed until all conflicts are checked.
+    - If there were directories that couldn't be flattened, lists them at the end.
+    """
+    # TODO: make this recursive
+    # check file permissions for final move before starting
+    # any other safeguard to stop directories from being half-flattened
     dirlist = sds_listdir(rootpath)
     full_dirlist = [ rootpath + os.sep + fname for fname in dirlist ]
     nested = [ f for f in full_dirlist if sds_isdir(f) ]
@@ -218,6 +420,7 @@ def sds_flatten(rootpath):
         for dname in flatten_fail:
             print(dname)
 
+
 #-----------------------------------------------------------------------------------------
 def _sds_path_multi(path, share=None, overwrite=True):
     '''
@@ -258,6 +461,7 @@ def _sds_path_multi(path, share=None, overwrite=True):
                 #raise ValueError(f'Directory {path!r} does not exist.  SDSMakeDirs global variable must be set to auto create sub directories.')
 
     return True
+
 
 #-----------------------------------------------------------------------------------------
 def _sds_path_single(path, share=None, overwrite=True, name=None, append=None):
@@ -338,6 +542,7 @@ def _sds_path_single(path, share=None, overwrite=True, name=None, append=None):
 
     return path, name, True
 
+
 #-----------------------------------------------------------------------------------------
 def _sds_save_single(item, path, share=None, overwrite=True, compress=True, name=None, onefile=False, bandsize=None, append=None, complevel=None):
     '''
@@ -362,49 +567,92 @@ def _sds_load_single(meta, arrays, meta_tups, info=False):
     item = list(item.values())[0]
     return item
 
-#-----------------------------------------------------------------------------------------
-def save_sds_uncompressed(filepath, item, overwrite=True, name=None):
-    '''
-    Explicitly save an item without using compression.
-    Equivalent to save_sds(filepath, item, compress=False)
-    '''
-    save_sds(filepath, item, compress=False, overwrite=overwrite, name=name)
 
 #-----------------------------------------------------------------------------------------
-def save_sds(filepath: str, item: Union[np.ndarray, 'Dataset', 'Struct'], share: Optional[str]=None,
-        compress: bool=True, overwrite: bool=True, name: Optional[str]=None, onefile: bool=False,
-        bandsize: Optional[int]=None, append: Optional[str]=None, complevel: Optional[int]=None):
-    '''
-    Datasets and arrays will be saved into a single .sds file.
-    Structs will create a directory of .sds files for potential nested structures.
+def save_sds_uncompressed(
+    filepath: Union[str, bytes],
+    item: Union[np.ndarray, 'Dataset', 'Struct'],
+    overwrite: bool = True,
+    name: Optional[str] = None
+) -> None:
+    """
+    Explicitly save an item without using compression.
+    Equivalent to ``save_sds(filepath, item, compress=False)``.
 
     Parameters
     ----------
-    filepath: str
-        Path to directory for Struct, path to .sds file for Dataset/array (extension will be added if necessary).
+    filepath: str or bytes
+        Path to directory for ``Struct``, path to ``.sds`` file for ``Dataset`` or array
+        (where SDS extension will be added if necessary).
+    item : Struct, Dataset, ndarray, or ndarray subclass
+        The ``Struct``, ``Dataset``, ``ndarray``, or ``ndarray`` subclass to store.
+    overwrite : bool
+        If ``True``, do not prompt the user when overwriting an existing ``.sds`` file (mainly useful for ``Struct.save()``,
+        which may call ``Dataset.save()`` multiple times) (default False).
+    name : str, optional
+        Name of the sds file (default None).
+
+    Raises
+    ------
+    TypeError
+        If `item` type cannot be saved.
+
+    See Also
+    --------
+    save_sds: save datasets to the filename.
+
+    """
+    save_sds(filepath, item, compress=False, overwrite=overwrite, name=name)
+
+#-----------------------------------------------------------------------------------------
+def save_sds(
+    filepath: Union[str, bytes],
+    item: Union[np.ndarray, 'Dataset', 'Struct'],
+    share: Optional[str] = None,
+    compress: bool = True,
+    overwrite: bool = True,
+    name: Optional[str] = None,
+    onefile: bool = False,
+    bandsize: Optional[int] = None,
+    append: Optional[str] = None,
+    complevel: Optional[int] = None
+) -> None:
+    """
+    Datasets and arrays will be saved into a single .sds file.
+    Structs will create a directory of ``.sds`` files for potential nested structures.
+
+    Parameters
+    ----------
+    filepath: str or bytes
+        Path to directory for Struct, path to ``.sds`` file for Dataset/array (extension will be added if necessary).
     item : Struct, dataset, array, or array subclass
     share
-        Shared memory name. if set, item will be saved to shared memory and NOT to disk when shared memory
-        is specified, a filename must be included in path. only this will be used, the rest of the path will be discarded.
+        If the shared memory name is set, `item` will be saved to shared memory and NOT to disk. When shared memory
+        is specified, a filename must be included in path. Only this will be used, the rest of the path will be discarded.
     compress : bool, default True
         Use compression when saving the file (shared memory is always saved uncompressed)
     overwrite : bool, default False
-        If True, do not prompt the user when overwriting an existing .sds file (mainly useful for Struct.save(),
-        which may call Dataset.save() multiple times)
+        If ``True``, do not prompt the user when overwriting an existing ``.sds`` file (mainly useful for ``Struct.save()``,
+        which may call ``Dataset.save()`` multiple times)
     name : str, optional
         Name of the sds file.
     onefile : bool, default False
         If True will flatten() a nested struct before saving to make it one file.
     bandsize : int, optional
-        If set to an integer > 10000 it will compress column datas every `bandsize` rows.
+        If set to an integer greater than 10000 it will compress column datas every `bandsize` rows.
     append : str, optional
         If set to a string it will append to the file with the section name
     complevel : int, optional
         Compression level from 0 to 9. 2 (default) is average. 1 is faster, less compressed, 3 is slower, more compressed.
 
+    Raises
+    ------
+    TypeError
+        If `item` type cannot be saved
+
     Notes
     -----
-    save() can also be called from a Struct or Dataset object.
+    ``save()`` can also be called from a ``Struct`` or ``Dataset`` object.
 
     Examples
     --------
@@ -461,7 +709,7 @@ def save_sds(filepath: str, item: Union[np.ndarray, 'Dataset', 'Struct'], share:
     >>> save_sds(r'D:\\junk\\cat', c)
     >>> os.listdir(r'D:\\junk')
     cat.sds
-    '''
+    """
     if isinstance(item, TypeRegister.Dataset):
         # keep name and path as-is, extension added later
         _, _, status = _sds_path_single(filepath, share=share, overwrite=overwrite, name=name, append=append)
@@ -504,22 +752,33 @@ def _sds_raw_info(filepath, share=None, sections=None, threads=None) -> List[tup
 
     return decompress_dataset_internal(filepath, info=True, sections=sections, threads=threads)
 
+
 #-----------------------------------------------------------------------------------------
-def sds_dir(filepath:str, share: Optional[str] = None) -> List[str]:
-    '''
-    Returns list of dataset or struct item names as strings.
-    Only returns top level item names of struct directory.
+def sds_dir(filepath: Union[str, bytes], share: Optional[str] = None) -> List[str]:
+    """
+    Returns list of ``Dataset`` or ``Struct`` item names as strings.
+    Only returns top level item names of ``Struct`` directory.
 
-    Examples:
-    ---------
+    Parameters
+    ----------
+    filepath: str or bytes
+        Path to directory for Struct, path to ``.sds`` file for Dataset/array (extension will be added if necessary).
+    share
+        If the shared memory name is set, the item will be saved to shared memory and NOT to disk. When shared memory
+        is specified, a filename must be included in path. Only this will be used, the rest of the path will be discarded.
 
+    Returns
+    -------
+    List of str
+
+    Examples
+    --------
     >>> ds = Dataset({'col_'+str(i):arange(5) for i in range(5)})
     >>> ds.save(r'D:\junk\test')
     >>> sds_dir(r'D:\junk\test')
     ['col_0', 'col_1', 'col_2', 'col_3', 'col_4']
 
-    '''
-
+    """
     dirlist = []
     firstsds = _sds_raw_info(filepath, share=share)
     meta, info, tups, fileheader = firstsds[0]
@@ -528,13 +787,13 @@ def sds_dir(filepath:str, share: Optional[str] = None) -> List[str]:
             dirlist.append(tup[0].decode())
     return dirlist
 
+
 #-----------------------------------------------------------------------------------------
 def sds_info(filepath:str, share=None, sections=None, threads=None):
-    '''
-    Returns a list of tuples -- the metadata, item tupls, array info, and fileheader dict from final rc.DecompressFile call.
-    TODO: match the Matlab output (should it look the same, or print more information from array info?)
-    '''
+
+    # TODO: match the Matlab output (should it look the same, or print more information from array info?)
     return _sds_raw_info(filepath, share=share, sections=sections, threads=threads)
+
 
 #-----------------------------------------------------------------------------------------
 def sds_tree(filepath: str, threads: Optional[int] = None):
@@ -724,7 +983,7 @@ def _multistack_categoricals(spec_name, meta_list, indices, listcats, idx_cutoff
     newcats = TypeRegister.Grouping(indices, categories=newcats, _trusted=True, base_index=base_index, ordered=ordered, sort_display=sort_display)
     result = TypeRegister.Categorical(newcats)
 
-    if SDSVerbose: VerbosePrintElapsed(f'finished reconstructing cateogorical {spec_name}', verbose_start)
+    if SDSVerbose: VerbosePrintElapsed(f'finished reconstructing categorical {spec_name}', verbose_start)
     return result
 
 #-----------------------------------------------------------------------------------------
@@ -955,7 +1214,7 @@ def _stack_sds_files(filenames, share=None, info=False, include=None, folders=No
         if filter is not None:
             mask = _convert_to_mask(filter)
             filter = None
- 
+
         result = rc.MultiStackFiles(filenames, include=include, folders=folders, filter=filter, mask=mask, mustexist=mustexist, sections=sections, reserve=reserve)
 
         if result is None:
@@ -1127,7 +1386,7 @@ def _load_sds_internal(
 
         # try to load with extension and without (due to people naming directories with .sds extensions)
         try:
-            result = _load_sds(filepath, sharename=share, info=info, include_all_sds=include_all_sds, include=include, name=name, stack=stack, threads=threads, 
+            result = _load_sds(filepath, sharename=share, info=info, include_all_sds=include_all_sds, include=include, name=name, stack=stack, threads=threads,
                                filter=filter, folders=folders, sections=sections)
             origerror = None
         except Exception:
@@ -1153,7 +1412,7 @@ def _load_sds_internal(
 
 #-----------------------------------------------------------------------------------------
 def load_sds(
-    filepath: str,
+    filepath: Union[str, bytes],
     share: Optional[str] = None,
     info: bool = False,
     include_all_sds: bool = False,
@@ -1169,49 +1428,51 @@ def load_sds(
     reserve: float = 0.0
 ) -> 'Struct':
     """
-    Load a dataset from single .sds file or struct from directory of .sds files.
+    Load a dataset from single ``.sds`` file or struct from directory of ``.sds`` files.
 
-    When ``stack=True``, generic loader for a single .sds file or directory of multiple .sds files.
+    When ``stack=True``, generic loader for a single ``.sds`` file or directory of multiple ``.sds`` files.
 
-    Parameters:
-    -----------
-    filepath : str
-        full path to file or directory
-        When ``stack=True`` can be list of .sds files to stack
-        When ``stack=True`` list of directories containing .sds files to stack (must also use kwarg `include`)
+    Parameters
+    ----------
+    filepath : str or bytes
+        Full path to file or directory.
+        When `stack` is ``True`` can be list of ``.sds`` files to stack
+        When `stack` is ``True`` list of directories containing ``.sds`` files to stack (must also use kwarg `include`)
     share : str, optional
-        shared memory name. loader will check for dataset in shared memory first. if it's not there, the
-        data (if file found on disk) will be loaded into the user's workspace AND shared memory. a sharename
-        must be accompanied by a file name. (the rest of a full path will be trimmed off internally)
+        The shared memory name. loader will check for dataset in shared memory first and if it's not there, the
+        data (if the filepath is found on disk) will be loaded into the user's workspace AND shared memory.
+        A sharename must be accompanied by a file name. The rest of a full path will be trimmed off internally.
+        Defaults to None.
     info : bool
-        no item data will be loaded, the hierarchy will be displayed in a tree
+        No item data will be loaded, the hierarchy will be displayed in a tree (defaults to False).
     include_all_sds : bool
-        if True, any extra files in saved struct's directory will be loaded into final struct (skips user prompt)
+        If ``True``, any extra files in saved struct's directory will be loaded into final struct (skips user prompt) (defaults to False).
     include : list of str, optional
-        a list of strings of which columns to load, e.g. ``['Ask','Bid']``.
-        When ``stack=True`` and directories passed, list of filenames to stack across each directory
+        A list of strings of which columns to load, e.g. ``['Ask','Bid']``.
+        When `stack` is ``True`` and directories passed, list of filenames to stack across each directory (defaults to None).
     name : str, optional
-        Optionally specify the name of the struct being loaded. This might be different than directory.
+        Optionally specify the name of the struct being loaded. This might be different than directory (defaults to None).
     threads : int, optional
-        how many threads to read, stack, and decompress with
-    stack : bool
-        Set to True to stack array data before loading into python (see docstring for `stack_sds`).
-        Set to False when appending many files into one and want columns flattening
-        This parameter is not compatible with the `share` or `info` parameters.
+        How many threads to read, stack, and decompress with (defaults to None).
+    stack : bool, optional
+        Set to ``True`` to stack array data before loading into python (see docstring for `stack_sds`).
+        Set to ``False`` when appending many files into one and want columns flattening.
+        This parameter is not compatible with the `share` or `info` parameters (defaults to None).
     folders : list of str, optional
-        a list of strings on which folders to include i.e.['zz/','xtra/'] (must be saved with ``onefile=True``)
+        A list of strings on which folders to include e.g., ``['zz/','xtra/']`` (must be saved with ``onefile=True``) (defaults to None).
     sections : list of str, optional
-        a list of strings on which sections to include (must be saved with ``append="name"``)
-    filter : array of bool, optional
+        A list of strings on which sections to include (must be saved with ``append="name"``) (defaults to None).
+    filter : ndarray, optional
         Optional fancy index or boolean array. Does not work with ``stack=True``.
-        Designed to read in contiguous sections; for example, ``filter=arange(10)`` to read first 10 elements.
-    mustexist : bool, optional defaults to False
-        Set to True to ensure that all files exist or raise an exception.
+        Designed to read in contiguous sections; for example, ``filter=arange(10)`` to read first 10 elements (defaults to None).
+    mustexist : bool
+        Set to True to ensure that all files exist or raise an exception (defaults to False).
     verbose : bool
-        prints time related data to stdout.
+        Prints time related data to stdout (defaults to False).
     reserve : float
-        When set > 0.0 and less than < 1.0 is how much extra room to reserve when stacking.
+        When set greater than 0.0 and less than 1.0, this is how much extra room is reserved when stacking.
         If set to 0.10, it will allocate 10% more memory for future partitions.
+        Defaults to 0.0.
 
     Returns
     -------
@@ -1219,7 +1480,7 @@ def load_sds(
 
     Notes
     -----
-    When ``stack=True``:
+    When `stack` is ``True``:
     - columns with the same name must have matching types or upcastable types
     - bytestring widths will be fixed internally
     - numeric types will be upcast appropriately
@@ -1330,18 +1591,31 @@ def _make_zero_length(sdsresult):
 
 
 #-----------------------------------------------------------------------------------------
-def sds_concat(filenames, output=None, include=None):
-    '''
+# TODO - PEP484 What type does sds_concat return?
+def sds_concat(filenames: List[str], output: Optional[str] = None, include: List[str] = None):
+    """
     Parameters
     ----------
-    filenames  : list of strings of fully qualified path names
-    output     : single string of the filename to create    
-    include    : a list of strings indicating which columns to include in the load
-                (currently not supported)
+    filenames : list of str
+        List of fully qualified pathnames
+    output : str, optional
+        Single string of the filename to create (defaults to None).
+    include : list of str, optional
+        A list of strings indicating which columns to include in the load (currently not supported).
+        Defaults to None.
 
     Returns
     -------
-    A new file created with the name in 'output'.  This output file has all the filenames appended.
+    A new file created with the name in `output`.  This output file has all the filenames appended.
+
+    Raises
+    ------
+    ValueError
+        If output filename is not specified.
+
+    Notes
+    -----
+    The `include` parameter is not currently implemented.
 
     Examples
     --------
@@ -1349,39 +1623,74 @@ def sds_concat(filenames, output=None, include=None):
     >>> sds_concat(flist, output='/nfs/mydata/concattest.sds')
     >>> sds_load('/nfs/mydata/concattest.sds', stack=True)
 
-    '''
+    """
     if output is None:
         raise ValueError(f'The output kwarg must be specified and be a valid filename to create.')
 
     result = rc.MultiConcatFiles(filenames, output=output, include=include)
 
+
 #-----------------------------------------------------------------------------------------
-def decompress_dataset_internal(filename, mode=CompressionMode.DecompressFile, sharename=None, info=False,
-                               include=None, stack=None, threads=None, folders=None, sections=None, filter=None, mustexist=False,
-                               goodfiles=None):
-    '''
+def decompress_dataset_internal(
+    filename: Union[bytes, str, List[str]],
+    mode: CompressionMode = CompressionMode.DecompressFile,
+    sharename: Optional[Union[bytes, str]] = None,
+    info: bool = False,
+    include: Optional[Union[bytes, str, List[str]]] = None,
+    stack: Optional[bool] = None,
+    threads: Optional[int] = None,
+    folders: Optional[List[str]] = None,
+    sections: Optional[List[str]] = None,
+    filter: Optional[np.ndarray] = None,
+    mustexist: bool = False,
+    goodfiles: Optional[List[str]] = None
+) -> List[Tuple[bytes, List[np.ndarray], List[tuple]]]:
+    """
     Parameters
     ----------
-    filename  : string (or list of strings) of fully qualified path name, or shared memory location (Global\...)
-    mode      : When set to CompressionMode.Info, tup2 is replaced with a tuple of numpy attributes (shape, dtype, flags, itemsize)
-    sharename : Unique bytestring for shared memory location. Prevents mistakenly overwriting data in shared memory.
-    include   : which items to include in the load. If items were omitted, tuples will still appear,
-                but None will be loaded as their corresponding data.
-    info      : Instead of decompressing numpy arrays, return a summary of each one's contents (shape/dtype/itemsize/etc.)
-    folders   : when saving with onefile=True (will filter out only those subfolders) list of strings
-    filter    : optional: boolean or fancy index filter (only rows in the filter will be added)
-    mustexist : bool, optional: when True will raise exception if any file is missing
-    sections  : optional: list of strings with sections to load (file must have been saved with append=)
-    goodfiles : optional: tuples of two objects (list of filenames, path the files came from) -- often from os.walk
+    filename : str, bytes, or list of str
+        A string (or list of strings) of fully qualified path name, or shared memory location (e.g., ``Global\...``)
+    mode : CompressionMode
+        When set to `CompressionMode.Info`, tup2 is replaced with a tuple of numpy attributes (shape, dtype,
+        flags, itemsize) (default CompressionMode).
+    sharename : str, or bytes, optional
+        Unique bytestring for shared memory location. Prevents mistakenly overwriting data in shared memory (defaults to None).
+    include : str, bytes, or list of str
+        Which items to include in the load. If items were omitted, tuples will still appear, but None will
+        be loaded as their corresponding data (defaults to None).
+    stack : bool, optional
+        Set to ``True`` to stack array data before loading into python (see docstring for `stack_sds`).
+        Set to ``False`` when appending many files into one and want columns flattening.
+        Defaults to None.
+    threads : int, optional
+        How many threads to read, stack, and decompress with (defaults to None).
+    info : boolean
+        Instead of decompressing numpy arrays, return a summary of each one's contents (shape/dtype/itemsize/etc.)
+    folders : str, bytes, or list of strings, optional
+        When saving with ``onefile=True`` (will filter out only those subfolders) list of strings (defaults to None)
+    filter : ndarray, optional
+        A boolean or fancy index filter (only rows in the filter will be added) (defaults to None).
+    mustexist : bool
+        When true will raise exception if any file is missing.
+    sections : list of str, optional
+        List of strings with sections to load (file must have been saved with ``append=``) (defaults to None).
+    goodfiles : list of str, optional
+        Tuples of two objects (list of filenames, path the files came from) -- often from ``os.walk`` (defaults to None).
 
     Returns
     -------
-    list of tuples:
+    list of tuples, optional
         tup1: json metadata in a bytestring
         tup2: list of numpy arrays or tuple of (shape, dtype, flags, itemsize) if info mode
         tup3: list of tuples containing (itemname, SDSFlags bitmask) for all items in container (might not correspond with 2nd item's arrays)
         tup4: dictionary of file header meta data
-    '''
+
+    Raises
+    ------
+    ValueError
+        If `include` is not a list of column names.
+        If the result doesn't contain any data.
+    """
     #-------------------------------------------
     def _add_sds_ext(filename):
         """If a filename does not exist or is not a file, and has no extension, add extension
@@ -1540,21 +1849,37 @@ def decompress_dataset_internal(filename, mode=CompressionMode.DecompressFile, s
 
     return result
 
+
 #------------------------------------------------------------------------------------
-def compress_dataset_internal(filename, metadata, listarrays, meta_tups=[], comptype=CompressionType.ZStd, complevel=2, fileType = 0,
-                             sharename=None, bandsize=None, append=None):
+def compress_dataset_internal(
+    filename: Union[str, bytes],
+    metadata: bytes,
+    listarrays: List[np.ndarray],
+    meta_tups: Optional[List[Tuple[str, SDSFlag]]] = None,
+    comptype: CompressionType = CompressionType.ZStd,
+    complevel: Optional[int] = 2,
+    fileType = 0,
+    sharename=None,
+    bandsize=None,
+    append=None
+) -> None:
     '''
-    All SDS saves will hit this routine before the final call to riptide_cpp.CompressFile()
+    All SDS saves will hit this routine before the final call to ``riptable_cpp.CompressFile()``
 
     Parameters
     ----------
-    filename  : Fully qualified filename (path has already been checked by save_sds wrapper)
-    metadata  : json metadata as a bytestring
+    filename : str or bytes
+        Fully qualified filename (path has already been checked by save_sds wrapper)
+    metadata  : bytes
+        JSON metadata as a bytestring
     listarrays : list of numpy arrays
     meta_tups : Tuples of (itemname, SDSFlag) - see SDSFlag enum in rt_enum.py
-    comptype  : See CompressionType in rt_enum.py (currently supports uncompressed(0) or zstandard(1)
-    complevel : 2 (default) is average. 1 is faster, less compressed, 3 is slower, more compressed.
-    fileType  : See SDSFileType in rt_enum.py - distinguishes between Struct, Dataset, Single item, or Matlab Table
+    comptype  : CompressionType
+        Specify the type of compression to use when saving the Dataset.
+    complevel : int
+        Compression level. 2 (default) is average. 1 is faster, less compressed, 3 is slower, more compressed.
+    fileType : SDSFileType
+        See SDSFileType in rt_enum.py - distinguishes between Struct, Dataset, Single item, or Matlab Table
     sharename : If provided, data will be saved (uncompressed) into shared memory. No file will be saved to disk.
 
     Returns
@@ -1563,6 +1888,8 @@ def compress_dataset_internal(filename, metadata, listarrays, meta_tups=[], comp
     '''
     if complevel is None:
         complevel = 2
+    if meta_tups is None:
+        meta_tups = []
 
     if not isinstance(filename, bytes):
         filename = filename.encode()
@@ -1590,13 +1917,21 @@ def compress_dataset_internal(filename, metadata, listarrays, meta_tups=[], comp
 
         rc.CompressFile(filename, metadata, listarrays, meta_tups, comptype, complevel, fileType, sharename, bandsize=bandsize, section=append)
 
-#------------------------------------------------------------------------------------
-def container_from_filetype(filetype):
-    '''
-    Returns the appropriate container class based on the SDSFileType enum saved in the SDS file header.
-    Older files where the file type is not set will default to 0, and container will default to Struct.
-    '''
 
+#------------------------------------------------------------------------------------
+def container_from_filetype(filetype: SDSFileType) -> SDSFileType:
+    """
+    Returns the appropriate container class based on the ``SDSFileType`` enum saved in the SDS file header.
+    Older files where the file type is not set will default to 0, and container will default to ``Struct``.
+
+    Parameters
+    ----------
+    filetype: SDSFileType
+
+    Returns
+    -------
+    SDSFileType
+    """
     if filetype in (SDSFileType.Dataset, SDSFileType.Table):
         container_type = TypeRegister.Dataset
     else:
@@ -2519,7 +2854,7 @@ def _read_sds(
             # currently if sds_concat was called, StackType will be 1
             # if it was manually appended, then it will be 0
             # to be used in the future
-            specialappend = fileheader_dict.get('StackType', 0) 
+            specialappend = fileheader_dict.get('StackType', 0)
     else:
         meta, arrs, meta_tups, fileheader_dict = multiload
 
@@ -2710,5 +3045,3 @@ def _sds_from_tree(data, path, name=None, compress=True, sharename=None):
     if needs_sds:
         if name is not None:
             _write_to_sds(data, path, name=name, compress=compress, sharename=sharename)
-
-

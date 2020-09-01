@@ -1,4 +1,4 @@
-__all__ = ['hstack_any', 'merge_cats', 'stack_rows']
+__all__ = ['hstack_any', 'stack_rows']
 
 import warnings
 from collections import defaultdict
@@ -7,9 +7,8 @@ from typing import List, Union, Optional, Mapping
 import numpy as np
 import riptide_cpp as rc
 from .rt_enum import TypeRegister, NumpyCharTypes, CategoryMode, int_dtype_from_len
-from .rt_numpy import arange, unique, ismember, crc64, hstack, empty
-from .rt_timers import tic, toc
-from .rt_grouping import hstack_groupings
+from .rt_numpy import arange, hstack, empty
+from .rt_grouping import hstack_groupings, merge_cats
 
 
 def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type]=None, baseclass:Optional[type]=None, destroy:bool=False, **kwargs):
@@ -673,78 +672,6 @@ def _hstack_categorical(cats:list, verbose:bool=False, destroy:bool=False):
     result = TypeRegister.Categorical(newcats)
     return result
 
-
-# ------------------------------------------------------------
-def _hstack_grouping(glist, _trusted:bool=False, base_index:int=1, ordered:bool=False, destroy:bool=False):
-    '''
-    HStack for Grouping instances.
-
-    Parameters
-    ----------
-    glist : list of Grouping
-        A list of Grouping objects.
-    _trusted : bool
-        Indicates whether we need to validate the data in the supplied Grouping
-        instances for consistency / correctness before using it. In certain cases,
-        the caller knows the data is safe to use directly (e.g. because they've just
-        created it), so the validation can be skipped.
-    base_index : int
-        The base index to use for the resulting Categorical.
-    ordered : bool
-        Indicates whether the resulting Categorical will be an 'ordered' Categorical
-        (sometimes called an 'Ordinal').
-    destroy : bool
-        This parameter is unused.
-
-    Returns
-    -------
-    Grouping
-    '''
-    # need to vet base index, enum mode, number of columns, etc.
-    if not _trusted:
-        warnings.warn(f'still implementing grouping hstack validation')
-
-        # TODO: add more tests for single vs. multikey (without unnecessary calculation of uniquedict)
-        for grp in glist:
-            same_mode = set()
-            if not isinstance(grp, TypeRegister.Grouping):
-                raise TypeError(f"Grouping hstack is for categoricals, not {type(grp)}")
-            same_mode.add(grp.isenum)
-
-        if len(same_mode)!=1:
-            raise TypeError(f"Grouping hstack received a mix of different modes.")
-
-    firstgroup = glist[0]
-    sort_display = firstgroup.isdisplaysorted
-
-    # mapping
-    if firstgroup.isenum:
-        # stack underlying arrays from all categoricals (held in grouping's grouping_dict)
-        underlying = hstack([[*g._grouping_dict.values()][0] for g in glist])
-        # stack all unique string arrays
-        listnames = hstack([g._enum.category_array for g in glist])
-
-        # collect, measure, stack integer arrays
-        listcodes = [g._enum.code_array for g in glist]
-        cutoffs = [ TypeRegister.FastArray([len(c) for c in listcodes], dtype=np.int64).cumsum() ]
-        listcodes = hstack(listcodes)
-
-        # send in as two arrays
-        listcats = [ listcodes, listnames ]
-
-        # will return new unique arrays for codes, names
-        underlying, newcats = merge_cats(underlying, listcats, unique_cutoffs=cutoffs, from_mapping=True, ordered=ordered)
-        newgroup = TypeRegister.Grouping(underlying, categories=dict(zip(newcats[1], newcats[0])), _trusted=True)
-    else:
-        # use catinstance for base 0 or 1
-        listidx = [g.catinstance for g in glist]
-        cat_tuples = [tuple(g.uniquedict.values()) for g in glist]
-        listcats = [ [v[i] for v in cat_tuples ] for i in range(len(cat_tuples[0])) ]
-        underlying, newcats = merge_cats(listidx, listcats, base_index=base_index, ordered=ordered)
-        newgroup = TypeRegister.Grouping(underlying, categories=newcats, categorical=True, _trusted=True, base_index=base_index, ordered=ordered, sort_display=sort_display)
-
-    return newgroup
-
 # ------------------------------------------------------------
 def _hstack_datetimenano(dtlist, destroy=False):
     '''
@@ -821,150 +748,6 @@ def _hstack_date_internal(dates, subclass=TypeRegister.Date):
 
     stacked = rc.HStack(dates)
     return subclass.newclassfrominstance(stacked, dates[0])
-
-# ------------------------------------------------------------
-def crc_match(arrlist: List[np.ndarray]) -> bool:
-    """
-    Perform a CRC check on every array in list, returns True if they were all a match.
-
-    Parameters
-    ----------
-    arrlist : list of numpy arrays
-
-    Returns
-    -------
-    bool
-        True if all arrays in `arrlist` are structurally equal; otherwise, False.
-
-    See Also
-    --------
-    numpy.array_equal
-    """
-    # This function also compares the shapes of the arrays in addition to the CRC value.
-    # This is necessary for correctness because this function is (essentially) implementing a structural
-    # equality comparison for arrays; a CRC value may not be impacted by zeros in some cases, e.g.
-    #   crc64(FA([b'', b'abcdef'])) == crc64(FA([b'abcdef']))
-    # which will give an incorrect result (since the arrays actually aren't structurally equal).
-
-    crcs = {(arr.shape, crc64(arr)) for arr in arrlist}
-    return len(crcs) == 1
-
-# ------------------------------------------------------------
-def merge_cats(indices, listcats, idx_cutoffs=None, unique_cutoffs=None, from_mapping=False, stack=True, base_index =1, ordered=False, verbose=False):
-    '''
-    For hstacking Categoricals possibly from a stacked .sds load.
-
-    Supports categoricals from single array or dictionary mapping.
-
-    Parameters
-    ----------
-    indices :  single stacked array or list of indices
-                if single array, needs idx_cutoffs for slicing
-    listcats : list of stacked unique category arrays (needs unique_cutoffs)
-                or list of lists of uniques
-                if the uniques in file1 are 'A,'C'  and the uniques in file2 are 'B','C,'D'
-                then listcats is [FastArray('A','C','B','C','D')]
-    idx_cutoffs: int64 array of the cutoffs to the  indices
-               if the index length is 30 and 20 the idx_cutoffs is [30,50]
-    unique_cutoffs: list of one int64 array of the cutoffs to the listcats
-               if the index length is 2 and 3 the idx_cutoffs is [2,5]
-
-    Returns
-    -------
-    Returns two items:
-    - list of fixed indices, or array of fixed contiguous indices.
-    - stacked unique values
-
-    Notes
-    -----
-    TODO: Needs to support multikey cats.
-    '''
-    # ------------------------------------------------------------
-    if verbose:
-        print("**indicees", indices)
-        print("**listcats", listcats)
-        print("**idx_cutoffs", idx_cutoffs)
-        print("**ucutoffs", unique_cutoffs)
-        print("**from_mapping", from_mapping)
-
-    if unique_cutoffs is not None:
-        if verbose:
-            print('unique cutoffs was not none')
-
-        oldcats = []
-        # all combined uniques will have the same cutoff points
-        unique_cutoffs = unique_cutoffs[0]
-        match = True
-        for cat_array in listcats:
-            oc = []
-            start = 0
-            for end in unique_cutoffs:
-                oc.append(cat_array[start:end])
-                start = end
-            # build list of slices
-            oldcats.append(oc)
-
-    # single list of unique categories (not from slices)
-    else:
-        oldcats = listcats
-
-    if verbose:
-        print('**oldcats',oldcats)
-        tic()
-
-    # check to see if all categories were the same
-    match = True
-    catlen = len(oldcats[0])
-    if catlen > 1:
-        for oc in oldcats:
-            # check the length first
-            if catlen == len(oc):
-                if not crc_match(oc):
-                    match = False
-                    break
-            else:
-                match = False
-                break
-
-    if match:
-        # first uniques are the same for all
-        newcats = [oc[0] for oc in oldcats]
-
-        if from_mapping:
-            newcats[1] = newcats[1].astype('U', copy=False)
-        else:
-            if len(newcats) == 0:
-                newcats = newcats[0]
-
-        # now indices will always be stacked
-        # maybe set a flag for comparisons - the stack isn't necessary if the categories match
-        if unique_cutoffs is None:
-            indices = hstack(indices)
-        if verbose:
-            print("**from_mapping match exactly", indices, newcats[0])
-
-    elif from_mapping:
-        # listcats is two arrays:
-        # the first is the combined uniques of codes
-        # the second is the combined uniques of names
-        codes, uidx = unique(listcats[0], return_index=True, sorted=False)
-        names = listcats[1][uidx].astype('U', copy=False)
-        newcats = [codes, names]
-        if verbose:
-            print("**from_mapping does NOT match exactly", names)
-
-        # use first occurance of codes to get uniques for both codes and names
-        #return indices, newcats
-
-    # need to perform own hstack
-    # this will get hit by Categorical.hstack() for single/multikey
-    # nothing has been stacked
-    else:
-        # unique_cutoffs can be None
-        indices, newcats = hstack_groupings(indices, listcats, i_cutoffs=idx_cutoffs, u_cutoffs=unique_cutoffs, base_index=base_index, ordered=ordered, verbose=verbose)
-    if verbose:
-        toc()
-    return indices, newcats
 
 # create a stack_rows alias for now
 stack_rows = hstack_any
