@@ -2216,14 +2216,14 @@ class Categorical_Test(unittest.TestCase):
         self.assertEqual(len(c.unique()), 4)
 
         c = Categorical(['a', 'a', 'b', 'c', 'd'])
-        c._fa[2] = 0
+        c[2] = 0
         n = c.nunique()
         self.assertEqual(n, 3)
         self.assertEqual(len(c.unique()), 3)
         self.assertEqual(c.unique_count, 4)
 
         c = Categorical([arange(3), np.array(['a', 'b', 'c'])])
-        c._fa[0] = 0
+        c[0] = 0
         n = c.nunique()
         self.assertEqual(n, 2)
         self.assertEqual(c.unique_count, 3)

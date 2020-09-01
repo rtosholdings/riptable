@@ -3227,7 +3227,8 @@ class Categorical(GroupByOps, FastArray):
                     raise IndexError(f"Invalid index in category dictionary.")
 
             else:
-                raise TypeError(f'Cannot set item with value of type {type(value)}. Mode was {CategoryMode(self.category_mode).name}')
+                if value < 0 or value > len(self._categories_wrap)-1+self.base_index:
+                    raise IndexError(f"Invalid index in category dictionary.")
 
         elif isinstance(value, tuple):
             if self.ismultikey:
@@ -3737,17 +3738,6 @@ class Categorical(GroupByOps, FastArray):
         return self.grouping.ilastkey
 
     # ------------------------------------------------------------
-    def unique(self, *args, **kwargs):
-        """
-        Returns the unique elements of this Categorical.
-        See Also
-        --------
-        rt_numpy.unique
-            ``unique`` doc shows the acceptable positional and keyword arguments.
-        """
-        return unique(self.filter(), *args, **kwargs)
-
-    # ------------------------------------------------------------
     @property
     def unique_count(self):
         """
@@ -3782,8 +3772,8 @@ class Categorical(GroupByOps, FastArray):
             pass
         # array / multikey categoricals (base index 1) have invalids at 0 bin
         else:
-            un = sort(un)
-            if un[0] == 0:
+            haszero = un == 0
+            if haszero.sum():
                 count -= 1
         return count
 
