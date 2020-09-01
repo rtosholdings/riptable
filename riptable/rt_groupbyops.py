@@ -263,7 +263,7 @@ class GroupByOps(object):
 
             # a two key groupby (not gbu) often has display sort turned on
             if hasattr(self,'_sort_display'):
-                if self._sort_display:
+                if self._sort_display and self.grouping.Ordered is True:
                     # transform will put numbers back in original order
                     isort = rc.ReverseShuffle(self.isortrows)
                     ikey = isort[ikey]
