@@ -1,27 +1,23 @@
-__all__ = [# misc riptable utility funcs
-           'get_default_value', 'merge_prebinned', 'alignmk', 'normalize_keys',
-           'bytes_to_str', 'findTrueWidth', 'ischararray', 'islogical', 'mbget', 'str_to_bytes', 'to_str', 'describe',
-           # h5 -> riptable
-           'load_h5']
+__all__ = [
+    # misc riptable utility funcs
+    'get_default_value', 'merge_prebinned', 'alignmk', 'normalize_keys',
+    'bytes_to_str', 'findTrueWidth', 'ischararray', 'islogical', 'mbget', 'str_to_bytes', 'to_str', 'describe',
+    'crc_match',
+    # h5 -> riptable
+    'load_h5'
+]
 
-from typing import Optional, List, Union
-import os
-import sys
-import shutil
-import tempfile
+from collections.abc import Iterable
+import keyword
 from math import modf
+from typing import Optional, List, Union
+import warnings
+
 import numpy as np
 import riptide_cpp as rc
-from collections.abc import Iterable
-import warnings
-import keyword
 
-from .rt_hstack import merge_cats
-from .rt_numpy import zeros, issorted, ismember, sort, tile, arange, unique, crc64, bool_to_fancy, empty, hstack, lexsort, get_common_dtype
-from .rt_enum import TypeRegister, INVALID_DICT, NumpyCharTypes, TypeId, CompressionMode, CompressionType, INVALID_FILE_CHARS, SDSFlag, SDSFileType, CategoryMode, SDS_EXTENSION, SDS_EXTENSION_BYTES
-from .rt_timers import tic, toc, utcnow
-from .Utils.rt_metadata import MetaData
-# from .rt_enum import INVALID_POINTER_32, INVALID_POINTER_64
+from .rt_enum import TypeRegister, INVALID_DICT, NumpyCharTypes
+from .rt_numpy import arange, bool_to_fancy, crc32c, get_common_dtype, tile
 
 
 #-----------------------------------------------------------------------------------------
@@ -423,16 +419,19 @@ def alignmk(key1, key2, time1, time2, direction:str='backward', allow_exact_matc
 
     if verbose: print("alignmk keys", key1, key2, time1, time2, direction, allow_exact_matches)
 
-    if direction == 'nearest':
-        backward= rc.MultiKeyAlign32((key1,), (key2,), time1, time2, False, allow_exact_matches)
-        forward= rc.MultiKeyAlign32((key1,), (key2,), time1, time2, True, allow_exact_matches)
-        if verbose: print("forward", forward, 'backward', backward)
+    if direction is 'nearest':
+        # This logic isn't fully implemented and working yet; don't allow it to be used until it is.
+        raise NotImplementedError("The 'nearest' direction is not yet supported by alignmk.")
+
+        #backward= rc.MultiKeyAlign32((key1,), (key2,), time1, time2, False, allow_exact_matches)
+        #forward= rc.MultiKeyAlign32((key1,), (key2,), time1, time2, True, allow_exact_matches)
+        #if verbose: print("forward", forward, 'backward', backward)
         # TODO combine forward and backward
-        return forward
+        #return forward
     else:
-        if direction == 'backward':
+        if direction is 'backward':
             isForward = False
-        elif direction == 'forward':
+        elif direction is 'forward':
             isForward = True
         else:
             raise ValueError("unsupported direction in alignmk")
@@ -478,7 +477,8 @@ def _mbget_2dims(arr, idx):
 #------------------------------------------------------------------------------------------------------
 def mbget(aValues: np.ndarray, aIndex: np.ndarray, d: Optional[Union[int, float, bytes]]=None) -> np.ndarray:
     """
-    This function is meant to mimic the mbget function in MATLab.
+    Provides fancy-indexing functionality similar to `np.take`, but where out-of-bounds indices 'retrieve' a
+    default value instead of e.g. raising an exception.
 
     It returns an array the same size as the `aIndex` array, with `aValues` in place of the indices and
     delimiter values (use `d` to customize) for invalid indices.
@@ -499,12 +499,13 @@ def mbget(aValues: np.ndarray, aIndex: np.ndarray, d: Optional[Union[int, float,
     Returns
     -------
     vout : np.ndarray
-        An array of values in v that have been looked up according to the indices in p.
+        An array of values in `aValues` that have been looked up according to the indices in `aIndex`.
+        The array will have the same shape as `aIndex`, and the same dtype and class as `aValues`.
 
     Raises
     ------
     KeyError
-        when the dtype for aValues is not int32,int64,float32,float64 and aValues is not a chararray
+        When the dtype for `aValues` is not int32,int64,float32,float64 and `aValues` is not a chararray.
 
     Notes
     -----
@@ -547,34 +548,36 @@ def mbget(aValues: np.ndarray, aIndex: np.ndarray, d: Optional[Union[int, float,
     >>> print(vout)                                         #MATLab: vout
     [10  -2147483648  50  40 -2147483648  20  30]    #MATLab: [10.00  NaN  50.00  40.00  NaN  20.00  30.00]
     """
-    #for now, always use the default d value
-    d=None
-    #make sure a aValues and aIndex are both numpy arrays
-
+    # make sure a aValues and aIndex are both numpy arrays
     if isinstance(aValues, (list, tuple)):
         aValues = TypeRegister.FastArray(aValues)
 
     if isinstance(aIndex, (list, tuple)):
         aIndex = TypeRegister.FastArray(aIndex)
 
-    if isinstance(aValues, np.ndarray) and isinstance(aIndex, np.ndarray):
-        if aValues.dtype.char == 'O':
-            raise TypeError(f"mbget does not support object types")
-
-        if aIndex.dtype.char not in NumpyCharTypes.AllInteger:
-            raise TypeError(f"indices provided to mbget must be an integer type not {aIndex.dtype}")
-
-        if aValues.ndim == 2:
-            return _mbget_2dims(aValues, aIndex)
-
-        # TODO: probably need special code or parameter to set custom default value for NAN_TIME
-        result = rc.MBGet(aValues, aIndex, d)
-        result = TypeRegister.newclassfrominstance(result, aValues)
-
-    else:
+    # If one or both of the inputs is still not an array,
+    # we can't proceed so raise an error.
+    if not isinstance(aValues, np.ndarray) or not isinstance(aIndex, np.ndarray):
         raise TypeError(f"Values and index must be numpy arrays. Got {type(aValues)} {type(aIndex)}")
 
-    return result
+    elif aValues.dtype.char == 'O':
+        raise TypeError(f"mbget does not support object types")
+
+    elif aIndex.dtype.char not in NumpyCharTypes.AllInteger:
+        raise TypeError(f"indices provided to mbget must be an integer type not {aIndex.dtype}")
+
+    # mbget supports both 1D and 2D arrays.
+    if aValues.ndim == 1:
+        # TODO: probably need special code or parameter to set custom default value for NAN_TIME
+        result = TypeRegister.MathLedger._MBGET(aValues, aIndex, d)
+        result = TypeRegister.newclassfrominstance(result, aValues)
+        return result
+
+    elif aValues.ndim == 2:
+        return _mbget_2dims(aValues, aIndex)
+
+    else:
+        raise ValueError("mbget does not support arrays of more than 2 dimensions.")
 
 #------------------------------------------------------
 def str_to_bytes(s):
@@ -779,7 +782,7 @@ def describe(arr, q: Optional[List[float]] = None, fill_value = None):
     ----------
     arr : array, list-like, or Dataset
         The data to be described.
-    q : list of float
+    q : list of float, optional
         List of quantiles, defaults to ``[0.10, 0.25, 0.50, 0.75, 0.90]``.
     fill_value : optional
         Place-holder value for non-computable columns.
@@ -951,3 +954,36 @@ def sample(obj, N: int=10, filter=None):
         return obj[idx]
     else:
         return obj[idx, :]
+
+# ------------------------------------------------------------
+def crc_match(arrlist: List[np.ndarray]) -> bool:
+    """
+    Perform a CRC check on every array in list, returns True if they were all a match.
+
+    Parameters
+    ----------
+    arrlist : list of numpy arrays
+
+    Returns
+    -------
+    bool
+        True if all arrays in `arrlist` are structurally equal; otherwise, False.
+
+    See Also
+    --------
+    numpy.array_equal
+    """
+    # This function also compares the shapes of the arrays in addition to the CRC value.
+    # This is necessary for correctness because this function is (essentially) implementing a structural
+    # equality comparison for arrays; a CRC value may not be impacted by zeros in some cases, e.g.
+    #   crc32c(FA([b'', b'abcdef'])) == crc32c(FA([b'abcdef']))
+    # which will give an incorrect result (since the arrays actually aren't structurally equal).
+
+    # TODO: Also need to consider strides, at least until the CRC implementation respects them.
+    #       Even then, we may want to calculate the CRC over the whole memory for performance reasons
+    #       then use the strides here to disambiguate the results.
+    #       Also consider dtype -- even if underlying data is identical, different dtypes means the data
+    #       will be interpreted differently so the arrays aren't a match. Checking for shape already partially
+    #       accounts for this, but we need to check dtype explicitly to account for bool vs. int8 and signed vs. unsigned int.
+    crcs = {(arr.shape, crc32c(arr)) for arr in arrlist}
+    return len(crcs) == 1

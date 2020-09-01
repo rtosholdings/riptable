@@ -3,32 +3,33 @@
            'parse_epoch', 'timestring_to_nano', 'datestring_to_nano', 'datetimestring_to_nano',
            'strptime_to_nano']
 
-
 import numpy as np
 from datetime import datetime as dt
-from datetime import date,timezone
+from datetime import date, timezone
 from dateutil import tz
 import time
 import warnings
-#import starfish as sf
+# import starfish as sf
 import riptide_cpp as rc
 from typing import Union, Tuple, List, Optional
 
 from .rt_fastarray import FastArray
-from .rt_enum import TypeRegister, DisplayArrayTypes, DisplayLength, DisplayJustification, DisplayTextDecoration, TypeId, TimeFormat, NumpyCharTypes, INVALID_DICT, DayOfWeek, SDSFlag, MATH_OPERATION
-from .rt_numpy import mask_ori, mask_andi, mask_xori, searchsorted, arange, putmask, isnan, empty, sum, zeros, full, hstack
+from .rt_enum import TypeRegister, DisplayArrayTypes, DisplayLength, DisplayJustification, DisplayTextDecoration, \
+    TypeId, TimeFormat, NumpyCharTypes, INVALID_DICT, DayOfWeek, SDSFlag, MATH_OPERATION
+from .rt_numpy import mask_ori, mask_andi, mask_xori, searchsorted, arange, putmask, isnan, empty, sum, zeros, full, \
+    hstack
 from .rt_hstack import hstack_any
 from .rt_timers import *
 from .Utils.rt_display_properties import ItemFormat
 from .Utils.rt_metadata import MetaData, meta_from_version, META_VERSION
-
+from .rt_categorical import Categorical
 
 NANOS_PER_MICROSECOND = 1_000
 NANOS_PER_MILLISECOND = 1_000_000
 NANOS_PER_SECOND = 1_000_000_000
 NANOS_PER_MINUTE = NANOS_PER_SECOND * 60
 NANOS_PER_HOUR = NANOS_PER_MINUTE * 60
-NANOS_PER_DAY =  NANOS_PER_HOUR * 24
+NANOS_PER_DAY = NANOS_PER_HOUR * 24
 NANOS_PER_YEAR = NANOS_PER_DAY * 365
 NANOS_PER_LEAPYEAR = NANOS_PER_DAY * 366
 NANOS_AT_2000 = (NANOS_PER_YEAR * 30) + (NANOS_PER_DAY * 7)
@@ -37,203 +38,201 @@ DAYS_PER_YEAR = 365
 DAYS_PER_LEAPYEAR = 366
 DAYS_AT_2000 = (DAYS_PER_YEAR * 30) + 7
 UTC_1970_DAY_SPLITS = FastArray([
-0,                                       # 1970
-DAYS_PER_YEAR,
-2*DAYS_PER_YEAR,
-(3*DAYS_PER_YEAR) + (1),
-(4*DAYS_PER_YEAR) + (1),
-(5*DAYS_PER_YEAR) + (1),
-(6*DAYS_PER_YEAR) + (1),
-(7*DAYS_PER_YEAR) + (2),
-(8*DAYS_PER_YEAR) + (2),
-(9*DAYS_PER_YEAR) + (2),
-(10*DAYS_PER_YEAR) + (2), # 1980
-(11*DAYS_PER_YEAR) + (3),
-(12*DAYS_PER_YEAR) + (3),
-(13*DAYS_PER_YEAR) + (3),
-(14*DAYS_PER_YEAR) + (3),
-(15*DAYS_PER_YEAR) + (4),
-(16*DAYS_PER_YEAR) + (4),
-(17*DAYS_PER_YEAR) + (4),
-(18*DAYS_PER_YEAR) + (4),
-(19*DAYS_PER_YEAR) + (5),
-(20*DAYS_PER_YEAR) + (5), # 1990
-(21*DAYS_PER_YEAR) + (5),
-(22*DAYS_PER_YEAR) + (5),
-(23*DAYS_PER_YEAR) + (6),
-(24*DAYS_PER_YEAR) + (6),
-(25*DAYS_PER_YEAR) + (6),
-(26*DAYS_PER_YEAR) + (6),
-(27*DAYS_PER_YEAR) + (7),
-(28*DAYS_PER_YEAR) + (7),
-(29*DAYS_PER_YEAR) + (7),
-DAYS_AT_2000,                         # 2000
-DAYS_AT_2000 + DAYS_PER_LEAPYEAR, 
-DAYS_AT_2000 + (2*DAYS_PER_YEAR) + (1), 
-DAYS_AT_2000 + (3*DAYS_PER_YEAR) + (1), 
-DAYS_AT_2000 + (4*DAYS_PER_YEAR) + (1), 
-DAYS_AT_2000 + (5*DAYS_PER_YEAR) + (2), 
-DAYS_AT_2000 + (6*DAYS_PER_YEAR) + (2), 
-DAYS_AT_2000 + (7*DAYS_PER_YEAR) + (2), 
-DAYS_AT_2000 + (8*DAYS_PER_YEAR) + (2), 
-DAYS_AT_2000 + (9*DAYS_PER_YEAR) + (3), 
-DAYS_AT_2000 + (10*DAYS_PER_YEAR) + (3), # 2010
-DAYS_AT_2000 + (11*DAYS_PER_YEAR) + (3), 
-DAYS_AT_2000 + (12*DAYS_PER_YEAR) + (3), 
-DAYS_AT_2000 + (13*DAYS_PER_YEAR) + (4), 
-DAYS_AT_2000 + (14*DAYS_PER_YEAR) + (4), 
-DAYS_AT_2000 + (15*DAYS_PER_YEAR) + (4), 
-DAYS_AT_2000 + (16*DAYS_PER_YEAR) + (4), 
-DAYS_AT_2000 + (17*DAYS_PER_YEAR) + (5), 
-DAYS_AT_2000 + (18*DAYS_PER_YEAR) + (5), 
-DAYS_AT_2000 + (19*DAYS_PER_YEAR) + (5), 
-DAYS_AT_2000 + (20*DAYS_PER_YEAR) + (5), # 2020
-DAYS_AT_2000 + (21*DAYS_PER_YEAR) + (6),
-DAYS_AT_2000 + (22*DAYS_PER_YEAR) + (6),
-DAYS_AT_2000 + (23*DAYS_PER_YEAR) + (6),
-DAYS_AT_2000 + (24*DAYS_PER_YEAR) + (6),
-DAYS_AT_2000 + (25*DAYS_PER_YEAR) + (7),
-DAYS_AT_2000 + (26*DAYS_PER_YEAR) + (7),
-DAYS_AT_2000 + (27*DAYS_PER_YEAR) + (7),
-DAYS_AT_2000 + (28*DAYS_PER_YEAR) + (7),
-DAYS_AT_2000 + (29*DAYS_PER_YEAR) + (8),
-DAYS_AT_2000 + (30*DAYS_PER_YEAR) + (8), # 2030
-DAYS_AT_2000 + (31*DAYS_PER_YEAR) + (8),
-DAYS_AT_2000 + (32*DAYS_PER_YEAR) + (8),
-DAYS_AT_2000 + (33*DAYS_PER_YEAR) + (9),
-DAYS_AT_2000 + (34*DAYS_PER_YEAR) + (9),
-DAYS_AT_2000 + (35*DAYS_PER_YEAR) + (9),
-DAYS_AT_2000 + (36*DAYS_PER_YEAR) + (9),
-DAYS_AT_2000 + (37*DAYS_PER_YEAR) + (10),
-DAYS_AT_2000 + (38*DAYS_PER_YEAR) + (10),
-DAYS_AT_2000 + (39*DAYS_PER_YEAR) + (10),
-DAYS_AT_2000 + (40*DAYS_PER_YEAR) + (10), # 2040
+    0,  # 1970
+    DAYS_PER_YEAR,
+    2 * DAYS_PER_YEAR,
+    (3 * DAYS_PER_YEAR) + (1),
+    (4 * DAYS_PER_YEAR) + (1),
+    (5 * DAYS_PER_YEAR) + (1),
+    (6 * DAYS_PER_YEAR) + (1),
+    (7 * DAYS_PER_YEAR) + (2),
+    (8 * DAYS_PER_YEAR) + (2),
+    (9 * DAYS_PER_YEAR) + (2),
+    (10 * DAYS_PER_YEAR) + (2),  # 1980
+    (11 * DAYS_PER_YEAR) + (3),
+    (12 * DAYS_PER_YEAR) + (3),
+    (13 * DAYS_PER_YEAR) + (3),
+    (14 * DAYS_PER_YEAR) + (3),
+    (15 * DAYS_PER_YEAR) + (4),
+    (16 * DAYS_PER_YEAR) + (4),
+    (17 * DAYS_PER_YEAR) + (4),
+    (18 * DAYS_PER_YEAR) + (4),
+    (19 * DAYS_PER_YEAR) + (5),
+    (20 * DAYS_PER_YEAR) + (5),  # 1990
+    (21 * DAYS_PER_YEAR) + (5),
+    (22 * DAYS_PER_YEAR) + (5),
+    (23 * DAYS_PER_YEAR) + (6),
+    (24 * DAYS_PER_YEAR) + (6),
+    (25 * DAYS_PER_YEAR) + (6),
+    (26 * DAYS_PER_YEAR) + (6),
+    (27 * DAYS_PER_YEAR) + (7),
+    (28 * DAYS_PER_YEAR) + (7),
+    (29 * DAYS_PER_YEAR) + (7),
+    DAYS_AT_2000,  # 2000
+    DAYS_AT_2000 + DAYS_PER_LEAPYEAR,
+    DAYS_AT_2000 + (2 * DAYS_PER_YEAR) + (1),
+    DAYS_AT_2000 + (3 * DAYS_PER_YEAR) + (1),
+    DAYS_AT_2000 + (4 * DAYS_PER_YEAR) + (1),
+    DAYS_AT_2000 + (5 * DAYS_PER_YEAR) + (2),
+    DAYS_AT_2000 + (6 * DAYS_PER_YEAR) + (2),
+    DAYS_AT_2000 + (7 * DAYS_PER_YEAR) + (2),
+    DAYS_AT_2000 + (8 * DAYS_PER_YEAR) + (2),
+    DAYS_AT_2000 + (9 * DAYS_PER_YEAR) + (3),
+    DAYS_AT_2000 + (10 * DAYS_PER_YEAR) + (3),  # 2010
+    DAYS_AT_2000 + (11 * DAYS_PER_YEAR) + (3),
+    DAYS_AT_2000 + (12 * DAYS_PER_YEAR) + (3),
+    DAYS_AT_2000 + (13 * DAYS_PER_YEAR) + (4),
+    DAYS_AT_2000 + (14 * DAYS_PER_YEAR) + (4),
+    DAYS_AT_2000 + (15 * DAYS_PER_YEAR) + (4),
+    DAYS_AT_2000 + (16 * DAYS_PER_YEAR) + (4),
+    DAYS_AT_2000 + (17 * DAYS_PER_YEAR) + (5),
+    DAYS_AT_2000 + (18 * DAYS_PER_YEAR) + (5),
+    DAYS_AT_2000 + (19 * DAYS_PER_YEAR) + (5),
+    DAYS_AT_2000 + (20 * DAYS_PER_YEAR) + (5),  # 2020
+    DAYS_AT_2000 + (21 * DAYS_PER_YEAR) + (6),
+    DAYS_AT_2000 + (22 * DAYS_PER_YEAR) + (6),
+    DAYS_AT_2000 + (23 * DAYS_PER_YEAR) + (6),
+    DAYS_AT_2000 + (24 * DAYS_PER_YEAR) + (6),
+    DAYS_AT_2000 + (25 * DAYS_PER_YEAR) + (7),
+    DAYS_AT_2000 + (26 * DAYS_PER_YEAR) + (7),
+    DAYS_AT_2000 + (27 * DAYS_PER_YEAR) + (7),
+    DAYS_AT_2000 + (28 * DAYS_PER_YEAR) + (7),
+    DAYS_AT_2000 + (29 * DAYS_PER_YEAR) + (8),
+    DAYS_AT_2000 + (30 * DAYS_PER_YEAR) + (8),  # 2030
+    DAYS_AT_2000 + (31 * DAYS_PER_YEAR) + (8),
+    DAYS_AT_2000 + (32 * DAYS_PER_YEAR) + (8),
+    DAYS_AT_2000 + (33 * DAYS_PER_YEAR) + (9),
+    DAYS_AT_2000 + (34 * DAYS_PER_YEAR) + (9),
+    DAYS_AT_2000 + (35 * DAYS_PER_YEAR) + (9),
+    DAYS_AT_2000 + (36 * DAYS_PER_YEAR) + (9),
+    DAYS_AT_2000 + (37 * DAYS_PER_YEAR) + (10),
+    DAYS_AT_2000 + (38 * DAYS_PER_YEAR) + (10),
+    DAYS_AT_2000 + (39 * DAYS_PER_YEAR) + (10),
+    DAYS_AT_2000 + (40 * DAYS_PER_YEAR) + (10),  # 2040
 ])
 
 # UTC @ midnight, years 1970 - 2040
 UTC_1970_SPLITS = FastArray([
-0,                                       # 1970
-NANOS_PER_YEAR,
-2*NANOS_PER_YEAR,
-(3*NANOS_PER_YEAR) + (NANOS_PER_DAY*1),
-(4*NANOS_PER_YEAR) + (NANOS_PER_DAY*1),
-(5*NANOS_PER_YEAR) + (NANOS_PER_DAY*1),
-(6*NANOS_PER_YEAR) + (NANOS_PER_DAY*1),
-(7*NANOS_PER_YEAR) + (NANOS_PER_DAY*2),
-(8*NANOS_PER_YEAR) + (NANOS_PER_DAY*2),
-(9*NANOS_PER_YEAR) + (NANOS_PER_DAY*2),
-(10*NANOS_PER_YEAR) + (NANOS_PER_DAY*2), # 1980
-(11*NANOS_PER_YEAR) + (NANOS_PER_DAY*3),
-(12*NANOS_PER_YEAR) + (NANOS_PER_DAY*3),
-(13*NANOS_PER_YEAR) + (NANOS_PER_DAY*3),
-(14*NANOS_PER_YEAR) + (NANOS_PER_DAY*3),
-(15*NANOS_PER_YEAR) + (NANOS_PER_DAY*4),
-(16*NANOS_PER_YEAR) + (NANOS_PER_DAY*4),
-(17*NANOS_PER_YEAR) + (NANOS_PER_DAY*4),
-(18*NANOS_PER_YEAR) + (NANOS_PER_DAY*4),
-(19*NANOS_PER_YEAR) + (NANOS_PER_DAY*5),
-(20*NANOS_PER_YEAR) + (NANOS_PER_DAY*5), # 1990
-(21*NANOS_PER_YEAR) + (NANOS_PER_DAY*5),
-(22*NANOS_PER_YEAR) + (NANOS_PER_DAY*5),
-(23*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-(24*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-(25*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-(26*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-(27*NANOS_PER_YEAR) + (NANOS_PER_DAY*7),
-(28*NANOS_PER_YEAR) + (NANOS_PER_DAY*7),
-(29*NANOS_PER_YEAR) + (NANOS_PER_DAY*7),
-NANOS_AT_2000,                         # 2000
-NANOS_AT_2000 + NANOS_PER_LEAPYEAR, 
-NANOS_AT_2000 + (2*NANOS_PER_YEAR) + (NANOS_PER_DAY*1), 
-NANOS_AT_2000 + (3*NANOS_PER_YEAR) + (NANOS_PER_DAY*1), 
-NANOS_AT_2000 + (4*NANOS_PER_YEAR) + (NANOS_PER_DAY*1), 
-NANOS_AT_2000 + (5*NANOS_PER_YEAR) + (NANOS_PER_DAY*2), 
-NANOS_AT_2000 + (6*NANOS_PER_YEAR) + (NANOS_PER_DAY*2), 
-NANOS_AT_2000 + (7*NANOS_PER_YEAR) + (NANOS_PER_DAY*2), 
-NANOS_AT_2000 + (8*NANOS_PER_YEAR) + (NANOS_PER_DAY*2), 
-NANOS_AT_2000 + (9*NANOS_PER_YEAR) + (NANOS_PER_DAY*3), 
-NANOS_AT_2000 + (10*NANOS_PER_YEAR) + (NANOS_PER_DAY*3), # 2010
-NANOS_AT_2000 + (11*NANOS_PER_YEAR) + (NANOS_PER_DAY*3), 
-NANOS_AT_2000 + (12*NANOS_PER_YEAR) + (NANOS_PER_DAY*3), 
-NANOS_AT_2000 + (13*NANOS_PER_YEAR) + (NANOS_PER_DAY*4), 
-NANOS_AT_2000 + (14*NANOS_PER_YEAR) + (NANOS_PER_DAY*4), 
-NANOS_AT_2000 + (15*NANOS_PER_YEAR) + (NANOS_PER_DAY*4), 
-NANOS_AT_2000 + (16*NANOS_PER_YEAR) + (NANOS_PER_DAY*4), 
-NANOS_AT_2000 + (17*NANOS_PER_YEAR) + (NANOS_PER_DAY*5), 
-NANOS_AT_2000 + (18*NANOS_PER_YEAR) + (NANOS_PER_DAY*5), 
-NANOS_AT_2000 + (19*NANOS_PER_YEAR) + (NANOS_PER_DAY*5), 
-NANOS_AT_2000 + (20*NANOS_PER_YEAR) + (NANOS_PER_DAY*5), # 2020
-NANOS_AT_2000 + (21*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-NANOS_AT_2000 + (22*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-NANOS_AT_2000 + (23*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-NANOS_AT_2000 + (24*NANOS_PER_YEAR) + (NANOS_PER_DAY*6),
-NANOS_AT_2000 + (25*NANOS_PER_YEAR) + (NANOS_PER_DAY*7),
-NANOS_AT_2000 + (26*NANOS_PER_YEAR) + (NANOS_PER_DAY*7),
-NANOS_AT_2000 + (27*NANOS_PER_YEAR) + (NANOS_PER_DAY*7),
-NANOS_AT_2000 + (28*NANOS_PER_YEAR) + (NANOS_PER_DAY*7),
-NANOS_AT_2000 + (29*NANOS_PER_YEAR) + (NANOS_PER_DAY*8),
-NANOS_AT_2000 + (30*NANOS_PER_YEAR) + (NANOS_PER_DAY*8), # 2030
-NANOS_AT_2000 + (31*NANOS_PER_YEAR) + (NANOS_PER_DAY*8),
-NANOS_AT_2000 + (32*NANOS_PER_YEAR) + (NANOS_PER_DAY*8),
-NANOS_AT_2000 + (33*NANOS_PER_YEAR) + (NANOS_PER_DAY*9),
-NANOS_AT_2000 + (34*NANOS_PER_YEAR) + (NANOS_PER_DAY*9),
-NANOS_AT_2000 + (35*NANOS_PER_YEAR) + (NANOS_PER_DAY*9),
-NANOS_AT_2000 + (36*NANOS_PER_YEAR) + (NANOS_PER_DAY*9),
-NANOS_AT_2000 + (37*NANOS_PER_YEAR) + (NANOS_PER_DAY*10),
-NANOS_AT_2000 + (38*NANOS_PER_YEAR) + (NANOS_PER_DAY*10),
-NANOS_AT_2000 + (39*NANOS_PER_YEAR) + (NANOS_PER_DAY*10),
-NANOS_AT_2000 + (40*NANOS_PER_YEAR) + (NANOS_PER_DAY*10), # 2040
+    0,  # 1970
+    NANOS_PER_YEAR,
+    2 * NANOS_PER_YEAR,
+    (3 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
+    (4 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
+    (5 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
+    (6 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
+    (7 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
+    (8 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
+    (9 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
+    (10 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),  # 1980
+    (11 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
+    (12 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
+    (13 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
+    (14 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
+    (15 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    (16 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    (17 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    (18 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    (19 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
+    (20 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),  # 1990
+    (21 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
+    (22 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
+    (23 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    (24 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    (25 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    (26 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    (27 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
+    (28 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
+    (29 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
+    NANOS_AT_2000,  # 2000
+    NANOS_AT_2000 + NANOS_PER_LEAPYEAR,
+    NANOS_AT_2000 + (2 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
+    NANOS_AT_2000 + (3 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
+    NANOS_AT_2000 + (4 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
+    NANOS_AT_2000 + (5 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
+    NANOS_AT_2000 + (6 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
+    NANOS_AT_2000 + (7 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
+    NANOS_AT_2000 + (8 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
+    NANOS_AT_2000 + (9 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
+    NANOS_AT_2000 + (10 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),  # 2010
+    NANOS_AT_2000 + (11 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
+    NANOS_AT_2000 + (12 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
+    NANOS_AT_2000 + (13 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    NANOS_AT_2000 + (14 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    NANOS_AT_2000 + (15 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    NANOS_AT_2000 + (16 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
+    NANOS_AT_2000 + (17 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
+    NANOS_AT_2000 + (18 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
+    NANOS_AT_2000 + (19 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
+    NANOS_AT_2000 + (20 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),  # 2020
+    NANOS_AT_2000 + (21 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    NANOS_AT_2000 + (22 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    NANOS_AT_2000 + (23 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    NANOS_AT_2000 + (24 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
+    NANOS_AT_2000 + (25 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
+    NANOS_AT_2000 + (26 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
+    NANOS_AT_2000 + (27 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
+    NANOS_AT_2000 + (28 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
+    NANOS_AT_2000 + (29 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),
+    NANOS_AT_2000 + (30 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),  # 2030
+    NANOS_AT_2000 + (31 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),
+    NANOS_AT_2000 + (32 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),
+    NANOS_AT_2000 + (33 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
+    NANOS_AT_2000 + (34 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
+    NANOS_AT_2000 + (35 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
+    NANOS_AT_2000 + (36 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
+    NANOS_AT_2000 + (37 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),
+    NANOS_AT_2000 + (38 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),
+    NANOS_AT_2000 + (39 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),
+    NANOS_AT_2000 + (40 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),  # 2040
 ])
 
 MATLAB_EPOCH_DATENUM = 719529
 EPOCH_DAY_OF_WEEK = DayOfWeek.Thursday
-YDAY_SPLITS = FastArray([  0,  31,  59,  90, 120, 151, 181, 212, 243, 273, 304, 334])
-YDAY_SPLITS_LEAP = FastArray([  0,  31,  60,  91, 121, 152, 182, 213, 244, 274, 305, 335])
-MONTH_STR_ARRAY = FastArray(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])        
-
+YDAY_SPLITS = FastArray([0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334])
+YDAY_SPLITS_LEAP = FastArray([0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335])
+MONTH_STR_ARRAY = FastArray(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
 # need to hard code the nano cutoffs because FastArray can't do math yet
-UTC_YDAY_SPLITS=FastArray([
-    (NANOS_PER_DAY*0),
-    (NANOS_PER_DAY*31),
-    (NANOS_PER_DAY*59),
-    (NANOS_PER_DAY*90),
-    (NANOS_PER_DAY*120),
-    (NANOS_PER_DAY*151),
-    (NANOS_PER_DAY*181),
-    (NANOS_PER_DAY*212),
-    (NANOS_PER_DAY*243),
-    (NANOS_PER_DAY*273),
-    (NANOS_PER_DAY*304),
-    (NANOS_PER_DAY*334)    
-    ])
+UTC_YDAY_SPLITS = FastArray([
+    (NANOS_PER_DAY * 0),
+    (NANOS_PER_DAY * 31),
+    (NANOS_PER_DAY * 59),
+    (NANOS_PER_DAY * 90),
+    (NANOS_PER_DAY * 120),
+    (NANOS_PER_DAY * 151),
+    (NANOS_PER_DAY * 181),
+    (NANOS_PER_DAY * 212),
+    (NANOS_PER_DAY * 243),
+    (NANOS_PER_DAY * 273),
+    (NANOS_PER_DAY * 304),
+    (NANOS_PER_DAY * 334)
+])
 
-UTC_YDAY_SPLITS_LEAP=FastArray([
-    (NANOS_PER_DAY*0),
-    (NANOS_PER_DAY*31),
-    (NANOS_PER_DAY*60),
-    (NANOS_PER_DAY*91),
-    (NANOS_PER_DAY*121),
-    (NANOS_PER_DAY*152),
-    (NANOS_PER_DAY*182),
-    (NANOS_PER_DAY*213),
-    (NANOS_PER_DAY*244),
-    (NANOS_PER_DAY*274),
-    (NANOS_PER_DAY*305),
-    (NANOS_PER_DAY*335)    
-    ])
-
+UTC_YDAY_SPLITS_LEAP = FastArray([
+    (NANOS_PER_DAY * 0),
+    (NANOS_PER_DAY * 31),
+    (NANOS_PER_DAY * 60),
+    (NANOS_PER_DAY * 91),
+    (NANOS_PER_DAY * 121),
+    (NANOS_PER_DAY * 152),
+    (NANOS_PER_DAY * 182),
+    (NANOS_PER_DAY * 213),
+    (NANOS_PER_DAY * 244),
+    (NANOS_PER_DAY * 274),
+    (NANOS_PER_DAY * 305),
+    (NANOS_PER_DAY * 335)
+])
 
 TIME_FORMATS = {
-    1 : "%Y%m%d", # ordinal date
-    2 : "%#H:%M %p",    # ms from midnight
-    3 : "%Y%m%d %H:%M:%S",
-    4 : "%H:%M:%S",
-    5 : "%H:%M"
+    1: "%Y%m%d",  # ordinal date
+    2: "%#H:%M %p",  # ms from midnight
+    3: "%Y%m%d %H:%M:%S",
+    4: "%H:%M:%S",
+    5: "%H:%M"
 }
 
 
-#------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 def strptime_to_nano(dtstrings, format, from_tz=None, to_tz='NYC'):
     '''
     Converts datetime string to DateTimeNano object with user-specified format.
@@ -244,13 +243,13 @@ def strptime_to_nano(dtstrings, format, from_tz=None, to_tz='NYC'):
     format    : timestring format
 
                 Currently supports the following escape codes:
-    
+
                 Date:
                 -----
                 %y      Year without century as zero-padded decimal number.
                 %Y      Year with century as decimal number.
                 %m      Month as a decimal number (with or without zero-padding).
-                %B      Full month name: ['January', 'February', 'March', 'April', 'May', 'June', 
+                %B      Full month name: ['January', 'February', 'March', 'April', 'May', 'June',
                                           'July', 'August', 'September', 'October', 'November', 'December']
                 %b      Abbreviated month name: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                                                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -271,13 +270,13 @@ def strptime_to_nano(dtstrings, format, from_tz=None, to_tz='NYC'):
 
 
     Other Notes:
-    ------------    
+    ------------
     Works best with timestrings that include a date:
     - If no year is present in the string, an invalid time will be returned for all values.
     - If no form of year/month/day is present, values will yield a time in 1970.
       Consider using timestring_to_nano(), which also will accept one datestring for all times.
 
-    If the timestring ends in a '.', the following numbers will be parsed as a second fraction. This happens 
+    If the timestring ends in a '.', the following numbers will be parsed as a second fraction. This happens
     automatically, no escape character is required in the format string.
 
     If no time escape characters are present, will return midnight at all date values.
@@ -302,7 +301,7 @@ def strptime_to_nano(dtstrings, format, from_tz=None, to_tz='NYC'):
     >>> fmt = '%m/%d/%Y %I:%M:%S %p'
     >>> strptime_to_nano(dt, fmt, from_tz='NYC')
     DateTimeNano([19920201 07:48:30.000000000, 19920201 19:48:30.000000000])
-    
+
     Date + time + second fraction:
     >>> dt = FastArray(['02/01/1992 7:48:30.123456789', '2/1/1992 15:48:30.000000006'])
     >>> fmt = '%m/%d/%Y %H:%M:%S'
@@ -317,7 +316,7 @@ def strptime_to_nano(dtstrings, format, from_tz=None, to_tz='NYC'):
     return DateTimeNano(nano_times, from_tz=from_tz, to_tz=to_tz)
 
 
-#------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 def _possibly_convert_cat(arr):
     '''
     When a cateorical is passed into DateTime functions, we extract the unique categories
@@ -333,7 +332,7 @@ def _possibly_convert_cat(arr):
     return arr, None
 
 
-#------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 def datetimestring_to_nano(dtstring, from_tz=None, to_tz='NYC'):
     '''
     Converts datetime string to DateTimeNano object.
@@ -360,7 +359,7 @@ def datetimestring_to_nano(dtstring, from_tz=None, to_tz='NYC'):
     return DateTimeNano(nano_times, from_tz=from_tz, to_tz=to_tz)
 
 
-#------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 def datestring_to_nano(datestring, time=None, from_tz=None, to_tz='NYC'):
     '''
     Converts date string to DateTimeNano object (default midnight).
@@ -401,13 +400,13 @@ def datestring_to_nano(datestring, time=None, from_tz=None, to_tz='NYC'):
         time = rc.TimeStringToNanos(time)
 
         result = nano_dates + time
-        
+
     result = DateTimeNano(result, from_tz=from_tz, to_tz=to_tz)
 
     return result
 
 
-#------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 def timestring_to_nano(timestring, date=None, from_tz=None, to_tz='NYC'):
     '''
     Converts timestring to TimeSpan or DateTimeNano object.
@@ -442,7 +441,7 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz='NYC'):
     DateTimeNano([20180201 01:23:45.000000000, 20180201 12:34:56.000000000, 20180201 23:22:21.000000000])
 
     Multiple date strings:
-    
+
     >>> ts = FA(['1:23:45', '12:34:56', '23:22:21'])
     >>> dts = FA(['2018-02-01', '2018-02-07', '2018-05-12'])
     >>> timestring_to_nano(ts, date=dts, from_tz='NYC')
@@ -453,7 +452,7 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz='NYC'):
     if date is None:
         result = TimeSpan(nano_times)
     else:
-        
+
         if isinstance(date, (str, bytes)):
             date = TypeRegister.FastArray([date])
 
@@ -463,7 +462,8 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz='NYC'):
 
     return result
 
-#===========================================================================================
+
+# ===========================================================================================
 def parse_epoch(etime, to_tz='NYC'):
     """Days since epoch and milliseconds since midnight from nanosecond timestamps.
 
@@ -487,7 +487,7 @@ def parse_epoch(etime, to_tz='NYC'):
     return dtn.days_since_epoch, dtn.millis_since_midnight()
 
 
-#------------------------------------------------------------
+# ------------------------------------------------------------
 def _apply_inv_mask(arr1, arr2, fillval=None, arr1_inv_mask=None, arr2_inv_mask=None):
     """Preserve NaN date and time values in the final result of date/time class operations.
     Called by time fraction properties and math operations.
@@ -513,10 +513,10 @@ def _apply_inv_mask(arr1, arr2, fillval=None, arr1_inv_mask=None, arr2_inv_mask=
                 # was with a scalar or single item array
                 if np.isscalar(arr2_inv_mask):
                     if arr2_inv_mask:
-                        arr2[:]=fillval
+                        arr2[:] = fillval
                 elif len(arr2_inv_mask) == 1:
                     if arr2_inv_mask[0]:
-                        arr2[:]=fillval
+                        arr2[:] = fillval
                 else:
                     putmask(arr2, arr2_inv_mask, fillval)
             return arr2
@@ -527,7 +527,7 @@ def _apply_inv_mask(arr1, arr2, fillval=None, arr1_inv_mask=None, arr2_inv_mask=
         return arr2
 
 
-#========================================================
+# ========================================================
 class DateTimeBase(FastArray):
     """Base class for DateTimeNano and TimeSpan.
     Both of these subclasses have times with nanosecond precision.
@@ -536,64 +536,64 @@ class DateTimeBase(FastArray):
     PRECISION = 9
     NAN_TIME = 0
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __new__(cls, values):
-        instance =np.asarray(values).view(cls)
+        instance = np.asarray(values).view(cls)
         instance._display_length = DisplayLength.Long
         return instance
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         return self.view(FastArray)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def display_length(self):
         if not hasattr(self, '_display_length'):
             self._display_length = DisplayLength.Long
         return self._display_length
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def display_item(self, utcnano):
         raise NotImplementedError(f"DateTimeBase subclasses need to override this method.")
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _meta_dict(self, name=None):
         raise NotImplementedError(f"DateTimeBase subclasses need to override this method.")
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _as_meta_data(self, name=None):
-        # ** TODO: Date, DateSpan, DateTimeNano, TimeSpan all have very similar 
+        # ** TODO: Date, DateSpan, DateTimeNano, TimeSpan all have very similar
         # versions of this routine - collapse into one
         if name is None:
             name = self.get_name()
         meta = MetaData(self._meta_dict(name))
-        return {meta['name']:self._fa}, [SDSFlag.OriginalContainer + SDSFlag.Stackable], meta.string
+        return {meta['name']: self._fa}, [SDSFlag.OriginalContainer + SDSFlag.Stackable], meta.string
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _build_sds_meta_data(self, name, **kwargs):
         """Build meta data for DateTimeNano
         """
-        meta = MetaData( self._meta_dict(name=name) )
+        meta = MetaData(self._meta_dict(name=name))
         # for now there's only one array in this FastArray subclass
         cols = []
         tups = []
         return meta, cols, tups
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _build_string(self):
         def qwrap(timestring):
-            return "".join(["'",timestring,"'"])
+            return "".join(["'", timestring, "'"])
 
-        _slicesize = int(np.floor(DateTimeBase.MAX_DISPLAY_LEN/2))
+        _slicesize = int(np.floor(DateTimeBase.MAX_DISPLAY_LEN / 2))
         _asize = len(self)
 
-        #DFUNC = self.display_item
+        # DFUNC = self.display_item
         fmt, DFUNC = self.display_query_properties()
 
         # print with break
@@ -606,50 +606,49 @@ class DateTimeBase(FastArray):
             right_strings = [qwrap(DFUNC(i, fmt)) for i in right_idx]
             all_strings = left_strings + break_string + right_strings
 
-            
+
         # print full
         else:
             all_strings = [qwrap(DFUNC(i, fmt)) for i in self]
 
-        
         result = ", ".join(all_strings)
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
     def _add_nano_ext(utcnano, timestr):
         precision = DateTimeBase.PRECISION
         if precision > 0:
-            if precision > 9: 
+            if precision > 9:
                 precision = 9
 
-            power = 10**precision
+            power = 10 ** precision
             nanos = int(utcnano % power)
             nanostr = str(nanos).zfill(precision)
-            timestr= timestr + "." + nanostr
+            timestr = timestr + "." + nanostr
         return timestr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __str__(self):
-        return  self._build_string()
+        return self._build_string()
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __repr__(self):
         return self.get_classname() + "([" + self._build_string() + "])"
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __getitem__(self, fld):
         result = self._fa.__getitem__(fld)
         if isinstance(result, FastArray):
             # possible fix for strides bug
-            #if result.strides[0] != result.itemsize:
+            # if result.strides[0] != result.itemsize:
             #    result = result.copy()
             result = self.newclassfrominstance(result, self)
         if np.isscalar(result):
             return self.get_scalar(result)
         return result
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def _math_error_string(self, value, operator, reverse=False):
         if reverse:
             a = value
@@ -659,22 +658,22 @@ class DateTimeBase(FastArray):
             b = value
         return f"unsupported operand type(s) for {operator}: {type(a).__name__} {type(b).__name__}"
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _funnel_mathops(self, funcname, value):
         '''
         Wrapper for all math operations on Date and DateSpan.
-        
+
         Both subclasses need to take over:
         _check_mathops_nano()
         _check_mathops()
-        
+
         maybe... still testing
         _build_mathops_result()
 
         Easier to catch forbidden operations here.
         '''
 
-        #if funcname in self.forbidden_mathops:
+        # if funcname in self.forbidden_mathops:
         #    raise TypeError(f'Cannot perform {funcname} on {self.__class__.__name__} object.')
 
         inv_mask = self.isnan()
@@ -683,7 +682,8 @@ class DateTimeBase(FastArray):
         caller = self._fa
 
         # check if operand has nano precision, set invalid, return type accordingly
-        value, other_inv_mask, return_type, caller = self._check_mathops_base(funcname, value, other_inv_mask, return_type, caller)
+        value, other_inv_mask, return_type, caller = self._check_mathops_base(funcname, value, other_inv_mask,
+                                                                              return_type, caller)
 
         # perform main math operation on fast array
         func = getattr(caller, funcname)
@@ -701,20 +701,21 @@ class DateTimeBase(FastArray):
         result = self._build_mathops_result(value, result, inv_mask, other_inv_mask, return_type)
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def copy(self, order='K'):
         instance = self._fa.copy(order=order)
         return self.newclassfrominstance(instance, self)
 
 
-#========================================================
+# ========================================================
 class TimeStampBase():
     """Parent class for DateTimeNano and Date.
     """
+
     def __init__(self):
         pass
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _year(self, arr, fix_dst=False):
         """
         Parameters
@@ -733,7 +734,7 @@ class TimeStampBase():
         result = self._year_splits.searchsorted(arr, side='right').astype(np.int32, copy=False) + 1969
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _month(self, arr=None, fix_dst=False):
         '''
         Internal year to avoid performing the daylight savings fixup multiple times.
@@ -746,8 +747,8 @@ class TimeStampBase():
                 arr = self._fa
         year = self._year(arr, fix_dst=fix_dst)
         startyear = arr - self._year_splits[year - 1970]
-        
-        maskleap = (year%4)==0
+
+        maskleap = (year % 4) == 0
 
         # get the months for non-leaps
         smonth = self._yearday_splits.searchsorted(startyear, side='right')
@@ -756,7 +757,7 @@ class TimeStampBase():
         putmask(smonth, maskleap, self._yearday_splits_leap.searchsorted(startyear, side='right'))
         return smonth.astype(np.int32, copy=False).view(FastArray)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _preserve_invalid_comparison(self, caller, other, funcname):
         """Date and DateTimeNano have multiple values for nan (0 and integer sentinel).
         Both of their compare checks need to preserve nans in the result the same way.
@@ -770,12 +771,12 @@ class TimeStampBase():
         return result
 
 
-#========================================================
+# ========================================================
 class DateBase(FastArray):
     """Parent class for Date and Datespan.
     Both of these subclasses have times with day precision.
     """
-    #NAN_DATE = INVALID_DICT[np.dtype(np.int32).num]
+    # NAN_DATE = INVALID_DICT[np.dtype(np.int32).num]
     NAN_DATE = 0
 
     # ------------------------------------------------------------
@@ -786,20 +787,20 @@ class DateBase(FastArray):
     def __init__(cls, arr, **kwargs):
         pass
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         return self.view(FastArray)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __str__(self):
-        return  self._build_string()
+        return self._build_string()
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __repr__(self):
         return self.get_classname() + "([" + self._build_string() + "])"
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def strftime(self, format, dtype='O'):
         '''
         Converts DateTimeNano to an array of object strings or a scalar string.
@@ -821,11 +822,13 @@ class DateBase(FastArray):
 
         '''
         if isinstance(self, np.ndarray):
-            return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa* SECONDS_PER_DAY], dtype=dtype)
+            return np.asarray(
+                [dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa * SECONDS_PER_DAY],
+                dtype=dtype)
         else:
             return dt.strftime(dt.utcfromtimestamp(self * SECONDS_PER_DAY), format)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def display_length(self):
         if not hasattr(self, '_display_length'):
@@ -838,26 +841,26 @@ class DateBase(FastArray):
     #                                 'align':sf.DisplayAlign.Right})
     #     return itemformat, self.display_convert_func
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def display_query_properties(self):
-        #if TypeRegister.DisplayOptions.STARFISH:
+        # if TypeRegister.DisplayOptions.STARFISH:
         #    return self._sf_display_query_properties()
         '''
         Each instance knows how to format its time strings. The formatter is specified in TIME_FORMATS
         The length property of item_format stores the index into TIME_FORMATS for the display_convert_func
         '''
         item_format = ItemFormat(
-            length          = self.display_length,
-            justification   = DisplayJustification.Right,
-            can_have_spaces = True,
-            decoration      = None,
+            length=self.display_length,
+            justification=DisplayJustification.Right,
+            can_have_spaces=True,
+            decoration=None,
         )
         convert_func = self.display_convert_func
         return item_format, convert_func
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _build_string(self):
-        _slicesize = int(np.floor(DateTimeBase.MAX_DISPLAY_LEN/2))
+        _slicesize = int(np.floor(DateTimeBase.MAX_DISPLAY_LEN / 2))
         _asize = len(self)
 
         fmt, DFUNC = self.display_query_properties()
@@ -871,11 +874,11 @@ class DateBase(FastArray):
             break_string = ["..."]
             right_strings = [f"'{DFUNC(i, fmt)}'" for i in right_idx]
             all_strings = left_strings + break_string + right_strings
-            
+
         # print full
         else:
             all_strings = [f"'{DFUNC(i, fmt)}'" for i in self]
-        
+
         result = ", ".join(all_strings)
         return result
 
@@ -886,7 +889,7 @@ class DateBase(FastArray):
         result = self._fa[fld]
         if isinstance(result, np.ndarray):
             # possible fix for strides bug
-            #if result.strides[0] != result.itemsize:
+            # if result.strides[0] != result.itemsize:
             #    result = result.copy()
             return self.newclassfrominstance(result, self)
         if np.isscalar(result):
@@ -894,15 +897,15 @@ class DateBase(FastArray):
 
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _funnel_mathops(self, funcname, value):
         '''
         Wrapper for all math operations on Date and DateSpan.
-        
+
         Both subclasses need to take over:
         _check_mathops_nano()
         _check_mathops()
-        
+
         maybe... still testing
         _build_mathops_result()
 
@@ -917,7 +920,8 @@ class DateBase(FastArray):
         caller = self._fa
 
         # check if operand has nano precision, set invalid, return type accordingly
-        value, other_inv_mask, return_type, caller = self._check_mathops_nano(funcname, value, other_inv_mask, return_type, caller)
+        value, other_inv_mask, return_type, caller = self._check_mathops_nano(funcname, value, other_inv_mask,
+                                                                              return_type, caller)
 
         # perform main math operation on fast array
         func = getattr(caller, funcname)
@@ -934,17 +938,18 @@ class DateBase(FastArray):
         result = self._build_mathops_result(value, result, inv_mask, other_inv_mask, return_type)
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _build_mathops_result(self, value, result, inv_mask, other_inv_mask, return_type):
         # restore invalid for Date and other operand if necessary
-        #print('**DateBase._build_mathops_result')
-        #print('value',value)
-        #print('result',result)
-        #print('inv_mask',inv_mask)
-        #print('other_inv_mask',other_inv_mask)
-        #print('return type',return_type)
+        # print('**DateBase._build_mathops_result')
+        # print('value',value)
+        # print('result',result)
+        # print('inv_mask',inv_mask)
+        # print('other_inv_mask',other_inv_mask)
+        # print('return type',return_type)
 
-        result = _apply_inv_mask(self, result, fillval=self.NAN_DATE, arr1_inv_mask=inv_mask, arr2_inv_mask=other_inv_mask)
+        result = _apply_inv_mask(self, result, fillval=self.NAN_DATE, arr1_inv_mask=inv_mask,
+                                 arr2_inv_mask=other_inv_mask)
 
         if not isinstance(result, return_type):
             if return_type == DateTimeNano:
@@ -961,7 +966,7 @@ class DateBase(FastArray):
 
         return result
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def min(self, **kwargs):
         '''
         Earliest date / datespan in array.
@@ -977,7 +982,7 @@ class DateBase(FastArray):
         '''
         return self.__class__([self._fa.min()])
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def max(self, **kwargs):
         '''
         Latest date / datespan in array.
@@ -1000,52 +1005,52 @@ class DateBase(FastArray):
         metadict = {
             'name': name,
             'typeid': getattr(TypeId, classname),
-            'classname' : classname,
+            'classname': classname,
             'ncols': 0,
             'version': self.MetaVersion,
-            'author' : 'python',
+            'author': 'python',
 
-            'instance_vars' : {
-                '_display_length' : self.display_length,
+            'instance_vars': {
+                '_display_length': self.display_length,
             },
 
-            '_base_is_stackable' : SDSFlag.Stackable
+            '_base_is_stackable': SDSFlag.Stackable
         }
         return metadict
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _as_meta_data(self, name=None):
         if name is None:
             name = self.get_name()
         meta = MetaData(self._meta_dict(name=name))
-        return {meta['name']:self._fa}, [SDSFlag.OriginalContainer + SDSFlag.Stackable], meta.string
+        return {meta['name']: self._fa}, [SDSFlag.OriginalContainer + SDSFlag.Stackable], meta.string
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _build_sds_meta_data(self, name):
         meta = MetaData(self._meta_dict(name=name))
         cols = []
         tups = []
         return meta, cols, tups
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _from_meta_data(cls, arrdict, arrflags, meta):
         meta = MetaData(meta)
-        instance = cls( [*arrdict.values()][0] )
+        instance = cls([*arrdict.values()][0])
         # combine loaded meta variables with class defaults
         vars = meta['instance_vars']
         for k, v in cls.MetaDefault.items():
-            vars.setdefault(k,v)
+            vars.setdefault(k, v)
         for k, v in vars.items():
             setattr(instance, k, v)
         return instance
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def copy(self, order='K'):
         instance = self._fa.copy(order=order)
         return self.newclassfrominstance(instance, self)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def newclassfrominstance(cls, instance, origin):
         result = instance.view(cls)
@@ -1053,7 +1058,7 @@ class DateBase(FastArray):
         return result
 
 
-#========================================================
+# ========================================================
 class Date(DateBase, TimeStampBase):
     '''
     Date arrays have an underlying int32 array. The array values are number of days since January 1st. 1970.
@@ -1090,7 +1095,7 @@ class Date(DateBase, TimeStampBase):
     >>> d = FA([737061.0, 737062.0, 737063.0, 737064.0, 737065.0])
     >>> Date(dates, from_matlab=True)
     Date([2018-01-01, 2018-01-02, 2018-01-03, 2018-01-04, 2018-01-05])
-    
+
     From riptable DateTimeNano:
 
     >>> dtn = DateTimeNano.random(5)
@@ -1105,10 +1110,10 @@ class Date(DateBase, TimeStampBase):
         # vars for container loader
         'name': 'Date',
         'typeid': TypeId.Date,
-        'version': 0,       # if no version, assume before versions implemented
+        'version': 0,  # if no version, assume before versions implemented
 
-        'instance_vars' : {
-            '_display_length' : DisplayLength.Long
+        'instance_vars': {
+            '_display_length': DisplayLength.Long
         }
     }
     forbidden_mathops = ('__mul__', '__imul__')
@@ -1128,7 +1133,7 @@ class Date(DateBase, TimeStampBase):
                     try:
                         cats = arr.category_array
                         # flip to correct integer before re-expanding
-                        if cats.dtype.char in ('U','S'):
+                        if cats.dtype.char in ('U', 'S'):
                             cats = cls._convert_datestring(cats).astype(np.int32, copy=False)
                             arr = TypeRegister.Categorical(arr._fa, cats)
                         arr = arr.expand_array
@@ -1138,40 +1143,40 @@ class Date(DateBase, TimeStampBase):
                 # fix datetimenano so the days match display (account for previous daylight savings fixup)
                 elif isinstance(arr, TypeRegister.DateTimeNano):
                     # there is a bug here -- do not think a timezone fixup is nec
-                    #arr = arr._timezone.fix_dst(arr._fa, arr._timezone._dst_cutoffs)
+                    # arr = arr._timezone.fix_dst(arr._fa, arr._timezone._dst_cutoffs)
                     arr = arr._fa // NANOS_PER_DAY
-            
+
                 # flip strings to days from 1970
-                if arr.dtype.char in ('U','S'):
+                if arr.dtype.char in ('U', 'S'):
                     arr = cls._convert_datestring(arr, format=format)
-            
+
                 # flip matlab ordinal dates to days from 1970
                 if from_matlab:
                     arr = cls._convert_matlab_days(arr)
 
-                elif arr.dtype.char in NumpyCharTypes.AllInteger+NumpyCharTypes.AllFloat:
+                elif arr.dtype.char in NumpyCharTypes.AllInteger + NumpyCharTypes.AllFloat:
                     arr = arr.astype(np.int32, copy=False)
 
                 else:
                     raise TypeError(f'Could not initialize Date object with array of type {arr.dtype}.')
 
         else:
-            raise TypeError(f'Date objects must be initialized with numeric or string arrays, lists or scalars. Got {type(arr)}')
-
+            raise TypeError(
+                f'Date objects must be initialized with numeric or string arrays, lists or scalars. Got {type(arr)}')
 
         instance = arr.view(cls)
         instance._display_length = DisplayLength.Long
         return instance
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __init__(self, arr, from_matlab=False, format=None):
         pass
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_scalar(self, scalarval):
         return DateScalar(scalarval, _from=self)
-    
-    #-------------------------------------------------------
+
+    # -------------------------------------------------------
     def diff(self, periods=1):
         '''
         Returns
@@ -1181,7 +1186,7 @@ class Date(DateBase, TimeStampBase):
         result = self._fa.diff(periods=periods)
         return DateSpan(result)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _convert_datestring(cls, arr, format=None):
         '''
@@ -1196,12 +1201,12 @@ class Date(DateBase, TimeStampBase):
 
         return arr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _convert_matlab_days(cls, arr):
         '''
         TODO: move this to a more generic superclass - almost exactly the same as DateTimeNano._convert_matlab_days
-        
+
         Parameters:
         -----------
 
@@ -1220,17 +1225,17 @@ class Date(DateBase, TimeStampBase):
         putmask(arr, inv_mask, cls.NAN_DATE)
         return arr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
-    def display_convert_func(date_num, itemformat:ItemFormat):
+    def display_convert_func(date_num, itemformat: ItemFormat):
         # TODO: apply ItemFormat options that were passed in
         return Date.format_date_num(date_num, itemformat)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
     def format_date_num(date_num, itemformat):
         if date_num == DateBase.NAN_DATE or date_num == INVALID_DICT[np.dtype(np.int32).num]:
@@ -1238,61 +1243,61 @@ class Date(DateBase, TimeStampBase):
         format_str = Date._parse_item_format(itemformat)
         localzone = tz.gettz('GMT')
         try:
-            timestr = dt.fromtimestamp( (date_num * SECONDS_PER_DAY), timezone.utc )
+            timestr = dt.fromtimestamp((date_num * SECONDS_PER_DAY), timezone.utc)
             timestr = timestr.astimezone(localzone)
             timestr = timestr.strftime(format_str)
         except:
             raise ValueError(f'Date number {date_num} is not a valid value for Date() object.')
         return timestr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
     def _parse_item_format(itemformat):
         return '%Y-%m-%d'
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def fill_invalid(self, shape=None, dtype=None, inplace=True):
         arr = self._fill_invalid_internal(shape=shape, dtype=self.dtype, fill_val=self.NAN_DATE, inplace=inplace)
         if arr is None:
             return
         return Date(arr)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def isnan(self):
         """Both NaN date (0) and integer sentinel value are considered NaN.
         """
         return self._fa.isnanorzero()
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def isnotnan(self):
         """Both NaN date (0) and integer sentinel value are considered NaN.
         """
         return ~self.isnan()
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def yyyymmdd(self):
         return DateTimeNano(self._fa * NANOS_PER_DAY, from_tz='GMT', to_tz='GMT').yyyymmdd
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _year_splits(self):
         """Midnght on Jan. 1st from 1970 - 1940 in utc nanoseconds."""
         return UTC_1970_DAY_SPLITS
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _yearday_splits(self):
         """Midnight on the 1st of the month in dayssince the beginning of the year."""
         return YDAY_SPLITS
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _yearday_splits_leap(self):
         """Midnight on the 1st of the month in days since the beginning of the year during a leap year."""
         return YDAY_SPLITS_LEAP
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def year(self):
         '''
@@ -1306,7 +1311,7 @@ class Date(DateBase, TimeStampBase):
         year = self._year(self._fa, fix_dst=False)
         return _apply_inv_mask(self, year)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def month(self, arr=None):
         '''
@@ -1318,7 +1323,7 @@ class Date(DateBase, TimeStampBase):
         '''
         return _apply_inv_mask(self, self._month())
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def monthyear(self, arr=None):
         '''
@@ -1331,10 +1336,10 @@ class Date(DateBase, TimeStampBase):
         FastArray([ 'Feb2000','Dec2018'])
         '''
         month = self.month
-        yearstr= self.year.astype('S')
-        return MONTH_STR_ARRAY[month-1] + yearstr
+        yearstr = self.year.astype('S')
+        return MONTH_STR_ARRAY[month - 1] + yearstr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def is_leapyear(self):
         '''
@@ -1349,7 +1354,7 @@ class Date(DateBase, TimeStampBase):
         maskleap = year % 4 == 0
         return maskleap
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def day_of_year(self):
         '''
@@ -1362,33 +1367,32 @@ class Date(DateBase, TimeStampBase):
         '''
         year = self._year(self._fa, fix_dst=False)
         arr = self._fa - self._year_splits[year - 1970]
-        arr+=1
+        arr += 1
         return _apply_inv_mask(self, arr)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def day_of_month(self):
         year = self._year(self._fa, fix_dst=False)
-        
+
         # subtract the days from start of year so all times are in MM-DD, etc.
         startyear = self._fa - self._year_splits[year - 1970]
 
         # treat the whole array like a non-leapyear
-        startmonth_idx = self._yearday_splits.searchsorted(startyear, side='right')-1
+        startmonth_idx = self._yearday_splits.searchsorted(startyear, side='right') - 1
         monthtime = startyear - self._yearday_splits[startmonth_idx]
 
         # fix up the leapyears with a different yearday split table
-        leapmask = (year%4) == 0
-        startmonth_idx_leap = self._yearday_splits_leap.searchsorted(startyear[leapmask], side='right')-1
+        leapmask = (year % 4) == 0
+        startmonth_idx_leap = self._yearday_splits_leap.searchsorted(startyear[leapmask], side='right') - 1
         monthtime[leapmask] = startyear[leapmask] - self._yearday_splits_leap[startmonth_idx_leap]
-
 
         # unlike month, weekday, hour, etc. day of month starts at 1
         monthday = monthtime + 1
-        
+
         return _apply_inv_mask(self, monthday)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def day_of_week(self):
         '''
@@ -1402,7 +1406,7 @@ class Date(DateBase, TimeStampBase):
         arr = (self._fa + EPOCH_DAY_OF_WEEK) % 7
         return _apply_inv_mask(self, arr)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def is_weekend(self):
         '''
@@ -1414,7 +1418,8 @@ class Date(DateBase, TimeStampBase):
 
         '''
         return _apply_inv_mask(self, self.day_of_week > 4)
-    #------------------------------------------------------------
+
+    # ------------------------------------------------------------
     @property
     def is_weekday(self):
         '''
@@ -1427,7 +1432,7 @@ class Date(DateBase, TimeStampBase):
         '''
         return _apply_inv_mask(self, self.day_of_week < 5)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def seconds_since_epoch(self):
         '''
@@ -1436,7 +1441,7 @@ class Date(DateBase, TimeStampBase):
         '''
         return _apply_inv_mask(self, self._fa * SECONDS_PER_DAY)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def hstack(cls, dates):
         '''
@@ -1457,7 +1462,7 @@ class Date(DateBase, TimeStampBase):
         # pass the subclass to the parent class routine
         return hstack_any(dates, cls, Date)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def range(cls, start, end=None, days=None, step=1, format=None, closed=None):
         """
@@ -1521,13 +1526,13 @@ class Date(DateBase, TimeStampBase):
                 raise TypeError(f'End date must be string or integer. Got {type(start)}')
         end = cls(end, format=format)._fa[0]
 
-        if days is None and step==1:
+        if days is None and step == 1:
             # include one or both ends
             if closed is None:
-                end+=1
+                end += 1
             elif closed == 'right':
-                end+=1
-                start+=1
+                end += 1
+                start += 1
             elif closed == 'left':
                 pass
             else:
@@ -1589,7 +1594,7 @@ class Date(DateBase, TimeStampBase):
     def __lt__(self, other):
         return self._date_compare_check('__lt__', other)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __add__(self, value):
         '''
         Addition rules:
@@ -1610,7 +1615,7 @@ class Date(DateBase, TimeStampBase):
     def __radd__(self, value):
         return self._funnel_mathops('__add__', value)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __sub__(self, value):
         '''
         Subtraction rules:
@@ -1628,7 +1633,7 @@ class Date(DateBase, TimeStampBase):
             # need routine for int32 - int32 => int32 (operands have 0 as invalid, result has sentinel as invalid)
             # right now, using the double return, gets recasted in the constructor
             op = MATH_OPERATION.SUBDATETIMES
-            
+
             functup = (self, value)
             result = func(functup, op, 0)
             return DateSpan(result)
@@ -1639,105 +1644,149 @@ class Date(DateBase, TimeStampBase):
 
         else:
             return self._funnel_mathops('__sub__', value)
+
     def __isub__(self, value):
         return self._funnel_mathops('__isub__', value)
+
     def __rsub__(self, value):
         if isinstance(value, (Date, DateTimeNano)):
             return value.__sub__(self)
         else:
             raise NotImplementedError
 
-    def __mul__(self, other): raise NotImplementedError
+    def __mul__(self, other):
+        raise NotImplementedError
 
-    def __matmul__(self, other): raise NotImplementedError
+    def __matmul__(self, other):
+        raise NotImplementedError
 
     # need to check properties to see if division is happening
-    #def __truediv__(self, other): raise NotImplementedError
-    #def __floordiv__(self, other): raise NotImplementedError
-    #def __mod__(self, other): raise NotImplementedError
-    #def __divmod__(self, other): raise NotImplementedError
-    
-    def __pow__(self, other, modulo=None): raise NotImplementedError
+    # def __truediv__(self, other): raise NotImplementedError
+    # def __floordiv__(self, other): raise NotImplementedError
+    # def __mod__(self, other): raise NotImplementedError
+    # def __divmod__(self, other): raise NotImplementedError
 
-    def __lshift__(self, other): raise NotImplementedError
+    def __pow__(self, other, modulo=None):
+        raise NotImplementedError
 
-    def __rshift__(self, other): raise NotImplementedError
+    def __lshift__(self, other):
+        raise NotImplementedError
 
-    def __and__(self, other): raise NotImplementedError
+    def __rshift__(self, other):
+        raise NotImplementedError
 
-    def __xor__(self, other): raise NotImplementedError
+    def __and__(self, other):
+        raise NotImplementedError
 
-    def __or__(self, other): raise NotImplementedError
+    def __xor__(self, other):
+        raise NotImplementedError
 
-    def __rmul__(self, other): raise NotImplementedError
+    def __or__(self, other):
+        raise NotImplementedError
 
-    def __rmatmul__(self, other): raise NotImplementedError
+    def __rmul__(self, other):
+        raise NotImplementedError
 
-    def __rtruediv__(self, other): raise NotImplementedError
+    def __rmatmul__(self, other):
+        raise NotImplementedError
 
-    def __rfloordiv__(self, other): raise NotImplementedError
+    def __rtruediv__(self, other):
+        raise NotImplementedError
 
-    def __rmod__(self, other): raise NotImplementedError
+    def __rfloordiv__(self, other):
+        raise NotImplementedError
 
-    def __rdivmod__(self, other): raise NotImplementedError
+    def __rmod__(self, other):
+        raise NotImplementedError
 
-    def __rpow__(self, other): raise NotImplementedError
+    def __rdivmod__(self, other):
+        raise NotImplementedError
 
-    def __rlshift__(self, other): raise NotImplementedError
+    def __rpow__(self, other):
+        raise NotImplementedError
 
-    def __rrshift__(self, other): raise NotImplementedError
+    def __rlshift__(self, other):
+        raise NotImplementedError
 
-    def __rand__(self, other): raise NotImplementedError
+    def __rrshift__(self, other):
+        raise NotImplementedError
 
-    def __rxor__(self, other): raise NotImplementedError
+    def __rand__(self, other):
+        raise NotImplementedError
 
-    def __ror__(self, other): raise NotImplementedError
+    def __rxor__(self, other):
+        raise NotImplementedError
 
-    def __imul__(self, other): raise NotImplementedError
+    def __ror__(self, other):
+        raise NotImplementedError
 
-    def __imatmul__(self, other): raise NotImplementedError
+    def __imul__(self, other):
+        raise NotImplementedError
 
-    def __itruediv__(self, other): raise NotImplementedError
+    def __imatmul__(self, other):
+        raise NotImplementedError
 
-    def __ifloordiv__(self, other): raise NotImplementedError
+    def __itruediv__(self, other):
+        raise NotImplementedError
 
-    def __imod__(self, other): raise NotImplementedError
+    def __ifloordiv__(self, other):
+        raise NotImplementedError
 
-    def __ipow__(self, other, modulo=None): raise NotImplementedError
+    def __imod__(self, other):
+        raise NotImplementedError
 
-    def __ilshift__(self, other): raise NotImplementedError
+    def __ipow__(self, other, modulo=None):
+        raise NotImplementedError
 
-    def __irshift__(self, other): raise NotImplementedError
+    def __ilshift__(self, other):
+        raise NotImplementedError
 
-    def __iand__(self, other): raise NotImplementedError
+    def __irshift__(self, other):
+        raise NotImplementedError
 
-    def __ixor__(self, other): raise NotImplementedError
+    def __iand__(self, other):
+        raise NotImplementedError
 
-    def __ior__(self, other): raise NotImplementedError
+    def __ixor__(self, other):
+        raise NotImplementedError
 
-    def __neg__(self): raise NotImplementedError
+    def __ior__(self, other):
+        raise NotImplementedError
 
-    def __pos__(self): raise NotImplementedError
+    def __neg__(self):
+        raise NotImplementedError
 
-    def __abs__(self): raise NotImplementedError
+    def __pos__(self):
+        raise NotImplementedError
 
-    def __invert__(self): raise NotImplementedError
+    def __abs__(self):
+        raise NotImplementedError
 
-    def __complex__(self): raise NotImplementedError
+    def __invert__(self):
+        raise NotImplementedError
 
-    def __int__(self): raise NotImplementedError
+    def __complex__(self):
+        raise NotImplementedError
 
-    def __float__(self): raise NotImplementedError
+    def __int__(self):
+        raise NotImplementedError
 
-    def __round__(self, ndigits=0): raise NotImplementedError
+    def __float__(self):
+        raise NotImplementedError
 
-    def __trunc__(self): raise NotImplementedError
+    def __round__(self, ndigits=0):
+        raise NotImplementedError
 
-    def __floor__(self): raise NotImplementedError
+    def __trunc__(self):
+        raise NotImplementedError
 
-    def __ceil__(self): raise NotImplementedError
+    def __floor__(self):
+        raise NotImplementedError
 
-    #------------------------------------------------------------
+    def __ceil__(self):
+        raise NotImplementedError
+
+    # ------------------------------------------------------------
     def _check_mathops(self, funcname, value):
         '''
         This gets called after a math operation has been performed on the Date's FastArray.
@@ -1775,7 +1824,7 @@ class Date(DateBase, TimeStampBase):
 
         return return_type, other_inv_mask
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _check_mathops_nano(self, funcname, value, other_inv_mask, return_type, caller):
         '''
         Operations with TimeSpan and DateTimeNano will flip to nano precision, or raise an error.
@@ -1806,7 +1855,7 @@ class Date(DateBase, TimeStampBase):
 
         return value, other_inv_mask, return_type, caller
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _load_from_sds_meta_data(cls, name, arr, cols, meta):
         '''
@@ -1815,7 +1864,6 @@ class Date(DateBase, TimeStampBase):
 
         # **** remove after implementing new metadata routine
 
-
         if not isinstance(meta, MetaData):
             meta = MetaData(meta)
         arr = cls(arr)
@@ -1823,14 +1871,35 @@ class Date(DateBase, TimeStampBase):
         # combine loaded meta variables with class defaults
         vars = meta['instance_vars']
         for k, v in cls.MetaDefault.items():
-            vars.setdefault(k,v)
+            vars.setdefault(k, v)
         for k, v in vars.items():
             setattr(arr, k, v)
 
         return arr
 
+    ## ------------------------------------------------------------
+    @property
+    def start_of_month(self):
+        """
 
-#========================================================
+        Returns
+        -------
+        rt.Date array of first of self's month
+        """
+        return self - self.day_of_month + 1
+
+    @property
+    def start_of_week(self):
+        """
+
+        Returns
+        -------
+        rt.Date array of previous Monday
+        """
+        return self - self.day_of_week
+
+
+# ========================================================
 class DateSpan(DateBase):
     '''
     DateSpan arrays have an underlying int32 array. The array values are in number of days.
@@ -1848,57 +1917,59 @@ class DateSpan(DateBase):
         # vars for container loader
         'name': 'Date',
         'typeid': TypeId.DateSpan,
-        'version': 0,       # if no version, assume before versions implemented
+        'version': 0,  # if no version, assume before versions implemented
 
-        'instance_vars' : {
-            '_display_length' : DisplayLength.Long
+        'instance_vars': {
+            '_display_length': DisplayLength.Long
         }
     }
-    NAN_DATE = INVALID_DICT[7] # int32 sentinel
+    NAN_DATE = INVALID_DICT[7]  # int32 sentinel
     forbidden_mathops = ()
+
     def __new__(cls, arr, unit=None):
         instance = None
         if isinstance(arr, list) or np.isscalar(arr):
             arr = FastArray(arr, dtype=np.int32)
 
         if isinstance(arr, np.ndarray):
-            if arr.dtype.char in NumpyCharTypes.AllInteger+NumpyCharTypes.AllFloat:
+            if arr.dtype.char in NumpyCharTypes.AllInteger + NumpyCharTypes.AllFloat:
                 # is this unit really necessary?
-                if unit in ('W','w'):
+                if unit in ('W', 'w'):
                     arr = arr * 7
                 arr = arr.astype(np.int32, copy=False)
             else:
                 raise TypeError(f'Could not initialize Date object with array of type {arr.dtype}.')
 
         else:
-            raise TypeError(f'DateSpan objects must be initialized with numeric arrays, lists or scalars. Got {type(arr)}')
+            raise TypeError(
+                f'DateSpan objects must be initialized with numeric arrays, lists or scalars. Got {type(arr)}')
 
         instance = arr.view(cls)
         instance._display_length = DisplayLength.Long
         return instance
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __init__(self, arr, unit=None):
         pass
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_scalar(self, scalarval):
         return DateSpanScalar(scalarval, _from=self)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
-    def display_convert_func(date_num, itemformat:ItemFormat):
+    def display_convert_func(date_num, itemformat: ItemFormat):
         '''
         Called by main rt_display() routine to format items in array correctly in Dataset display.
         Also called by DateSpan's __str__() and __repr__().
         '''
         return DateSpan.format_date_span(date_num, itemformat)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
     def format_date_span(date_span, itemformat):
         '''
@@ -1909,7 +1980,7 @@ class DateSpan(DateBase):
         if itemformat.length == DisplayLength.Short:
             unit_str = 'd'
         else:
-            if date_span ==1:
+            if date_span == 1:
                 unit_str = ' day'
             else:
                 unit_str = ' days'
@@ -1918,16 +1989,18 @@ class DateSpan(DateBase):
         if isinstance(date_span, np.int32):
             date_span = np.int32(date_span)
 
-        return str(date_span)+unit_str
+        return str(date_span) + unit_str
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
-    def format_short(self): self._display_length = DisplayLength.Short
+    def format_short(self):
+        self._display_length = DisplayLength.Short
 
     @property
-    def format_long(self): self._display_length = DisplayLength.Long
+    def format_long(self):
+        self._display_length = DisplayLength.Long
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _load_from_sds_meta_data(cls, name, arr, cols, meta):
         '''
@@ -1941,20 +2014,20 @@ class DateSpan(DateBase):
         # combine loaded meta variables with class defaults
         vars = meta['instance_vars']
         for k, v in cls.MetaDefault.items():
-            vars.setdefault(k,v)
+            vars.setdefault(k, v)
         for k, v in vars.items():
             setattr(arr, k, v)
 
         return arr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def fill_invalid(self, shape=None, dtype=None, inplace=True):
         arr = self._fill_invalid_internal(shape=shape, dtype=self.dtype, inplace=inplace)
         if arr is None:
             return
         return DateSpan(arr)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def hstack(cls, dates):
         '''
@@ -1975,7 +2048,7 @@ class DateSpan(DateBase):
         # pass the subclass to the parent class routine
         return hstack_any(dates, cls, DateSpan)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _check_mathops_nano(self, funcname, value, other_inv_mask, return_type, caller):
         '''
         Operations with TimeSpan and DateTimeNano will flip to nano precision, or raise an error.
@@ -2004,7 +2077,7 @@ class DateSpan(DateBase):
 
         return value, other_inv_mask, return_type, caller
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _check_mathops(self, funcname, value):
         '''
         This gets called after a math operation has been performed on the Date's FastArray.
@@ -2041,7 +2114,7 @@ class DateSpan(DateBase):
 
         return return_type, other_inv_mask
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __add__(self, value):
         return self._funnel_mathops('__add__', value)
 
@@ -2102,21 +2175,24 @@ class DateSpan(DateBase):
     def __lt__(self, other):
         return self._datespan_compare_check('__lt__', other)
 
+
 # ------------------------------------------------------------
 def DateTimeUTC(arr, to_tz='NYC', from_matlab=False, format=None, start_date=None, gmt=None):
     """Forces DateTimeNano ``from_tz`` keyword to 'UTC'.
     For more see DateTimeNano.
     """
-    return DateTimeNano(arr, from_tz='UTC', to_tz=to_tz, from_matlab=from_matlab, format=format, start_date=start_date, gmt=gmt)
+    return DateTimeNano(arr, from_tz='UTC', to_tz=to_tz, from_matlab=from_matlab, format=format, start_date=start_date,
+                        gmt=gmt)
 
-#========================================================
+
+# ========================================================
 class DateTimeCommon:
     '''
     Common functions shared between the array based class and the scalar
     This class must be combine with another class because of dependency on _timezone
     '''
 
-    #-CLOCK HH:MM------------------------------------------------
+    # -CLOCK HH:MM------------------------------------------------
     @property
     def format_clock(self):
         '''Set time to be displayed as HH:MM:SS'''
@@ -2126,9 +2202,8 @@ class DateTimeCommon:
     def format_short(self):
         '''Set time to be displayed as HH:MM:SS'''
         self._display_length = DisplayLength.Short
-        
 
-    #-YYYYMMDD----------------------------------------------------
+    # -YYYYMMDD----------------------------------------------------
     @property
     def format_medium(self):
         '''Set time to be displayed as YYYYMMDD'''
@@ -2143,9 +2218,8 @@ class DateTimeCommon:
     def format_day(self):
         '''Set time to be displayed as YYYYMMDD'''
         self._display_length = DisplayLength.Medium
-       
 
-    #-YYYYMMDD HH:MM:SS.nanosecond ---------------------------------
+    # -YYYYMMDD HH:MM:SS.nanosecond ---------------------------------
     @property
     def format_long(self):
         '''Set time to be displayed as YYYYMMDD HH:MM:SS.fffffffff'''
@@ -2161,8 +2235,7 @@ class DateTimeCommon:
         '''Set time to be displayed as YYYYMMDD HH:MM:SS.fffffffff'''
         self._display_length = DisplayLength.Long
 
-
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def days_since_epoch(self):
         '''
@@ -2182,7 +2255,7 @@ class DateTimeCommon:
         arr = self._timezone.fix_dst(self)
         return arr // NANOS_PER_DAY
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def seconds_since_epoch(self):
         '''
@@ -2201,7 +2274,7 @@ class DateTimeCommon:
         arr = self._timezone.fix_dst(self)
         return arr // NANOS_PER_SECOND
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def nanos_since_midnight(self):
         '''
         Nanosecond since midnight of the current day.
@@ -2222,10 +2295,10 @@ class DateTimeCommon:
 
         '''
         arr = self._timezone.fix_dst(self)
-        arr =  arr % NANOS_PER_DAY
+        arr = arr % NANOS_PER_DAY
         return _apply_inv_mask(self, arr)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def millis_since_midnight(self):
         '''
         Milliseconds since midnight of the current day.
@@ -2242,7 +2315,7 @@ class DateTimeCommon:
 
         Note
         ----
-        Unlike similar methods, this returns floating point, similar to common columns 
+        Unlike similar methods, this returns floating point, similar to common columns
         in Matlab datasets.
 
         '''
@@ -2251,8 +2324,7 @@ class DateTimeCommon:
         arr = arr / NANOS_PER_MILLISECOND
         return _apply_inv_mask(self, arr)
 
-
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def date(self):
         '''
         Copies the object and removes hours, minutes, seconds, and second fractions.
@@ -2277,13 +2349,13 @@ class DateTimeCommon:
             arr = self._fa
             arr = arr - (arr % NANOS_PER_DAY)
         # from_tz needs to match to_tz (similar to from_matlab_days, except can't force 'GMT' because of DST fixup)
-        #return DateTimeNano(arr, from_tz=self._timezone._to_tz, to_tz='UTC')
+        # return DateTimeNano(arr, from_tz=self._timezone._to_tz, to_tz='UTC')
         result = DateTimeNano(arr, from_tz=self._timezone._to_tz, to_tz=self._timezone._to_tz)
         if isinstance(self, DateTimeNanoScalar):
             return result[0]
         return result
-    
-    #------------------------------------------------------------
+
+    # ------------------------------------------------------------
     @property
     def yyyymmdd(self):
         '''
@@ -2310,50 +2382,50 @@ class DateTimeCommon:
         year = self._year(arr, fix_dst=False)
         # initialize result
         final = year * 10_000
-        
+
         # subtract the nanos from start of year so all times are in MM-DD HH:MM:SS, etc.
         startyear = arr - self._year_splits[year - 1970]
 
         # treat the whole array like a non-leapyear
         monthnum = self._yearday_splits.searchsorted(startyear, side='right')
-        startmonth_idx = monthnum-1
+        startmonth_idx = monthnum - 1
         monthtime = startyear - self._yearday_splits[startmonth_idx]
         # fix up the leapyears with a different yearday split table
-        leapmask = (year%4) == 0
+        leapmask = (year % 4) == 0
         monthnum_leap = self._yearday_splits_leap.searchsorted(startyear[leapmask], side='right')
-        startmonth_idx_leap = monthnum_leap-1
+        startmonth_idx_leap = monthnum_leap - 1
         monthnum[leapmask] = monthnum_leap
         monthtime[leapmask] = startyear[leapmask] - self._yearday_splits_leap[startmonth_idx_leap]
 
         # future optimization, takeover place, or send __setitem__ indexer to our version of it
-        #np.place(monthnum, leapmask, monthnum_leap)
-        #np.place(monthtime, leapmask, startyear[leapmask] - UTC_YDAY_SPLITS_LEAP[startmonth_idx_leap])
+        # np.place(monthnum, leapmask, monthnum_leap)
+        # np.place(monthtime, leapmask, startyear[leapmask] - UTC_YDAY_SPLITS_LEAP[startmonth_idx_leap])
 
         # add month and day values to final
         final += monthnum.astype(np.int32) * 100
         final += (monthtime // NANOS_PER_DAY) + 1
-        
+
         return final
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _year_splits(self):
         """Midnght on Jan. 1st from 1970 - 1940 in utc nanoseconds."""
         return UTC_1970_SPLITS
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _yearday_splits(self):
         """Midnight on the 1st of the month in nanoseconds since the beginning of the year."""
         return UTC_YDAY_SPLITS
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _yearday_splits_leap(self):
         """Midnight on the 1st of the month in nanoseconds since the beginning of the year during a leap year."""
         return UTC_YDAY_SPLITS_LEAP
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def year(self):
         '''
         The year value for each entry in the array
@@ -2372,7 +2444,7 @@ class DateTimeCommon:
         year = self._year(self._fa, fix_dst=True)
         return _apply_inv_mask(self, year)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def month(self):
         '''
         The month value for each entry in the array.
@@ -2391,7 +2463,7 @@ class DateTimeCommon:
         '''
         return _apply_inv_mask(self, self._month(fix_dst=True))
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def monthyear(self, arr=None):
         '''
         Returns a string with 3 letter month + 4 digit year
@@ -2403,10 +2475,10 @@ class DateTimeCommon:
         FastArray([ 'Feb2000','Dec2018'])
         '''
         month = self.month()
-        yearstr= self.year().astype('S')
-        return MONTH_STR_ARRAY[month-1] + yearstr
+        yearstr = self.year().astype('S')
+        return MONTH_STR_ARRAY[month - 1] + yearstr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def day_of_year(self):
         '''
@@ -2432,7 +2504,7 @@ class DateTimeCommon:
 
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def day_of_month(self):
         '''
@@ -2453,17 +2525,17 @@ class DateTimeCommon:
         '''
         arr = self._fa
         year = self._year(arr, fix_dst=True)
-        
+
         # subtract the nanos from start of year so all times are in MM-DD HH:MM:SS, etc.
         startyear = arr - self._year_splits[year - 1970]
 
         # treat the whole array like a non-leapyear
-        startmonth_idx = self._yearday_splits.searchsorted(startyear, side='right')-1
+        startmonth_idx = self._yearday_splits.searchsorted(startyear, side='right') - 1
         monthtime = startyear - self._yearday_splits[startmonth_idx]
 
         # fix up the leapyears with a different yearday split table
-        leapmask = (year%4) == 0
-        startmonth_idx_leap = self._yearday_splits_leap.searchsorted(startyear[leapmask], side='right')-1
+        leapmask = (year % 4) == 0
+        startmonth_idx_leap = self._yearday_splits_leap.searchsorted(startyear[leapmask], side='right') - 1
         monthtime[leapmask] = startyear[leapmask] - self._yearday_splits_leap[startmonth_idx_leap]
 
         # unlike month, weekday, hour, etc. day of month starts at 1
@@ -2472,16 +2544,16 @@ class DateTimeCommon:
         else:
             monthtime = monthtime // NANOS_PER_DAY
         monthtime += 1
-        
+
         return monthtime
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def day_of_week(self):
         '''
         Day of week value for each entry in the array.
         Monday (0) -> Sunday (6)
-        
+
         January 1st 1970 was a Thursday! (3)
 
         Examples
@@ -2500,12 +2572,12 @@ class DateTimeCommon:
 
         if isinstance(arr, np.ndarray):
             # inplace operation
-            np.mod( arr, 7, out=arr)
+            np.mod(arr, 7, out=arr)
         else:
-            arr = arr  % 7
+            arr = arr % 7
         return arr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def start_of_week(self):
         '''
@@ -2523,7 +2595,7 @@ class DateTimeCommon:
             return result[0]
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def is_dst(self):
         '''
@@ -2551,7 +2623,7 @@ class DateTimeCommon:
         '''
         return self._timezone._is_dst(self._fa)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def tz_offset(self):
         '''
@@ -2578,7 +2650,7 @@ class DateTimeCommon:
         '''
         return self._timezone._tz_offset(self._fa)
 
-    #-----------------------------------------------------
+    # -----------------------------------------------------
     def putmask(self, arr1, filter, arr2):
         '''
         scalar or array putmask
@@ -2591,7 +2663,7 @@ class DateTimeCommon:
             else:
                 return arr1
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def is_weekday(self):
         '''
@@ -2614,7 +2686,7 @@ class DateTimeCommon:
         self.putmask(isweekday, inv_mask, False)
         return isweekday
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def is_weekend(self):
         '''
@@ -2637,7 +2709,7 @@ class DateTimeCommon:
         self.putmask(isweekend, inv_mask, False)
         return isweekend
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def day(self):
         '''
@@ -2655,7 +2727,7 @@ class DateTimeCommon:
 
         Notes
         -----
-        this is different than properties for hour, minute, and second as the 
+        this is different than properties for hour, minute, and second as the
         relative unit is its own unit.
         '''
         inv_mask = self.isnan()
@@ -2665,7 +2737,7 @@ class DateTimeCommon:
         self.putmask(arr, inv_mask, np.nan)
         return arr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def hour(self):
         '''
@@ -2687,7 +2759,7 @@ class DateTimeCommon:
         '''
         return self._hour()
 
-    #-----------------------------------------------------
+    # -----------------------------------------------------
     @property
     def hour_span(self):
         '''
@@ -2720,7 +2792,7 @@ class DateTimeCommon:
         self.putmask(result, inv_mask, np.nan)
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def _time_fraction(self, modulo, divisor, span=False):
         '''
         Internal routine for minute, second, millisecond, microsecond, nanosecond (+span) properties.
@@ -2738,7 +2810,7 @@ class DateTimeCommon:
         self.putmask(result, inv_mask, np.nan)
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def minute(self):
         '''
@@ -2759,7 +2831,7 @@ class DateTimeCommon:
         DateTimeNano.minute_span
         '''
         return self._time_fraction(NANOS_PER_HOUR, NANOS_PER_MINUTE)
-    
+
     @property
     def minute_span(self):
         '''
@@ -2780,13 +2852,13 @@ class DateTimeCommon:
         DateTimeNano.minute
         '''
         return self._time_fraction(NANOS_PER_HOUR, NANOS_PER_MINUTE, span=True)
-    
-    #------------------------------------------------------------
+
+    # ------------------------------------------------------------
     @property
     def second(self):
         '''
         Seconds relative to the current minute (with partial second decimal).
-        
+
         Examples
         --------
         >>> dtn = DateTimeNano(['2000-02-01 19:48:30.100000'], from_tz='NYC')
@@ -2802,6 +2874,7 @@ class DateTimeCommon:
         DateTimeNano.second_span
         '''
         return self._time_fraction(NANOS_PER_MINUTE, NANOS_PER_SECOND)
+
     @property
     def second_span(self):
         '''
@@ -2815,7 +2888,7 @@ class DateTimeCommon:
         '''
         return self._time_fraction(NANOS_PER_MINUTE, NANOS_PER_SECOND, span=True)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def millisecond(self):
         '''
@@ -2859,7 +2932,7 @@ class DateTimeCommon:
         '''
         return self._time_fraction(NANOS_PER_SECOND, NANOS_PER_MILLISECOND, span=True)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def microsecond(self):
         '''
@@ -2902,7 +2975,7 @@ class DateTimeCommon:
         '''
         return self._time_fraction(NANOS_PER_MILLISECOND, NANOS_PER_MICROSECOND, span=True)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def nanosecond(self):
         '''
@@ -2947,7 +3020,7 @@ class DateTimeCommon:
         '''
         return self._time_fraction(NANOS_PER_MICROSECOND, 1, span=True)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def nanos_since_start_of_year(self):
         '''
         Nanoseconds since Jan. 1st at midnight of the current year.
@@ -2972,7 +3045,7 @@ class DateTimeCommon:
         arr = arr - self._year_splits[year - 1970]
         return arr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def time_since_start_of_year(self):
         '''
         Nanoseconds since Jan. 1st at midnight of the current year as a TimeSpan object.
@@ -2990,19 +3063,19 @@ class DateTimeCommon:
         See Also
         --------
         DateTimeNano.nanos_since_start_of_year
-        
+
         Note
         ----
         Nanosecond precision will be lost after ~52 days
         '''
 
-        result=TimeSpan(self.nanos_since_start_of_year())
+        result = TimeSpan(self.nanos_since_start_of_year())
 
         if isinstance(self, DateTimeNano):
             return result
         return result[0]
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def time_since_midnight(self):
         '''
         Elapsed time since midnight as a TimeSpan object.
@@ -3024,15 +3097,15 @@ class DateTimeCommon:
         '''
         return self.hour_span
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     # for DateTimeNano and DateTimeNanoScalar
     def _build_mathops_result(self, other, funcname, call_super, other_inv_mask, inplace, op, return_type):
         '''
         Operates on fastarray or takes invalid fast track for DateTimeNano math operations like add/sub
         '''
         input1 = self
-        if not isinstance(self,np.ndarray):
-            input1=DateTimeNano(self)
+        if not isinstance(self, np.ndarray):
+            input1 = DateTimeNano(self)
 
         func = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
         if call_super:
@@ -3046,7 +3119,8 @@ class DateTimeCommon:
                 other_inv_mask = isnan(other)
             func = getattr(input1._fa, funcname)
             result = func(other)
-            result = _apply_inv_mask(input1, result, fillval=DateTimeBase.NAN_TIME, arr1_inv_mask=input1_mask, arr2_inv_mask=other_inv_mask)
+            result = _apply_inv_mask(input1, result, fillval=DateTimeBase.NAN_TIME, arr1_inv_mask=input1_mask,
+                                     arr2_inv_mask=other_inv_mask)
         else:
             if inplace:
                 functup = (input1, other, input1)
@@ -3055,15 +3129,16 @@ class DateTimeCommon:
 
             result = func(functup, op, 0)
             if result is None:
-                raise RuntimeError(f'Could not perform {funcname} operation with DateTimeNano and {type(other)} {other}')
+                raise RuntimeError(
+                    f'Could not perform {funcname} operation with DateTimeNano and {type(other)} {other}')
 
         if return_type == DateTimeNano:
-            result= DateTimeNano(result, from_tz='GMT', to_tz=input1._timezone._to_tz)
+            result = DateTimeNano(result, from_tz='GMT', to_tz=input1._timezone._to_tz)
         else:
-            result =return_type(result)
+            result = return_type(result)
 
         # check if both were scalars, then return a scalar
-        if not isinstance(self,np.ndarray) and not isinstance(other,np.ndarray):
+        if not isinstance(self, np.ndarray) and not isinstance(other, np.ndarray):
             return result[0]
         return result
 
@@ -3093,27 +3168,29 @@ class DateTimeCommon:
         '''
         in_seconds = self / NANOS_PER_SECOND
         to_tz = self._timezone._to_tz
-        if to_tz in ['GMT','UTC']:
+        if to_tz in ['GMT', 'UTC']:
             if isinstance(in_seconds, np.ndarray):
-                return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in in_seconds], dtype=dtype)
+                return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in in_seconds],
+                                  dtype=dtype)
             else:
                 return dt.strftime(dt.utcfromtimestamp(in_seconds), format)
 
         else:
             # Choose timezone from to_tz
             localzone = tz.gettz(self._timezone._timezone_str)
-      
+
             if isinstance(in_seconds, np.ndarray):
-                return np.asarray([dt.fromtimestamp(timestamp, localzone).strftime(format) for timestamp in in_seconds], dtype=dtype)
+                return np.asarray([dt.fromtimestamp(timestamp, localzone).strftime(format) for timestamp in in_seconds],
+                                  dtype=dtype)
             else:
                 return dt.strftime(dt.fromtimestamp(in_seconds, localzone), format)
 
 
-#========================================================
+# ========================================================
 class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     '''
 
-    DateTimeNano arrays have an underlying int64 array. The array is in UTC nanosecond time that defaults to display 
+    DateTimeNano arrays have an underlying int64 array. The array is in UTC nanosecond time that defaults to display
     correctly in eastern/NYC time, accounting for daylight savings time.
 
     Parameters
@@ -3230,8 +3307,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         'ncols': 0,
         'version': 0,
 
-        'instance_vars' : {
-            '_display_length' : DisplayLength.Long,
+        'instance_vars': {
+            '_display_length': DisplayLength.Long,
             '_to_tz': 'NYC'
         }
     }
@@ -3239,20 +3316,20 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # need to interact with the business calendar class
     # maybe merge these with TimeSpan unit conversion dict?
     FrequencyStrings = {
-        'H'   : 'h',
-        'T'   : 'm',
-        'MIN' : 's',
-        'S'   : 's',
-        'L'   : 'ms',
-        'MS'  : 'ms',
-        'U'   : 'us',
-        'US'  : 'us',
-        'N'   : 'ns',
-        'NS'  : 'ns',
+        'H': 'h',
+        'T': 'm',
+        'MIN': 's',
+        'S': 's',
+        'L': 'ms',
+        'MS': 'ms',
+        'U': 'us',
+        'US': 'us',
+        'N': 'ns',
+        'NS': 'ns',
     }
     _INVALID_FREQ_ERROR = "Invalid frequency: {}"
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __new__(cls, arr, from_tz=None, to_tz=None, from_matlab=False, format=None, start_date=None, gmt=None):
         '''
 
@@ -3277,14 +3354,14 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         Notes:
         ------
-        - If the integer data in a DateTimeNano object is extracted, it is in GMT time. To initialize another 
+        - If the integer data in a DateTimeNano object is extracted, it is in GMT time. To initialize another
           DateTimeNano with the same underlying array, need to set from_tz='GMT' or 'UTC'
         - the gmt keyword is no longer used, need to add a deprication warning at some point
         - DateTimeNano has no knowledge of timezones. All timezone operations are handled by the TimeZone class
 
         Examples
         --------
-        
+
         >>> dtn = DateTimeNano(['20180201 12:34'], from_tz='NYC')
         >>> dtn
         DateTimeNano([20180201 12:34:00.000000000])
@@ -3298,13 +3375,13 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         # changing defaults / requirments based on constructor
         # non-string constructors don't require from_tz keyword to be set
         # need to store original keyword values to check in the funnel (saving all in case we add more)
-        _orig_from_tz=from_tz
+        _orig_from_tz = from_tz
         if from_tz is None:
             from_tz = 'UTC'
-        
-        _from_matlab=from_matlab
-        _format=format
-        _start_date=start_date
+
+        _from_matlab = from_matlab
+        _format = format
+        _start_date = start_date
 
         # check for categorical of string or dates
         arr, cat = _possibly_convert_cat(arr)
@@ -3344,8 +3421,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                     else:
                         start_date = start_date[0] * NANOS_PER_DAY
                 else:
-                    raise TypeError(f'Start date must be string in format YYYYMMDD or Date object. Got type {type(start_date)}')
-
+                    raise TypeError(
+                        f'Start date must be string in format YYYYMMDD or Date object. Got type {type(start_date)}')
 
             instance = None
             if isinstance(arr, list) or np.isscalar(arr):
@@ -3367,10 +3444,10 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
                     # if format specified, use our strptime
                     if format is not None:
-                        instance= strptime_to_nano(arr, format, from_tz=from_tz, to_tz=to_tz)
+                        instance = strptime_to_nano(arr, format, from_tz=from_tz, to_tz=to_tz)
                     else:
                         # otherwise assume ISO-8601 format
-                        instance= datetimestring_to_nano(arr, from_tz=from_tz, to_tz=to_tz)
+                        instance = datetimestring_to_nano(arr, from_tz=from_tz, to_tz=to_tz)
 
                     # check for categorical of string
                     if cat is not None:
@@ -3386,12 +3463,12 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                 elif isinstance(arr, TimeSpan) and start_date is None:
                     raise TypeError(f'Cannot create DateTimeNano from TimeSpan array unless start_date is provided.')
 
-                elif arr.dtype.char in NumpyCharTypes.AllInteger+NumpyCharTypes.AllFloat:
+                elif arr.dtype.char in NumpyCharTypes.AllInteger + NumpyCharTypes.AllFloat:
                     pass
 
                 else:
                     raise TypeError(f"Cannot create DateTimeNano object from {arr.dtype}")
-                
+
                 # only flip to int64 if necessary
                 # TODO: for uint64 do we want a .view() so we dont have to convert?
                 instance = arr.astype(np.int64, copy=False)
@@ -3415,11 +3492,11 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return instance
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __init__(self, arr, from_matlab=False, from_tz=None, to_tz=None, format=None, start_date=None, gmt=None):
         pass
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         '''
         Return object's class name for array repr.
@@ -3431,11 +3508,11 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_scalar(self, scalarval):
         return DateTimeNanoScalar(scalarval, _from=self)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _convert_matlab_days(cls, arr, timezone):
         '''
@@ -3463,7 +3540,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return arr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def set_timezone(self, tz):
         '''
         Changes the timezone that the times are displayed in.
@@ -3484,7 +3561,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         >>> dtn.set_timezone('DUBLIN')
         >>> dtn
         DateTimeNano([20190107 15:36:00.000000000])
-        
+
         NYC is in daylight savings time, Dublin is not:
         >>> dtn = DateTimeNano(['2019-03-15 10:36'], from_tz='NYC', to_tz='NYC')
         >>> dtn
@@ -3495,7 +3572,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         self._timezone._set_timezone(tz)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def astimezone(self, tz):
         '''
         Returns a new DateTimeNano object in a different displayed timezone.
@@ -3516,7 +3593,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         return DateTimeNano(self._fa, from_tz='GMT', to_tz=tz)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def to_iso(self):
         '''
         Generates a FastArray of ISO-8601 timestamp bytestrings.
@@ -3560,9 +3637,9 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     #                                 'timezone_str':self._timezone._timezone_str})
     #     return itemformat, self.display_convert_func
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def display_query_properties(self):
-        #if TypeRegister.DisplayOptions.STARFISH:
+        # if TypeRegister.DisplayOptions.STARFISH:
         #    return self._sf_display_query_properties()
         '''
         Call back for display functions to get the formatting function and style for timestrings.
@@ -3577,18 +3654,18 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             Callback function for formatting the timestring
         '''
         item_format = ItemFormat(
-            length          = self.display_length,
-            justification   = DisplayJustification.Right,
-            can_have_spaces = True,
-            decoration      = None,
-            timezone_str    = self._timezone._timezone_str
+            length=self.display_length,
+            justification=DisplayJustification.Right,
+            can_have_spaces=True,
+            decoration=None,
+            timezone_str=self._timezone._timezone_str
         )
         convert_func = self.display_convert_func
         return item_format, convert_func
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
-    def display_convert_func(utcnano, itemformat:ItemFormat):
+    def display_convert_func(utcnano, itemformat: ItemFormat):
         '''
         Convert a utc nanosecond timestamp to a string for display.
 
@@ -3613,7 +3690,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         # TODO: apply ItemFormat options that were passed in
         return DateTimeNano.format_nano_time(utcnano, itemformat)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def display_item(self, utcnano):
         '''
         Convert a utc nanosecond timestamp to a string for array repr.
@@ -3630,7 +3707,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         itemformat, _ = self.display_query_properties()
         return self.format_nano_time(utcnano, itemformat)
-    
+
     # -----------------------------------------------------------
     @classmethod
     def _parse_item_format(cls, itemformat):
@@ -3687,12 +3764,12 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         # timezone is datetime.timezone
         localzone = tz.gettz(itemformat.timezone_str)
         try:
-            timestr = dt.fromtimestamp( (utcnano // NANOS_PER_SECOND), timezone.utc )
+            timestr = dt.fromtimestamp((utcnano // NANOS_PER_SECOND), timezone.utc)
             timestr = timestr.astimezone(localzone)
             timestr = timestr.strftime(format_str)
         except:
             raise ValueError(f"DateTime: the utc nano value {utcnano!r} for {timezone.utc!r} is not valid.")
-        
+
         # possible add ms,us,ns precision to seconds
         # each instance should attempt to set its own precision based on how it was constructed
         if display_nano:
@@ -3700,17 +3777,17 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return timestr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _from_meta_data(cls, arrdict, arrflags, meta):
         meta = MetaData(meta)
 
         # combine saved attributes with defaults based on version number
         vars = meta['instance_vars']
-        for k,v in cls.MetaDefault['instance_vars'].items():
-            vars.setdefault(k,v)
-        for k,v in cls.MetaDefault.items():
-            meta.setdefault(k,v)
+        for k, v in cls.MetaDefault['instance_vars'].items():
+            vars.setdefault(k, v)
+        for k, v in cls.MetaDefault.items():
+            meta.setdefault(k, v)
 
         # preparing for future versions in case reconstruction changes
         version = meta['version']
@@ -3719,7 +3796,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             if version == 0:
                 pass
             else:
-                raise ValueError(f"DateTimeNano cannot load. Version {version!r} not supported. Current version installed is {cls.MetaVersion!r}. Update riptable.")
+                raise ValueError(
+                    f"DateTimeNano cannot load. Version {version!r} not supported. Current version installed is {cls.MetaVersion!r}. Update riptable.")
 
         # datetime nano integers are always in GMT
         instance = [*arrdict.values()][0]
@@ -3739,28 +3817,28 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             name = classname
         metadict = {
             'name': name,
-            'typeid': getattr( TypeId, classname ),
-            'classname' : classname,
+            'typeid': getattr(TypeId, classname),
+            'classname': classname,
             'ncols': 0,
             'version': self.MetaVersion,
-            'author' : 'python',
+            'author': 'python',
 
-            'instance_vars' : {
-                '_display_length' : self.display_length,
+            'instance_vars': {
+                '_display_length': self.display_length,
                 '_to_tz': self._timezone._to_tz
             },
 
-            '_base_is_stackable' : SDSFlag.Stackable
+            '_base_is_stackable': SDSFlag.Stackable
         }
         return metadict
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _load_from_sds_meta_data(cls, name, arr, cols, meta, tups: Optional[list] = None):
         '''
         Note
         ----
-        This will be changed to a private method with a different name as it only pertains 
+        This will be changed to a private method with a different name as it only pertains
         to the SDS file format.
 
         Load DateTimeNano from an SDS file as the correct class.
@@ -3785,10 +3863,10 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         # combine saved attributes with defaults based on version number
         vars = meta['instance_vars']
-        for k,v in cls.MetaDefault['instance_vars'].items():
-            vars.setdefault(k,v)
-        for k,v in cls.MetaDefault.items():
-            meta.setdefault(k,v)
+        for k, v in cls.MetaDefault['instance_vars'].items():
+            vars.setdefault(k, v)
+        for k, v in cls.MetaDefault.items():
+            meta.setdefault(k, v)
 
         # preparing for future versions in case reconstruction changes
         version = meta['version']
@@ -3797,7 +3875,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             if version == 0:
                 pass
             else:
-                raise ValueError(f"DateTimeNano cannot load. Version {version!r} not supported. Current version installed is {cls.MetaVersion!r}. Update riptable.")
+                raise ValueError(
+                    f"DateTimeNano cannot load. Version {version!r} not supported. Current version installed is {cls.MetaVersion!r}. Update riptable.")
 
         # datetime nano integers are always in GMT
         instance = DateTimeNano(arr, from_tz='GMT', to_tz=vars['_to_tz'])
@@ -3808,7 +3887,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return instance
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def newclassfrominstance(cls, instance, origin):
         '''
@@ -3820,7 +3899,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def info(self):
         '''
         Returns
@@ -3830,7 +3909,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         print(self.__repr__(verbose=True))
 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
     def diff(self, periods=1):
         '''
         Returns
@@ -3840,7 +3919,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         result = self._fa.diff(periods=periods)
         return TimeSpan(result)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __repr__(self, verbose=False):
         repr_strings = []
         tz_string = f", to_tz='{self._timezone._to_tz}'"
@@ -3854,7 +3933,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         repr_strings.append(f"Offset: {self._timezone._offset} hours")
         return "\n".join(repr_strings)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def hstack(cls, dtlist):
         '''
@@ -3881,7 +3960,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         return hstack_any(dtlist, cls, DateTimeNano)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def shift(self, periods=1):
         '''
         Modeled on pandas.shift.
@@ -3902,11 +3981,10 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         temp = FastArray.shift(self, periods=periods)
         return self.newclassfrominstance(temp, self)
 
-
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def cut_time(self, buckets: Union[int, 'TimeSpan', List], start_time: Tuple = None,
                  end_time: Tuple = None, add_pre_bucket: bool = False, add_post_bucket: bool = False,
-                 label: str = "left", label_fmt: str = "%H:%M", nyc: bool=False) -> TypeRegister.Categorical:
+                 label: str = "left", label_fmt: str = "%H:%M", nyc: bool = False) -> TypeRegister.Categorical:
         """
         Analogous to rt.cut() but for times. We ignore the date part and cut based on time of day component only.
 
@@ -4035,14 +4113,14 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return TypeRegister.Categorical(cat, bucket_cut_labels, base_index=1, ordered=False)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def fill_invalid(self, shape=None, dtype=None, inplace=True):
         arr = self._fill_invalid_internal(shape=shape, dtype=self.dtype, fill_val=self.NAN_TIME, inplace=inplace)
         if arr is None:
             return
         return DateTimeNano(arr, from_tz='GMT', to_tz=self._timezone._to_tz)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def isnan(self):
         '''
         Boolean array, True where DateTimeNano == NaN time or int64 sentinel (min int)
@@ -4058,7 +4136,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         return self._fa.isnanorzero()
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def isnotnan(self):
         '''
         Boolean array, True where DateTimeNano != NaN time or int64 sentinel (min int).
@@ -4074,16 +4152,17 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         return ~self.isnan()
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def _datetimenano_compare_check(self, funcname, other):
         caller = self._fa
 
         if isinstance(other, (DateTimeNano, DateTimeNanoScalar)):
             if other._timezone._to_tz != self._timezone._to_tz:
-                warnings.warn(f'DateTimeNano objects are being displayed in different timezones. Results may not appear to be correct for {funcname}')
+                warnings.warn(
+                    f'DateTimeNano objects are being displayed in different timezones. Results may not appear to be correct for {funcname}')
 
         elif isinstance(other, (Date, DateScalar)):
-            other = DateTimeNano( other._fa * NANOS_PER_DAY, from_tz=self._timezone._to_tz, to_tz=self._timezone._to_tz )
+            other = DateTimeNano(other._fa * NANOS_PER_DAY, from_tz=self._timezone._to_tz, to_tz=self._timezone._to_tz)
 
         elif isinstance(other, (TimeSpan, DateSpan, TimeSpanScalar, DateSpanScalar)):
             raise TypeError(f'Cannot compare DateTimeNano with {type(other)}')
@@ -4112,7 +4191,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     def __lt__(self, other):
         return self._datetimenano_compare_check('__lt__', other)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def min(self, **kwargs):
         '''
         Earliest timestamp in array.
@@ -4127,9 +4206,9 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         This returns an array, not a scalar. However, broadcasting rules will apply to operations with it.
         '''
         return DateTimeNano([self._fa.min()], from_tz='GMT', to_tz=self._timezone._to_tz)
-        #return DateTimeNanoScalar(self._fa.min(), timezone=self._timezone)
+        # return DateTimeNanoScalar(self._fa.min(), timezone=self._timezone)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def max(self, **kwargs):
         '''
         Latest timestamp in array.
@@ -4144,9 +4223,9 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         This returns an array, not a scalar. However, broadcasting rules will apply to operations with it.
         '''
         return DateTimeNano([self._fa.max()], from_tz='GMT', to_tz=self._timezone._to_tz)
-        #return DateTimeNanoScalar(self._fa.max(), timezone=self._timezone)
+        # return DateTimeNanoScalar(self._fa.max(), timezone=self._timezone)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def diff(self, periods=1):
         '''
         Calculate the n-th discrete difference.
@@ -4163,31 +4242,32 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         return TimeSpan(self._fa.diff(periods=periods).astype(np.float64))
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __radd__(self, other):
         return self.__add__(other)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __iadd__(self, other):
-        #warnings.warn(f'Currently allowing inplace operation __iadd__ on DateTimeNano. May change in the future.')
+        # warnings.warn(f'Currently allowing inplace operation __iadd__ on DateTimeNano. May change in the future.')
         return self.__add__(other, inplace=True)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __add__(self, other, inplace=False):
         call_super = False
         other_inv_mask = None
         func = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
         op = None
-        
+
         return_type = DateTimeNano
 
-        if not isinstance(other, np.ndarray) and not isinstance(other, (DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
+        if not isinstance(other, np.ndarray) and not isinstance(other, (
+        DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
             # TJD change
             if np.isscalar(other):
                 other = np.int64(other)
             else:
                 other = FastArray(other, dtype=np.int64)
-            #op = MATH_OPERATION.ADDDATES
+            # op = MATH_OPERATION.ADDDATES
             call_super = True
 
         else:
@@ -4199,17 +4279,17 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                 other_inv_mask = isnan(other)
                 other = other.astype(np.int64)
                 call_super = True
-                #op = MATH_OPERATION.ADDDATES
+                # op = MATH_OPERATION.ADDDATES
             elif isinstance(other, (DateSpan, DateSpanScalar)):
                 other_inv_mask = isnan(other)
                 other = other.astype(np.int64) * NANOS_PER_DAY
                 call_super = True
-                #op = MATH_OPERATION.ADDDATES
+                # op = MATH_OPERATION.ADDDATES
             else:
                 other = other.view(FastArray)
                 other = other.astype(np.int64, copy=False)
                 call_super = True
-                #op = MATH_OPERATION.ADDDATES
+                # op = MATH_OPERATION.ADDDATES
 
         if inplace:
             funcname = '__iadd__'
@@ -4218,26 +4298,27 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return self._build_mathops_result(other, funcname, call_super, other_inv_mask, inplace, op, return_type)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __rsub__(self, other):
         if isinstance(other, (Date, DateScalar)):
             return other.__sub__(self)
         else:
             raise TypeError(f'DateTimeNano can only be subtracted from DateTimeNano or Date.')
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __isub__(self, other):
         warnings.warn(f'Currently allowing inplace operation __isub__ on DateTimeNano. May change in the future.')
         return self.__sub__(other, inplace=True)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __sub__(self, other, inplace=False):
         call_super = False
         other_inv_mask = None
         func = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
         op = None
 
-        if not isinstance(other, np.ndarray) and not isinstance(other, (DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
+        if not isinstance(other, np.ndarray) and not isinstance(other, (
+        DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
             return_type = DateTimeNano
             # TJD change
             if np.isscalar(other):
@@ -4261,7 +4342,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                     raise TypeError(f'__sub__ returns TimeSpan. Cannot perform inplace.')
                 # upcast Date
                 other = other.astype(np.int64) * NANOS_PER_DAY
-                
+
             elif isinstance(other, (TimeSpan, TimeSpanScalar)):
                 # apply our own mask during this track
                 return_type = DateTimeNano
@@ -4281,7 +4362,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                 return_type = DateTimeNano
                 other = other.view(FastArray)
                 other = other.astype(np.int64, copy=False)
-                #op = MATH_OPERATION.SUBDATETIMESLEFT
+                # op = MATH_OPERATION.SUBDATETIMESLEFT
                 call_super = True
 
         if inplace:
@@ -4291,95 +4372,135 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return self._build_mathops_result(other, funcname, call_super, other_inv_mask, inplace, op, return_type)
 
-    def __matmul__(self, other): raise NotImplementedError
+    def __matmul__(self, other):
+        raise NotImplementedError
 
     # need to check properties to see if division is happening
-    #def __truediv__(self, other): raise NotImplementedError
-    #def __floordiv__(self, other): raise NotImplementedError
-    #def __mod__(self, other): raise NotImplementedError
-    #def __divmod__(self, other): raise NotImplementedError
-    
-    def __pow__(self, other, modulo=None): raise NotImplementedError
+    # def __truediv__(self, other): raise NotImplementedError
+    # def __floordiv__(self, other): raise NotImplementedError
+    # def __mod__(self, other): raise NotImplementedError
+    # def __divmod__(self, other): raise NotImplementedError
 
-    def __lshift__(self, other): raise NotImplementedError
+    def __pow__(self, other, modulo=None):
+        raise NotImplementedError
 
-    def __rshift__(self, other): raise NotImplementedError
+    def __lshift__(self, other):
+        raise NotImplementedError
 
-    def __and__(self, other): raise NotImplementedError
+    def __rshift__(self, other):
+        raise NotImplementedError
 
-    def __xor__(self, other): raise NotImplementedError
+    def __and__(self, other):
+        raise NotImplementedError
 
-    def __or__(self, other): raise NotImplementedError
+    def __xor__(self, other):
+        raise NotImplementedError
 
-    def __rmul__(self, other): raise NotImplementedError
+    def __or__(self, other):
+        raise NotImplementedError
 
-    def __rmatmul__(self, other): raise NotImplementedError
+    def __rmul__(self, other):
+        raise NotImplementedError
 
-    def __rtruediv__(self, other): raise NotImplementedError
+    def __rmatmul__(self, other):
+        raise NotImplementedError
 
-    def __rfloordiv__(self, other): raise NotImplementedError
+    def __rtruediv__(self, other):
+        raise NotImplementedError
 
-    def __rmod__(self, other): raise NotImplementedError
+    def __rfloordiv__(self, other):
+        raise NotImplementedError
 
-    def __rdivmod__(self, other): raise NotImplementedError
+    def __rmod__(self, other):
+        raise NotImplementedError
 
-    def __rpow__(self, other): raise NotImplementedError
+    def __rdivmod__(self, other):
+        raise NotImplementedError
 
-    def __rlshift__(self, other): raise NotImplementedError
+    def __rpow__(self, other):
+        raise NotImplementedError
 
-    def __rrshift__(self, other): raise NotImplementedError
+    def __rlshift__(self, other):
+        raise NotImplementedError
 
-    def __rand__(self, other): raise NotImplementedError
+    def __rrshift__(self, other):
+        raise NotImplementedError
 
-    def __rxor__(self, other): raise NotImplementedError
+    def __rand__(self, other):
+        raise NotImplementedError
 
-    def __ror__(self, other): raise NotImplementedError
+    def __rxor__(self, other):
+        raise NotImplementedError
 
-    def __imul__(self, other): raise NotImplementedError
+    def __ror__(self, other):
+        raise NotImplementedError
 
-    def __imatmul__(self, other): raise NotImplementedError
+    def __imul__(self, other):
+        raise NotImplementedError
 
-    def __itruediv__(self, other): raise NotImplementedError
+    def __imatmul__(self, other):
+        raise NotImplementedError
 
-    def __ifloordiv__(self, other): raise NotImplementedError
+    def __itruediv__(self, other):
+        raise NotImplementedError
 
-    def __imod__(self, other): raise NotImplementedError
+    def __ifloordiv__(self, other):
+        raise NotImplementedError
 
-    def __ipow__(self, other, modulo=None): raise NotImplementedError
+    def __imod__(self, other):
+        raise NotImplementedError
 
-    def __ilshift__(self, other): raise NotImplementedError
+    def __ipow__(self, other, modulo=None):
+        raise NotImplementedError
 
-    def __irshift__(self, other): raise NotImplementedError
+    def __ilshift__(self, other):
+        raise NotImplementedError
 
-    def __iand__(self, other): raise NotImplementedError
+    def __irshift__(self, other):
+        raise NotImplementedError
 
-    def __ixor__(self, other): raise NotImplementedError
+    def __iand__(self, other):
+        raise NotImplementedError
 
-    def __ior__(self, other): raise NotImplementedError
+    def __ixor__(self, other):
+        raise NotImplementedError
 
-    def __neg__(self): raise NotImplementedError
+    def __ior__(self, other):
+        raise NotImplementedError
 
-    def __pos__(self): raise NotImplementedError
+    def __neg__(self):
+        raise NotImplementedError
 
-    def __invert__(self): raise NotImplementedError
+    def __pos__(self):
+        raise NotImplementedError
 
-    def __complex__(self): raise NotImplementedError
+    def __invert__(self):
+        raise NotImplementedError
 
-    def __int__(self): raise NotImplementedError
+    def __complex__(self):
+        raise NotImplementedError
 
-    def __float__(self): raise NotImplementedError
+    def __int__(self):
+        raise NotImplementedError
 
-    def __round__(self, ndigits=0): raise NotImplementedError
+    def __float__(self):
+        raise NotImplementedError
 
-    def __trunc__(self): raise NotImplementedError
+    def __round__(self, ndigits=0):
+        raise NotImplementedError
 
-    def __floor__(self): raise NotImplementedError
+    def __trunc__(self):
+        raise NotImplementedError
 
-    def __ceil__(self): raise NotImplementedError
+    def __floor__(self):
+        raise NotImplementedError
 
-    #-------------------------------------------------------------
-    #----raise error on certain math operations-------------------
-    #def __radd__(self, value):
+    def __ceil__(self):
+        raise NotImplementedError
+
+    # -------------------------------------------------------------
+    # ----raise error on certain math operations-------------------
+    # def __radd__(self, value):
     #    return self.__add__(value)
 
     def __mul__(self, value):
@@ -4400,7 +4521,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         op = getattr(self._fa, op_name)
         return op(value)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     @classmethod
     def _random(cls, sz, to_tz='NYC', from_tz='NYC', inv=None, start=None, end=None):
         '''
@@ -4408,9 +4529,9 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         '''
         if start is None:
             start = NANOS_PER_YEAR
-            end = NANOS_PER_YEAR*50
+            end = NANOS_PER_YEAR * 50
         else:
-            start = (start-1970) * NANOS_PER_YEAR
+            start = (start - 1970) * NANOS_PER_YEAR
             if end is None:
                 # maybe test if leap year?
                 end = start + NANOS_PER_YEAR
@@ -4490,12 +4611,12 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         --------
         DateTimeNano.random
         '''
-        inv = np.random.randint(0,2,sz,dtype=np.bool)
+        inv = np.random.randint(0, 2, sz, dtype=np.bool)
         return cls._random(sz, to_tz=to_tz, from_tz=from_tz, inv=inv, start=start, end=end)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def resample(self, rule, dropna=False):
-        """Convenience method for frequency conversion and resampling of 
+        """Convenience method for frequency conversion and resampling of
         DateTimeNano arrays.
 
         Parameters
@@ -4522,7 +4643,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                                 '2015-04-23 13:15:24.526871083',
                                 '2015-04-21 02:25:11.768548100',
                                 '2015-04-24 07:47:54.737776979',
-                                '2015-04-10 23:59:59.376589955'], 
+                                '2015-04-10 23:59:59.376589955'],
                                      from_tz='UTC', to_tz='UTC')
         >>> dtn.resample('L', dropna=True)
         DateTimeNano(['20150415 14:26:54.735000000', '20150420 07:30:00.858000000', '20150423 13:15:24.526000000', '20150421 02:25:11.768000000', '20150424 07:47:54.737000000', '20150410 23:59:59.376000000'], to_tz='UTC')
@@ -4539,7 +4660,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         dtn : `DateTimeNano`
         """
 
-        #-------------------------------------------------------
+        # -------------------------------------------------------
         def parse_rule(rule):
             # returns an integer or float amount and unit string
             amount = None
@@ -4566,7 +4687,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
             return amount, unit
 
-        #-------------------------------------------------------
+        # -------------------------------------------------------
         def get_time_unit(unit):
             if unit in TimeSpan.unit_convert_factors:
                 unit = TimeSpan.unit_convert_factors[unit]
@@ -4574,7 +4695,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                 raise NotImplementedError(f'Currently supports frequency strings {[*self.FrequencyStrings]}')
             return unit
 
-        #-------------------------------------------------------
+        # -------------------------------------------------------
         def time_interval(amount, unit):
             # amount is a multiplier for the unit
             # unit is a TimeSpan unit or for larger units, will be assigned separately to maintain precision
@@ -4595,7 +4716,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             interval = DateTimeNano(stamps, to_tz=self._timezone._to_tz)
 
             return interval
-        #-------------------------------------------------------
+
+        # -------------------------------------------------------
         def as_time_interval(amount, unit):
             # returns a date time nano the same length as the original
             # may have repeats, empty will not appear
@@ -4603,13 +4725,14 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             step = np.int64(amount * unit)
             timediff = self._fa % step
             return self - timediff
-        #-------------------------------------------------------
+
+        # -------------------------------------------------------
 
         if not isinstance(rule, str):
             raise TypeError(f'Rule must be a string. Got {type(rule)}.')
 
         amount, unit = parse_rule(rule)
-    
+
         if dropna:
             resampled = as_time_interval(amount, unit)
         else:
@@ -4618,7 +4741,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         return resampled
 
 
-#========================================================
+# ========================================================
 class TimeSpanBase:
     """
     """
@@ -4635,11 +4758,11 @@ class TimeSpanBase:
         'ns': 1
     }
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def strftime(self, format, dtype='U'):
         '''
         Converts DateTimeNano to an array of object strings or a scalar string.
@@ -4664,27 +4787,29 @@ class TimeSpanBase:
         isnegative = self._fa < 0
 
         if isinstance(self, np.ndarray):
-            result= np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa.abs() / 1_000_000_000.0], dtype=dtype)
+            result = np.asarray(
+                [dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa.abs() / 1_000_000_000.0],
+                dtype=dtype)
             if isnegative.sum() > 0:
                 if dtype == 'S':
                     negcol = zeros(result.shape, dtype='S1')
-                    negcol[isnegative]=b'-'
+                    negcol[isnegative] = b'-'
                 else:
                     negcol = zeros(result.shape, dtype='U1')
-                    negcol[isnegative]='-'
+                    negcol[isnegative] = '-'
                 result = negcol + result
         else:
-            result =dt.strftime(dt.utcfromtimestamp(abs(self) / 1_000_000_000.0), format)
+            result = dt.strftime(dt.utcfromtimestamp(abs(self) / 1_000_000_000.0), format)
             if isnegative:
                 # check dtype 'S'
                 if dtype == 'S':
                     result = b'-' + result
                 else:
-                    result = '-'+result
+                    result = '-' + result
         return result
 
-    #------------------------------------------------------------
-    #--------RETURN FLOAT ARRAY AT DIFFERENT RESOLUTIONS---------
+    # ------------------------------------------------------------
+    # --------RETURN FLOAT ARRAY AT DIFFERENT RESOLUTIONS---------
     @property
     def days(self):
         """Timespan as float64 array of days.
@@ -4724,7 +4849,7 @@ class TimeSpanBase:
         """Timespan as float64 array of nanoseconds (same as underlying array)."""
         return self._fa
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _unit_to_nano_span(cls, values, unit):
         '''
@@ -4744,7 +4869,7 @@ class TimeSpanBase:
 
         return values
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
     def display_item(nanosecs, itemformat=None):
 
@@ -4759,7 +4884,7 @@ class TimeSpanBase:
         else:
             return TimeSpan.display_item_clock(nanosecs)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
     def display_item_unit(nanosecs):
         '''
@@ -4778,7 +4903,7 @@ class TimeSpanBase:
             delta = "{0:.3f}".format(delta)
 
         return delta + unit_str
-    
+
     @staticmethod
     def _display_resolution(nanosecs):
         '''
@@ -4810,13 +4935,13 @@ class TimeSpanBase:
 
         # we should probably use a different format past this point
         # maybe a formatting string with more info
-        #elif max_time < NANOS_PER_DAY:
+        # elif max_time < NANOS_PER_DAY:
         #    divisor = NANOS_PER_HOUR
         #    unit_str = 'h'
 
         return divisor, unit_str
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
     def display_item_clock(nanosecs):
         '''
@@ -4827,21 +4952,21 @@ class TimeSpanBase:
 
         if isnan(item):
             timestr = 'Inv'
-            
+
         else:
-            gmt_time=time.gmtime(item / NANOS_PER_SECOND)
-            timestr= DateTimeBase.DEFAULT_FORMATTER(format_str, gmt_time)
+            gmt_time = time.gmtime(item / NANOS_PER_SECOND)
+            timestr = DateTimeBase.DEFAULT_FORMATTER(format_str, gmt_time)
 
             if nanosecs < 0:
-                timestr = "-"+timestr
+                timestr = "-" + timestr
 
-            timestr = DateTimeBase._add_nano_ext(item, timestr)      
+            timestr = DateTimeBase._add_nano_ext(item, timestr)
 
         return timestr
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @staticmethod
-    def display_convert_func(nanosecs, itemformat:ItemFormat):
+    def display_convert_func(nanosecs, itemformat: ItemFormat):
         return TimeSpan.display_item(nanosecs, itemformat=itemformat)
 
     # TODO uncomment when starfish is implemented and imported
@@ -4850,21 +4975,21 @@ class TimeSpanBase:
     #                                 'align':sf.DisplayAlign.Right})
     #     return itemformat, self.display_convert_func
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def display_query_properties(self):
-        #if TypeRegister.DisplayOptions.STARFISH:
+        # if TypeRegister.DisplayOptions.STARFISH:
         #    return self._sf_display_query_properties()
         item_format = ItemFormat(
-            length          = self.display_length,
-            justification   = DisplayJustification.Right,
-            can_have_spaces = True,
-            decoration      = None
+            length=self.display_length,
+            justification=DisplayJustification.Right,
+            can_have_spaces=True,
+            decoration=None
         )
         convert_func = self.display_convert_func
         return item_format, convert_func
 
-    #--BINARY OPERATIONS------------------------------------------
-    #-------------------------------------------------------------
+    # --BINARY OPERATIONS------------------------------------------
+    # -------------------------------------------------------------
     def __add__(self, value):
         other_inv_mask = None
 
@@ -4887,17 +5012,17 @@ class TimeSpanBase:
 
         return self._fix_binary_ops(value, '__add__', other_inv_mask=other_inv_mask)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __radd__(self, value):
         return self.__add__(value)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __sub__(self, value):
         if isinstance(value, (DateTimeNano, DateTimeNanoScalar, Date, DateScalar)):
             return value.__rsub__(self)
         return self._fix_binary_ops(value, '__sub__')
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __rsub__(self, value):
         if not isinstance(value, np.ndarray):
             value = FastArray(value).astype(np.float64)
@@ -4918,39 +5043,41 @@ class TimeSpanBase:
 
         return self._fix_binary_ops(value, '__rsub__')
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __mul__(self, value):
-        if isinstance(value, (TimeSpan, DateSpan, Date, DateTimeNano, TimeSpanScalar, DateSpanScalar, DateScalar, DateTimeNanoScalar)):
+        if isinstance(value, (
+        TimeSpan, DateSpan, Date, DateTimeNano, TimeSpanScalar, DateSpanScalar, DateScalar, DateTimeNanoScalar)):
             raise TypeError(f"Cannot multiply TimeSpan by {type(value)} object.")
         if not isinstance(value, np.ndarray):
             value = FastArray(value).astype(np.float64)
         return self._fix_binary_ops(value, '__mul__')
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __floordiv__(self, value):
         if isinstance(value, (TimeSpan, TimeSpanScalar)):
             result = self._fa.__floordiv__(value)
             return result
         else:
-            raise TypeError(f"Can only floor divide TimeSpan objects with other timespan objects not type {type(value)}.")
+            raise TypeError(
+                f"Can only floor divide TimeSpan objects with other timespan objects not type {type(value)}.")
 
-    #-------------------------------------------------------------
+    # -------------------------------------------------------------
     def __truediv__(self, value):
         # handle TimeSpan('00:30:00') / TimeSpan('01:00:00') with truediv
         if isinstance(value, (TimeSpan, TimeSpanScalar)):
             return self._fa.__truediv__(value)
         return self._fix_binary_ops(value, '__truediv__')
 
-    #-------------------------------------------------------------
-    def _fix_binary_ops(self, value, op_name, other_inv_mask = None):
+    # -------------------------------------------------------------
+    def _fix_binary_ops(self, value, op_name, other_inv_mask=None):
         '''
         Preserves invalids from integer arrays. If valid, wraps result fastarray in TimeSpan object.
         '''
-        #print("binary", type(self), type(value), op_name)
+        # print("binary", type(self), type(value), op_name)
         if np.isscalar(self):
             op = getattr(np.float64, op_name)
             result = op(self, value)
@@ -4970,7 +5097,7 @@ class TimeSpanBase:
                     result[inv_mask] = np.nan
             else:
                 # possible nan fill
-                if len(other_inv_mask)==1:
+                if len(other_inv_mask) == 1:
                     if isnan(other_inv_mask)[0]:
                         result = TimeSpan(full(len(self), np.nan, dtype=np.float64))
                 else:
@@ -4979,95 +5106,134 @@ class TimeSpanBase:
 
         return result
 
-    def __pow__(self, other, modulo=None): raise NotImplementedError
+    def __pow__(self, other, modulo=None):
+        raise NotImplementedError
 
-    def __lshift__(self, other): raise NotImplementedError
+    def __lshift__(self, other):
+        raise NotImplementedError
 
-    def __rshift__(self, other): raise NotImplementedError
+    def __rshift__(self, other):
+        raise NotImplementedError
 
-    def __and__(self, other): raise NotImplementedError
+    def __and__(self, other):
+        raise NotImplementedError
 
-    def __xor__(self, other): raise NotImplementedError
+    def __xor__(self, other):
+        raise NotImplementedError
 
-    def __or__(self, other): raise NotImplementedError
+    def __or__(self, other):
+        raise NotImplementedError
 
-    #def __rmul__(self, other): raise NotImplementedError
+    # def __rmul__(self, other): raise NotImplementedError
 
-    def __rmatmul__(self, other): raise NotImplementedError
+    def __rmatmul__(self, other):
+        raise NotImplementedError
 
-    def __rtruediv__(self, other): raise NotImplementedError
+    def __rtruediv__(self, other):
+        raise NotImplementedError
 
-    def __rfloordiv__(self, other): raise NotImplementedError
+    def __rfloordiv__(self, other):
+        raise NotImplementedError
 
-    def __rmod__(self, other): raise NotImplementedError
+    def __rmod__(self, other):
+        raise NotImplementedError
 
-    def __rdivmod__(self, other): raise NotImplementedError
+    def __rdivmod__(self, other):
+        raise NotImplementedError
 
-    def __rpow__(self, other): raise NotImplementedError
+    def __rpow__(self, other):
+        raise NotImplementedError
 
-    def __rlshift__(self, other): raise NotImplementedError
+    def __rlshift__(self, other):
+        raise NotImplementedError
 
-    def __rrshift__(self, other): raise NotImplementedError
+    def __rrshift__(self, other):
+        raise NotImplementedError
 
-    def __rand__(self, other): raise NotImplementedError
+    def __rand__(self, other):
+        raise NotImplementedError
 
-    def __rxor__(self, other): raise NotImplementedError
+    def __rxor__(self, other):
+        raise NotImplementedError
 
-    def __ror__(self, other): raise NotImplementedError
+    def __ror__(self, other):
+        raise NotImplementedError
 
-    def __imul__(self, other): raise NotImplementedError
+    def __imul__(self, other):
+        raise NotImplementedError
 
-    def __imatmul__(self, other): raise NotImplementedError
+    def __imatmul__(self, other):
+        raise NotImplementedError
 
-    def __itruediv__(self, other): raise NotImplementedError
+    def __itruediv__(self, other):
+        raise NotImplementedError
 
-    def __ifloordiv__(self, other): raise NotImplementedError
+    def __ifloordiv__(self, other):
+        raise NotImplementedError
 
-    def __imod__(self, other): raise NotImplementedError
+    def __imod__(self, other):
+        raise NotImplementedError
 
-    def __ipow__(self, other, modulo=None): raise NotImplementedError
+    def __ipow__(self, other, modulo=None):
+        raise NotImplementedError
 
-    def __ilshift__(self, other): raise NotImplementedError
+    def __ilshift__(self, other):
+        raise NotImplementedError
 
-    def __irshift__(self, other): raise NotImplementedError
+    def __irshift__(self, other):
+        raise NotImplementedError
 
-    def __iand__(self, other): raise NotImplementedError
+    def __iand__(self, other):
+        raise NotImplementedError
 
-    def __ixor__(self, other): raise NotImplementedError
+    def __ixor__(self, other):
+        raise NotImplementedError
 
-    def __ior__(self, other): raise NotImplementedError
+    def __ior__(self, other):
+        raise NotImplementedError
 
-    #def __neg__(self): raise NotImplementedError
+    # def __neg__(self): raise NotImplementedError
 
-    #def __pos__(self): raise NotImplementedError
+    # def __pos__(self): raise NotImplementedError
 
-    #def __abs__(self): raise NotImplementedError
+    # def __abs__(self): raise NotImplementedError
 
-    def __invert__(self): raise NotImplementedError
+    def __invert__(self):
+        raise NotImplementedError
 
-    def __complex__(self): raise NotImplementedError
+    def __complex__(self):
+        raise NotImplementedError
 
-    def __int__(self): raise NotImplementedError
+    def __int__(self):
+        raise NotImplementedError
 
-    #def __float__(self): raise NotImplementedError
+    # def __float__(self): raise NotImplementedError
 
-    def __round__(self, ndigits=0): raise NotImplementedError
+    def __round__(self, ndigits=0):
+        raise NotImplementedError
 
-    def __trunc__(self): raise NotImplementedError
+    def __trunc__(self):
+        raise NotImplementedError
 
-    def __floor__(self): raise NotImplementedError
+    def __floor__(self):
+        raise NotImplementedError
 
-    def __ceil__(self): raise NotImplementedError
+    def __ceil__(self):
+        raise NotImplementedError
 
-    #--UNARY OPERATIONS-------------------------------------------
-    #-------------------------------------------------------------
-    def __abs__(self): return self._unary_ufunc_builder('__abs__')
+    # --UNARY OPERATIONS-------------------------------------------
+    # -------------------------------------------------------------
+    def __abs__(self):
+        return self._unary_ufunc_builder('__abs__')
 
-    def __neg__(self): return self._unary_ufunc_builder('__neg__')
+    def __neg__(self):
+        return self._unary_ufunc_builder('__neg__')
 
-    def __pos__(self): return self._unary_ufunc_builder('__pos__')
+    def __pos__(self):
+        return self._unary_ufunc_builder('__pos__')
 
-    def abs(self): return self.__abs__()
+    def abs(self):
+        return self.__abs__()
 
     def _unary_ufunc_builder(self, op_name):
         if np.isscalar(self):
@@ -5088,17 +5254,20 @@ class TimeSpanBase:
         for name in ['sum', 'mean', 'std', 'var', 'min', 'max', 'median',
                      'nansum', 'nanmean', 'nanstd', 'nanvar', 'nanmin', 'nanmax', 'nanmedian']:
             func_string = []
-            func_string.append("def "+name+"(self, **kwargs):")
-            func_string.append("    r = self._fa."+name+"()")
+            func_string.append("def " + name + "(self, **kwargs):")
+            func_string.append("    r = self._fa." + name + "()")
             func_string.append("    r = FastArray(r, dtype=np.float64)")
             func_string.append("    return TimeSpan(r)")
-            func_string.append("setattr(cls, '"+name+"', "+name+")")
+            func_string.append("setattr(cls, '" + name + "', " + name + ")")
             exec("\n".join(func_string))
-    
-    #------------------------------------------------------------
-    #-------------------------------------------------------------
+
+    # ------------------------------------------------------------
+    # -------------------------------------------------------------
     def _timespan_compare_check(self, funcname, other):
         func = getattr(self._fa, funcname)
+
+        if isinstance(other, (str, bytes)):
+            other = TimeSpan(other)[0]
 
         if isinstance(other, (DateTimeNano, Date)):
             raise TypeError(f'Cannot compare TimeSpan with {type(other)}')
@@ -5133,7 +5302,7 @@ class TimeSpanBase:
         return self._timespan_compare_check('__lt__', other)
 
 
-#========================================================
+# ========================================================
 class TimeSpan(TimeSpanBase, DateTimeBase):
     """Array of time delta in nanoseconds, held in float64.
 
@@ -5186,7 +5355,8 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
     >>> ts * 5.6
     TimeSpan([13:04:00.000000000])
     """
-    #------------------------------------------------------------
+
+    # ------------------------------------------------------------
     def __new__(cls, values, unit=None):
         # handle all input as array, scalars -> array of one item
         if not isinstance(values, np.ndarray):
@@ -5212,22 +5382,22 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         instance._display_length = DisplayLength.Short
         return instance
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_scalar(self, scalarval):
         return TimeSpanScalar(scalarval, _from=self)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def newclassfrominstance(cls, instance, origin):
         result = instance.view(cls)
         result._display_length = origin.display_length
         return result
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def hstack(cls, tspans):
         '''
@@ -5236,7 +5406,7 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         '''
         return hstack_any(tspans, cls, TimeSpan)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def fill_invalid(self, shape=None, dtype=None, inplace=True):
         arr = self._fill_invalid_internal(shape=shape, dtype=self.dtype, inplace=inplace)
         if arr is None:
@@ -5252,10 +5422,10 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         default_meta = meta_from_version(cls, version)
         # combine saved attributes with defaults based on version number
         vars = meta['instance_vars']
-        for k,v in default_meta.items():
-            meta.setdefault(k,v)
-        for k,v in default_meta['instance_vars'].items():
-            vars.setdefault(k,v)
+        for k, v in default_meta.items():
+            meta.setdefault(k, v)
+        for k, v in default_meta['instance_vars'].items():
+            vars.setdefault(k, v)
 
         instance = [*arrdict.values()][0]
         instance = TimeSpan(instance)
@@ -5274,20 +5444,20 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         metadict = {
             'name': name,
             'typeid': getattr(TypeId, classname),
-            'classname' : classname,
+            'classname': classname,
             'ncols': 0,
             'version': META_VERSION,
-            'author' : 'python',
+            'author': 'python',
 
-            'instance_vars' : {
-                '_display_length' : self.display_length
+            'instance_vars': {
+                '_display_length': self.display_length
             },
 
-            '_base_is_stackable' : SDSFlag.Stackable
+            '_base_is_stackable': SDSFlag.Stackable
         }
         return metadict
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @classmethod
     def _load_from_sds_meta_data(cls, name, arr, cols, meta, tups: Optional[list] = None):
         '''
@@ -5304,25 +5474,25 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         default_meta = meta_from_version(cls, version)
         # combine saved attributes with defaults based on version number
         vars = meta['instance_vars']
-        for k,v in default_meta.items():
-            meta.setdefault(k,v)
-        for k,v in default_meta['instance_vars'].items():
-            vars.setdefault(k,v)
+        for k, v in default_meta.items():
+            meta.setdefault(k, v)
+        for k, v in default_meta['instance_vars'].items():
+            vars.setdefault(k, v)
 
         instance = TimeSpan(arr)
 
         # restore all instance variables
         vars = meta['instance_vars']
-        
+
         for name, value in vars.items():
             setattr(instance, name, value)
 
         return instance
 
 
-#==========================================================
+# ==========================================================
 # Scalars
-#==========================================================
+# ==========================================================
 class DateScalar(np.int32):
     '''
     Derived from np.int32
@@ -5332,7 +5502,7 @@ class DateScalar(np.int32):
 
     __slots__ = '_display_length'
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __init__(*args, **kwargs):
         self = args[0]
         _from = kwargs.get('_from', None)
@@ -5343,19 +5513,19 @@ class DateScalar(np.int32):
 
     def get_item_format(self):
         item_format = ItemFormat(
-            length          = self._display_length,
-            justification   = DisplayJustification.Right,
-            can_have_spaces = True,
-            decoration      = None,
+            length=self._display_length,
+            justification=DisplayJustification.Right,
+            can_have_spaces=True,
+            decoration=None,
         )
         return item_format
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         return self
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
@@ -5367,7 +5537,7 @@ class DateScalar(np.int32):
         itemformat = self.get_item_format()
         return Date.format_date_num(self._np, itemformat)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def strftime(self, format, dtype='O'):
         '''
         Converts Date to an array of object strings or a scalar string.
@@ -5389,7 +5559,7 @@ class DateScalar(np.int32):
         '''
         return dt.strftime(dt.utcfromtimestamp(self * SECONDS_PER_DAY), format)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _np(self):
         return self.view(np.int32)
@@ -5402,7 +5572,7 @@ class DateScalar(np.int32):
         return Date(self._np.tile(repeats))
 
 
-#==========================================================
+# ==========================================================
 class DateSpanScalar(np.int32):
     '''
     Derived from np.int32
@@ -5410,7 +5580,8 @@ class DateSpanScalar(np.int32):
     '''
 
     __slots__ = '_display_length'
-    #------------------------------------------------------------
+
+    # ------------------------------------------------------------
     def __init__(*args, **kwargs):
         self = args[0]
         _from = kwargs.get('_from', None)
@@ -5422,14 +5593,14 @@ class DateSpanScalar(np.int32):
 
     def get_item_format(self):
         item_format = ItemFormat(
-            length          = self._display_length,
-            justification   = DisplayJustification.Right,
-            can_have_spaces = True,
-            decoration      = None
+            length=self._display_length,
+            justification=DisplayJustification.Right,
+            can_have_spaces=True,
+            decoration=None
         )
         return item_format
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
@@ -5441,12 +5612,12 @@ class DateSpanScalar(np.int32):
         itemformat = self.get_item_format()
         return DateSpan.format_date_span(self._np, itemformat)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _np(self):
         return self.view(np.int32)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         return self.view(np.int32)
@@ -5459,7 +5630,7 @@ class DateSpanScalar(np.int32):
         return DateSpan(self._np.tile(repeats))
 
 
-#==========================================================
+# ==========================================================
 class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
     '''
     Derived from np.int64
@@ -5469,7 +5640,7 @@ class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
 
     __slots__ = '_display_length', '_timezone'
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __init__(*args, **kwargs):
         # This needs more work, especially when init with a string
         self = args[0]
@@ -5502,44 +5673,44 @@ class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
 
     def get_item_format(self):
         item_format = ItemFormat(
-            length          = self._display_length,
-            justification   = DisplayJustification.Right,
-            can_have_spaces = True,
-            decoration      = None,
-            timezone_str    = self._timezone._timezone_str
+            length=self._display_length,
+            justification=DisplayJustification.Right,
+            can_have_spaces=True,
+            decoration=None,
+            timezone_str=self._timezone._timezone_str
         )
         return item_format
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def isnan(self):
-        return self<=0
+        return self <= 0
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _np(self):
         return self.view(np.int64)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         return self.view(np.int64)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __repr__(self):
         itemformat = self.get_item_format()
-        #return DateTimeNano.format_nano_time(self._np, itemformat)
+        # return DateTimeNano.format_nano_time(self._np, itemformat)
         return f"{self.get_classname()}('{DateTimeNano.format_nano_time(self._np, itemformat)}')"
 
     def __str__(self):
         itemformat = self.get_item_format()
         return DateTimeNano.format_nano_time(self._np, itemformat)
 
-    #--BINARY OPERATIONS------------------------------------------
-    #-------------------------------------------------------------
+    # --BINARY OPERATIONS------------------------------------------
+    # -------------------------------------------------------------
     def __add__(self, value):
         # reroute this back to the nonscalar
         return DateTimeNano.__add__(self, value)
@@ -5550,13 +5721,14 @@ class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
 
     # used in adding a scalar to a Dataset
     def repeat(self, repeats, axis=None):
-        return DateTimeNano(self._np.repeat(repeats, axis=axis), to_tz=self._timezone._to_tz, from_tz=self._timezone._from_tz)
+        return DateTimeNano(self._np.repeat(repeats, axis=axis), to_tz=self._timezone._to_tz,
+                            from_tz=self._timezone._from_tz)
 
     def tile(self, repeats):
         return DateTimeNano(self._np.tile(repeats), to_tz=self._timezone._to_tz, from_tz=self._timezone._from_tz)
 
 
-#==========================================================
+# ==========================================================
 class TimeSpanScalar(np.float64, TimeSpanBase):
     '''
     Derived from np.float64
@@ -5587,29 +5759,29 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
 
     def get_item_format(self):
         item_format = ItemFormat(
-            length          = self._display_length,
-            justification   = DisplayJustification.Right,
-            can_have_spaces = True,
-            decoration      = None
+            length=self._display_length,
+            justification=DisplayJustification.Right,
+            can_have_spaces=True,
+            decoration=None
         )
         return item_format
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         # must go to numpy or it will flip back to an array
         return self.view(np.float64)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     @property
     def _np(self):
         return self.view(np.float64)
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     def __repr__(self):
         itemformat = self.get_item_format()
         return f"{self.get_classname()}('{TimeSpan.display_item_clock(self._np)}')"
@@ -5620,31 +5792,46 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
 
     # because np.float64 is first, it hooks these before TimeSpanBase
 
-    def __abs__(self): return self._unary_ufunc_builder('__abs__')
+    def __abs__(self):
+        return self._unary_ufunc_builder('__abs__')
 
-    def __neg__(self): return self._unary_ufunc_builder('__neg__')
+    def __neg__(self):
+        return self._unary_ufunc_builder('__neg__')
 
-    def __pos__(self): return self._unary_ufunc_builder('__pos__')
+    def __pos__(self):
+        return self._unary_ufunc_builder('__pos__')
 
-    def abs(self):   return self.__abs__()
+    def abs(self):
+        return self.__abs__()
 
-    #--BINARY OPERATIONS------------------------------------------
-    #-------------------------------------------------------------
-    def __add__(self, value):      return TimeSpanBase.__add__(self, value)
+    # --BINARY OPERATIONS------------------------------------------
+    # -------------------------------------------------------------
+    def __add__(self, value):
+        return TimeSpanBase.__add__(self, value)
 
-    def __radd__(self, value):     return TimeSpanBase.__radd__(self, value)
+    def __radd__(self, value):
+        return TimeSpanBase.__radd__(self, value)
 
-    def __sub__(self, value):      return TimeSpanBase.__sub__(self, value)
+    def __sub__(self, value):
+        return TimeSpanBase.__sub__(self, value)
 
-    def __rsub__(self, value):     return TimeSpanBase.__rsub__(self, value)
+    def __rsub__(self, value):
+        return TimeSpanBase.__rsub__(self, value)
 
-    def __mul__(self, value):      return TimeSpanBase.__mul__(self, value)
+    def __mul__(self, value):
+        return TimeSpanBase.__mul__(self, value)
 
-    def __rmul__(self, other):     return TimeSpanBase.__rmul__(self, value)
+    def __rmul__(self, other):
+        return TimeSpanBase.__rmul__(self, value)
 
-    def __floordiv__(self, value): return TimeSpanBase.__floordiv__(self, value)
+    def __floordiv__(self, value):
+        return TimeSpanBase.__floordiv__(self, value)
 
-    def __truediv__(self, value):  return TimeSpanBase.__truediv__(self, value)
+    def __truediv__(self, value):
+        return TimeSpanBase.__truediv__(self, value)
+
+    def __eq__(self, other):
+        return self._timespan_compare_check('__eq__', other)
 
     # used in adding a scalar to a Dataset
     def repeat(self, repeats, axis=None):
@@ -5654,7 +5841,7 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
         return TimeSpan(self._np.tile(repeats))
 
 
-#-----------------------------------------------------
+# -----------------------------------------------------
 # keep this at end of file
 TypeRegister.DateTimeBase = DateTimeBase
 TypeRegister.DateTimeNano = DateTimeNano

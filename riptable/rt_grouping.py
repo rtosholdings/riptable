@@ -1,10 +1,23 @@
-__all__ = ['Grouping','combine2groups','hstack_groupings','hstack_test']
+__all__ = [
+    # classes/types
+    'Grouping',
+    # functions
+    'combine2groups',
+    'hstack_groupings',
+    'hstack_test',
+    'merge_cats'
+]
+
+# TODO: Enable this and use it in code below to replace print() calls;
+#       can remove 'verbose' parameters too since logging can be turned on externally.
+#import logging
 
 import warnings
 from enum import IntEnum, EnumMeta
-from typing import Optional, List, Union, Callable, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
+import numba as nb
 import riptide_cpp as rc
 
 from .rt_numpy import (
@@ -20,7 +33,6 @@ from .rt_numpy import (
     sort, sortinplaceindirect,
     unique, where, zeros
 )
-from .rt_timers import GetTSC, tic, toc
 from .rt_enum import (
     ApplyType,
     INVALID_DICT,
@@ -29,29 +41,42 @@ from .rt_enum import (
     int_dtype_from_len,
     NumpyCharTypes
 )
-from .rt_groupbykeys import GroupByKeys
+#from .rt_groupbykeys import GroupByKeys
+from .rt_timers import tic, toc
+from .rt_utils import crc_match
+
+if TYPE_CHECKING:
+    from .rt_dataset import Dataset
+    from .rt_fastarray import FastArray
 
 
-def combine2groups(group_row, group_col, filter=None, showfilter=False):
+def combine2groups(
+    group_row: 'Grouping',
+    group_col: 'Grouping',
+    filter: Optional[np.ndarray] = None,
+    showfilter: bool = False
+) -> 'Grouping':
     '''
-    Parameters
-    ----------
-        group_row: Grouping object for the rows
-        group_col: Grouping object for the cols
-        filter: A boolean filter of values to remove on the rows
-
-    Other Parameters
-    ----------------
-    filter: boolean array same length as group_row.ikey array (can pass in None)
-
     The group_row unique keys are used in the grouping_dict returned.
     The group_cols unique keys are expected to become columns.
 
+    Parameters
+    ----------
+    group_row : Grouping
+        Grouping object for the rows
+    group_col : Grouping
+        Grouping object for the cols
+    filter : np.ndarray of bool, optional
+        A boolean filter of values to remove on the rows.
+        Should be same length as group_row.ikey array (can pass in ``None``).
+    showfilter : bool
+
     Returns
     -------
-    A new Grouping object
-    The new ikey will always the number of (group_row.unique_count+1)*(group_col.unique_count+1)
-    The grouping_dict in the Grouping object will be for the rows only
+    Grouping
+        A new Grouping object
+        The new ikey will always the number of ``(group_row.unique_count+1)*(group_col.unique_count+1)``.
+        The grouping_dict in the Grouping object will be for the rows only.
     '''
     # call CPP algo to merge two bins into one
     result = combine2keys(
@@ -80,7 +105,278 @@ def combine2groups(group_row, group_col, filter=None, showfilter=False):
 
     return grouping
 
-class Grouping(object):
+def merge_cats(
+    indices,
+    listcats,
+    idx_cutoffs=None,
+    unique_cutoffs=None,
+    from_mapping=False,
+    stack=True,
+    base_index =1,
+    ordered=False,
+    verbose=False
+):
+    '''
+    For hstacking Categoricals possibly from a stacked .sds load.
+
+    Supports Categoricals from single array or dictionary mapping.
+
+    Parameters
+    ----------
+    indices :  single stacked array or list of indices
+                if single array, needs idx_cutoffs for slicing
+    listcats : list of stacked unique category arrays (needs unique_cutoffs)
+                or list of lists of uniques
+                if the uniques in file1 are 'A,'C'  and the uniques in file2 are 'B','C,'D'
+                then listcats is [FastArray('A','C','B','C','D')]
+    idx_cutoffs : ndarray of int64, optional
+        int64 array of the cutoffs to the `indices`.
+        if the index length is 30 and 20 the idx_cutoffs is [30,50]
+    unique_cutoffs: list of one int64 array of the cutoffs to the listcats
+               if the index length is 2 and 3 the idx_cutoffs is [2,5]
+    from_mapping : bool
+    stack : bool
+    base_index : int
+    ordered : bool
+    verbose : bool
+
+    Returns
+    -------
+    Returns two items:
+    - list of fixed indices, or array of fixed contiguous indices.
+    - stacked unique values
+
+    Notes
+    -----
+    TODO: Needs to support multikey cats.
+    '''
+    # ------------------------------------------------------------
+    if verbose:
+        print("**indices", indices)
+        print("**listcats", listcats)
+        print("**idx_cutoffs", idx_cutoffs)
+        print("**ucutoffs", unique_cutoffs)
+        print("**from_mapping", from_mapping)
+
+    if unique_cutoffs is not None:
+        if verbose:
+            print('unique cutoffs was not none')
+
+        oldcats = []
+        # all combined uniques will have the same cutoff points
+        unique_cutoffs = unique_cutoffs[0]
+        match = True
+        for cat_array in listcats:
+            oc = []
+            start = 0
+            for end in unique_cutoffs:
+                oc.append(cat_array[start:end])
+                start = end
+            # build list of slices
+            oldcats.append(oc)
+
+    # single list of unique categories (not from slices)
+    else:
+        oldcats = listcats
+
+    if verbose:
+        print('**oldcats',oldcats)
+        tic()
+
+    # check to see if all categories were the same
+    match = True
+    catlen = len(oldcats[0])
+    if catlen > 1:
+        for oc in oldcats:
+            # check the length first
+            if catlen == len(oc):
+                if not crc_match(oc):
+                    match = False
+                    break
+            else:
+                match = False
+                break
+
+    if match:
+        # first uniques are the same for all
+        newcats = [oc[0] for oc in oldcats]
+
+        if from_mapping:
+            newcats[1] = newcats[1].astype('U', copy=False)
+        else:
+            if len(newcats) == 0:
+                newcats = newcats[0]
+
+        # now indices will always be stacked
+        # maybe set a flag for comparisons - the stack isn't necessary if the categories match
+        if unique_cutoffs is None:
+            indices = hstack(indices)
+        if verbose:
+            print("**from_mapping match exactly", indices, newcats[0])
+
+    elif from_mapping:
+        # listcats is two arrays:
+        # the first is the combined uniques of codes
+        # the second is the combined uniques of names
+        codes, uidx = unique(listcats[0], return_index=True, sorted=False)
+        names = listcats[1][uidx].astype('U', copy=False)
+        newcats = [codes, names]
+        if verbose:
+            print("**from_mapping does NOT match exactly", names)
+
+        # use first occurance of codes to get uniques for both codes and names
+        #return indices, newcats
+
+    # need to perform own hstack
+    # this will get hit by Categorical.hstack() for single/multikey
+    # nothing has been stacked
+    else:
+        # unique_cutoffs can be None
+        indices, newcats = hstack_groupings(indices, listcats, i_cutoffs=idx_cutoffs, u_cutoffs=unique_cutoffs, base_index=base_index, ordered=ordered, verbose=verbose)
+    if verbose:
+        toc()
+    return indices, newcats
+
+def hstack_groupings(
+    ikey,
+    uniques,
+    i_cutoffs=None,
+    u_cutoffs=None,
+    from_mapping: bool = False,
+    base_index: int = 1,
+    ordered: bool = False,
+    verbose: bool = False
+) -> Tuple[Union[list, np.ndarray], List[np.ndarray]]:
+    '''
+    For hstacking Categoricals or fixing indices in a categorical from a stacked .sds load
+    Supports Categoricals from single array or dictionary mapping
+
+    Parameters
+    ----------
+    indices : single stacked array or list of indices
+        if single array, needs idx_cutoffs for slicing
+    uniques : list of stacked unique category arrays (needs ``unique_cutoffs``)
+        or list of lists of uniques
+    i_cutoffs
+    u_cutoffs
+    from_mapping : bool
+    base_index : int
+    ordered : bool
+    verbose : bool
+
+    Returns
+    -------
+    list or array_like
+        list of fixed indices, or array of fixed contiguous indices.
+    list of ndarray
+        stacked unique values
+    '''
+    def lengths_from_cutoffs(cutoffs):
+        lengths = cutoffs.copy()
+        lengths[1:] -=  cutoffs[:-1]
+        return lengths
+
+    if i_cutoffs is None:
+        # stack as many as we need to
+        if len(ikey) ==1:
+            # nothing to do
+            return ikey[0], uniques[0]
+        else:
+            # Turn separate arrays into an array with cutoffs
+            i_lengths = TypeRegister.FastArray([len(i) for i in ikey], dtype=np.int64)
+            i_cutoffs = i_lengths.cumsum()
+            ikey = hstack(ikey)
+
+            u_lengths = TypeRegister.FastArray([len(u) for u in uniques[0]], dtype=np.int64)
+            u_cutoffs = u_lengths.cumsum()
+            uniques = [hstack(u) for u in uniques]
+
+    else:
+        if len(i_cutoffs) == 1:
+            # nothing to do
+            return ikey[0], uniques[0]
+
+        i_lengths = lengths_from_cutoffs(i_cutoffs)
+        u_lengths = lengths_from_cutoffs(u_cutoffs)
+
+    if verbose:
+        print("**ikey",ikey, ikey.dtype)
+        print("**i_lengths",i_lengths)
+        print("**i_cutoffs",i_cutoffs)
+        print("**uniques", uniques)
+        print("**u_lengths",u_lengths)
+        print("**u_cutoffs",u_cutoffs)
+
+    if ordered:
+        # TODO: a grouping object can keep the igroup
+        g= groupbylex(uniques)
+    else:
+        # For columns containing higher numbers of unique values, this is where a majority
+        # of time will be spent.
+        # One example of this would be a Dataset containing all trades reported to OPRA on a given date;
+        # if grouping by a string-based column containing the OCC Option Symbology Initiative (OSI)
+        # symbol for the option represented by a trade record, there will be on the order of 10^6
+        # unique option symbols for a typical day.
+        # https://en.wikipedia.org/wiki/Option_symbol
+        g= groupbyhash(uniques)
+
+    if base_index == 0:
+        uikey=g['iKey'] - 1
+    else:
+        uikey=g['iKey']
+
+    #--------- START OF C++ ROUTINE -------------
+    #based on how many uniques we have, allocate the new ikey
+    # do we have a routine for this?
+    uikey_length = max(uikey)
+    dtype = int_dtype_from_len(uikey_length)
+    dtypei = dtype.itemsize
+
+    if base_index==1 and uikey.itemsize == 4 and dtypei <= ikey.itemsize:
+        # TODO: handle base_index ==0
+        # TODO: handle new array (currently rewrites ikey)
+        u_cutoffs=u_cutoffs.astype(np.int64)
+        i_cutoffs=i_cutoffs.astype(np.int64)
+        newikey = rc.ReIndexGroups(ikey, uikey, u_cutoffs, i_cutoffs)
+    else:
+        #print(f"bad match {uikey.itemsize} {ikey.itemsize} {uikey_length}")
+        newikey = empty((len(ikey),), dtype=dtype)
+
+        start =0
+        starti = 0
+        for i in range(len(u_cutoffs)):
+            stop = u_cutoffs[i]
+            stopi = i_cutoffs[i]
+            uikey_slice = uikey[start:stop]
+            oldikey_slice = ikey[starti:stopi]
+
+            if verbose:
+                print("fixing ",starti, stopi)
+                print("newikey ",newikey)
+                print("oldikey_slice ",oldikey_slice)
+
+            if base_index==1:
+                # write a routine for this in C++
+                # if 0 and base_index=1, then keep the 0
+                filtermask = oldikey_slice == 0
+                newikey[starti:stopi] = uikey_slice[oldikey_slice-1]
+                if filtermask.sum() > 0:
+                    newikey[starti:stopi][filtermask] = 0
+            else:
+                newikey[starti:stopi] = uikey_slice[oldikey_slice]
+
+            start = stop
+            starti = stopi
+        #END C++ ROUTINE ---------------------------------
+
+    newuniques = []
+    for u in uniques:
+        newuniques.append(u[g['iFirstKey']])
+
+    return newikey, newuniques
+
+
+class Grouping:
     '''
     Every GroupBy and Categorical object holds a grouping in self.grouping;
     this class informs the groupby algorithms how to group the data.
@@ -216,7 +512,7 @@ class Grouping(object):
     REGISTERED_REVERSE_TABLES=[]
 
     #---------------------------------------------------------------
-    def copy_from(self, other=None):
+    def copy_from(self, other: Optional['Grouping'] = None) -> None:
         '''
         Initializes a new Grouping object if other is None.
         Otherwise shallow copy all necessary attributes from another grouping object to self.
@@ -867,6 +1163,7 @@ class Grouping(object):
             # check for any integer or float array which we route to MBGet
             if not has_slice and fld.dtype.num >= 1 and fld.dtype.num <=13 and self._base_index > 0:
                 # pass in the invalid as 0
+                # TODO: Modify to call mbget through the mbget function in rt_utils.py (which wraps the ledger call).
                 newinstance = TypeRegister.MathLedger._MBGET(self._iKey,fld, 0)
             else:
                 newinstance= self._iKey[fld]
@@ -880,20 +1177,22 @@ class Grouping(object):
         return self.newgroupfrominstance(newinstance)
 
     #---------------------------------------------------------------
-    def ismember(self, values, reverse=False):
+    def ismember(self, values, reverse: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """
         Used to match against the unique categories
         NOTE: This does not match against the entire array, just the uniques
 
-        Kwarags
-        -------
-        reverse: defaults to False.
-                 set to True to reverse the ismember(A, B) to ismember(B,A)
+        Parameters
+        ----------
+        reverse : bool, defaults to False.
+             Set to True to reverse the ``ismember(A, B)`` to ``ismember(B,A)``.
 
         Returns
         -------
-        boolean array of matches to unique categories
-        fancy index array of location in unique categories
+        member_mask : np.ndarray of bool
+            boolean array of matches to unique categories
+        member_indices : np.ndarray of int
+            fancy index array of location in unique categories
 
         Examples
         --------
@@ -1074,37 +1373,43 @@ class Grouping(object):
     #--MODE PROPERTIES----------------------------------------------
     #---------------------------------------------------------------
     @property
-    def isenum(self):
+    def isenum(self) -> bool:
         return self._enum is not None
+
     @property
-    def isdisplaysorted(self):
+    def isdisplaysorted(self) -> bool:
         return self._sort_display
+
     @property
-    def isordered(self):
+    def isordered(self) -> bool:
         return self.Ordered
+
     @property
-    def issinglekey(self):
+    def issinglekey(self) -> bool:
         """True if unique dict holds single array.
         False if unique dict hodls multiple arrays or in enum mode.
         """
         if self.isenum:
             return False
         return len(self.uniquedict) == 1
+
     @property
-    def ismultikey(self):
+    def ismultikey(self) -> bool:
         """True if unique dict holds multiple arrays.
         False if unique dict holds single array or in enum mode.
         """
         if self.isenum:
             return False
         return len(self.uniquedict) > 1
+
     @property
-    def iscategorical(self):
+    def iscategorical(self) -> bool:
         """True if only uniques are being held - no reference to original data.
         """
         return self._categorical
+
     @property
-    def isdirty(self):
+    def isdirty(self) -> bool:
         '''
         isdirty : bool, default False
             If True, it's possible that not all of the values in between 0 and the unique count appear in the iKey.
@@ -1146,9 +1451,14 @@ class Grouping(object):
     @property
     def ikey(self):
         '''
-        Returns a 1 based integer array with the bin number for each row.
+        Returns a 1-based integer array with the bin number for each row.
+
         Bin 0 is reserved for filtered out rows.
         This property will return +1 for base-0 grouping.
+
+        Returns
+        -------
+        ikey : np.ndarray of int
         '''
         if self._iKey is None:
             if self.isenum:
@@ -1166,14 +1476,24 @@ class Grouping(object):
 
     #---------------------------------------------------------------
     @property
-    def base_index(self):
+    def base_index(self) -> int:
+        """The starting index from which keys (valid groups) are numbered. Always equal to 0 or 1."""
         return self._base_index
+
+    @property
+    def all_unique(self) -> bool:
+        """Indicates whether all keys/groups occur exactly once."""
+        return self.unique_count == len(self.ikey)
 
     #---------------------------------------------------------------
     @property
     def ifirstkey(self):
         '''
         returns the row locations of the first member of the group
+
+        Returns
+        -------
+        ifirstkey : np.ndarray of int
         '''
         # only categoricals do not have an iFirstKey
         if self.iFirstKey is None:
@@ -1192,6 +1512,10 @@ class Grouping(object):
     def ilastkey(self):
         '''
         returns the row locations of the last member of the group
+
+        Returns
+        -------
+        ilastkey : np.ndarray of int
         '''
         if self.iLastKey is None:
 
@@ -1207,7 +1531,11 @@ class Grouping(object):
     @property
     def inextkey(self):
         '''
-        returns the row locations of the next member of the group (or invalid int)
+        returns the row locations of the next member of the group (or invalid int).
+
+        Returns
+        -------
+        inextkey : np.ndarray of int
         '''
         if self.iNextKey is None:
             self.iNextKey = makeinext(self.ikey, self.unique_count)
@@ -1218,6 +1546,10 @@ class Grouping(object):
     def iprevkey(self):
         '''
         returns the row locations of the previous member of the group (or invalid int)
+
+        Returns
+        -------
+        iprevkey : np.ndarray of int
         '''
         if self.iPrevKey is None:
             self.iPrevKey = makeiprev(self.ikey, self.unique_count)
@@ -1228,6 +1560,10 @@ class Grouping(object):
     def igroup(self):
         '''
         returns a fancy index that when applied will make all the groups contiguous (packed together)
+
+        Returns
+        -------
+        igroup : np.ndarray of int
 
         See Also
         --------
@@ -1242,7 +1578,11 @@ class Grouping(object):
     @property
     def igroupreverse(self):
         '''
-        returns the fancy index to reverse the shuffle from igroup
+        Returns the fancy index to reverse the shuffle from `igroup`.
+
+        Returns
+        -------
+        igroupreverse : np.ndarray of int
 
         See Also
         --------
@@ -1257,7 +1597,11 @@ class Grouping(object):
     @property
     def ncountgroup(self):
         '''
-        returns a sister array used with ifirstgroup and igroup
+        returns a sister array used with `ifirstgroup` and `igroup`.
+
+        Returns
+        -------
+        ncountgroup : np.ndarray of int
 
         See Also
         --------
@@ -1273,7 +1617,11 @@ class Grouping(object):
     @property
     def ifirstgroup(self):
         '''
-        returns a sister array used with ncountgroup and igroup
+        Returns a sister array used with `ncountgroup` and `igroup`.
+
+        Returns
+        -------
+        ifirstgroup : np.ndarray of int
 
         See Also
         --------
@@ -1286,7 +1634,7 @@ class Grouping(object):
 
     #---------------------------------------------------------------
     def _build_unique_dict(self, grouping:dict) -> dict:
-        """Pull values from the non-unique grouping dict using the iFirstKey index.
+        """Pull values from the non-unique grouping dict using the `iFirstKey` index.
         If enumstring is True, translate enum codes to their strings.
         """
         # regenerate
@@ -1296,7 +1644,7 @@ class Grouping(object):
 
         if self.iFirstKey is None and self.isenum:
             # force enum to generate ikey, ifirstkey, uniquecount
-            self.ikey
+            _ = self.ikey
 
         for k, v in grouping.items():
             arr = v[self.iFirstKey]
@@ -1339,13 +1687,22 @@ class Grouping(object):
 
     #---------------------------------------------------------------
     @property
-    def uniquedict(self):
-        """Dictionary of key names -> array(s) of unique categories.
-        GroupBy will pull values from non-unique dictionary using iFirstKey
-        Categorical already holds a unique dictionary.
-        Enums will pull with iFirstKey, and return unique strings after translating integer codes.
+    def uniquedict(self) -> Mapping[str, np.ndarray]:
+        """
+        Dictionary of key names -> array(s) of unique categories.
 
-        Note: no sort is applied here.
+        `GroupBy` will pull values from non-unique dictionary using `iFirstKey`.
+        `Categorical` already holds a unique dictionary.
+        Enums will pull with `iFirstKey`, and return unique strings after translating integer codes.
+
+        Returns
+        -------
+        dict
+            Dictionary of key names -> array(s) of unique categories.
+
+        Notes
+        -----
+        No sort is applied here.
         """
         if self._grouping_unique_dict is None:
             return self._build_unique_dict(self._grouping_dict)
@@ -1363,27 +1720,27 @@ class Grouping(object):
 
     #---------------------------------------------------------------
     @property
-    def unique_count(self):
+    def unique_count(self) -> int:
         '''
         Number of unique groups.
         '''
         if self.isenum and self._unique_count is None:
             #force regen of unique_count
-            temp = self.ikey
+            _ = self.ikey
         return self._unique_count
 
     #---------------------------------------------------------------
     @property
-    def packed(self):
+    def packed(self) -> bool:
         '''
-        The grouping operation has performed an operation that requires packing e.g. median()
-        If packed, iGroup, iFirstGroup, and nCountGroup have been generated.
+        The grouping operation has performed an operation that requires packing e.g. ``median()``
+        If `packed`, `iGroup`, `iFirstGroup`, and `nCountGroup` have been generated.
         '''
         return self._packed
 
     #---------------------------------------------------------------
     @property
-    def gbkeys(self):
+    def gbkeys(self) -> Mapping[str, np.ndarray]:
         if self._gbkeys is None:
             self._gbkeys = self.uniquedict
         return self._gbkeys
@@ -1401,19 +1758,25 @@ class Grouping(object):
         '''
         Returns
         -------
-        An array with the number of unique counts per key
-        Does include the zero bin
+        ncountkey : np.ndarray of int
+            An array with the number of unique counts per key
+            Does include the zero bin
         '''
         return self.ncountgroup[1:]
 
     #---------------------------------------------------------------
-    def set_name(self, name):
+    def set_name(self, name: str) -> None:
         """
         If the grouping dict contains a single item, rename it.
 
         This will make categorical results consistent with groupby results if they've been constructed
         before being added to a dataset.
         Ensures that label names are consistent with categorical names.
+
+        Parameters
+        ----------
+        name : str
+            The new name to use for the single column in the internal grouping dictionary.
 
         Examples
         --------
@@ -1497,6 +1860,7 @@ class Grouping(object):
         inplace : bool, not implemented
             If True, re-index the categorical's underlying FastArray.
             Otherwise, return a new categorical with a new index and grouping object.
+        name
 
         Returns
         -------
@@ -1597,25 +1961,22 @@ class Grouping(object):
         return result
 
     #---------------------------------------------------------------
-    def regroup(self, filter=None, ikey=None):
+    def regroup(self, filter=None, ikey=None) -> 'Grouping':
         """Regenerate the groupings iKey, possibly with a filter and/or eliminating unique values.
 
         Parameters
         ----------
-        filter : boolean array, optional
+        filter : np.ndarray of bool, optional
             Filtered bins will be marked as zero in the resulting iKey.
             If not provided, uniques will be reduced to the ones that occur in the iKey.
-        ikey: integer array, optional
+        ikey : np.ndarray of int, optional
             Only used when the grouping is in enum mode.
 
         Returns
         -------
-        ikey : array
-            New iKey with indices to match the previous bins. (base-1 indexing)
-        ifirstkey : array
-            Index of first occurence of new uniques in iKey.
-        unique_count : int
-            Number of uniques.
+        Grouping
+            New Grouping object created by regenerating the `ikey`, `ifirstkey`, and `unique_count`
+            using data from this instance.
         """
         def ifirstkey_regroup(ikey, ifirstkey, lex=False):
 
@@ -1745,7 +2106,7 @@ class Grouping(object):
         return lexsort(sortlist)
 
     #---------------------------------------------------------------
-    def _finalize_dataset(self, accumdict, keychain, gbkeys, transform=False, showfilter=False, addkeys=False, **kwargs):
+    def _finalize_dataset(self, accumdict, keychain, gbkeys, transform=False, showfilter=False, addkeys=False, **kwargs) -> 'Dataset':
         '''
         possibly transform?  TODO: move to here
         possibly reattach keys
@@ -1796,7 +2157,7 @@ class Grouping(object):
         return accumDS
 
     #---------------------------------------------------------------
-    def _return_dataset(self, origdict, accumdict:dict, func_num, return_all=False, col_idx=None, keychain=None, **kwargs):
+    def _return_dataset(self, origdict, accumdict:dict, func_num, return_all=False, col_idx=None, keychain=None, **kwargs) -> 'Dataset':
         '''
 
         '''
@@ -2413,7 +2774,7 @@ class Grouping(object):
         ``apply`` is therefore a highly flexible grouping method.
 
         While ``apply`` is a very flexible method, its downside is that using it can be quite a bit slower
-        than using more specific methods. riptable offers a wide range of methods that will be much faster
+        than using more specific methods. riptide offers a wide range of methods that will be much faster
         than using ``apply`` for their specific purposes, so try to use them before reaching for ``apply``.
 
         Parameters
@@ -2902,7 +3263,7 @@ class Grouping(object):
         return funcNum == GB_FUNCTIONS.GB_ROLLING_COUNT
 
     #---------------------------------------------------------------
-    def count(self, gbkeys=None, isortrows=None, keychain=None, filter=None, transform=False, **kwargs):
+    def count(self, gbkeys=None, isortrows=None, keychain=None, filter=None, transform=False, **kwargs) -> 'Dataset':
         '''
         Compute count of each unique key
         Returns a dataset containing a single column. The Grouping object has the ability to generate
@@ -2937,10 +3298,257 @@ class Grouping(object):
         #return self._make_accum_dataset(origdict, accumdict, accumdict['Count'], GB_FUNC_COUNT)
         return self._return_dataset(None, accumdict, GB_FUNC_COUNT, keychain=keychain, transform=transform, **kwargs)
 
+    @staticmethod
+    def _hstack(
+        glist: List['Grouping'],
+        _trusted: bool = False,
+        base_index: int = 1,
+        ordered: bool = False,
+        destroy: bool = False
+    ) -> 'Grouping':
+        """
+        'hstack' operation for Grouping instances.
 
-#---------------------------------------------------------------
-#---------------------------------------------------------------
-class GroupingEnum(object):
+        Parameters
+        ----------
+        glist : list of Grouping
+            A list of Grouping objects.
+        _trusted : bool
+            Indicates whether we need to validate the data in the supplied Grouping
+            instances for consistency / correctness before using it. In certain cases,
+            the caller knows the data is safe to use directly (e.g. because they've just
+            created it), so the validation can be skipped.
+        base_index : int
+            The base index to use for the resulting Categorical.
+        ordered : bool
+            Indicates whether the resulting Categorical will be an 'ordered' Categorical
+            (sometimes called an 'Ordinal').
+        destroy : bool
+            This parameter is unused.
+
+        Returns
+        -------
+        Grouping
+        """
+        # need to vet base index, enum mode, number of columns, etc.
+        if not _trusted:
+            warnings.warn(f'still implementing grouping hstack validation')
+
+            # TODO: add more tests for single vs. multikey (without unnecessary calculation of uniquedict)
+            for grp in glist:
+                same_mode = set()
+                if not isinstance(grp, Grouping):
+                    raise TypeError(f"Grouping hstack is for categoricals, not {type(grp)}")
+                same_mode.add(grp.isenum)
+
+            if len(same_mode) != 1:
+                raise TypeError(f"Grouping hstack received a mix of different modes.")
+
+        firstgroup = glist[0]
+        sort_display = firstgroup.isdisplaysorted
+
+        # mapping
+        if firstgroup.isenum:
+            # stack underlying arrays from all categoricals (held in grouping's grouping_dict)
+            underlying = hstack([[*g._grouping_dict.values()][0] for g in glist])
+            # stack all unique string arrays
+            listnames = hstack([g._enum.category_array for g in glist])
+
+            # collect, measure, stack integer arrays
+            listcodes = [g._enum.code_array for g in glist]
+            cutoffs = [TypeRegister.FastArray([len(c) for c in listcodes], dtype=np.int64).cumsum()]
+            listcodes = hstack(listcodes)
+
+            # send in as two arrays
+            listcats = [listcodes, listnames]
+
+            # will return new unique arrays for codes, names
+            underlying, newcats = merge_cats(underlying, listcats, unique_cutoffs=cutoffs, from_mapping=True,
+                                             ordered=ordered)
+            newgroup = Grouping(underlying, categories=dict(zip(newcats[1], newcats[0])), _trusted=True)
+        else:
+            # use catinstance for base 0 or 1
+            listidx = [g.catinstance for g in glist]
+            cat_tuples = [tuple(g.uniquedict.values()) for g in glist]
+            listcats = [[v[i] for v in cat_tuples] for i in range(len(cat_tuples[0]))]
+            underlying, newcats = merge_cats(listidx, listcats, base_index=base_index, ordered=ordered)
+            newgroup = Grouping(underlying, categories=newcats, categorical=True, _trusted=True,
+                                             base_index=base_index, ordered=ordered, sort_display=sort_display)
+
+        return newgroup
+
+    @staticmethod
+    def take_groups(
+        grouped_data: np.ndarray,
+        indices: np.ndarray,
+        ncountgroup: np.ndarray,
+        ifirstgroup: np.ndarray
+    ) -> np.ndarray:
+        """
+        Take groups of elements from an array.
+
+        This function provides fancy-indexing over groups of data -- so a fancy index can be used to
+        specify _groups_ of data, rather than just individual elements, and the grouped elements will
+        be copied to the output.
+
+        Parameters
+        ----------
+        grouped_data : np.ndarray
+        indices : np.ndarray of int
+        ncountgroup : np.ndarray of int
+        ifirstgroup : np.ndarray of int
+
+        Returns
+        -------
+        np.ndarray
+
+        Raises
+        ------
+        ValueError
+            When `ncountgroup` and `ifirstgroup` have different shapes.
+
+        See Also
+        --------
+        numpy.take
+
+        Examples
+        --------
+        Select data from an array, where the elements belong to the 2nd, 4th, and 6th groups within the Grouping object.
+
+        >>> key_data = rt.FA([1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6])
+        >>> data = rt.arange(len(key_data))
+        >>> g = rt.Grouping(key_data)
+        >>> group_indices = rt.FA([2, 4, 6])
+        >>> Grouping.take_groups(data, group_indices, g.ncountgroup, g.ifirstgroup)
+        FastArray([1, 2, 6, 7, 8, 9, 15, 16, 17, 18, 19, 20])
+        """
+        # TODO: Input validation
+        if ifirstgroup.shape != ncountgroup.shape:
+            raise ValueError("The shape of 'ifirstgroup' must match the shape of 'ncountgroup'.")
+
+        # Determine the size of the output array
+        output_length = ncountgroup[indices].nansum(dtype=np.int64)
+
+        # Create the output array.
+        result = empty(output_length, dtype=grouped_data.dtype)
+
+        @nb.njit(cache=True)
+        def impl(grouped_data, indices, ncountgroup, ifirstgroup, out):
+            # TODO: If we ever want to use nb.prange() in the loop below, we'll need to
+            #       do something like a partial cumsum() on ncountgroup[indices] to determine
+            #       how to segment the output space so it can be written to in parallel.
+            #       The way 'out_idx' is incremented below won't work in a parallelized loop.
+            #       One idea is to have a boolean parameter to indicate that ncountgroup is already
+            #       in cumulative form; we need to do a little extra work to deal with that above,
+            #       but then we'd be able to more easily parallelize here.
+            out_idx = 0
+            for i in range(len(indices)):
+                curr_group = indices[i]
+                group_length = ncountgroup[curr_group]
+
+                # Copy the elements of the current group to the output.
+                group_start_idx = ifirstgroup[curr_group]
+                out[out_idx:out_idx + group_length] = grouped_data[group_start_idx:group_start_idx+group_length]
+
+                # Advance the current index within the output array.
+                out_idx += group_length
+
+        # Call the numba implementation of the function to build the result.
+        impl(grouped_data, indices, ncountgroup, ifirstgroup, result)
+        return result
+
+    @staticmethod
+    def extract_groups(
+        condition: np.ndarray,
+        grouped_data: np.ndarray,
+        ncountgroup: np.ndarray,
+        ifirstgroup: np.ndarray
+    ) -> np.ndarray:
+        """
+        Take groups of elements from an array, where the groups are selected by a boolean mask.
+
+        This function provides boolean-indexing over groups of data -- so a boolean mask can be used to
+        select _groups_ of data, rather than just individual elements, and the grouped elements will
+        be copied to the output.
+
+        Parameters
+        ----------
+        condition : np.ndarray of bool
+            An array whose nonzero or True entries indicate the groups in `ncountgroup` whose
+            elements will be extracted from `grouped_data`.
+        grouped_data : np.ndarray
+        ncountgroup : np.ndarray of int
+        ifirstgroup : np.ndarray of int
+
+        Returns
+        -------
+        np.ndarray
+
+        Raises
+        ------
+        ValueError
+            When `condition` is not a boolean/logical array.
+            When `condition` and `ncountgroup` have different shapes.
+            When `ncountgroup` and `ifirstgroup` have different shapes.
+
+        See Also
+        --------
+        numpy.extract
+
+        Examples
+        --------
+        Select data from an array, where the elements belong to even-numbered groups within the Grouping object.
+
+        >>> key_data = rt.FA([1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6])
+        >>> data = rt.arange(len(key_data))
+        >>> g = rt.Grouping(key_data)
+        >>> group_mask = rt.arange(len(g.ncountgroup)) % 2 == 0
+        >>> Grouping.extract_groups(group_mask, data, g.ncountgroup, g.ifirstgroup)
+        FastArray([1, 2, 6, 7, 8, 9, 15, 16, 17, 18, 19, 20])
+        """
+        if condition.dtype.char != '?':
+            # TODO: This condition can be relaxed for compatibility with np.extract -- we just need to make a few
+            #       compatibility modifications below (e.g. to use np.extract or rt.extract to get the elements to
+            #       pass to the nansum() below).
+            raise ValueError("'condition' must be a boolean/logical array.")
+        elif condition.shape != ncountgroup.shape:
+            raise ValueError("The shapes of the 'condition' and 'ncountgroup' arrays must be the same.")
+        elif ifirstgroup.shape != ncountgroup.shape:
+            raise ValueError("The shape of 'ifirstgroup' must match the shape of 'ncountgroup'.")
+
+        # Determine the size of the output array
+        output_length = ncountgroup[condition].nansum(dtype=np.int64)
+
+        # Create the output array.
+        result = empty(output_length, dtype=grouped_data.dtype)
+
+        @nb.njit(cache=True)
+        def impl(grouped_data, condition, ncountgroup, ifirstgroup, out):
+            # TODO: If we ever want to use nb.prange() in the loop below, we'll need to
+            #       do something like a partial cumsum() on ncountgroup[condition] to determine
+            #       how to segment the output space so it can be written to in parallel.
+            #       The way 'out_idx' is incremented below won't work in a parallelized loop.
+            #       One idea is to have a boolean parameter to indicate that ncountgroup is already
+            #       in cumulative form; we need to do a little extra work to deal with that above,
+            #       but then we'd be able to more easily parallelize here.
+            out_idx = 0
+            for curr_group in range(len(condition)):
+                if condition[curr_group]:
+                    group_length = ncountgroup[curr_group]
+
+                    # Copy the elements of the current group to the output.
+                    group_start_idx = ifirstgroup[curr_group]
+                    out[out_idx:out_idx + group_length] = grouped_data[group_start_idx:group_start_idx + group_length]
+
+                    # Advance the current index within the output array.
+                    out_idx += group_length
+
+        # Call the numba implementation of the function to build the result.
+        impl(grouped_data, condition, ncountgroup, ifirstgroup, result)
+        return result
+
+
+class GroupingEnum:
     """Holds enum mapping for grouping object's integer codes.
     Used to translate unique codes into strings for groupby keys.
 
@@ -3156,124 +3764,6 @@ class GroupingEnum(object):
     # ------------------------------------------------------------
 
 
-# ------------------------------------------------------------
-def hstack_groupings(ikey, uniques, i_cutoffs=None, u_cutoffs=None, from_mapping=False, base_index=1, ordered=False, verbose=False):
-    '''
-    For hstacking Categoricals or fixing indices in a categorical from a stacked .sds load
-    Supports categoricals from single array or dictionary mapping
-
-    Parameters
-    ----------
-    indices : single stacked array or list of indices
-        if single array, needs idx_cutoffs for slicing
-    uniques : list of stacked unique category arrays (needs ``unique_cutoffs``)
-        or list of lists of uniques
-
-    Returns
-    -------
-    list or array_like
-        list of fixed indices, or array of fixed contiguous indices.
-    list of ndarray
-        stacked unique values
-    '''
-    def lengths_from_cutoffs(cutoffs):
-        lengths = cutoffs.copy()
-        lengths[1:] -=  cutoffs[:-1]
-        return lengths
-
-    if i_cutoffs is None:
-        # stack as many as we need to
-        if len(ikey) ==1:
-            # nothing to do
-            return ikey[0], uniques[0]
-        else:
-            # Turn separate arrays into an array with cutoffs
-            i_lengths = TypeRegister.FastArray([len(i) for i in ikey], dtype=np.int64)
-            i_cutoffs = i_lengths.cumsum()
-            ikey = hstack(ikey)
-
-            u_lengths = TypeRegister.FastArray([len(u) for u in uniques[0]], dtype=np.int64)
-            u_cutoffs = u_lengths.cumsum()
-            uniques = [hstack(u) for u in uniques]
-
-    else:
-        if len(i_cutoffs) == 1:
-            # nothing to do
-            return ikey[0], uniques[0]
-
-        i_lengths = lengths_from_cutoffs(i_cutoffs)
-        u_lengths = lengths_from_cutoffs(u_cutoffs)
-
-    if verbose:
-        print("**ikey",ikey, ikey.dtype)
-        print("**i_lengths",i_lengths)
-        print("**i_cutoffs",i_cutoffs)
-        print("**uniques", uniques)
-        print("**u_lengths",u_lengths)
-        print("**u_cutoffs",u_cutoffs)
-
-    if ordered:
-        # TODO: a grouping object can keep the igroup
-        g= groupbylex(uniques)
-    else:
-        # TJD Note, for something like OSISymbol, most time is spent here
-        g= groupbyhash(uniques)
-
-    if base_index == 0:
-        uikey=g['iKey'] - 1
-    else:
-        uikey=g['iKey']
-
-    #--------- START OF C++ ROUTINE -------------
-    #based on how many uniques we have, allocate the new ikey
-    # do we have a routine for this?
-    uikey_length = max(uikey)
-    dtype = int_dtype_from_len(uikey_length)
-    dtypei = dtype.itemsize
-
-    if base_index==1 and uikey.itemsize == 4 and dtypei <= ikey.itemsize:
-        # TODO: handle base_index ==0
-        # TODO: handle new array (currently rewrites ikey)
-        u_cutoffs=u_cutoffs.astype(np.int64)
-        i_cutoffs=i_cutoffs.astype(np.int64)
-        newikey = rc.ReIndexGroups(ikey, uikey, u_cutoffs, i_cutoffs);
-    else:
-        #print(f"bad match {uikey.itemsize} {ikey.itemsize} {uikey_length}")
-        newikey = empty((len(ikey),), dtype=dtype)
-
-        start =0
-        starti = 0
-        for i in range(len(u_cutoffs)):
-            stop = u_cutoffs[i]
-            stopi = i_cutoffs[i]
-            uikey_slice = uikey[start:stop]
-            oldikey_slice = ikey[starti:stopi]
-
-            if verbose:
-                print("fixing ",starti, stopi)
-                print("newikey ",newikey)
-                print("oldikey_slice ",oldikey_slice)
-
-            if base_index==1:
-                # write a routine for this in C++
-                # if 0 and base_index=1, then keep the 0
-                filtermask = oldikey_slice == 0
-                newikey[starti:stopi] = uikey_slice[oldikey_slice-1]
-                if filtermask.sum() > 0:
-                    newikey[starti:stopi][filtermask] = 0
-            else:
-                newikey[starti:stopi] = uikey_slice[oldikey_slice]
-
-            start = stop
-            starti = stopi
-        #END C++ ROUTINE ---------------------------------
-
-    newuniques = []
-    for u in uniques:
-        newuniques.append(u[g['iFirstKey']])
-
-    return newikey, newuniques
-
 def hstack_test(arr_list):
     hashes =[groupbyhash(a) for a in arr_list]
     indices = [h['iKey'] for h in hashes]
@@ -3283,5 +3773,3 @@ def hstack_test(arr_list):
 # keep this as the last line
 from .rt_enum import TypeRegister
 TypeRegister.Grouping = Grouping
-
-
