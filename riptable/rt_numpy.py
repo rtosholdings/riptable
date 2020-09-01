@@ -372,6 +372,7 @@ def unique(
 
     optional_indices = return_index or return_inverse
     optional_returns = optional_indices or return_counts
+    mark_readonly = False
 
     if isinstance(arr, TypeRegister.Categorical):
         # NOTE if the categorical is not dirty, filter should do nothing
@@ -379,6 +380,12 @@ def unique(
         g=arr.grouping
         if filter is not None:
             g=g.regroup(filter)
+        else:
+            if g.isdirty:
+                # dirty flag means a bool or fancy index mask was applied
+                g = g.regroup()
+            else:
+                mark_readonly = True
 
         # NOTE the existing categorical is already ordered/unordered and thus will disobey the sorted flag
     else:
@@ -403,6 +410,11 @@ def unique(
     # check for multikey
     if len(un)==1:
         un = un[0]
+
+    if mark_readonly:
+        # make an object copy to mark it readonly
+        un = un.view(TypeRegister.FastArray)
+        un.flags.writeable = False
 
     if return_counts:
         # handles both base0 and base1
