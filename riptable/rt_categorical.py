@@ -3055,7 +3055,7 @@ class Categorical(GroupByOps, FastArray):
         Notes
         -----
         Behavior differs from pandas in the following ways:
-        * Riptide favors bytestrings, and will make conversions from unicode/bytes to match for operations as necessary.
+        * Riptable favors bytestrings, and will make conversions from unicode/bytes to match for operations as necessary.
         * We also accept single scalars for `values`.
         * Pandas series will return another series - we have no series, and will return a FastArray.
 
