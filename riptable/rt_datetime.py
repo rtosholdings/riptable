@@ -5501,6 +5501,9 @@ class DateScalar(np.int32):
     '''
 
     __slots__ = '_display_length'
+    # ------------------------------------------------------------
+    def __new__(cls, arr, **kwargs):
+        return super().__new__(cls, arr)
 
     # ------------------------------------------------------------
     def __init__(*args, **kwargs):
@@ -5582,6 +5585,10 @@ class DateSpanScalar(np.int32):
     __slots__ = '_display_length'
 
     # ------------------------------------------------------------
+    def __new__(cls, arr, **kwargs):
+        return super().__new__(cls, arr)
+
+    # ------------------------------------------------------------
     def __init__(*args, **kwargs):
         self = args[0]
         _from = kwargs.get('_from', None)
@@ -5639,6 +5646,10 @@ class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
     '''
 
     __slots__ = '_display_length', '_timezone'
+
+    # ------------------------------------------------------------
+    def __new__(cls, arr, **kwargs):
+        return super().__new__(cls, arr)
 
     # ------------------------------------------------------------
     def __init__(*args, **kwargs):
@@ -5738,6 +5749,10 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
     '''
 
     __slots__ = '_display_length'
+
+    # ------------------------------------------------------------
+    def __new__(cls, arr, **kwargs):
+        return super().__new__(cls, arr)
 
     def __new__(cls, scalar, **kwargs):
         # strings must be in format HH:MM / HH:MM:SS / HH:MM:SS.ffffff
