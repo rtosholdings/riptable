@@ -29,6 +29,7 @@ from .rt_enum import (
 )
 from .rt_timers import utcnow
 from .Utils.rt_metadata import MetaData
+from .rt_utils import h5io_to_struct
 
 if TYPE_CHECKING:
     from .rt_dataset import Dataset

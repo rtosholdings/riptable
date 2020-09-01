@@ -419,7 +419,7 @@ def alignmk(key1, key2, time1, time2, direction:str='backward', allow_exact_matc
 
     if verbose: print("alignmk keys", key1, key2, time1, time2, direction, allow_exact_matches)
 
-    if direction is 'nearest':
+    if direction == 'nearest':
         # This logic isn't fully implemented and working yet; don't allow it to be used until it is.
         raise NotImplementedError("The 'nearest' direction is not yet supported by alignmk.")
 
@@ -429,9 +429,9 @@ def alignmk(key1, key2, time1, time2, direction:str='backward', allow_exact_matc
         # TODO combine forward and backward
         #return forward
     else:
-        if direction is 'backward':
+        if direction == 'backward':
             isForward = False
-        elif direction is 'forward':
+        elif direction == 'forward':
             isForward = True
         else:
             raise ValueError("unsupported direction in alignmk")
