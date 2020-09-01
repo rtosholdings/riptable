@@ -1,0 +1,6 @@
+include riptable/Utils/*
+include riptable/tests/*
+include riptable/test_files/*
+include riptable/bechmarks/*
+include riptable/hypothesis_tests/*
+include riptable/test_tooling_integration/*
