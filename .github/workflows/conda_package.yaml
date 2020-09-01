@@ -1,0 +1,38 @@
+name: Conda package
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest']
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Setup Miniconda
+        uses: goanpeca/setup-miniconda@v1
+        with:
+          activate-environment: ""
+      - name: Build Package
+        shell: bash -l {0}
+        env:
+          ANACONDA_USER: rtosholdings
+          ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
+        run: |
+          set -ex
+          conda create -n conda_build python=3.8 conda-build anaconda-client -y
+          conda activate conda_build
+          mkdir conda_pkgs_output
+          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output --label main --user ${ANACONDA_USER} --token "${ANACONDA_TOKEN}"
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: packages
+          path: conda_pkgs_output/*/riptable-*.tar.bz2
+          if-no-files-found: "error"
