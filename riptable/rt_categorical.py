@@ -3737,6 +3737,17 @@ class Categorical(GroupByOps, FastArray):
         return self.grouping.ilastkey
 
     # ------------------------------------------------------------
+    def unique(self, *args, **kwargs):
+        """
+        Returns the unique elements of this Categorical.
+        See Also
+        --------
+        rt_numpy.unique
+            ``unique`` doc shows the acceptable positional and keyword arguments.
+        """
+        return unique(self.filter(), *args, **kwargs)
+
+    # ------------------------------------------------------------
     @property
     def unique_count(self):
         """
