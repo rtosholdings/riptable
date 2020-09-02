@@ -315,11 +315,14 @@ def profile_func(func, sortby='time'):
     '''
     Used to profile a function that has no arguments
 
-    Example usage:
-    trd= sTrades.trd
-    profile_func(trd.__repr__)
-    
+    Examples
+    --------
     This will time how long the __repr__ function to print out a dataset
+
+    >>> import riptable as rt
+    >>> import riptable_docdata as rtd
+    >>> trips = rt.Dataset(rtd.get_bike_trips_data('trips'))
+    >>> profile_func(trips.__repr__)
     '''
 
     try:

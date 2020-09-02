@@ -1,4 +1,3 @@
-import unittest
 from enum import IntEnum
 
 from riptable import *
@@ -125,126 +124,126 @@ class str_enum(IntEnum):
     e = 50
 
 
-class Categorical_first_order_Test(unittest.TestCase):
+class TestCategoricalFirstOrder:
     def test_strings(self):
         c = Categorical(str_fa)
         result = bool(np.all(c.category_array == complete_unique_cats))
-        self.assertTrue(result)
+        assert result
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical(str_fa, ordered=False)
         result = bool(np.all(c.category_array == unsorted_unique_cats))
-        self.assertTrue(result)
+        assert result
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, unsorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical(str_fa, complete_unique_cats)
         result = bool(np.all(c.category_array == complete_unique_cats))
-        self.assertTrue(result)
+        assert result
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical(str_fa, complete_unique_cats, ordered=False)
         result = bool(np.all(c.category_array == complete_unique_cats))
-        self.assertTrue(result)
+        assert result
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical(str_fa, unsorted_unique_cats, ordered=False, sort_gb=True)
         result = bool(np.all(c.category_array == unsorted_unique_cats))
-        self.assertTrue(result)
+        assert result
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical(str_fa, unsorted_unique_cats, ordered=False)
         result = bool(np.all(c.category_array == unsorted_unique_cats))
-        self.assertTrue(result)
+        assert result
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, unsorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
     def test_multikey(self):
         c = Categorical([str_fa, sorted_codes])
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, unsorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical([str_fa, sorted_codes], ordered=False, sort_gb=True)
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
-        self.assertTrue(result)
+        assert result
         first_arr = c.category_dict['key_0']
         result = bool(np.all(first_arr == unsorted_unique_cats))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical([str_fa, sorted_codes])
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, unsorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical([str_fa, sorted_codes], ordered=False, sort_gb=True)
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
-        self.assertTrue(result)
+        assert result
         first_arr = c.category_dict['key_0']
         result = bool(np.all(first_arr == unsorted_unique_cats))
-        self.assertTrue(result)
+        assert result
 
     def test_enum(self):
         c = Categorical(enum_codes, str_enum)
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, unsorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
         c = Categorical(enum_codes, str_enum, sort_gb=True)
         float_sum = c.sum(flt_fa).floats
         result = bool(np.allclose(float_sum, sorted_float_sum))
-        self.assertTrue(result)
+        assert result
 
     def test_lex(self):
         # string sort test
         a = arange(100).astype('S')
         c1 = Cat(a, lex=True)
         c2 = Cat(a, ordered=True)
-        self.assertTrue(np.all(c1._fa == c2._fa))
-        self.assertTrue(np.all(c1.categories() == c2.categories()))
+        assert np.all(c1._fa == c2._fa)
+        assert np.all(c1.categories() == c2.categories())
 
         # make sure sorted
         srt = np.sort(c1._categories)
-        self.assertTrue(np.all(c1._categories == srt))
+        assert np.all(c1._categories == srt)
 
         # with filter
         f = logical(arange(100) % 3)
         c1 = Cat(a, lex=True, filter=f)
         c2 = Cat(a, ordered=True, filter=f)
-        self.assertTrue(np.all(c1._fa == c2._fa))
+        assert np.all(c1._fa == c2._fa)
 
         # larger data
         r = np.random.randint(0, 800_000, 2_000_000)
         r1 = Cat(r, lex=True)
         r2 = Cat(r, ordered=True)
-        self.assertTrue(np.all(r1._fa == r2._fa))
+        assert np.all(r1._fa == r2._fa)
 
         # make sure sorted
         srt = np.sort(r1._categories)
-        self.assertTrue(np.all(r1._categories == srt))
+        assert np.all(r1._categories == srt)
 
         f = logical(arange(len(r)) % 3)
         r1 = Cat(r, lex=True, filter=f)
         r2 = Cat(r, ordered=True, filter=f)
-        self.assertTrue(np.all(r1._fa == r2._fa))
+        assert np.all(r1._fa == r2._fa)
 
         # larger data multikey
         q = np.random.randint(0, 800_000, 2_000_000)
         r1 = Cat([r, q], lex=True, filter=f)
         r2 = Cat([r, q], ordered=True, filter=f)
-        self.assertTrue(np.all(r1._fa == r2._fa))
+        assert np.all(r1._fa == r2._fa)
 
         # multikey strings
         r = np.random.randint(0, 80, 200).astype('U')
@@ -254,7 +253,7 @@ class Categorical_first_order_Test(unittest.TestCase):
 
         r1 = Cat([q, r], lex=True)
         r2 = Cat([q, r], ordered=True)
-        self.assertTrue(np.all(r1._fa == r2._fa))
+        assert np.all(r1._fa == r2._fa)
 
         # make sure multikey is sorted
         x = r1._categories.copy()
@@ -265,13 +264,9 @@ class Categorical_first_order_Test(unittest.TestCase):
         y = r2._categories.copy()
         y1 = y.popitem()[1]
         y2 = y.popitem()[1]
-        self.assertTrue(np.all(p1 == y1))
-        self.assertTrue(np.all(p2 == y2))
+        assert np.all(p1 == y1)
+        assert np.all(p2 == y2)
 
         p = p2 + p1
         srt = np.sort(p)
-        self.assertTrue(np.all(p == srt))
-
-
-if __name__ == '__main__':
-    tester = unittest.main()
+        assert np.all(p == srt)

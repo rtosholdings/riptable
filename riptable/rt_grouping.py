@@ -2774,7 +2774,7 @@ class Grouping:
         ``apply`` is therefore a highly flexible grouping method.
 
         While ``apply`` is a very flexible method, its downside is that using it can be quite a bit slower
-        than using more specific methods. riptide offers a wide range of methods that will be much faster
+        than using more specific methods. riptable offers a wide range of methods that will be much faster
         than using ``apply`` for their specific purposes, so try to use them before reaching for ``apply``.
 
         Parameters

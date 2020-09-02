@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-# $Id: //Depot/Source/SFW/riptable/Python/core/riptable/tests/utils.py#4 $
 
 import sys, os
 from contextlib import contextmanager
@@ -12,6 +11,7 @@ __all__ = [
     "redirectStdoutCtx",
     "redirectStdoutAndErrorCtx",
     'chdirCtx',
+    'new_array_function',
 ]
 
 
@@ -114,3 +114,15 @@ def chdirCtx(newdir):
         raise
     else:
         os.chdir(olddir)
+
+
+@contextmanager
+def new_array_function(kls: type):
+    """A context manager that allows using the new array function code path given a class `kls`
+    that has a feature flag ``NEW_ARRAY_FUNCTION_ENABLED`` to enable the NEP 18 array function
+    machinery."""
+    try:
+        kls.NEW_ARRAY_FUNCTION_ENABLED = True
+        yield
+    finally:
+        kls.NEW_ARRAY_FUNCTION_ENABLED = False

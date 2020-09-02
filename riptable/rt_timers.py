@@ -1,22 +1,35 @@
-__all__ = ['GetNanoTime', 'GetTSC', 'tic', 'ticx', 'toc', 'tocx', 'tt', 'ttx','ticp','tocp','ticf','tocf','utcnow']
+__all__ = [
+    'GetNanoTime', 'GetTSC',
+    'tic', 'toc',
+    'ticx', 'tocx',
+    'tt', 'ttx',
+    'ticp', 'tocp',
+    'ticf', 'tocf',
+    'utcnow'
+]
 
-import sys
+'''
+Timing and profiling functionality
+'''
+
+import logging
+from typing import TYPE_CHECKING, Optional
+
 import numpy as np
 import riptide_cpp as rc
 from riptable.rt_enum import TypeRegister
 
-'''
-Timer functionality
-'''
+if TYPE_CHECKING:
+    from .rt_datetime import DateTimeNano
 
-def GetNanoTime():
+def GetNanoTime() -> int:
     '''
     Returns: a long integer in unix epoch nanoseconds
     Note: this function is written as fast as possible for both Windows and Linux
     '''
     return rc.GetNanoTime()
 
-def GetTSC():
+def GetTSC() -> int:
     '''
     Returns: a long integer from the CPUs's current time stamp counter
 
@@ -27,23 +40,39 @@ def GetTSC():
     '''
     return rc.GetTSC()
 
-def utcnow(count=1):
+def utcnow(count: int = 1) -> 'DateTimeNano':
     '''
-    Returns: a DateTimeNano array with one item representing the current time in utc nanos.
+    Call `GetNanoTime` one or more times and return the timestamps in a :class:`~rt.rt_datetime.DateTimeNano` array.
 
-    import riptable as rt
+    Parameters
+    ----------
+    count : int, default to 1
+        The number of timestamp samples to collect.
+
+    Returns
+    -------
+    DateTimeNano
+        A DateTimeNano array containing the sampled timestamps (representing the current time in UTC nanoseconds).
+
+    Examples
+    --------
+    >>> import riptable as rt
     >>> rt.utcnow()
     DateTimeNano([20190215 11:29:44.022382600])
     >>> rt.utcnow()._fa
     FastArray([1550248297734812800], dtype=int64)
 
-    To make a Dataset full of timestamps:
-    >>> Dataset({'localtime':utcnow(1_000_000)})
+    To make an array containing multiple timestamps:
 
-    See also: rc.GetNanoTime()
-    Compare with: datetime.datetime.utcnow()
+    >>> len(rt.utcnow(1_000_000))
+    1000000
+
+    See Also
+    --------
+    GetNanoTime()
+    datetime.datetime.utcnow()
     '''
-    if count ==1:
+    if count == 1:
         return TypeRegister.DateTimeNano([rc.GetNanoTime()], from_tz='GMT')
     else:
         x=[rc.GetNanoTime() for i in range(count)]
@@ -52,31 +81,47 @@ def utcnow(count=1):
 # Timing code below
 def tic():
     '''
-    Call tic() folowed by code followed by toc() to time a routine in nanoseconds
+    Call tic() followed by code followed by toc() to time a routine in nanoseconds.
 
-    See also: toc, ticx, ticp, ticf
+    See Also
+    --------
+    toc, ticx, ticp, ticf
     '''
     global TicStartTime
     TicStartTime = GetNanoTime()
 
 
-def toc():
+def toc(logger: Optional[logging.Logger] = None) -> None:
     '''
-    Call tic() folowed by code followed by toc() to time a routine
+    Call tic() followed by code followed by toc() to time a routine in nanoseconds.
 
-    See also: toc, ticx, ticp, ticf
+    Parameters
+    ----------
+    logger : logging.Logger, optional
+        An optionally-specified logger where the collected timing information is recorded.
+        If not specified (the default), the timing information is written to stdout.
+
+    See Also
+    --------
+    toc, ticx, ticp, ticf
     '''
     global TicStartTime
     global TocEndTime
     TocEndTime = GetNanoTime()
-    delta = (TocEndTime - TicStartTime) / 1000000000.0
-    deltaTime = float("{0:.6f}".format(delta))
-    print("Elapsed time",deltaTime,"seconds.")
+
+    delta_ns = TocEndTime - TicStartTime
+
+    if logger:
+        logger.debug("Elapsed time (ns): %d", delta_ns)
+    else:
+        delta = delta_ns / 1_000_000_000.0
+        deltaTime = float("{0:.6f}".format(delta))
+        print("Elapsed time",deltaTime,"seconds.")
 
 # even more accurate cycle counting
 def ticx():
     '''
-    Call ticx() folowed by code followed by tocx() to time a routine in TSC
+    Call ticx() followed by code followed by tocx() to time a routine in TSC
 
     See also: toc, ticx, ticp, ticf
     '''
@@ -84,21 +129,32 @@ def ticx():
     TicStartTimeX = GetTSC()
 
 
-def tocx():
+def tocx(logger: Optional[logging.Logger] = None) -> None:
     '''
-    Call ticx() folowed by code followed by tocx() to time a routine in TSC
+    Call ticx() followed by code followed by tocx() to time a routine in TSC
+
+    Parameters
+    ----------
+    logger : logging.Logger, optional
+        An optionally-specified logger where the collected timing information is recorded.
+        If not specified (the default), the timing information is written to stdout.
 
     See also: toc, ticx, ticp, ticf
     '''
     global TicStartTimeX
     global TocEndTimeX
     TocEndTimeX = GetTSC()
-    delta = (TocEndTimeX - TicStartTimeX)
-    print("Elapsed time", delta,"cycles.")
+
+    # TODO: Need to handle TSC wraparound here
+    delta_cycles = TocEndTimeX - TicStartTimeX
+    if logger:
+        logger.debug("Elapsed time (cycles): %d", delta_cycles)
+    else:
+        print("Elapsed time", delta_cycles,"cycles.")
 
 def ticf():
     '''
-    Call ticf() folowed by code followed by tocf() to time fastarrays
+    Call ticf() followed by code followed by tocf() to time fastarrays
 
     See also: toc, ticx, ticp, ticf
     '''
@@ -108,11 +164,12 @@ def ticf():
 
 def tocf(dataset=True):
     '''
-    Call ticf() folowed by code followed by tocf() to time fastarrays
+    Call ticf() followed by code followed by tocf() to time fastarrays
 
-    Other Parameters
+    Parameters
     ----------------
-    dataset: defaults to True.  Returns a dataset.  Set to False to print out instead.
+    dataset: bool, defaults to True.
+        If specified, returns a Dataset. Set to False to print out instead.
     '''
     FA=TypeRegister.FastArray
     FA._LOFF()
@@ -120,7 +177,7 @@ def tocf(dataset=True):
 
 def ticp():
     '''
-    Call ticp() folowed by code followed by tocp() to profile function calls
+    Call ticp() followed by code followed by tocp() to profile function calls
 
     See also: toc, ticx, ticp, ticf
     '''
@@ -131,7 +188,7 @@ def ticp():
 
 def tocp(dataset=True, logfile=None, sort='time', strip=True, stats=False, calls=False, find=None):
     '''
-    Call ticp() folowed by code followed by tocp() to profile anything between the ticp/tocp
+    Call ticp() followed by code followed by tocp() to profile anything between the ticp/tocp
     tocp() may be called again to retrieve data in a different manner
 
     Examples
@@ -147,7 +204,7 @@ def tocp(dataset=True, logfile=None, sort='time', strip=True, stats=False, calls
     ticp(); ds.sort_copy(by='Symbol'); tocp(False, strip=False);
     ticp(); ds.sort_copy(by='Symbol'); tocp(False, sort='cumtime');
 
-    Other Parameters
+    Parameters
     ----------------
     dataset=False.  set to True to return a Dataset otherwise use pstats output
     logfile=None.   set to filename to save the Dataset in SDS format
@@ -175,17 +232,17 @@ def tocp(dataset=True, logfile=None, sort='time', strip=True, stats=False, calls
         return all information collected by the profiler.
         Each profiler_entry is a tuple-like object with the
         following attributes:
-    
+
             code          code object
             callcount     how many times this was called
             reccallcount  how many times called recursively
             totaltime     total time in this entry
             inlinetime    inline time in this entry (not in subcalls)
             calls         details of the calls
-    
+
         The calls attribute is either None or a list of
         profiler_subentry objects:
-    
+
             code          called code object
             callcount     how many times this is called
             reccallcount  how many times this is called recursively
@@ -250,7 +307,7 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
             func_str.append(basename)
             filepath=normpath[:-len(basename)]
 
-        # line_number 
+        # line_number
         if tup[1] != 0:
             func_str.append(':'+str(tup[1]))
 
@@ -346,7 +403,7 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
                         for k,v in callers.items():
                             name, filepathc = (parse_func_info(k))
                             cc1, nc1, tt1, ct1 = (v)
-                            
+
                             callcount.append(cc1)
                             ncalls.append(nc1)
                             tottime.append(tt1)

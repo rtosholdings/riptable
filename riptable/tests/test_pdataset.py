@@ -1,6 +1,8 @@
 import unittest
 import os
 
+import pytest
+
 from riptable import *
 from riptable.rt_sds import SDSMakeDirsOn
 
@@ -117,8 +119,8 @@ class PDataset_Test(unittest.TestCase):
         for p in paths:
             os.remove(p)
 
-    def rtest_constructor_errors(self):
-    # this test no longer works and is disabled
+    @pytest.mark.skip(reason="this test no longer works and is disabled")
+    def test_constructor_errors(self):
         garbage = [1, 2, 'test.sds']
         with self.assertRaises(TypeError):
             pds = PDataset(garbage)

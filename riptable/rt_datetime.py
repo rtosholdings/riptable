@@ -682,8 +682,7 @@ class DateTimeBase(FastArray):
         caller = self._fa
 
         # check if operand has nano precision, set invalid, return type accordingly
-        value, other_inv_mask, return_type, caller = self._check_mathops_base(funcname, value, other_inv_mask,
-                                                                              return_type, caller)
+        value, other_inv_mask, return_type, caller = self._check_mathops_base(funcname, value, other_inv_mask, return_type, caller)
 
         # perform main math operation on fast array
         func = getattr(caller, funcname)
@@ -822,9 +821,7 @@ class DateBase(FastArray):
 
         '''
         if isinstance(self, np.ndarray):
-            return np.asarray(
-                [dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa * SECONDS_PER_DAY],
-                dtype=dtype)
+            return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa* SECONDS_PER_DAY], dtype=dtype)
         else:
             return dt.strftime(dt.utcfromtimestamp(self * SECONDS_PER_DAY), format)
 
@@ -920,8 +917,7 @@ class DateBase(FastArray):
         caller = self._fa
 
         # check if operand has nano precision, set invalid, return type accordingly
-        value, other_inv_mask, return_type, caller = self._check_mathops_nano(funcname, value, other_inv_mask,
-                                                                              return_type, caller)
+        value, other_inv_mask, return_type, caller = self._check_mathops_nano(funcname, value, other_inv_mask, return_type, caller)
 
         # perform main math operation on fast array
         func = getattr(caller, funcname)
@@ -948,8 +944,7 @@ class DateBase(FastArray):
         # print('other_inv_mask',other_inv_mask)
         # print('return type',return_type)
 
-        result = _apply_inv_mask(self, result, fillval=self.NAN_DATE, arr1_inv_mask=inv_mask,
-                                 arr2_inv_mask=other_inv_mask)
+        result = _apply_inv_mask(self, result, fillval=self.NAN_DATE, arr1_inv_mask=inv_mask, arr2_inv_mask=other_inv_mask)
 
         if not isinstance(result, return_type):
             if return_type == DateTimeNano:
@@ -1161,8 +1156,8 @@ class Date(DateBase, TimeStampBase):
                     raise TypeError(f'Could not initialize Date object with array of type {arr.dtype}.')
 
         else:
-            raise TypeError(
-                f'Date objects must be initialized with numeric or string arrays, lists or scalars. Got {type(arr)}')
+            raise TypeError(f'Date objects must be initialized with numeric or string arrays, lists or scalars. Got {type(arr)}')
+
 
         instance = arr.view(cls)
         instance._display_length = DisplayLength.Long
@@ -1654,137 +1649,95 @@ class Date(DateBase, TimeStampBase):
         else:
             raise NotImplementedError
 
-    def __mul__(self, other):
-        raise NotImplementedError
+    def __mul__(self, other): raise NotImplementedError
 
-    def __matmul__(self, other):
-        raise NotImplementedError
+    def __matmul__(self, other): raise NotImplementedError
 
     # need to check properties to see if division is happening
-    # def __truediv__(self, other): raise NotImplementedError
-    # def __floordiv__(self, other): raise NotImplementedError
-    # def __mod__(self, other): raise NotImplementedError
-    # def __divmod__(self, other): raise NotImplementedError
+    #def __truediv__(self, other): raise NotImplementedError
+    #def __floordiv__(self, other): raise NotImplementedError
+    #def __mod__(self, other): raise NotImplementedError
+    #def __divmod__(self, other): raise NotImplementedError
+    
+    def __pow__(self, other, modulo=None): raise NotImplementedError
 
-    def __pow__(self, other, modulo=None):
-        raise NotImplementedError
+    def __lshift__(self, other): raise NotImplementedError
 
-    def __lshift__(self, other):
-        raise NotImplementedError
+    def __rshift__(self, other): raise NotImplementedError
 
-    def __rshift__(self, other):
-        raise NotImplementedError
+    def __and__(self, other): raise NotImplementedError
 
-    def __and__(self, other):
-        raise NotImplementedError
+    def __xor__(self, other): raise NotImplementedError
 
-    def __xor__(self, other):
-        raise NotImplementedError
+    def __or__(self, other): raise NotImplementedError
 
-    def __or__(self, other):
-        raise NotImplementedError
+    def __rmul__(self, other): raise NotImplementedError
 
-    def __rmul__(self, other):
-        raise NotImplementedError
+    def __rmatmul__(self, other): raise NotImplementedError
 
-    def __rmatmul__(self, other):
-        raise NotImplementedError
+    def __rtruediv__(self, other): raise NotImplementedError
 
-    def __rtruediv__(self, other):
-        raise NotImplementedError
+    def __rfloordiv__(self, other): raise NotImplementedError
 
-    def __rfloordiv__(self, other):
-        raise NotImplementedError
+    def __rmod__(self, other): raise NotImplementedError
 
-    def __rmod__(self, other):
-        raise NotImplementedError
+    def __rdivmod__(self, other): raise NotImplementedError
 
-    def __rdivmod__(self, other):
-        raise NotImplementedError
+    def __rpow__(self, other): raise NotImplementedError
 
-    def __rpow__(self, other):
-        raise NotImplementedError
+    def __rlshift__(self, other): raise NotImplementedError
 
-    def __rlshift__(self, other):
-        raise NotImplementedError
+    def __rrshift__(self, other): raise NotImplementedError
 
-    def __rrshift__(self, other):
-        raise NotImplementedError
+    def __rand__(self, other): raise NotImplementedError
 
-    def __rand__(self, other):
-        raise NotImplementedError
+    def __rxor__(self, other): raise NotImplementedError
 
-    def __rxor__(self, other):
-        raise NotImplementedError
+    def __ror__(self, other): raise NotImplementedError
 
-    def __ror__(self, other):
-        raise NotImplementedError
+    def __imul__(self, other): raise NotImplementedError
 
-    def __imul__(self, other):
-        raise NotImplementedError
+    def __imatmul__(self, other): raise NotImplementedError
 
-    def __imatmul__(self, other):
-        raise NotImplementedError
+    def __itruediv__(self, other): raise NotImplementedError
 
-    def __itruediv__(self, other):
-        raise NotImplementedError
+    def __ifloordiv__(self, other): raise NotImplementedError
 
-    def __ifloordiv__(self, other):
-        raise NotImplementedError
+    def __imod__(self, other): raise NotImplementedError
 
-    def __imod__(self, other):
-        raise NotImplementedError
+    def __ipow__(self, other, modulo=None): raise NotImplementedError
 
-    def __ipow__(self, other, modulo=None):
-        raise NotImplementedError
+    def __ilshift__(self, other): raise NotImplementedError
 
-    def __ilshift__(self, other):
-        raise NotImplementedError
+    def __irshift__(self, other): raise NotImplementedError
 
-    def __irshift__(self, other):
-        raise NotImplementedError
+    def __iand__(self, other): raise NotImplementedError
 
-    def __iand__(self, other):
-        raise NotImplementedError
+    def __ixor__(self, other): raise NotImplementedError
 
-    def __ixor__(self, other):
-        raise NotImplementedError
+    def __ior__(self, other): raise NotImplementedError
 
-    def __ior__(self, other):
-        raise NotImplementedError
+    def __neg__(self): raise NotImplementedError
 
-    def __neg__(self):
-        raise NotImplementedError
+    def __pos__(self): raise NotImplementedError
 
-    def __pos__(self):
-        raise NotImplementedError
+    def __abs__(self): raise NotImplementedError
 
-    def __abs__(self):
-        raise NotImplementedError
+    def __invert__(self): raise NotImplementedError
 
-    def __invert__(self):
-        raise NotImplementedError
+    def __complex__(self): raise NotImplementedError
 
-    def __complex__(self):
-        raise NotImplementedError
+    def __int__(self): raise NotImplementedError
 
-    def __int__(self):
-        raise NotImplementedError
+    def __float__(self): raise NotImplementedError
 
-    def __float__(self):
-        raise NotImplementedError
+    def __round__(self, ndigits=0): raise NotImplementedError
 
-    def __round__(self, ndigits=0):
-        raise NotImplementedError
+    def __trunc__(self): raise NotImplementedError
 
-    def __trunc__(self):
-        raise NotImplementedError
+    def __floor__(self): raise NotImplementedError
 
-    def __floor__(self):
-        raise NotImplementedError
-
-    def __ceil__(self):
-        raise NotImplementedError
+    def __ceil__(self): raise NotImplementedError
 
     # ------------------------------------------------------------
     def _check_mathops(self, funcname, value):
@@ -1941,8 +1894,7 @@ class DateSpan(DateBase):
                 raise TypeError(f'Could not initialize Date object with array of type {arr.dtype}.')
 
         else:
-            raise TypeError(
-                f'DateSpan objects must be initialized with numeric arrays, lists or scalars. Got {type(arr)}')
+            raise TypeError(f'DateSpan objects must be initialized with numeric arrays, lists or scalars. Got {type(arr)}')
 
         instance = arr.view(cls)
         instance._display_length = DisplayLength.Long
@@ -1993,12 +1945,10 @@ class DateSpan(DateBase):
 
     # ------------------------------------------------------------
     @property
-    def format_short(self):
-        self._display_length = DisplayLength.Short
+    def format_short(self): self._display_length = DisplayLength.Short
 
     @property
-    def format_long(self):
-        self._display_length = DisplayLength.Long
+    def format_long(self): self._display_length = DisplayLength.Long
 
     # ------------------------------------------------------------
     @classmethod
@@ -2181,8 +2131,7 @@ def DateTimeUTC(arr, to_tz='NYC', from_matlab=False, format=None, start_date=Non
     """Forces DateTimeNano ``from_tz`` keyword to 'UTC'.
     For more see DateTimeNano.
     """
-    return DateTimeNano(arr, from_tz='UTC', to_tz=to_tz, from_matlab=from_matlab, format=format, start_date=start_date,
-                        gmt=gmt)
+    return DateTimeNano(arr, from_tz='UTC', to_tz=to_tz, from_matlab=from_matlab, format=format, start_date=start_date, gmt=gmt)
 
 
 # ========================================================
@@ -3119,8 +3068,7 @@ class DateTimeCommon:
                 other_inv_mask = isnan(other)
             func = getattr(input1._fa, funcname)
             result = func(other)
-            result = _apply_inv_mask(input1, result, fillval=DateTimeBase.NAN_TIME, arr1_inv_mask=input1_mask,
-                                     arr2_inv_mask=other_inv_mask)
+            result = _apply_inv_mask(input1, result, fillval=DateTimeBase.NAN_TIME, arr1_inv_mask=input1_mask, arr2_inv_mask=other_inv_mask)
         else:
             if inplace:
                 functup = (input1, other, input1)
@@ -3129,8 +3077,7 @@ class DateTimeCommon:
 
             result = func(functup, op, 0)
             if result is None:
-                raise RuntimeError(
-                    f'Could not perform {funcname} operation with DateTimeNano and {type(other)} {other}')
+                raise RuntimeError(f'Could not perform {funcname} operation with DateTimeNano and {type(other)} {other}')
 
         if return_type == DateTimeNano:
             result = DateTimeNano(result, from_tz='GMT', to_tz=input1._timezone._to_tz)
@@ -3170,8 +3117,7 @@ class DateTimeCommon:
         to_tz = self._timezone._to_tz
         if to_tz in ['GMT', 'UTC']:
             if isinstance(in_seconds, np.ndarray):
-                return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in in_seconds],
-                                  dtype=dtype)
+                return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in in_seconds], dtype=dtype)
             else:
                 return dt.strftime(dt.utcfromtimestamp(in_seconds), format)
 
@@ -3180,8 +3126,7 @@ class DateTimeCommon:
             localzone = tz.gettz(self._timezone._timezone_str)
 
             if isinstance(in_seconds, np.ndarray):
-                return np.asarray([dt.fromtimestamp(timestamp, localzone).strftime(format) for timestamp in in_seconds],
-                                  dtype=dtype)
+                return np.asarray([dt.fromtimestamp(timestamp, localzone).strftime(format) for timestamp in in_seconds], dtype=dtype)
             else:
                 return dt.strftime(dt.fromtimestamp(in_seconds, localzone), format)
 
@@ -3421,8 +3366,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                     else:
                         start_date = start_date[0] * NANOS_PER_DAY
                 else:
-                    raise TypeError(
-                        f'Start date must be string in format YYYYMMDD or Date object. Got type {type(start_date)}')
+                    raise TypeError(f'Start date must be string in format YYYYMMDD or Date object. Got type {type(start_date)}')
+
 
             instance = None
             if isinstance(arr, list) or np.isscalar(arr):
@@ -4260,8 +4205,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return_type = DateTimeNano
 
-        if not isinstance(other, np.ndarray) and not isinstance(other, (
-        DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
+        if not isinstance(other, np.ndarray) and not isinstance(other, (DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
             # TJD change
             if np.isscalar(other):
                 other = np.int64(other)
@@ -4317,8 +4261,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         func = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
         op = None
 
-        if not isinstance(other, np.ndarray) and not isinstance(other, (
-        DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
+        if not isinstance(other, np.ndarray) and not isinstance(other, (DateTimeNanoScalar, DateScalar, TimeSpanScalar, DateSpanScalar)):
             return_type = DateTimeNano
             # TJD change
             if np.isscalar(other):
@@ -4372,131 +4315,91 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         return self._build_mathops_result(other, funcname, call_super, other_inv_mask, inplace, op, return_type)
 
-    def __matmul__(self, other):
-        raise NotImplementedError
+    def __matmul__(self, other): raise NotImplementedError
 
     # need to check properties to see if division is happening
-    # def __truediv__(self, other): raise NotImplementedError
-    # def __floordiv__(self, other): raise NotImplementedError
-    # def __mod__(self, other): raise NotImplementedError
-    # def __divmod__(self, other): raise NotImplementedError
+    #def __truediv__(self, other): raise NotImplementedError
+    #def __floordiv__(self, other): raise NotImplementedError
+    #def __mod__(self, other): raise NotImplementedError
+    #def __divmod__(self, other): raise NotImplementedError
+    
+    def __pow__(self, other, modulo=None): raise NotImplementedError
 
-    def __pow__(self, other, modulo=None):
-        raise NotImplementedError
+    def __lshift__(self, other): raise NotImplementedError
 
-    def __lshift__(self, other):
-        raise NotImplementedError
+    def __rshift__(self, other): raise NotImplementedError
 
-    def __rshift__(self, other):
-        raise NotImplementedError
+    def __and__(self, other): raise NotImplementedError
 
-    def __and__(self, other):
-        raise NotImplementedError
+    def __xor__(self, other): raise NotImplementedError
 
-    def __xor__(self, other):
-        raise NotImplementedError
+    def __or__(self, other): raise NotImplementedError
 
-    def __or__(self, other):
-        raise NotImplementedError
+    def __rmul__(self, other): raise NotImplementedError
 
-    def __rmul__(self, other):
-        raise NotImplementedError
+    def __rmatmul__(self, other): raise NotImplementedError
 
-    def __rmatmul__(self, other):
-        raise NotImplementedError
+    def __rtruediv__(self, other): raise NotImplementedError
 
-    def __rtruediv__(self, other):
-        raise NotImplementedError
+    def __rfloordiv__(self, other): raise NotImplementedError
 
-    def __rfloordiv__(self, other):
-        raise NotImplementedError
+    def __rmod__(self, other): raise NotImplementedError
 
-    def __rmod__(self, other):
-        raise NotImplementedError
+    def __rdivmod__(self, other): raise NotImplementedError
 
-    def __rdivmod__(self, other):
-        raise NotImplementedError
+    def __rpow__(self, other): raise NotImplementedError
 
-    def __rpow__(self, other):
-        raise NotImplementedError
+    def __rlshift__(self, other): raise NotImplementedError
 
-    def __rlshift__(self, other):
-        raise NotImplementedError
+    def __rrshift__(self, other): raise NotImplementedError
 
-    def __rrshift__(self, other):
-        raise NotImplementedError
+    def __rand__(self, other): raise NotImplementedError
 
-    def __rand__(self, other):
-        raise NotImplementedError
+    def __rxor__(self, other): raise NotImplementedError
 
-    def __rxor__(self, other):
-        raise NotImplementedError
+    def __ror__(self, other): raise NotImplementedError
 
-    def __ror__(self, other):
-        raise NotImplementedError
+    def __imul__(self, other): raise NotImplementedError
 
-    def __imul__(self, other):
-        raise NotImplementedError
+    def __imatmul__(self, other): raise NotImplementedError
 
-    def __imatmul__(self, other):
-        raise NotImplementedError
+    def __itruediv__(self, other): raise NotImplementedError
 
-    def __itruediv__(self, other):
-        raise NotImplementedError
+    def __ifloordiv__(self, other): raise NotImplementedError
 
-    def __ifloordiv__(self, other):
-        raise NotImplementedError
+    def __imod__(self, other): raise NotImplementedError
 
-    def __imod__(self, other):
-        raise NotImplementedError
+    def __ipow__(self, other, modulo=None): raise NotImplementedError
 
-    def __ipow__(self, other, modulo=None):
-        raise NotImplementedError
+    def __ilshift__(self, other): raise NotImplementedError
 
-    def __ilshift__(self, other):
-        raise NotImplementedError
+    def __irshift__(self, other): raise NotImplementedError
 
-    def __irshift__(self, other):
-        raise NotImplementedError
+    def __iand__(self, other): raise NotImplementedError
 
-    def __iand__(self, other):
-        raise NotImplementedError
+    def __ixor__(self, other): raise NotImplementedError
 
-    def __ixor__(self, other):
-        raise NotImplementedError
+    def __ior__(self, other): raise NotImplementedError
 
-    def __ior__(self, other):
-        raise NotImplementedError
+    def __neg__(self): raise NotImplementedError
 
-    def __neg__(self):
-        raise NotImplementedError
+    def __pos__(self): raise NotImplementedError
 
-    def __pos__(self):
-        raise NotImplementedError
+    def __invert__(self): raise NotImplementedError
 
-    def __invert__(self):
-        raise NotImplementedError
+    def __complex__(self): raise NotImplementedError
 
-    def __complex__(self):
-        raise NotImplementedError
+    def __int__(self): raise NotImplementedError
 
-    def __int__(self):
-        raise NotImplementedError
+    def __float__(self): raise NotImplementedError
 
-    def __float__(self):
-        raise NotImplementedError
+    def __round__(self, ndigits=0): raise NotImplementedError
 
-    def __round__(self, ndigits=0):
-        raise NotImplementedError
+    def __trunc__(self): raise NotImplementedError
 
-    def __trunc__(self):
-        raise NotImplementedError
+    def __floor__(self): raise NotImplementedError
 
-    def __floor__(self):
-        raise NotImplementedError
-
-    def __ceil__(self):
-        raise NotImplementedError
+    def __ceil__(self): raise NotImplementedError
 
     # -------------------------------------------------------------
     # ----raise error on certain math operations-------------------
@@ -4787,9 +4690,7 @@ class TimeSpanBase:
         isnegative = self._fa < 0
 
         if isinstance(self, np.ndarray):
-            result = np.asarray(
-                [dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa.abs() / 1_000_000_000.0],
-                dtype=dtype)
+            result= np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa.abs() / 1_000_000_000.0], dtype=dtype)
             if isnegative.sum() > 0:
                 if dtype == 'S':
                     negcol = zeros(result.shape, dtype='S1')
@@ -5049,8 +4950,7 @@ class TimeSpanBase:
 
     # -------------------------------------------------------------
     def __mul__(self, value):
-        if isinstance(value, (
-        TimeSpan, DateSpan, Date, DateTimeNano, TimeSpanScalar, DateSpanScalar, DateScalar, DateTimeNanoScalar)):
+        if isinstance(value, (TimeSpan, DateSpan, Date, DateTimeNano, TimeSpanScalar, DateSpanScalar, DateScalar, DateTimeNanoScalar)):
             raise TypeError(f"Cannot multiply TimeSpan by {type(value)} object.")
         if not isinstance(value, np.ndarray):
             value = FastArray(value).astype(np.float64)
@@ -5066,8 +4966,7 @@ class TimeSpanBase:
             result = self._fa.__floordiv__(value)
             return result
         else:
-            raise TypeError(
-                f"Can only floor divide TimeSpan objects with other timespan objects not type {type(value)}.")
+            raise TypeError(f"Can only floor divide TimeSpan objects with other timespan objects not type {type(value)}.")
 
     # -------------------------------------------------------------
     def __truediv__(self, value):
@@ -5110,91 +5009,63 @@ class TimeSpanBase:
 
         return result
 
-    def __pow__(self, other, modulo=None):
-        raise NotImplementedError
+    def __pow__(self, other, modulo=None): raise NotImplementedError
 
-    def __lshift__(self, other):
-        raise NotImplementedError
+    def __lshift__(self, other): raise NotImplementedError
 
-    def __rshift__(self, other):
-        raise NotImplementedError
+    def __rshift__(self, other): raise NotImplementedError
 
-    def __and__(self, other):
-        raise NotImplementedError
+    def __and__(self, other): raise NotImplementedError
 
-    def __xor__(self, other):
-        raise NotImplementedError
+    def __xor__(self, other): raise NotImplementedError
 
-    def __or__(self, other):
-        raise NotImplementedError
+    def __or__(self, other): raise NotImplementedError
 
     # def __rmul__(self, other): raise NotImplementedError
 
-    def __rmatmul__(self, other):
-        raise NotImplementedError
+    def __rmatmul__(self, other): raise NotImplementedError
 
-    def __rtruediv__(self, other):
-        raise NotImplementedError
+    def __rtruediv__(self, other): raise NotImplementedError
 
-    def __rfloordiv__(self, other):
-        raise NotImplementedError
+    def __rfloordiv__(self, other): raise NotImplementedError
 
-    def __rmod__(self, other):
-        raise NotImplementedError
+    def __rmod__(self, other): raise NotImplementedError
 
-    def __rdivmod__(self, other):
-        raise NotImplementedError
+    def __rdivmod__(self, other): raise NotImplementedError
 
-    def __rpow__(self, other):
-        raise NotImplementedError
+    def __rpow__(self, other): raise NotImplementedError
 
-    def __rlshift__(self, other):
-        raise NotImplementedError
+    def __rlshift__(self, other): raise NotImplementedError
 
-    def __rrshift__(self, other):
-        raise NotImplementedError
+    def __rrshift__(self, other): raise NotImplementedError
 
-    def __rand__(self, other):
-        raise NotImplementedError
+    def __rand__(self, other): raise NotImplementedError
 
-    def __rxor__(self, other):
-        raise NotImplementedError
+    def __rxor__(self, other): raise NotImplementedError
 
-    def __ror__(self, other):
-        raise NotImplementedError
+    def __ror__(self, other): raise NotImplementedError
 
-    def __imul__(self, other):
-        raise NotImplementedError
+    def __imul__(self, other): raise NotImplementedError
 
-    def __imatmul__(self, other):
-        raise NotImplementedError
+    def __imatmul__(self, other): raise NotImplementedError
 
-    def __itruediv__(self, other):
-        raise NotImplementedError
+    def __itruediv__(self, other): raise NotImplementedError
 
-    def __ifloordiv__(self, other):
-        raise NotImplementedError
+    def __ifloordiv__(self, other): raise NotImplementedError
 
-    def __imod__(self, other):
-        raise NotImplementedError
+    def __imod__(self, other): raise NotImplementedError
 
-    def __ipow__(self, other, modulo=None):
-        raise NotImplementedError
+    def __ipow__(self, other, modulo=None): raise NotImplementedError
 
-    def __ilshift__(self, other):
-        raise NotImplementedError
+    def __ilshift__(self, other): raise NotImplementedError
 
-    def __irshift__(self, other):
-        raise NotImplementedError
+    def __irshift__(self, other): raise NotImplementedError
 
-    def __iand__(self, other):
-        raise NotImplementedError
+    def __iand__(self, other): raise NotImplementedError
 
-    def __ixor__(self, other):
-        raise NotImplementedError
+    def __ixor__(self, other): raise NotImplementedError
 
-    def __ior__(self, other):
-        raise NotImplementedError
+    def __ior__(self, other): raise NotImplementedError
 
     # def __neg__(self): raise NotImplementedError
 
@@ -5202,42 +5073,31 @@ class TimeSpanBase:
 
     # def __abs__(self): raise NotImplementedError
 
-    def __invert__(self):
-        raise NotImplementedError
+    def __invert__(self): raise NotImplementedError
 
-    def __complex__(self):
-        raise NotImplementedError
+    def __complex__(self): raise NotImplementedError
 
-    def __int__(self):
-        raise NotImplementedError
+    def __int__(self): raise NotImplementedError
 
     # def __float__(self): raise NotImplementedError
 
-    def __round__(self, ndigits=0):
-        raise NotImplementedError
+    def __round__(self, ndigits=0): raise NotImplementedError
 
-    def __trunc__(self):
-        raise NotImplementedError
+    def __trunc__(self): raise NotImplementedError
 
-    def __floor__(self):
-        raise NotImplementedError
+    def __floor__(self): raise NotImplementedError
 
-    def __ceil__(self):
-        raise NotImplementedError
+    def __ceil__(self): raise NotImplementedError
 
-    # --UNARY OPERATIONS-------------------------------------------
-    # -------------------------------------------------------------
-    def __abs__(self):
-        return self._unary_ufunc_builder('__abs__')
+    #--UNARY OPERATIONS-------------------------------------------
+    #-------------------------------------------------------------
+    def __abs__(self): return self._unary_ufunc_builder('__abs__')
 
-    def __neg__(self):
-        return self._unary_ufunc_builder('__neg__')
+    def __neg__(self): return self._unary_ufunc_builder('__neg__')
 
-    def __pos__(self):
-        return self._unary_ufunc_builder('__pos__')
+    def __pos__(self): return self._unary_ufunc_builder('__pos__')
 
-    def abs(self):
-        return self.__abs__()
+    def abs(self): return self.__abs__()
 
     def _unary_ufunc_builder(self, op_name):
         if np.isscalar(self):
@@ -5736,8 +5596,7 @@ class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
 
     # used in adding a scalar to a Dataset
     def repeat(self, repeats, axis=None):
-        return DateTimeNano(self._np.repeat(repeats, axis=axis), to_tz=self._timezone._to_tz,
-                            from_tz=self._timezone._from_tz)
+        return DateTimeNano(self._np.repeat(repeats, axis=axis), to_tz=self._timezone._to_tz, from_tz=self._timezone._from_tz)
 
     def tile(self, repeats):
         return DateTimeNano(self._np.tile(repeats), to_tz=self._timezone._to_tz, from_tz=self._timezone._from_tz)
@@ -5811,43 +5670,31 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
 
     # because np.float64 is first, it hooks these before TimeSpanBase
 
-    def __abs__(self):
-        return self._unary_ufunc_builder('__abs__')
+    def __abs__(self): return self._unary_ufunc_builder('__abs__')
 
-    def __neg__(self):
-        return self._unary_ufunc_builder('__neg__')
+    def __neg__(self): return self._unary_ufunc_builder('__neg__')
 
-    def __pos__(self):
-        return self._unary_ufunc_builder('__pos__')
+    def __pos__(self): return self._unary_ufunc_builder('__pos__')
 
-    def abs(self):
-        return self.__abs__()
+    def abs(self):   return self.__abs__()
 
-    # --BINARY OPERATIONS------------------------------------------
-    # -------------------------------------------------------------
-    def __add__(self, value):
-        return TimeSpanBase.__add__(self, value)
+    #--BINARY OPERATIONS------------------------------------------
+    #-------------------------------------------------------------
+    def __add__(self, value):      return TimeSpanBase.__add__(self, value)
 
-    def __radd__(self, value):
-        return TimeSpanBase.__radd__(self, value)
+    def __radd__(self, value):     return TimeSpanBase.__radd__(self, value)
 
-    def __sub__(self, value):
-        return TimeSpanBase.__sub__(self, value)
+    def __sub__(self, value):      return TimeSpanBase.__sub__(self, value)
 
-    def __rsub__(self, value):
-        return TimeSpanBase.__rsub__(self, value)
+    def __rsub__(self, value):     return TimeSpanBase.__rsub__(self, value)
 
-    def __mul__(self, value):
-        return TimeSpanBase.__mul__(self, value)
+    def __mul__(self, value):      return TimeSpanBase.__mul__(self, value)
 
-    def __rmul__(self, other):
-        return TimeSpanBase.__rmul__(self, value)
+    def __rmul__(self, other):     return TimeSpanBase.__rmul__(self, value)
 
-    def __floordiv__(self, value):
-        return TimeSpanBase.__floordiv__(self, value)
+    def __floordiv__(self, value): return TimeSpanBase.__floordiv__(self, value)
 
-    def __truediv__(self, value):
-        return TimeSpanBase.__truediv__(self, value)
+    def __truediv__(self, value):  return TimeSpanBase.__truediv__(self, value)
 
     def __eq__(self, other):
         return self._timespan_compare_check('__eq__', other)

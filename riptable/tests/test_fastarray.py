@@ -1,19 +1,12 @@
-import math
 import warnings
-from contextlib import contextmanager
-from typing import List, Callable
-
 import numpy as np
-
 import unittest
 import pytest
-from numpy.testing import (
-    assert_array_equal, assert_equal
-)
-
 import riptable as rt
 import riptide_cpp as rc
-
+from numpy.testing import assert_equal
+from contextlib import contextmanager
+from typing import List, Callable
 from riptable import FastArray
 from riptable.rt_enum import (
     gBinaryUFuncs,
@@ -24,6 +17,7 @@ from riptable.rt_enum import (
 )
 from riptable.rt_utils import mbget
 from riptable.rt_numpy import isnan, arange, issorted, nanmax, nanmin, isnotfinite, isnotnan
+from riptable.tests.utils import new_array_function
 
 NP_ARRAY_FUNCTION_PARAMS: List[Callable] = [
     np.argmax,
@@ -661,17 +655,6 @@ def disable_class_member(kls: type, member_name: str) -> None:
     finally:
         # set the original class member after caller is finished doing work
         setattr(kls, member_name, member)
-
-
-@contextmanager
-def new_array_function():
-    """A context manager that allows using the new array function code path."""
-    try:
-        FastArray.NEW_ARRAY_FUNCTION_ENABLED = True
-        yield
-    finally:
-        FastArray.NEW_ARRAY_FUNCTION_ENABLED = False
-
 
 # -------------------------------------------------------------------------------------
 
@@ -1567,7 +1550,7 @@ def test_array_function_matches_numpy(np_callable, np_array):
     np_result = np_callable(np_array)
 
     fast_array = np_array.view(FastArray)
-    with new_array_function():
+    with new_array_function(FastArray):
         rt_result = np_callable(fast_array)
 
     # TODO assert dispatching of np.min in fast array returns a _min (by convention) method
@@ -1584,7 +1567,7 @@ def test_array_function_matches_numpy(np_callable, np_array):
 @pytest.mark.parametrize("fast_array", [rt.FastArray([1,2,3])])
 def test_new_array_function_matches_old_array_function(np_callable, fast_array):
     # test equivalence between our array function implementation against the old array function implementation
-    with new_array_function():
+    with new_array_function(FastArray):
         actual = np_callable(fast_array)
 
     expected = np_callable(fast_array)
@@ -1597,7 +1580,7 @@ def test_new_array_function_matches_old_array_function(np_callable, fast_array):
 @pytest.mark.parametrize("fast_array", [rt.FastArray([1,2,3])])
 def test_new_array_function_matches_ufunc(np_callable, fast_array):
     # test equivalence between our array function implementation against our ufunc implementation
-    with new_array_function():
+    with new_array_function(FastArray):
         actual = np_callable(fast_array)
 
     with disable_class_member(FastArray, '__array_function__'):
@@ -1605,6 +1588,16 @@ def test_new_array_function_matches_ufunc(np_callable, fast_array):
 
     assert_equal(expected, actual, f'new array function implementation is inconsistent with ufunc implementation.')
     assert type(expected) == type(actual), f'new array function result type is inconsistent with ufunc implementation.'
+
+
+@pytest.mark.parametrize("np_callable", [np.empty_like])
+@pytest.mark.parametrize("fast_array", [rt.FastArray([1,2,3]), np.array([1,2,3])])
+def test_array_function_empty_like(np_callable, fast_array):
+    actual: FastArray
+    with new_array_function(FastArray):
+        actual = np_callable(fast_array)
+    assert type(actual) == type(fast_array), 'type mismatch'
+    assert actual.shape == fast_array.shape, 'shape mismatch'
 
 
 if __name__ == "__main__":

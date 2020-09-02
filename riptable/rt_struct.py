@@ -1362,15 +1362,16 @@ class Struct:
         return finalinfo
 
     # --------------------------------------------------------
-    def _copy(self, deep=False, cls=None):
+    def _copy(self, deep: bool = False, cls: Optional[type] = None):
         """
         Parameters
         ----------
-        deep : bool, True.
-           if True, perform a deep copy calling each object depth first with .copy(True)
-           if False, a shallow .copy(False) is called, often just copying the containers dict.
+        deep : bool, default True
+           if True, perform a deep copy calling each object depth first with ``.copy(True)``
+           if False, a shallow ``.copy(False)`` is called, often just copying the containers dict.
 
-        cls : class of return type, for subclass super() calls
+        cls : type, optional
+            Class of return type, for subclass super() calls
 
         First argument must be deep.  Deep cannnot be set to None.  It must be True or False.
         """
@@ -1400,16 +1401,16 @@ class Struct:
         return st
 
     # --------------------------------------------------------
-    def copy(self, deep=True):
+    def copy(self, deep: bool = True):
         '''
-        Returns a shallow or deep copy of the Struct.
-        Defaults to a deepy copy.
+        Returns a shallow or deep copy of the `Struct`.
+        Defaults to a deep copy.
 
         Parameters
         ----------
-        deep : bool, True.
-           if True, perform a deep copy calling each object depth first with .copy(True)
-           if False, a shallow .copy(False) is called, often just copying the containers dict.
+        deep : bool, default True
+           if True, perform a deep copy calling each object depth first with ``.copy(True)``
+           if False, a shallow ``.copy(False)`` is called, often just copying the containers dict.
 
         Examples
         --------
@@ -1437,7 +1438,7 @@ class Struct:
 
         Parameters
         ----------
-        struct_list : obj:`list` of obj:`Struct`
+        struct_list : list of `Struct`
 
         Returns
         -------
@@ -1458,7 +1459,7 @@ class Struct:
 
         Parameters
         ----------
-        struct_list : obj:`list` of obj:`Struct`
+        struct_list : list of `Struct`
 
         A struct utility for merging data from multiple structs (useful for multiday loading).
         Structs must have the same keys, and contain only Structs, Datasets, Categoricals, and Numpy Arrays.
@@ -2266,7 +2267,7 @@ class Struct:
 
     # -------------------------------------------------------
     @property
-    def has_nested_containers(self):
+    def has_nested_containers(self) -> bool:
         """bool: True if the Struct contains other Struct-like objects."""
         has_nested = False
         for v in self.values():
@@ -2387,13 +2388,13 @@ class Struct:
         setattr(self._all_items, attrib_name, attrib_value)
 
     # -------------------------------------------------------
-    def col_delete(self, name):
+    def col_delete(self, name: Union[str, List[str]]) -> None:
         """
         Remove and item from the struct.
 
         Parameters
         ----------
-        name : `str` or `list`
+        name : str or list of str
             Name or list of item names to be removed.
 
         Raises
@@ -2420,7 +2421,8 @@ class Struct:
 
         Raises
         ------
-        KeyError : item not found with given name.
+        KeyError
+            Item not found with given `name`.
 
         """
         return self._all_items.item_get_value(name)
@@ -2889,7 +2891,7 @@ class Struct:
         3    0.08    0.31    0.15    0.65    0.98
         4    0.63    0.89    0.25    0.13    0.16
 
-        ds.col_move_to_back(['col_2','col_0'])
+        >>> ds.col_move_to_back(['col_2','col_0'])
         #   col_1   col_3   col_4   col_2   col_0
         -   -----   -----   -----   -----   -----
         0    0.84    0.72    0.81    0.24    0.28
@@ -2900,7 +2902,8 @@ class Struct:
 
         See Also
         --------
-        Struct.col_move_to_back, Struct.col_move
+        Struct.col_move_to_back
+        Struct.col_move
         """
         if self.is_locked():
             raise AttributeError('Not allowed to call col_move_to_back() on locked object.')

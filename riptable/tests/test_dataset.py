@@ -20,7 +20,9 @@ from riptable.rt_enum import (
     INVALID_DICT,
     TypeRegister,
     FILTERED_LONG_NAME,
+    CategoryMode,
 )
+from .test_utils import get_all_categorical_data
 
 
 def almost_eq(ds, arr, places=5, rtol=1e-5, atol=1e-5, equal_nan=True):
@@ -1920,14 +1922,14 @@ class TestDataset(unittest.TestCase):
             else:
                 self.assertTrue((df[key] == df2[key]).all())
 
-    @pytest.mark.xfail(
-        reason="RIP-386 - rt.Dataset.to_pandas() mess up categorical mapping; throw an error since pandas Categorical does not support dictionaries"
-    )
     def test_to_pandas_categorical_mapping(self):
-        country_map = {1: "USA", 2: "IRL", 3: "GBR", 4: "AUS", 5: "CHN", 6: "JPN"}
-        ds = Dataset({"dict_cat": Categorical([2, 4], categories=country_map)})
-        with pytest.raises(ValueError):
-            ds.to_pandas()  # results in pandas DataFrame that has a Categorical that maps 0 to GBR and 1 to CHN
+        country_map = {0: "USA", 2: "IRL", 4: "GBR", 8: "AUS", 16: "CHN", 32: "JPN"}
+        k = "dict_cat"
+        ds = Dataset({k: Categorical([0, 2, 32], categories=country_map)})
+        df = ds.to_pandas()
+        ds_from_pandas = Dataset.from_pandas(df)
+        assert_array_equal(ds[k].as_singlekey().expand_array, ds_from_pandas[k].expand_array)
+        assert_array_equal(ds[k].category_array, ds_from_pandas[k].category_array)
 
     def test_from_pandas_num_string(self):
         dates = ['20190101', '20190101']
@@ -2123,6 +2125,18 @@ class TestDataset(unittest.TestCase):
         ds.filter(ds.MyValue == 1, inplace=True)
         result = ds.cat(['MyStrKey', 'MyDate']).null()
         self.assertTrue(isinstance(result['MyDate'], Date))
+
+
+@pytest.mark.parametrize('categorical', get_all_categorical_data())
+def test_dataset_to_dataframe_roundtripping(categorical):
+    k = 'categorical'
+    ds = Dataset({k: categorical})
+    df = ds.to_pandas()
+    ds_from_pandas = Dataset.from_pandas(df)
+    assert_array_equal(ds[k].as_singlekey().expand_array, ds_from_pandas[k].expand_array)
+    # add support for checking category arrays of multikey categoricals
+    if categorical.category_mode != CategoryMode.MultiKey:
+        assert_array_equal(ds[k].category_array, ds_from_pandas[k].category_array)
 
 
 if __name__ == "__main__":
