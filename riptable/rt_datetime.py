@@ -4957,6 +4957,10 @@ class TimeSpanBase:
             gmt_time = time.gmtime(item / NANOS_PER_SECOND)
             timestr = DateTimeBase.DEFAULT_FORMATTER(format_str, gmt_time)
 
+            days = np.int64(item) // NANOS_PER_DAY
+            
+            if days > 0:
+                timestr = str(days) + 'd ' + timestr
             if nanosecs < 0:
                 timestr = "-" + timestr
 
