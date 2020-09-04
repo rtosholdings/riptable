@@ -1164,6 +1164,9 @@ class Grouping:
             if not has_slice and fld.dtype.num >= 1 and fld.dtype.num <=13 and self._base_index > 0:
                 # pass in the invalid as 0
                 # TODO: Modify to call mbget through the mbget function in rt_utils.py (which wraps the ledger call).
+                if fld.ndim == 1:
+                    if fld.strides[0] != fld.itemsize:
+                        fld = fld.copy()
                 newinstance = TypeRegister.MathLedger._MBGET(self._iKey,fld, 0)
             else:
                 newinstance= self._iKey[fld]
