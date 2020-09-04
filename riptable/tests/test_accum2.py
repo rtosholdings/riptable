@@ -428,7 +428,7 @@ class AccumTable_Test(unittest.TestCase):
 
         np.random.seed(1234)
         df = unpivot(pd.concat([tm.makeTimeDataFrame(), tm.makeTimeDataFrame()]))
-        ds = rt.Dataset(df)
+        ds = dataset_from_pandas_df(df)
         ds.date = DateTimeNano(ds.date, from_tz='NYC').to_iso()
         ds.date = rt.FastArray([d[:10] for d in ds.date])
         ds.variable = rt.Categorical(ds.variable)
@@ -438,119 +438,114 @@ class AccumTable_Test(unittest.TestCase):
 
         # Add and view inner tables with totals
         at['Sum'] = at.sum(ds.value)
+        self.assertEqual(at['Sum'].shape, (3, 7))
+        assert_array_almost_equal(
+            at['Sum']['A'], np.array([0.47, -0.79, 1.72]), decimal=2
+        )
 
-        # this test is disabled because of the seed
-        if False:
+        vw = at.gen('Sum')
+        self.assertEqual(vw.shape, (3, 7))
+        assert_array_almost_equal(vw['A'], np.array([0.47, -0.79, 1.72]), decimal=2)
 
-            self.assertEqual(at['Sum'].shape, (3, 7))
-            assert_array_almost_equal(
-                at['Sum']['A'], np.array([0.47, -0.79, 1.72]), decimal=2
-            )
+        assert_array_almost_equal(vw['Sum'], np.array([-0.10, -5.02, 5.37]), decimal=2)
+        assert_array_almost_equal(
+            vw.footer_get_values(columns=['Sum'])['Sum'], np.array([0.25]), decimal=2
+        )
 
-            vw = at.gen('Sum')
-        
-            self.assertEqual(vw.shape, (3, 7))
-            assert_array_almost_equal(vw['A'], np.array([0.47, -0.79, 1.72]), decimal=2)
+        at['Mean'] = at.mean(ds.value)
+        self.assertEqual(at['Mean'].shape, (3, 7))
+        assert_array_almost_equal(
+            at['Mean']['A'], np.array([0.24, -0.39, 0.86]), decimal=2
+        )
 
-            assert_array_almost_equal(vw['Sum'], np.array([-0.10, -5.02, 5.37]), decimal=2)
-            assert_array_almost_equal(
-                vw.footer_get_values(columns=['Sum'])['Sum'], np.array([0.25]), decimal=2
-            )
-
-            at['Mean'] = at.mean(ds.value)
-            self.assertEqual(at['Mean'].shape, (3, 7))
-            assert_array_almost_equal(
-                at['Mean']['A'], np.array([0.24, -0.39, 0.86]), decimal=2
-            )
-
-            at['Half'] = at['Mean'] / at['Sum']
-            self.assertEqual(at['Half'].shape, (3, 7))
-            assert_array_almost_equal(at['Half']['A'], np.array([0.5, 0.5, 0.5]), decimal=2)
+        at['Half'] = at['Mean'] / at['Sum']
+        self.assertEqual(at['Half'].shape, (3, 7))
+        assert_array_almost_equal(at['Half']['A'], np.array([0.5, 0.5, 0.5]), decimal=2)
 
             # Add and view inner tables with blanks
 
-            at['Blanks'] = at['Sum'].copy()
-            at['Blanks']['C'] = 0.0
-            for col in at['Blanks'][:, 1:]:
-                at['Blanks'][col][2] = np.nan
+        at['Blanks'] = at['Sum'].copy()
+        at['Blanks']['C'] = 0.0
+        for col in at['Blanks'][:, 1:]:
+            at['Blanks'][col][2] = np.nan
 
-            vw = at.gen('Blanks')
-            self.assertEqual(vw.shape, (2, 9))
-            assert_array_almost_equal(vw['A'], np.array([0.47, -0.79]), decimal=2)
-            assert_array_almost_equal(vw['Blanks'], np.array([-0.10, -5.02]), decimal=2)
-            self.assertAlmostEqual(
-                vw.footer_get_dict()['Blanks']['Blanks'], 0.245, places=2
-            )
+        vw = at.gen('Blanks')
+        self.assertEqual(vw.shape, (2, 9))
+        assert_array_almost_equal(vw['A'], np.array([0.47, -0.79]), decimal=2)
+        assert_array_almost_equal(vw['Blanks'], np.array([-0.10, -5.02]), decimal=2)
+        self.assertAlmostEqual(
+            vw.footer_get_dict()['Blanks']['Blanks'], 0.245, places=2
+        )
 
-            vw = at.gen('Blanks', remove_blanks=False)
-            self.assertEqual(vw.shape, (3, 10))
-            assert_array_almost_equal(vw['A'], np.array([0.47, -0.79, np.nan]), decimal=2)
-            assert_array_almost_equal(
-                vw['Blanks'], np.array([-0.10, -5.02, np.nan]), decimal=2
-            )
+        vw = at.gen('Blanks', remove_blanks=False)
+        self.assertEqual(vw.shape, (3, 10))
+        assert_array_almost_equal(vw['A'], np.array([0.47, -0.79, np.nan]), decimal=2)
+        assert_array_almost_equal(
+            vw['Blanks'], np.array([-0.10, -5.02, np.nan]), decimal=2
+        )
 
-            # Test division with zeros and nans
-            at['Bad'] = at['Blanks'] / at['Half']
-            self.assertEqual(at['Blanks'].shape, (3, 7))
-            vw = at.gen('Bad')
-            self.assertEqual(vw.shape, (2, 10))
-            vw = at.gen('Blanks')
-            self.assertEqual(vw.shape, (2, 10))
-            vw = at.gen('Half')
-            self.assertEqual(vw.shape, (3, 11))
+        # Test division with zeros and nans
+        at['Bad'] = at['Blanks'] / at['Half']
+        self.assertEqual(at['Blanks'].shape, (3, 7))
+        vw = at.gen('Bad')
+        self.assertEqual(vw.shape, (2, 10))
+        vw = at.gen('Blanks')
+        self.assertEqual(vw.shape, (2, 10))
+        vw = at.gen('Half')
+        self.assertEqual(vw.shape, (3, 11))
 
             # Set margin columns to the right
 
-            at.set_margin_columns(['Blanks', 'Mean'])
-            vw = at.gen('Half')
-            self.assertEqual(vw.shape, (3, 9))
-            self.assertEqual(vw.keys()[6], 'Half')
-            self.assertEqual(vw.keys()[7], 'Blanks')
-            self.assertEqual(vw.keys()[8], 'Mean')
-            self.assertEqual(
-                list(vw.footer_get_dict().keys()), ['Half', 'Sum', 'Mean', 'Blanks', 'Bad']
-            )
+        at.set_margin_columns(['Blanks', 'Mean'])
+        vw = at.gen('Half')
+        self.assertEqual(vw.shape, (3, 9))
+        self.assertEqual(vw.keys()[6], 'Half')
+        self.assertEqual(vw.keys()[7], 'Blanks')
+        self.assertEqual(vw.keys()[8], 'Mean')
+        self.assertEqual(
+            list(vw.footer_get_dict().keys()), ['Half', 'Sum', 'Mean', 'Blanks', 'Bad']
+        )
 
-            vw = at.gen()
-            self.assertEqual(vw.keys()[6], 'Half')
+        vw = at.gen()
+        self.assertEqual(vw.keys()[6], 'Half')
 
-            vw = at.gen('Sum')
-            self.assertEqual(vw.keys()[6], 'Sum')
-            self.assertEqual(vw.keys()[7], 'Blanks')
-            self.assertEqual(vw.keys()[8], 'Mean')
-            self.assertEqual(
-                list(vw.footer_get_dict().keys()), ['Sum', 'Mean', 'Half', 'Blanks', 'Bad']
-            )
+        vw = at.gen('Sum')
+        self.assertEqual(vw.keys()[6], 'Sum')
+        self.assertEqual(vw.keys()[7], 'Blanks')
+        self.assertEqual(vw.keys()[8], 'Mean')
+        self.assertEqual(
+            list(vw.footer_get_dict().keys()), ['Sum', 'Mean', 'Half', 'Blanks', 'Bad']
+        )
 
             # Set footer rows at the bottom
 
-            at.set_footer_rows(['Mean'])
-            vw = at.gen('Half')
-            self.assertEqual(vw.shape, (3, 9))
-            self.assertEqual(vw.keys()[6], 'Half')
-            self.assertEqual(vw.keys()[7], 'Blanks')
-            self.assertEqual(vw.keys()[8], 'Mean')
-            self.assertEqual(list(vw.footer_get_dict().keys()), ['Half', 'Mean'])
+        at.set_footer_rows(['Mean'])
+        vw = at.gen('Half')
+        self.assertEqual(vw.shape, (3, 9))
+        self.assertEqual(vw.keys()[6], 'Half')
+        self.assertEqual(vw.keys()[7], 'Blanks')
+        self.assertEqual(vw.keys()[8], 'Mean')
+        self.assertEqual(list(vw.footer_get_dict().keys()), ['Half', 'Mean'])
 
-            vw = at.gen('Sum')
-            self.assertEqual(vw.keys()[6], 'Sum')
-            self.assertEqual(vw.keys()[7], 'Blanks')
-            self.assertEqual(vw.keys()[8], 'Mean')
-            self.assertEqual(list(vw.footer_get_dict().keys()), ['Sum', 'Mean'])
+        vw = at.gen('Sum')
+        self.assertEqual(vw.keys()[6], 'Sum')
+        self.assertEqual(vw.keys()[7], 'Blanks')
+        self.assertEqual(vw.keys()[8], 'Mean')
+        self.assertEqual(list(vw.footer_get_dict().keys()), ['Sum', 'Mean'])
 
             # Access view Dataset elements
 
-            vw = at.gen('Sum')
-            assert_array_equal(
-                vw.date, rt.FastArray(['2000-01-03', '2000-01-04', '2000-01-05'])
-            )
-            assert_array_almost_equal(vw['Sum'], np.array([-0.10, -5.02, 5.37]), decimal=2)
-            assert_almost_equal(vw[vw.date == '2000-01-03', 'A'][0], 0.47355353, decimal=2)
-            assert_almost_equal(
-                list(vw.footer_get_values('Sum', columns=['A']).values())[0],
-                1.409830,
-                decimal=2,
-            )
+        vw = at.gen('Sum')
+        assert_array_equal(
+            vw.date, rt.FastArray(['2000-01-03', '2000-01-04', '2000-01-05'])
+        )
+        assert_array_almost_equal(vw['Sum'], np.array([-0.10, -5.02, 5.37]), decimal=2)
+        assert_almost_equal(vw[vw.date == '2000-01-03', 'A'][0], 0.47355353, decimal=2)
+        assert_almost_equal(
+            list(vw.footer_get_values('Sum', columns=['A']).values())[0],
+            1.409830,
+            decimal=2,
+        )
 
 
 if __name__ == "__main__":

@@ -1,17 +1,17 @@
 __all__ = ['FastArray', 'Threading', 'Recycle','Ledger']
 
+import logging
 import numpy as np
 import warnings
-import os
-
-from numpy.core.numeric import ScalarType
-
 import riptide_cpp as rc
-from .rt_enum import gBinaryUFuncs, gBinaryLogicalUFuncs, gBinaryBitwiseUFuncs, gBinaryBitwiseMonoUFuncs, gUnaryUFuncs, gReduceUFuncs
-from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDUCE_FUNCTIONS, gNumpyScalarType, DisplayLength, NumpyCharTypes, MATH_OPERATION, INVALID_DICT
+
+from typing import Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
+from numpy.core.numeric import ScalarType
+from .rt_enum import gBinaryUFuncs, gBinaryLogicalUFuncs, gBinaryBitwiseUFuncs, gUnaryUFuncs, gReduceUFuncs
+from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDUCE_FUNCTIONS, gNumpyScalarType, NumpyCharTypes, MATH_OPERATION, INVALID_DICT
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .rt_mlutils import normalize_minmax, normalize_zscore
-from .rt_numpy import ismember, ones, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray
+from .rt_numpy import ismember, ones, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray, crc32c
 from .rt_sds import save_sds
 from .rt_utils import  sample, describe
 from .rt_grouping import Grouping
@@ -21,7 +21,11 @@ try:
 except Exception:
     pass
 
-NUMPY_CONVERSION_TABLE = {
+# Create a logger for this module.
+logger = logging.getLogger(__name__)
+
+
+NUMPY_CONVERSION_TABLE: Mapping[Callable, REDUCE_FUNCTIONS] = {
     np.sum: REDUCE_FUNCTIONS.REDUCE_SUM,
     np.nansum: REDUCE_FUNCTIONS.REDUCE_NANSUM,
     np.amin: REDUCE_FUNCTIONS.REDUCE_MIN,
@@ -246,6 +250,9 @@ class FastArray(np.ndarray):
     #set to false to be just normal numpy
     FasterUFunc = True
 
+    NEW_ARRAY_FUNCTION_ENABLED = False
+    """Enable implementation of array function protocol (default False)."""
+
     # 0=Quiet, 1=Warn, 2=Exception
     WarningLevel = 1
 
@@ -261,9 +268,148 @@ class FastArray(np.ndarray):
         "multiple_dimensions" : "FastArray contains two or more dimensions greater than one - shape:{}.  Problems may occur."
     }
 
+    # --------------------------------------------------------------------------
+    class _ArrayFunctionHelper:
+        # TODO add usage examples
+        """
+        Array function helper is responsible maintaining the array function protocol array implementations in the
+        form of the following API:
+
+        - get_array_function: given the Numpy function, returns overridden array function
+        - get_array_function_type_compatibility_check: given the Numpy function, returns overridden array function type compatibility check
+        - register_array_function: a function decorator whose argument is the Numpy function to override and the function that will override it
+        - register_array_function_type_compatibility: similar to register_array_function, but guards against incompatible array function protocol type arguments for the given Numpy function
+        - deregister: deregistration of the Numpy function and type compatibility override
+        - deregister_array_function_type_compatibility: deregistration of Numpy function type compatibility override
+
+        """
+        # TODO design consideration - using a single dict with tuple type compatibility and redirected callables
+        # where a default type compatibility check can be the default value
+        # a dictionary that maps numpy functions to our custom variants
+        HANDLED_FUNCTIONS: Dict[callable, callable] = {}
+        """Dictionary of Numpy API function with overridden functions."""
+        HANDLED_TYPE_COMPATIBILITY_CHECK: Dict[callable, callable] = {}
+        """Dictionary of type compatibility functions per each Numpy API overridden function."""
+
+        @classmethod
+        def get_array_function(cls, np_function: Callable) -> Optional[Callable]:
+            """
+            Given the Numpy function, returns overridden array function if implemented, otherwise None.
+
+            Parameters
+            ----------
+            np_function: callable
+                The overridden Numpy array function.
+
+            Returns
+            -------
+            callable, optional
+                The overridden function as a callable or None if it's not implemented.
+            """
+            return cls.HANDLED_FUNCTIONS.get(np_function, None)
+
+        @classmethod
+        def get_array_function_type_compatibility_check(cls, np_function: Callable) -> Optional[Callable]:
+            """
+            Given the Numpy function, returns the corresponding array function type compatibility callable, otherwise None.
+
+            Parameters
+            ----------
+            np_function: callable
+                The overridden Numpy array function.
+
+            Returns
+            -------
+            callable, optional
+                The overridden type compatibility function as a callable or None if it's not implemented.
+            """
+            return cls.HANDLED_TYPE_COMPATIBILITY_CHECK.get(np_function, None)
+
+        @classmethod
+        def register_array_function(cls, np_function: Callable) -> Callable:
+            """
+             A function decorator whose argument is the Numpy function to override and the function that will override it.
+             This registers the `np_function` with the function that it decorates.
+
+            Parameters
+            ----------
+            np_function: callable
+                The overridden Numpy array function.
+
+            Returns
+            -------
+            callable
+                The decorator that registers `np_function` with the decorated function.
+            """
+            # @wraps(np_function)
+            def decorator(func):
+                cls.HANDLED_FUNCTIONS[np_function] = func
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'{cls.__name__}.register_array_function: registered {repr(func.__name__)} in place of {np_function.__name__}')
+                return func
+            return decorator
+
+        @classmethod
+        def register_array_function_type_compatibility(cls, np_function: Callable) -> Callable:
+            """
+            This registers the type compatibility check for the `np_function` with the function that it decorates.
+
+            Parameters
+            ----------
+            np_function: callable
+                The overridden Numpy array function.
+
+            Returns
+            -------
+            callable
+                The decorator that registers the type compatibility check for the `np_function` with the decorated function.
+            """
+            # @wraps(np_function)
+            def decorator(check_type_compatibility):
+                cls.HANDLED_TYPE_COMPATIBILITY_CHECK[np_function] = check_type_compatibility
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'{cls.__name__}.register_array_function_type_compatibility: registered type compatibility check {repr(check_type_compatibility)} for array function {np_function.__name__}')
+                return check_type_compatibility
+            return decorator
+
+        @classmethod
+        def deregister_array_function(cls, np_function: Callable) -> None:
+            """
+            Deregistration of the Numpy function and type compatibility override.
+
+            Parameters
+            ----------
+            np_function: callable
+                The overridden Numpy array function.
+            """
+            if cls.get_array_function(np_function) is not None:
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'{cls.__name__}.deregister_array_function: deregistered {repr(np_function.__name__)}')
+                del cls.HANDLED_FUNCTIONS[np_function]
+
+        @classmethod
+        def deregister_array_function_type_compatibility(cls, np_function: Callable) -> None:
+            """
+            Deregistration of the Numpy function and type compatibility override.
+
+            Parameters
+            ----------
+            np_function: callable
+                The overridden Numpy array function.
+            """
+            if cls.HANDLED_TYPE_COMPATIBILITY_CHECK.get(np_function, None) is not None:
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'{cls.__name__}.deregister_array_function_type_compatibility: deregistered {repr(np_function.__name__)}')
+                del cls.HANDLED_TYPE_COMPATIBILITY_CHECK[np_function]
+
+        @classmethod
+        def deregister(cls, np_function: Callable) -> None:
+            cls.deregister_array_function(np_function)
+            cls.deregister_array_function_type_compatibility(np_function)
+
     #--------------------------------------------------------------------------
     @classmethod
-    def _possibly_warn(cls, warning_string):
+    def _possibly_warn(cls, warning_string: str) -> Optional[bool]:
         if cls.WarningLevel ==0:
             return False
         if cls.WarningLevel ==1:
@@ -911,7 +1057,7 @@ class FastArray(np.ndarray):
         can be controlled by the `include_low` and `include_high` arguments).
 
         Default behaviour is equivalent to (self >= low) & (self < high).
-        
+
         Parameters
         ----------
         low: scalar, array_like
@@ -1114,6 +1260,168 @@ class FastArray(np.ndarray):
     def iscomputable(self):
         return TypeRegister.is_computable(self)
 
+    #############################################
+    # nep-18 array function protocol implementation
+    #############################################
+    @classmethod
+    def _py_number_to_np_dtype(cls, val: Union[int, np.integer, None], dtype: np.dtype) -> Union[np.uint, np.int64, np.float64, None]:
+        """Convert a python type to numpy dtype.
+        Only handles integers."""
+        if val is not None:
+            # internally numpy expects a dtype returned for nanstd and other calculations
+            if isinstance(val, (int, np.integer)):
+                # for uint64, the high bit must be preserved
+                if dtype.char in NumpyCharTypes.UnsignedInteger64:
+                    return np.uint64(val)
+                return np.int64(val)
+            return np.float64(val)
+        return val
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.argmax)
+    def _argmax(a, axis=None, out=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_ARGMAX, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nanargmax)
+    def _nanargmax(a, axis=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANARGMAX, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.argmin)
+    def _argmin(a, axis=None, out=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_ARGMIN, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nanargmin)
+    def _nanargmin(a, axis=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANARGMIN, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.empty_like)
+    def _empty_like(array: 'FastArray',
+        dtype: Optional[Union[str, np.dtype]] = None,
+        order: str = 'K',
+        subok: bool = True,
+        shape: Optional[Union[int, Sequence[int]]] = None
+    ) -> 'FastArray':
+        array = array._np
+        result = rc.LedgerFunction(np.empty_like, array, dtype=dtype, order=order, subok=subok, shape=shape)
+        return result
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.max)
+    def _max(a, axis=None, out=None, keepdims=None, initial=None, where=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_MAX, 0)
+        if result is not None:
+            return a.dtype.type(result)
+        return result
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nanmax)
+    def _nanmax(a, axis=None, out=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANMAX, 0)
+        if result is not None:
+            return a.dtype.type(result)
+        return result
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.mean)
+    def _mean(a, axis=None, dtype=None, out=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_MEAN, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nanmean)
+    def _nanmean(a, axis=None, dtype=None, out=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANMEAN, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.min)
+    def _min(a, axis=None, out=None, keepdims=None, initial=None, where=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_MIN, 0)
+        if result is not None:
+            return a.dtype.type(result)
+        return result
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nanmin)
+    def _nanmin(a, axis=None, out=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANMIN, 0)
+        if result is not None:
+            return a.dtype.type(result)
+        return result
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.std)
+    def _std(a, axis=None, dtype=None, out=None, ddof=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_STD, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nanstd)
+    def _nanstd(a, axis=None, dtype=None, out=None, ddof=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANSTD, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.round)
+    @_ArrayFunctionHelper.register_array_function(np.around)
+    @_ArrayFunctionHelper.register_array_function(np.round_)  # N.B, round_ is an alias for around
+    def _round_(a, decimals=None, out=None):
+        # TODO handle `decimal` and `out` arguments
+        # If callers decide to use this FastArray staticmethod outside the scope of array function protocol
+        # provide argument checks since it may become unclear when things fail at the C extension layer.
+        if not isinstance(a, FastArray):
+            raise ValueError(f'{FastArray.__name__}._round_ expected FastArray subtype, got {type(a)}')
+
+        original_dtype = a.dtype
+        a = a.astype(np.float64)
+        fast_function = gUnaryUFuncs.get(np.round, None)
+        if fast_function is None:
+            raise ValueError(f'{FastArray.__name__}._round_ unhandled array function {np.round}\nKnown numpy array function to riptable functions: {repr(gUnaryUFuncs)}')
+
+        # For MATH_OPERATION.ROUND, _BASICMATH_ONE_INPUT returns an array `array(None, dtype=object)`
+        # if the input dtype is not a float64. As a workaround cast to float64 dtype, perform the operation,
+        # then cast back to the original dtype.
+        result = TypeRegister.MathLedger._BASICMATH_ONE_INPUT(a, fast_function, 0)
+
+        if not isinstance(result, FastArray) and isinstance(result, np.ndarray):
+            result = result.view(FastArray)
+
+        if result.dtype != original_dtype:
+            result = result.astype(original_dtype)
+
+        return result
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.sum)
+    def _sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_SUM, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nansum)
+    def _nansum(a, axis=None, dtype=None, out=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANSUM, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.var)
+    def _var(a, axis=None, dtype=None, out=None, ddof=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_VAR, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
+
+    @staticmethod
+    @_ArrayFunctionHelper.register_array_function(np.nanvar)
+    def _nanvar(a, axis=None, dtype=None, out=None, ddof=None, keepdims=None):
+        result = rc.Reduce(a, REDUCE_FUNCTIONS.REDUCE_NANVAR, 0)
+        return FastArray._py_number_to_np_dtype(result, a.dtype)
 
     #############################################
     # Helper section
@@ -1298,9 +1606,12 @@ class FastArray(np.ndarray):
     #def __add__(self, value):   return rc.BasicMathTwoInputs((self, value), 1, 0)
 
     @property
-    def crc(self):
+    def crc(self) -> int:
         '''
-        performs a 32 bit CRC algo, returning a 64 bit value
+        Calculate the 32-bit CRC of the data in this array using the Castagnoli polynomial (CRC32C).
+
+        This function does not consider the array's shape or strides when calculating the CRC,
+        it simply calculates the CRC value over the entire buffer described by the array.
 
         Examples
         --------
@@ -1311,7 +1622,7 @@ class FastArray(np.ndarray):
         >>> a.crc == b.crc
         False
         '''
-        return rc.CalculateCRC(self)
+        return crc32c(self)
 
     #todo: range/nanrange
     #todo: stats/nanstats
@@ -1679,15 +1990,29 @@ class FastArray(np.ndarray):
     def _is_not_supported(self, arr):
         ''' returns True if a numpy array is not FastArray internally supported '''
         if not (arr.flags.c_contiguous or arr.flags.f_contiguous):
+            # TODO enable this warning in a future minor release
+            # FastArray._possibly_warn(f'_is_not_supported: unsupported array flags {arr.flags}')
             return True
         if arr.dtype.char not in NumpyCharTypes.Supported:
+            # TODO enable this warning in a future minor release
+            # FastArray._possibly_warn(f'_is_not_supported: unsupported array dtype {arr.dtype}\nSupported dtypes {NumpyCharTypes.Supported}')
             return True
         if len(arr.strides) == 0:
+            # TODO enable this warning in a future minor release
+            # FastArray._possibly_warn(f'_is_not_supported: unsupported array strides {arr.strides}')
             return True
         return False
 
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     def __array_function__(self, func, types, args, kwargs):
+        if self.NEW_ARRAY_FUNCTION_ENABLED:
+            return self._new_array_function(func, types, args, kwargs)
+        else:
+            return self._legacy_array_function(func, types, args, kwargs)
+
+
+    #---------------------------------------------------------------------------
+    def _legacy_array_function(self, func, types, args, kwargs):
         '''
         Called before array_ufunc.
         Does not get called for every function np.isnan/trunc/true_divide for instance.
@@ -1729,64 +2054,197 @@ class FastArray(np.ndarray):
         # call the version numpy wanted use to
         return super(FastArray, self).__array_function__(func, types, args, kwargs)
 
+
+    # ---------------------------------------------------------------------------
+    def _new_array_function(self, func: Callable, types: tuple, args: tuple, kwargs: dict):
+        """
+        FastArray implementation of the array function protocol.
+
+        Parameters
+        ----------
+        func: callable
+            An callable exposed by NumPy’s public API, which was called in the form ``func(*args, **kwargs)``.
+        types: tuple
+            A tuple of unique argument types from the original NumPy function call that implement ``__array_function__``.
+        args: tuple
+            The tuple of arguments that will be passed to `func`.
+        kwargs: dict
+            The dictionary of keyword arguments that will be passed to `func`.
+
+        Raises
+        ------
+        TypeError
+            If `func` is not overridden by a corresponding riptable array function then a TypeError is raised.
+
+        Notes
+        -----
+        This array function implementation requires each class, such as FastArray and any other derived class,
+        to implement their own version of the Numpy array function API. In the event these array functions defer to the
+        inheriting class they will need to either re-wrap the results in the correct type or raise exception if a
+        particular operation is not well-defined nor meaningful for the derived class.
+        If an array function, which is also a universal function, is not overridden as an array function, but defined
+        as a ufunc then it will not be called unless it is registered with the array function helper since array function
+        protocol takes priority over the universal function protocol.
+
+        See Also
+        --------
+        For information around the Numpy array function protocol see NEP 18:
+        https://numpy.org/neps/nep-0018-array-function-protocol.html
+        """
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'{FastArray.__name__}._new_array_function(fun={func}, types={types}, args={args}, kwargs={kwargs})')
+        # handle `func` argument
+        array_func: Callable = FastArray._ArrayFunctionHelper.get_array_function(func)
+        if array_func is None:
+            # fallback to numpy for unhandled array functions and attempt to cast back to FastArray
+            result = super().__array_function__(func, types, args, kwargs)
+            if result is NotImplemented:
+                return NotImplemented
+            elif isinstance(result, np.ndarray):
+                return result.view(FastArray)
+            elif isinstance(result, list):
+                return [(x.view(FastArray) if isinstance(x, np.ndarray) else x) for x in result]
+            elif isinstance(result, tuple):
+                return tuple([(x.view(FastArray) if isinstance(x, np.ndarray) else x) for x in result])
+            else:
+                # Unknown result type.
+                raise TypeError(f"Unknown result type '{type(result)}' returned by ndarray.{func}.")
+
+        # handle `types` argument
+        array_func_type_check: Callable = FastArray._ArrayFunctionHelper.get_array_function_type_compatibility_check(func)
+        if array_func_type_check is None:
+            # no custom type compatibility check; default type compatibility check
+            # this allows subclasses that don't override __array_function__ to handle FastArray objects
+            for typ in types:
+                if not issubclass(typ, FastArray):
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(f'{FastArray.__name__}.__array_function__: unsupported type {repr(typ)}')
+                    return NotImplemented
+        else:  # custom type compatibility check
+            valid: bool = array_func_type_check(types)
+            if not valid:
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'{FastArray.__name__}.__array_function__: unsupported type in {repr(types)}')
+                return NotImplemented
+
+        return array_func(*args, **kwargs)
+
     #---------------------------------------------------------------------------
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        '''
-        - *ufunc* is the ufunc object that was called.
-        - *method* is a string indicating how the Ufunc was called, either
-          ``"__call__"`` to indicate it was called directly, or one of its
-          :ref:methods<ufuncs.methods>: "reduce", "accumulate"`,
-          ``"reduceat"``, ``"outer"``, or ``"at"``.
-        - *inputs* is a tuple of the input arguments to the ``ufunc``
-        - *kwargs* contains any optional or keyword arguments passed to the
-          function. This includes any ``out`` arguments, which are always
-          contained in a tuple.
-        '''
-        toplevel_abort = False
+    def __array_ufunc__(self, ufunc: Callable, method: str, *inputs: Any, **kwargs: Any):
+        """
+        The FastArray universal function (or ufunc) override offers multithreaded C/C++ implementation at the RiptideCPP layer.
+
+        When FastArray receives a `ufunc` callable it will attempt to handle it in priority order:
+            1. considering ``FastArray`` ``FastFunction`` is enabled, ufunc is handled by an explicit ufunc override, otherwise
+            2. ufunc is handled at the Riptable / Numpy API overrides level, otherwise
+            3. ufunc is handled at the Numpy API level.
+
+        Given a combination of `ufunc`, `inputs`, and `kwargs`, if neither of the aforementioned cases support this
+        then a warning is emitted.
+
+        The following references to supported ufuncs are grouped by method type.
+            - For `method` type ``reduce``, see ``gReduceUFuncs``.
+            - For `method` type ``__call__``, see ``gBinaryUFuncs``, ``gBinaryLogicalUFuncs``, ``gBinaryBitwiseUFuncs``, and ``gUnaryUFuncs``.
+            - For `method` type ``at`` return ``None``.
+
+        If `out` argument is specified, then an extra array copy is performed on the result of the ufunc computation.
+
+        If a `dtype` keyword is specified, all efforts are made to respect the `dtype` on the result of the computation.
+
+        Parameters
+        ----------
+        ufunc : callable
+            The ufunc object that was called.
+        method : str
+            A string indicating which Ufunc method was called (one of "__call__", "reduce", "reduceat", "accumulate", "outer", "inner").
+        inputs
+            A tuple of the input arguments to the ufunc.
+        kwargs
+            A dictionary containing the optional input arguments of the ufunc. If given, any out arguments, both positional and keyword, are passed as a tuple in kwargs.
+
+        Returns
+        -------
+            The method should return either the result of the operation, or NotImplemented if the operation requested is not implemented.
+
+        Notes
+        -----
+        The current implementation does not support the following keyword arguments: `casting`, `sig`, `signature`, and
+        `core_signature`.
+
+        It has partial support for keyword arguments: `where`, `axis`, and `axes`, if they match
+        the default values.
+
+        If FastArray's ``WarningLevel`` is enabled, then warnings will be emitted if any of unsupported or partially
+        supported keyword arguments are passed.
+
+        TODO document custom up casting rules.
+
+        See Also
+        --------
+        For more information on ufunc see the following numpy documents:
+            - https://numpy.org/doc/stable/reference/arrays.classes.html#numpy.class.__array_ufunc__
+            - https://numpy.org/doc/stable/reference/ufuncs.html
+
+        Note, the docstring Parameters and Return section is repeated from the numpy
+        `__array_ufunc__` docstring since this is overriding that method.
+        """
+        # TODO consider using type annotation typing.Final for these read-only variables when moving to Python 3.8
+        # Python 3.8 added support for typing.Final. Final will catch unintended assignments for constants when running
+        # static type checkers such as mypy.
+        _UNSUPPORTED_KEYWORDS: Tuple[str, str, str, str] = ('casting', 'sig', 'signature', 'core_signature')
+        _PARTIALLY_SUPPORTED_KEYWORDS_TO_DEFAULTS: Mapping[str, Union[None, bool]] = {'where': True, 'axis': None, 'axes': None}
+        toplevel_abort: bool = False
 
         if FastArray.Verbose > 2:
             print("*** top level array_ufunc", ufunc, method, *inputs, kwargs)
 
         # flip any inputs that are fastarrays back to an ndarray...
-        args = []
+        args: List[Any] = []
         for input in inputs:
             if isinstance(input, np.ndarray):
-                toplevel_abort |= self._is_not_supported(input)
+                is_not_supported = self._is_not_supported(input)
+                if is_not_supported:
+                    # TODO enable this warning in a future minor release
+                    # FastArray._possibly_warn(f'__array_ufunc__: unsupported input "{input}"')
+                    toplevel_abort |= is_not_supported
             args.append(input)
 
         # Check for numpy rules that we cannot handle.
-        for _kw in ['casting', 'sig', 'signature', 'core_signature']:
-            if _kw in kwargs: toplevel_abort |= True
+        for kw in _UNSUPPORTED_KEYWORDS:
+            if kw in kwargs:
+                # TODO enable this warning in a future minor release
+                # FastArray._possibly_warn(f'__array_ufunc__: unsupported keyword argument "{kw}"')
+                toplevel_abort |= True
 
         # Check for numpy rules that we partially support; that is, where we only support
         # the keyword if the value is some default value and otherwise punt to numpy.
         # The value associated with each keyword in the dictionary is the only value we'll
         # support for that keyword.
         # For example, in numpy 1.17 the sum() function passes where=True by default.
-        for _kw, default_val in {
-            'where': True,
-            'axis': None,
-            'axes': None
-            }.items():
-            if _kw in kwargs:
+        for kw, default_val in _PARTIALLY_SUPPORTED_KEYWORDS_TO_DEFAULTS.items():
+            if kw in kwargs:
                 # Use a type check before equality here to avoid errors caused
                 # by checking equality between bools and arrays.
-                kwarg_val = kwargs[_kw]
+                kwarg_val = kwargs[kw]
                 if type(default_val) != type(kwarg_val) or kwarg_val != default_val:
                     toplevel_abort |= True
 
-        dtype=kwargs.get('dtype',None)
+        dtype: Optional[np.dtype] = kwargs.get('dtype', None)
 
-        hasOutputs = False
-        out_args = []
+        has_outputs: bool = False
+        out_args: List[Any] = []
 
         #flip any outputs to ndarray...
         outputs = kwargs.pop('out', None)
         if outputs:
-            hasOutputs = True
+            has_outputs = True
             for output in outputs:
                 if isinstance(output, np.ndarray):
-                    toplevel_abort |= self._is_not_supported(output)
+                    is_not_supported = self._is_not_supported(output)
+                    if is_not_supported:
+                        # TODO enable this warning in a future minor release
+                        # FastArray._possibly_warn(f'__array_ufunc__: unsupported output "{output}"')
+                        toplevel_abort |= is_not_supported
                 out_args.append(output)
             #replace out
             kwargs['out'] = tuple(out_args)
@@ -1805,11 +2263,11 @@ class FastArray(np.ndarray):
         #ufunc.types	Returns a list with types grouped input->output.
         #ufunc.identity	The identity value.
 
-        final_dtype = None
-        mode = None
-        fastFunction = None
-        reduceFunc = None
+        final_dtype: Optional[np.dtype] = None
+        fast_function: Optional[MATH_OPERATION] = None
+        reduce_func: Optional[REDUCE_FUNCTIONS] = None
 
+        # Handle reduce ufunc methods.
         # note: when method is 'at' this is an inplace unbuffered operation
         # this can speed up routines that use heavy masked operations
         if method == 'reduce' and FastArray.FasterUFunc and not toplevel_abort:
@@ -1848,7 +2306,7 @@ class FastArray(np.ndarray):
             # look for reduce logical_or
             # look for reduce_logical_and   (used with np.fmin for instance)
 
-            reduceFunc=gReduceUFuncs.get(ufunc,None)
+            reduce_func=gReduceUFuncs.get(ufunc,None)
 
 
         # check if we can proceed to calculate a faster way
@@ -1860,20 +2318,19 @@ class FastArray(np.ndarray):
                 ###########################################################################
                 ## BINARY
                 ###########################################################################
-                arraytypes = []
-                scalartypes = []
-                anyTypes=[]
+                array_types: List[np.dtype] = []
+                scalar_types: List[ScalarType] = []
 
-                scalars = 0
-                abort=0
+                scalars: int = 0
+                abort: int = 0
                 for arr in args:
                     arrType = type(arr)
                     if arrType in ScalarType:
                         scalars += 1
-                        scalartypes.append(arrType)
+                        scalar_types.append(arrType)
                     else:
                         try:
-                            arraytypes.append(arr.dtype)
+                            array_types.append(arr.dtype)
                             # check for non contingous arrays
                             if arr.itemsize != arr.strides[0]: abort =1
                         except:
@@ -1884,97 +2341,97 @@ class FastArray(np.ndarray):
 
                 if abort == 0:
                     if scalars < 2:
-                        isLogical = 0
+                        is_logical = 0
                         # check for add, sub, mul, divide, power
-                        fastFunction= gBinaryUFuncs.get(ufunc, None)
-                        if fastFunction is None:
+                        fast_function= gBinaryUFuncs.get(ufunc, None)
+                        if fast_function is None:
                             #check for comparison and logical or/and functions
-                            fastFunction = gBinaryLogicalUFuncs.get(ufunc, None)
-                            if fastFunction is not None:
+                            fast_function = gBinaryLogicalUFuncs.get(ufunc, None)
+                            if fast_function is not None:
                                 if (FastArray.Verbose > 2):
                                     print(f"**logical function called {ufunc} args: {args}")
-                                isLogical = 1
+                                is_logical = 1
                                 final_dtype = np.bool
 
 
-                        if fastFunction is None:
+                        if fast_function is None:
                             #check for bitwise functions? (test this)
-                            fastFunction = gBinaryBitwiseUFuncs.get(ufunc, None)
+                            fast_function = gBinaryBitwiseUFuncs.get(ufunc, None)
 
-                        if fastFunction is not None:
-                            if hasOutputs and isLogical == 0:
+                        if fast_function is not None:
+                            if has_outputs and is_logical == 0:
                                 # have to conform to output
                                 final_dtype = out_args[0].dtype
                             else:
-                                if isLogical == 1 and scalars == 1:
+                                if is_logical == 1 and scalars == 1:
                                 # NOTE: scalar upcast rules -- just apply to logicals so that arr < 5 does not upcast?
                                 #       or globally apply this rule so that arr = arr + 5
                                 #if scalars == 1:
                                     #special case have to see if scalar is in range
                                     if type(args[0]) in ScalarType:
-                                        scalarval = args[0]
+                                        scalar_val = args[0]
                                     else:
-                                        scalarval = args[1]
+                                        scalar_val = args[1]
 
-                                    final_dtype = logical_find_common_type(arraytypes, scalartypes, scalarval)
+                                    final_dtype = logical_find_common_type(array_types, scalar_types, scalar_val)
 
                                 else:
                                     print
                                     # TODO: check for bug where np.int32 type 7 gets flipped to np.int32 type 5
-                                    if scalars ==0 and len(arraytypes)==2 and (arraytypes[0] == arraytypes[1]):
-                                        final_dtype = arraytypes[0]
+                                    if scalars ==0 and len(array_types)==2 and (array_types[0] == array_types[1]):
+                                        final_dtype = array_types[0]
                                     else:
                                         # check for int scalar against int
                                         # bug where np.int8 and then add +1999 or larger number.  need to upcast
-                                        if scalars == 1 and arraytypes[0].num <=10:
+                                        if scalars == 1 and array_types[0].num <=10:
                                             if type(args[0]) in ScalarType:
-                                                scalarval = args[0]
+                                                scalar_val = args[0]
                                             else:
-                                                scalarval = args[1]
+                                                scalar_val = args[1]
 
-                                            final_dtype = logical_find_common_type(arraytypes, scalartypes, scalarval)
+                                            final_dtype = logical_find_common_type(array_types, scalar_types, scalar_val)
                                         else:
-                                            final_dtype = np.find_common_type(arraytypes, scalartypes)
+                                            final_dtype = np.find_common_type(array_types, scalar_types)
 
                             # if we are adding two strings or unicode, special case
                             # if we think the final dtype is an object, check if this is really two strings
-                            if fastFunction == MATH_OPERATION.ADD and (arraytypes[0].num == 18 or arraytypes[0].num == 19) :
+                            if fast_function == MATH_OPERATION.ADD and (array_types[0].num == 18 or array_types[0].num == 19) :
                                 # assume addition of two strings
-                                final_dtype = arraytypes[0]
+                                final_dtype = array_types[0]
                                 if scalars != 0:
                                     # we have a scalar... make sure we convert it
                                     if type(args[0]) in ScalarType:
                                         # fix scalar type make sure string or unicode
-                                        if arraytypes[0].num == 18:
+                                        if array_types[0].num == 18:
                                             args[0] = str.encode(str(args[0]))
-                                        if arraytypes[0].num == 19:
+                                        if array_types[0].num == 19:
                                             args[0] = str(args[0])
                                     else:
-                                        if arraytypes[0].num == 18:
+                                        if array_types[0].num == 18:
                                             args[1] = str.encode(str(args[1]))
-                                        if arraytypes[0].num == 19:
+                                        if array_types[0].num == 19:
                                             args[1] = str(args[1])
                                 else:
                                     # we have two arrays, if one array is not proper string type, convert it
-                                    if arraytypes[1] != final_dtype:
-                                        if arraytypes[0].num == 18:
+                                    if array_types[1] != final_dtype:
+                                        if array_types[0].num == 18:
                                             args[1] = args[1].astype('S')
-                                        if arraytypes[0].num == 19:
+                                        if array_types[0].num == 19:
                                             args[1] = args[1].astype('U')
 
                                 if (FastArray.Verbose > 2):
-                                    print("ADD string operation", arraytypes, scalartypes)
+                                    print("ADD string operation", array_types, scalar_types)
 
                             elif scalars ==0:
-                                if arraytypes[0] != arraytypes[1]:
+                                if array_types[0] != array_types[1]:
                                     # UPCAST RULES
-                                    if arraytypes[0] == final_dtype and arraytypes[1] != final_dtype:
-                                        #print("!!!upcast rules second", arraytypes[0], arraytypes[1], final_dtype)
+                                    if array_types[0] == final_dtype and array_types[1] != final_dtype:
+                                        #print("!!!upcast rules second", array_types[0], array_types[1], final_dtype)
                                         #convert to the proper type befor calculation
                                         args[1] = _ASTYPE(args[1], final_dtype)
 
-                                    elif arraytypes[0] != final_dtype and arraytypes[1] == final_dtype:
-                                        #print("!!!upcast rules first", arraytypes[0], arraytypes[1], final_dtype)
+                                    elif array_types[0] != final_dtype and array_types[1] == final_dtype:
+                                        #print("!!!upcast rules first", array_types[0], array_types[1], final_dtype)
                                         #convert to the proper type befor calculation
                                         args[0] = _ASTYPE(args[0], final_dtype)
                                     else:
@@ -1987,7 +2444,7 @@ class FastArray(np.ndarray):
                                         ##UseNumpy = True
                             else:
                                 # UPCAST RULES when one is a scalar
-                                if arraytypes[0] != final_dtype:
+                                if array_types[0] != final_dtype:
                                     # which argument is the scalar?  convert the other one
                                     if type(args[0]) in ScalarType:
                                         #print("converting arg2 from", args[1], final_dtype)
@@ -2005,7 +2462,7 @@ class FastArray(np.ndarray):
                 ###########################################################################
                 ## UNARY
                 ###########################################################################
-                fastFunction= gUnaryUFuncs.get(ufunc, None)
+                fast_function= gUnaryUFuncs.get(ufunc, None)
             else:
                 if (FastArray.Verbose > 1):
                     print("***unknown ufunc arg style: ", ufunc.nin, ufunc.nout, ufunc, args, kwargs)
@@ -2013,27 +2470,23 @@ class FastArray(np.ndarray):
 
         # -------------------------------------------------------------------------------------------------------------
         if not FastArray.FasterUFunc:
-            fastFunction = None
-            reduceFunc= None
-
-        #arrType = input[0].dtype
-        #shape = numel(input[0])
-        outArray = None
+            fast_function = None
+            reduce_func= None
 
         # check for a reduce func like sum or min
-        if reduceFunc is not None:
-            keepdims = kwargs.get('keepdims',False)
+        if reduce_func is not None:
+            keepdims: bool = kwargs.get('keepdims',False)
             if dtype is None: dtype = args[0].dtype
 
             #MathLedger
-            result= TypeRegister.MathLedger._REDUCE(args[0], reduceFunc)
+            result= TypeRegister.MathLedger._REDUCE(args[0], reduce_func)
             char = np.dtype(dtype).char
             if FastArray.Verbose > 1:
                 print("***result from reduce", result, type(result), dtype, char)
 
             if result is not None:
                 #print("reduce called", ufunc, keepdims, dtype)
-                if reduceFunc in [REDUCE_FUNCTIONS.REDUCE_SUM, REDUCE_FUNCTIONS.REDUCE_NANSUM] and isinstance(result, float):
+                if reduce_func in [REDUCE_FUNCTIONS.REDUCE_SUM, REDUCE_FUNCTIONS.REDUCE_NANSUM] and isinstance(result, float):
                     result = np.float64(result)
                 elif (dtype != np.float32 and dtype != np.float64):
                     # preserve integers
@@ -2046,7 +2499,7 @@ class FastArray(np.ndarray):
                     result=np.float64(result)
 
                 # MIN/MAX need to return same type
-                if (reduceFunc >= REDUCE_FUNCTIONS.REDUCE_MIN):
+                if (reduce_func >= REDUCE_FUNCTIONS.REDUCE_MIN):
                     # min max not allowed on empty array per unit test
                     if (len(args[0])==0): raise ValueError("min/max arg is an empty sequence.")
 
@@ -2067,7 +2520,7 @@ class FastArray(np.ndarray):
                 return result
 
         # check for normal call function
-        elif fastFunction is not None:
+        elif fast_function is not None:
             # Call the FastArray APIs instead of numpy
             #callmode = 'f'
             results=None
@@ -2090,21 +2543,21 @@ class FastArray(np.ndarray):
 
 
                 if FastArray.Verbose > 2:
-                    print("*** binary think we can call", fastFunction, ufunc.nin, ufunc.nout, "arg1", args[0], "arg2", args[1], "out", out_args, "final", final_num)
+                    print("*** binary think we can call", fast_function, ufunc.nin, ufunc.nout, "arg1", args[0], "arg2", args[1], "out", out_args, "final", final_num)
                 if len(out_args)==1:
-                    results = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS((args[0], args[1], out_args[0]), fastFunction, final_num)
+                    results = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS((args[0], args[1], out_args[0]), fast_function, final_num)
                 else:
-                    results = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS((args[0], args[1]), fastFunction, final_num)
+                    results = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS((args[0], args[1]), fast_function, final_num)
             else:
                 #for conversion functions
                 #dtype=kwargs.get('dtype',None)
                 if FastArray.Verbose > 2:
-                    print("*** unary think we can call", fastFunction, ufunc.nin, ufunc.nout, "arg1", args[0], "out", out_args)
+                    print("*** unary think we can call", fast_function, ufunc.nin, ufunc.nout, "arg1", args[0], "out", out_args)
 
                 if len(out_args)==1:
-                    results = TypeRegister.MathLedger._BASICMATH_ONE_INPUT((args[0], out_args[0]), fastFunction,0)
+                    results = TypeRegister.MathLedger._BASICMATH_ONE_INPUT((args[0], out_args[0]), fast_function,0)
                 else:
-                    results = TypeRegister.MathLedger._BASICMATH_ONE_INPUT((args[0]), fastFunction,0)
+                    results = TypeRegister.MathLedger._BASICMATH_ONE_INPUT((args[0]), fast_function,0)
 
             if results is not None and len(out_args)==1:
                 # when the output argument is forced but we calculate it into another array we need to copy the result into the output
@@ -2119,8 +2572,8 @@ class FastArray(np.ndarray):
                 #callmode='p'
                 if (FastArray.Verbose > 1):
                     print("***punted ufunc: ", ufunc.nin, ufunc.nout, ufunc, args, kwargs)
-                fastFunction =None
-                # fall to "if fastFunction is None" and run through numpy...
+                fast_function =None
+                # fall to "if fast_function is None" and run through numpy...
 
             # respect dtype
             elif dtype is not None and isinstance(results, np.ndarray):
@@ -2129,7 +2582,7 @@ class FastArray(np.ndarray):
                     # convert
                     results = results.astype(dtype)
 
-        if fastFunction is None:
+        if fast_function is None:
             # Call the numpy APIs
             # Check if we can use the recycled arrays to avoid an allocation for the output array
 
@@ -2146,7 +2599,7 @@ class FastArray(np.ndarray):
                 else:
                     args.append(input)
 
-            if hasOutputs:
+            if has_outputs:
                 outputs = kwargs.pop('out', None)
                 if outputs:
                     out_args=[]

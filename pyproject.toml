@@ -1,0 +1,32 @@
+# NOTE: you have to use single-quoted strings in TOML for regular expressions.
+# It's the equivalent of r-strings in Python.  Multiline strings are treated as
+# verbose regular expressions by Black.  Use [ ] to denote a significant space
+# character.
+
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+target-version = ['py36', 'py37', 'py38']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.cache
+  | \.egg
+  | \.git
+  | \.hypothesis
+  | \.idea
+  | \.ionide
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.tox
+  | \.venv
+  | \.vs
+  | \.vscode
+  | _build
+  | build
+  | dist
+)/
+'''
+
+[pytest]
+xfail_strict = true

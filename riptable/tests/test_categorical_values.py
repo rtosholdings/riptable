@@ -1,8 +1,7 @@
+import pytest
+import numpy as np
 from riptable import *
 from riptable.rt_enum import GROUPBY_KEY_PREFIX
-import unittest
-import warnings
-import numpy as np
 
 all_int_dtypes = [np.int8, np.int16, np.int32, np.int64]
 
@@ -11,7 +10,7 @@ def arr_equal(a, b):
     return bool(np.all(a == b))
 
 
-class Categorical_Values_Test(unittest.TestCase):
+class TestCategoricalValues:
     '''
     Test Categorical constructor will list / array of values only.
 
@@ -85,11 +84,11 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=None,
             base_index=0,
         )
-        self.assertTrue(arr_equal(base_0_underlying_sorted, c._fa))
-        self.assertTrue(arr_equal(cats_sorted, c.category_array))
+        assert arr_equal(base_0_underlying_sorted, c._fa)
+        assert arr_equal(cats_sorted, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 0, None, None, 1
         c = Categorical(
@@ -100,14 +99,14 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=None,
             base_index=1,
         )
-        self.assertTrue(arr_equal(base_1_underlying_sorted, c._fa))
-        self.assertTrue(arr_equal(cats_sorted, c.category_array))
+        assert arr_equal(base_1_underlying_sorted, c._fa)
+        assert arr_equal(cats_sorted, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 0, None, FILTER, 0
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             c = Categorical(
                 bytes_arr,
                 ordered=True,
@@ -126,13 +125,11 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=b_filter,
             base_index=1,
         )
-        self.assertTrue(arr_equal(underlying_sorted_filtered, c._fa))
-        self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
+        assert arr_equal(underlying_sorted_filtered, c._fa)
+        assert arr_equal(cats_sorted_filtered, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
-        )
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted_filtered)
 
         # 0, 0, ALL_DTYPES, None, 0
         for dt in all_int_dtypes:
@@ -145,13 +142,11 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=0,
             )
-            self.assertTrue(arr_equal(base_0_underlying_sorted, c._fa))
-            self.assertTrue(arr_equal(cats_sorted, c.category_array))
+            assert arr_equal(base_0_underlying_sorted, c._fa)
+            assert arr_equal(cats_sorted, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 0, ALL_DTYPES, None, 1
         for dt in all_int_dtypes:
@@ -164,17 +159,15 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(base_1_underlying_sorted, c._fa))
-            self.assertTrue(arr_equal(cats_sorted, c.category_array))
+            assert arr_equal(base_1_underlying_sorted, c._fa)
+            assert arr_equal(cats_sorted, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 0, ALL_DTYPES, FILTER, 0
         for dt in all_int_dtypes:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 c = Categorical(
                     bytes_arr,
                     ordered=True,
@@ -195,36 +188,34 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=b_filter,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(underlying_sorted_filtered, c._fa))
-            self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
+            assert arr_equal(underlying_sorted_filtered, c._fa)
+            assert arr_equal(cats_sorted_filtered, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted_filtered)
 
         # 0, 1, None, None, 0
         c = Categorical(
             bytes_arr, ordered=True, sort_gb=True, dtype=None, filter=None, base_index=0
         )
-        self.assertTrue(arr_equal(base_0_underlying_sorted, c._fa))
-        self.assertTrue(arr_equal(cats_sorted, c.category_array))
+        assert arr_equal(base_0_underlying_sorted, c._fa)
+        assert arr_equal(cats_sorted, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 1, None, None, 1
         c = Categorical(
             bytes_arr, ordered=True, sort_gb=True, dtype=None, filter=None, base_index=1
         )
-        self.assertTrue(arr_equal(base_1_underlying_sorted, c._fa))
-        self.assertTrue(arr_equal(cats_sorted, c.category_array))
+        assert arr_equal(base_1_underlying_sorted, c._fa)
+        assert arr_equal(cats_sorted, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 1, None, FILTER, 0
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             c = Categorical(
                 bytes_arr,
                 ordered=True,
@@ -243,13 +234,11 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=b_filter,
             base_index=1,
         )
-        self.assertTrue(arr_equal(underlying_sorted_filtered, c._fa))
-        self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
+        assert arr_equal(underlying_sorted_filtered, c._fa)
+        assert arr_equal(cats_sorted_filtered, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
-        )
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted_filtered)
 
         # 0, 1, ALL_DTYPES, None, 0
         for dt in all_int_dtypes:
@@ -262,13 +251,11 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=0,
             )
-            self.assertTrue(arr_equal(base_0_underlying_sorted, c._fa))
-            self.assertTrue(arr_equal(cats_sorted, c.category_array))
+            assert arr_equal(base_0_underlying_sorted, c._fa)
+            assert arr_equal(cats_sorted, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 1, ALL_DTYPES, None, 1
         for dt in all_int_dtypes:
@@ -281,17 +268,15 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(base_1_underlying_sorted, c._fa))
-            self.assertTrue(arr_equal(cats_sorted, c.category_array))
+            assert arr_equal(base_1_underlying_sorted, c._fa)
+            assert arr_equal(cats_sorted, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 0, 1, ALL_DTYPES, FILTER, 0
         for dt in all_int_dtypes:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 c = Categorical(
                     bytes_arr,
                     ordered=True,
@@ -312,13 +297,11 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=b_filter,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(underlying_sorted_filtered, c._fa))
-            self.assertTrue(arr_equal(cats_sorted_filtered, c.category_array))
+            assert arr_equal(underlying_sorted_filtered, c._fa)
+            assert arr_equal(cats_sorted_filtered, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted_filtered)
 
         # 1, 0, None, None, 0
         c = Categorical(
@@ -329,13 +312,11 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=None,
             base_index=0,
         )
-        self.assertTrue(arr_equal(base_0_underlying_first_order, c._fa))
-        self.assertTrue(arr_equal(cats_first_order, c.category_array))
+        assert arr_equal(base_0_underlying_first_order, c._fa)
+        assert arr_equal(cats_first_order, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
-        )
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+        assert arr_equal(gb_result.col_0, gb_nums_first_order)
 
         # 1, 0, None, None, 1
         c = Categorical(
@@ -346,16 +327,14 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=None,
             base_index=1,
         )
-        self.assertTrue(arr_equal(base_1_underlying_first_order, c._fa))
-        self.assertTrue(arr_equal(cats_first_order, c.category_array))
+        assert arr_equal(base_1_underlying_first_order, c._fa)
+        assert arr_equal(cats_first_order, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
-        )
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+        assert arr_equal(gb_result.col_0, gb_nums_first_order)
 
         # 1, 0, None, FILTER, 0
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             c = Categorical(
                 bytes_arr,
                 ordered=False,
@@ -374,13 +353,11 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=b_filter,
             base_index=1,
         )
-        self.assertTrue(arr_equal(underlying_first_order_filtered, c._fa))
-        self.assertTrue(arr_equal(cats_first_order_filtered, c.category_array))
+        assert arr_equal(underlying_first_order_filtered, c._fa)
+        assert arr_equal(cats_first_order_filtered, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order_filtered)
-        )
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order_filtered))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order_filtered)
+        assert arr_equal(gb_result.col_0, gb_nums_first_order_filtered)
 
         # 1, 0, ALL_DTYPES, None, 0
         for dt in all_int_dtypes:
@@ -393,13 +370,11 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=0,
             )
-            self.assertTrue(arr_equal(base_0_underlying_first_order, c._fa))
-            self.assertTrue(arr_equal(cats_first_order, c.category_array))
+            assert arr_equal(base_0_underlying_first_order, c._fa)
+            assert arr_equal(cats_first_order, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+            assert arr_equal(gb_result.col_0, gb_nums_first_order)
 
         # 1, 0, ALL_DTYPES, None, 1
         for dt in all_int_dtypes:
@@ -412,17 +387,15 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(base_1_underlying_first_order, c._fa))
-            self.assertTrue(arr_equal(cats_first_order, c.category_array))
+            assert arr_equal(base_1_underlying_first_order, c._fa)
+            assert arr_equal(cats_first_order, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order)
+            assert arr_equal(gb_result.col_0, gb_nums_first_order)
 
         # 1, 0, ALL_DTYPES, FILTER, 0
         for dt in all_int_dtypes:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 c = Categorical(
                     bytes_arr,
                     ordered=False,
@@ -442,15 +415,13 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=b_filter,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(underlying_first_order_filtered, c._fa))
-            self.assertTrue(arr_equal(cats_first_order_filtered, c.category_array))
+            assert arr_equal(underlying_first_order_filtered, c._fa)
+            assert arr_equal(cats_first_order_filtered, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(
+            assert arr_equal(
                     gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_first_order_filtered
                 )
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_first_order_filtered))
+            assert arr_equal(gb_result.col_0, gb_nums_first_order_filtered)
 
         # 1, 1, None, None, 0
         c = Categorical(
@@ -461,11 +432,11 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=None,
             base_index=0,
         )
-        self.assertTrue(arr_equal(base_0_underlying_first_order, c._fa))
-        self.assertTrue(arr_equal(cats_first_order, c.category_array))
+        assert arr_equal(base_0_underlying_first_order, c._fa)
+        assert arr_equal(cats_first_order, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 1, 1, None, None, 1
         c = Categorical(
@@ -476,14 +447,14 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=None,
             base_index=1,
         )
-        self.assertTrue(arr_equal(base_1_underlying_first_order, c._fa))
-        self.assertTrue(arr_equal(cats_first_order, c.category_array))
+        assert arr_equal(base_1_underlying_first_order, c._fa)
+        assert arr_equal(cats_first_order, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted))
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 1, 1, None, FILTER, 0
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             c = Categorical(
                 bytes_arr,
                 ordered=False,
@@ -502,13 +473,11 @@ class Categorical_Values_Test(unittest.TestCase):
             filter=b_filter,
             base_index=1,
         )
-        self.assertTrue(arr_equal(underlying_first_order_filtered, c._fa))
-        self.assertTrue(arr_equal(cats_first_order_filtered, c.category_array))
+        assert arr_equal(underlying_first_order_filtered, c._fa)
+        assert arr_equal(cats_first_order_filtered, c.category_array)
         gb_result = c.sum(gb_data)
-        self.assertTrue(
-            arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
-        )
-        self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
+        assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+        assert arr_equal(gb_result.col_0, gb_nums_sorted_filtered)
 
         # 1, 1, ALL_DTYPES, None, 0
         for dt in all_int_dtypes:
@@ -521,13 +490,11 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=0,
             )
-            self.assertTrue(arr_equal(base_0_underlying_first_order, c._fa))
-            self.assertTrue(arr_equal(cats_first_order, c.category_array))
+            assert arr_equal(base_0_underlying_first_order, c._fa)
+            assert arr_equal(cats_first_order, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 1, 1, ALL_DTYPES, None, 1
         for dt in all_int_dtypes:
@@ -540,16 +507,14 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=None,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(base_1_underlying_first_order, c._fa))
-            self.assertTrue(arr_equal(cats_first_order, c.category_array))
+            assert arr_equal(base_1_underlying_first_order, c._fa)
+            assert arr_equal(cats_first_order, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted)
 
         # 1, 1, ALL_DTYPES, FILTER, 0
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             for dt in all_int_dtypes:
                 c = Categorical(
                     bytes_arr,
@@ -571,10 +536,8 @@ class Categorical_Values_Test(unittest.TestCase):
                 filter=b_filter,
                 base_index=1,
             )
-            self.assertTrue(arr_equal(underlying_first_order_filtered, c._fa))
-            self.assertTrue(arr_equal(cats_first_order_filtered, c.category_array))
+            assert arr_equal(underlying_first_order_filtered, c._fa)
+            assert arr_equal(cats_first_order_filtered, c.category_array)
             gb_result = c.sum(gb_data)
-            self.assertTrue(
-                arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
-            )
-            self.assertTrue(arr_equal(gb_result.col_0, gb_nums_sorted_filtered))
+            assert arr_equal(gb_result[GROUPBY_KEY_PREFIX + '_0'], cats_sorted_filtered)
+            assert arr_equal(gb_result.col_0, gb_nums_sorted_filtered)

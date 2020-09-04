@@ -3,7 +3,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 import riptable as rt
-from riptable.rt_algos import crc_match
+from riptable.rt_utils import crc_match
 
 @pytest.mark.parametrize(
     "arrs,expected",

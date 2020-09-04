@@ -50,7 +50,7 @@ del TypeRegister
 SharedMemory.check_shared_memory_limit()
 
 # Not fundamental yet of first-rank?
-from .rt_merge import merge, merge2, merge_lookup, merge_asof
+from .rt_merge import merge, merge2, merge_asof, merge_lookup
 
 # Second-rank?
 from .rt_timers import (
@@ -87,6 +87,7 @@ from .rt_numpy import (
     bitcount,
     ceil,
     concatenate,
+    crc32c,
     crc64,
     cumprod,
     cumsum,
@@ -200,10 +201,10 @@ from .rt_numpy import (
     absolute,
 )
 
-from .rt_grouping import Grouping, hstack_groupings, combine2groups
+from .rt_grouping import Grouping, hstack_groupings, combine2groups, merge_cats
 from .rt_bin import cut, qcut, quantile
 from .rt_csv import load_csv_as_dataset
-from .rt_hstack import hstack_any, merge_cats, stack_rows
+from .rt_hstack import hstack_any, stack_rows
 from .rt_display import DisplayTable as Display
 
 from .Utils.rt_display_nested import treedir

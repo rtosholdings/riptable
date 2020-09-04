@@ -1,4 +1,4 @@
-import unittest
+import pytest
 import os
 
 from riptable import *
@@ -16,63 +16,63 @@ def arr_all(a):
     return bool(np.all(a))
 
 
-class CategoricalFilterInvalid_Test(unittest.TestCase):
+class TestCategoricalFilterInvalid:
     def test_copy_new_filter_single(self):
         c = Categorical(['a', 'a', 'b', 'c', 'a'])
         orig = FastArray([1, 1, 2, 3, 1])
-        self.assertTrue(arr_eq(c._fa, orig))
+        assert arr_eq(c._fa, orig)
 
         f = FastArray([False, True, True, True, True])
         d = Categorical(c, filter=f)
         new = FastArray([0, 1, 2, 3, 1])
-        self.assertTrue(arr_eq(d._fa, new))
+        assert arr_eq(d._fa, new)
 
     def test_copy_new_filter_single2(self):
         c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
         orig = FastArray([1, 2, 3, 4, 5])
-        self.assertTrue(arr_eq(c._fa, orig))
+        assert arr_eq(c._fa, orig)
 
         f = FastArray([False, True, True, True, True])
         d = Categorical(c, filter=f)
         new = FastArray([0, 1, 2, 3, 4])
-        self.assertTrue(arr_eq(d._fa, new))
+        assert arr_eq(d._fa, new)
 
     def test_copy_filter_errors(self):
         c = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0)
         f = FastArray([False, True, True, True, True])
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, filter=f)
 
     def test_copy_warnings(self):
         c = Categorical(['a', 'a', 'b', 'c', 'a'])
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, ordered=False)
 
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, sort_gb=False)
 
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, lex=False)
 
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, base_index=0)
 
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, dtype=np.int64)
 
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, unicode=True)
 
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = Categorical(c, invalid='inv')
 
     def test_filtered_set_name(self):
         c = Categorical([0, 1, 1, 2, 3], ['a', 'b', 'c'])
-        self.assertEqual(c[0], 'Filtered')
-        self.assertEqual(c.filtered_name, 'Filtered')
+        assert c[0] == 'Filtered'
+        assert c.filtered_name == 'Filtered'
         c.filtered_set_name('FILT')
-        self.assertEqual(c[0], 'FILT')
-        self.assertEqual(c.filtered_name, 'FILT')
+        assert c[0] == 'FILT'
+        assert c.filtered_name == 'FILT'
 
     # TODO move this into SDS save / load test module and use pytest fixtures
     def test_saveload_invalid(self):
@@ -82,21 +82,21 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
         ds.save(r'riptable/tests/temp/ds')
         ds2 = load_sds(r'riptable/tests/temp/ds')
         c2 = ds2.catcol
-        self.assertEqual(c.invalid_category, c2.invalid_category)
-        self.assertEqual(c.filtered_name, c2.filtered_name)
+        assert c.invalid_category == c2.invalid_category
+        assert c.filtered_name == c2.filtered_name
         os.remove(r'riptable/tests/temp/ds.sds')
 
     def test_isfiltered(self):
         c = Categorical(np.random.choice(4, 100), ['a', 'b', 'c'])
         flt = c.isfiltered()
         eq_z = c._fa == 0
-        self.assertTrue(arr_eq(flt, eq_z))
+        assert arr_eq(flt, eq_z)
 
     def test_isnan(self):
         c = Categorical(np.random.choice(4, 100), ['a', 'b', 'c'], invalid='a')
         inv = c.isnan()
         eq_bin = c._fa == 1
-        self.assertTrue(arr_eq(inv, eq_bin))
+        assert arr_eq(inv, eq_bin)
 
     def test_combine_filter(self):
         c = Categorical(FA([2, 2, 1, 0, 2], dtype=np.int8), ['a', 'b'])
@@ -106,55 +106,55 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
     def test_single_key_filter(self):
         f = FA([True, True, False, True, False])
         pre_c = Categorical(['a', 'a', 'b', 'c', 'a'], filter=f)
-        self.assertEqual(pre_c.unique_count, 2)
+        assert pre_c.unique_count == 2
 
         c = Categorical(['a', 'a', 'b', 'c', 'a'])
-        self.assertEqual(c.unique_count, 3)
+        assert c.unique_count == 3
         d = c.filter(filter=f)
-        self.assertEqual(pre_c.unique_count, d.unique_count)
-        self.assertTrue(arr_eq(pre_c._fa, d._fa))
+        assert pre_c.unique_count == d.unique_count
+        assert arr_eq(pre_c._fa, d._fa)
 
     def test_multikey_filter(self):
         f = FA([True, True, False, True, False])
         pre_c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)], filter=f)
-        self.assertEqual(pre_c.unique_count, 3)
+        assert pre_c.unique_count == 3
 
         c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
-        self.assertEqual(c.unique_count, 5)
+        assert c.unique_count == 5
         d = c.filter(filter=f)
-        self.assertEqual(pre_c.unique_count, d.unique_count)
-        self.assertTrue(arr_eq(pre_c._fa, d._fa))
+        assert pre_c.unique_count == d.unique_count
+        assert arr_eq(pre_c._fa, d._fa)
 
     def test_categorical_empty(self):
         c = Categorical(zeros(10, dtype=np.int8), ['a', 'b', 'c'])
-        self.assertEqual(c.unique_count, 3)
+        assert c.unique_count == 3
 
         d = c.filter()
-        self.assertEqual(d.unique_count, 0)
-        self.assertEqual(len(d.category_array), 0)
+        assert d.unique_count == 0
+        assert len(d.category_array) == 0
 
     def test_categorical_full(self):
         f = full(5, True)
         c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
         d = c.filter(filter=f)
-        self.assertTrue(arr_eq(c._fa, d._fa))
+        assert arr_eq(c._fa, d._fa)
 
     def test_filter_deep_copy(self):
         f = FA([True, True, False, True, False])
         c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
-        self.assertEqual(c.unique_count, 5)
+        assert c.unique_count == 5
         d = c.filter(filter=f)
-        self.assertEqual(d.unique_count, 3)
-        self.assertEqual(c.unique_count, 5)
+        assert d.unique_count == 3
+        assert c.unique_count == 5
 
     def test_filter_base_zero(self):
         f = FA([True, True, False, True, False])
         c = Categorical(['a', 'a', 'b', 'c', 'a'], filter=f)
         c_zero = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0)
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             d = c_zero.filter(filter=f)
-        self.assertTrue(arr_eq(c._fa, d._fa))
-        self.assertEqual(c.unique_count, d.unique_count)
+        assert arr_eq(c._fa, d._fa)
+        assert c.unique_count == d.unique_count
 
     def test_pre_vs_post(self):
         # unique item removed
@@ -165,11 +165,11 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
         c_post = c.filter(filter=filter)
         c_copy = Categorical(c, filter=filter)
 
-        self.assertTrue(arr_eq(c_pre.category_array, c_post.category_array))
-        self.assertTrue(arr_eq(c_pre._fa, c_post._fa))
+        assert arr_eq(c_pre.category_array, c_post.category_array)
+        assert arr_eq(c_pre._fa, c_post._fa)
 
-        self.assertTrue(arr_eq(c_pre.category_array, c_copy.category_array))
-        self.assertTrue(arr_eq(c_pre._fa, c_copy._fa))
+        assert arr_eq(c_pre.category_array, c_copy.category_array)
+        assert arr_eq(c_pre._fa, c_copy._fa)
 
         # same uniques
         arr = np.random.choice(['a', 'b', 'c'], 50)
@@ -180,29 +180,29 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
         c_post = c.filter(filter=filter)
         c_copy = Categorical(c, filter=filter)
 
-        self.assertTrue(arr_eq(c_pre.category_array, c_post.category_array))
-        self.assertTrue(arr_eq(c_pre._fa, c_post._fa))
+        assert arr_eq(c_pre.category_array, c_post.category_array)
+        assert arr_eq(c_pre._fa, c_post._fa)
 
-        self.assertTrue(arr_eq(c_pre.category_array, c_copy.category_array))
-        self.assertTrue(arr_eq(c_pre._fa, c_copy._fa))
+        assert arr_eq(c_pre.category_array, c_copy.category_array)
+        assert arr_eq(c_pre._fa, c_copy._fa)
 
     def test_expand_array_empty(self):
         arr = np.random.choice(['a', 'b', 'c'], 50)
         c = Categorical(arr)
         c2 = c.filter(filter=full(50, False))
-        self.assertEqual(c2.unique_count, 0)
-        self.assertEqual(len(c2.category_array), 0)
+        assert c2.unique_count == 0
+        assert len(c2.category_array) == 0
         expanded = c2.expand_array
-        self.assertTrue(arr_eq(expanded, c2.filtered_name))
+        assert arr_eq(expanded, c2.filtered_name)
 
     def test_expand_dict_empty(self):
         c = Categorical([arange(5), np.array(['a', 'b', 'c', 'd', 'e'])])
         c2 = c.filter(filter=full(5, False))
-        self.assertEqual(c2.unique_count, 0)
+        assert c2.unique_count == 0
 
         d = list(c2.expand_dict.values())
-        self.assertTrue(arr_all(d[0].isnan()))
-        self.assertTrue(arr_eq(d[1], c2.filtered_name))
+        assert arr_all(d[0].isnan())
+        assert arr_eq(d[1], c2.filtered_name)
 
     def test_gbc_multikey(self):
         names = FA(['brian', 'brian', 'adam', 'charlie', 'edward', 'brian'])
@@ -224,14 +224,8 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
         dsc = Dataset({'catcol': c_multi})
         dsc_result = dsc.gbu('catcol').sum(data)
 
-        self.assertTrue(
-            c_result.equals(ds_result),
-            msg=f'did not match for \n{c_result}\n{ds_result}',
-        )
-        self.assertTrue(
-            ds_result.equals(dsc_result),
-            msg=f'did not match for \n{ds_result}\n{dsc_result}',
-        )
+        assert c_result.equals(ds_result), f'did not match for \n{c_result}\n{ds_result}'
+        assert ds_result.equals(dsc_result), f'did not match for \n{ds_result}\n{dsc_result}'
 
     def test_enum_filter(self):
         codes = np.random.choice([10, 20, 30, 40], 50)
@@ -242,13 +236,13 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
         # filter to go to groupby
         reg = c.sum(data)
         app = c.apply(sum, data)
-        self.assertTrue(reg.equals(app))
+        assert reg.equals(app)
 
         # keep enum as enum
         as_arr = c.filter(None)
 
         for i in range(len(as_arr)):
-            self.assertEqual(c[i], as_arr[i])
+            assert c[i] == as_arr[i]
 
         # post filter enum
         codes = FA([10, 10, 20, 30, 10])
@@ -257,14 +251,14 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
         c = Categorical(codes, d)
 
         c2 = c.as_singlekey().filter(f)
-        self.assertEqual(c2.unique_count, 2)
+        assert c2.unique_count == 2
         c2.filtered_set_name('FLT')
-        self.assertEqual(c2.unique_count, 2)
-        self.assertEqual(c2[2], 'FLT')
+        assert c2.unique_count == 2
+        assert c2[2] == 'FLT'
 
         c = Cat([10, 20, 30] * 3, {10: 'A', 20: 'B', 30: 'C'})
         count = c.filter(c == 'A').count()['Count']
-        self.assertTrue(np.all(count == [3, 6]))
+        assert np.all(count == [3, 6])
 
     def test_gbc_filter(self):
         pass
@@ -272,19 +266,15 @@ class CategoricalFilterInvalid_Test(unittest.TestCase):
     def test_slice_empty_gb(self):
         c = Categorical(['a', 'a', 'b', 'c', 'a'])
         c = c[:0]
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = c.sum(arange(5))
 
         codes = FA([10, 10, 20, 30, 10])
         d = {10: 'aaa', 20: 'bbb', 30: 'ccc'}
         c = Categorical(codes, d)
         c = c[:0]
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = c.sum(arange(5))
-
-
-if __name__ == '__main__':
-    tester = unittest.main()
 
 
 # INVAID vs. FILTERED checklist:

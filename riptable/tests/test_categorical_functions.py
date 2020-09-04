@@ -1,4 +1,3 @@
-import unittest
 import pandas as pd
 import riptable as rt
 
@@ -121,7 +120,7 @@ def safe_equal(ary1, ary2):
     return True
 
 
-class SimpleGroupByCatTest(unittest.TestCase):
+class TestCategoricalSimpleGroupBy:
     def groupby_func(self, df, fn, data=None):
         return functions[fn](df, data)
 
@@ -158,7 +157,3 @@ class SimpleGroupByCatTest(unittest.TestCase):
                     print(list(pd_out['vs']))
                     print('Function failed on - ', functions_str[function])
                     assert False
-
-
-if __name__ == "__main__":
-    tester = unittest.main()

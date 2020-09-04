@@ -1,21 +1,10 @@
+from typing import List
+import numpy as np
+
 from .rt_enum import TypeRegister
-from .rt_numpy import unique, ismember, crc64, hstack
+from .rt_numpy import unique, ismember, hstack
+from .rt_utils import crc_match
 
-# ------------------------------------------------------------
-def crc_match(arrlist):
-    """
-    Perform CRC check on every array in list, returning True if all have the same CRC value.
-
-    Parameters
-    ----------
-    arrlist : list of numpy arrays
-
-    Returns
-    -------
-    bool indicating whether all arrays in `arrlist` have the same CRC value.
-    """
-    crcs = {crc64(arr) for arr in arrlist}
-    return len(crcs) == 1
 
 # ------------------------------------------------------------
 def merge_index(indices, listcats, idx_cutoffs=None, unique_cutoffs=None, from_mapping=False, stack=True):

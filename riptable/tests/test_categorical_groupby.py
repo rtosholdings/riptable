@@ -1,4 +1,3 @@
-import unittest
 import numpy as np
 import riptable as rt
 from numpy.testing import assert_array_equal
@@ -356,7 +355,7 @@ class str_enum(IntEnum):
     e = 4
 
 
-class CategoricalGroupby_Test(unittest.TestCase):
+class TestCategoricalGroupby:
     def test_friendly_name(self):
         pass
 
@@ -394,10 +393,8 @@ class CategoricalGroupby_Test(unittest.TestCase):
         for op_name in all_gb_ops:
             # print('OP NAME WAS',op_name)
             match = self.get_gb_results(op_name, ds_gb, c, ds_nums, data_to_compare)
-            self.assertTrue(
-                match,
-                msg=f"Categorical {c} constructed from: {constructor_name} Results did not match for {op_name} operation.",
-            )
+            assert match,\
+                f"Categorical {c} constructed from: {constructor_name} Results did not match for {op_name} operation."
 
         # post filter
         if sorted is True:
@@ -409,20 +406,16 @@ class CategoricalGroupby_Test(unittest.TestCase):
             match = self.get_filtered_bin_results(
                 op_name, c, flt_fa, 'floats', d_filter, bin_idx, correct
             )
-            self.assertTrue(
-                match,
-                msg=f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}",
-            )
+            assert match,\
+                f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}"\
 
     def construction_with_invalid(self, c, constructor_name):
         for op_name, correct in zip(gb_funcs_L1, d_filter_results):
             match = self.get_filtered_bin_results(
                 op_name, c, flt_fa, 'floats', None, 2, correct
             )
-            self.assertTrue(
-                match,
-                msg=f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}",
-            )
+            assert match,\
+                f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}"
 
     def simple_string_set_item(self, *args, **kwargs):
         '''
@@ -476,18 +469,14 @@ class CategoricalGroupby_Test(unittest.TestCase):
             c[items[0]] = items[1]
             result = c == items[1]
             all_set = np.sum(goal == result)
-            self.assertEqual(
-                all_set,
-                30,
-                msg=f"did not set c[{items[0]}] to {items[1]} for categorical from {source}",
-            )
+            assert all_set ==\
+                30,\
+                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
             none_left = np.sum(c == 'b')
-            self.assertEqual(
-                none_left,
-                0,
-                msg=f"did not set c[{items[0]}] to {items[1]} for categorical from {source}",
-            )
+            assert none_left ==\
+                0,\
+                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
     def mk_set_item(self, *args, **kwargs):
         source = kwargs['constructor_name']
@@ -534,18 +523,14 @@ class CategoricalGroupby_Test(unittest.TestCase):
             c[items[0]] = items[1]
             result = c == items[1]
             all_set = np.sum(goal == result)
-            self.assertEqual(
-                all_set,
-                30,
-                msg=f"did not set c[{items[0]}] to {items[1]} for categorical from {source}",
-            )
+            assert all_set ==\
+                30,\
+                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
             none_left = np.sum(c == ('b', 'b'))
-            self.assertEqual(
-                none_left,
-                0,
-                msg=f"did not set c[{items[0]}] to {items[1]} for categorical from {source}",
-            )
+            assert none_left ==\
+                0,\
+                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
     # TODO pytest parameterize funnel_all_tests
     # --STRINGS-------------------------------------------------------------------------------
@@ -680,17 +665,13 @@ class CategoricalGroupby_Test(unittest.TestCase):
         y.set_name('strings')
         z.set_name('strings1')
         c = Categorical([x, y, z])
-        self.assertEqual(
-            c._categories_wrap.ncols,
-            3,
-            msg=f"incorrect number of columns for multikey from list. {c._categories_wrap.ncols} vs. 3",
-        )
+        assert c._categories_wrap.ncols ==\
+            3,\
+            f"incorrect number of columns for multikey from list. {c._categories_wrap.ncols} vs. 3"
         # 04/25/2019 all default column names now happen in grouping object
-        self.assertTrue(
-            list(c.categories().keys())
-            == ['strings', GROUPBY_KEY_PREFIX + '_c1', 'strings1'],
-            msg=f"column names did not match for multikey from list. {list(c.categories().keys())} vs. ['strings','strings2','strings1']",
-        )
+        assert list(c.categories().keys())\
+            == ['strings', GROUPBY_KEY_PREFIX + '_c1', 'strings1'],\
+            f"column names did not match for multikey from list. {list(c.categories().keys())} vs. ['strings','strings2','strings1']"
 
     # --MULTIKEY LIST---------------------------------------------------------------------------
     def test_groupby_ops_multikey_list(self):
@@ -717,10 +698,8 @@ class CategoricalGroupby_Test(unittest.TestCase):
         result_counts = c_multi.count().Count
         correct_counts = FastArray([6, 5, 1, 2, 3, 2, 2, 4, 2, 2, 1])
         all_correct = bool(np.all(result_counts == correct_counts))
-        self.assertTrue(
-            all_correct,
-            msg=f"Incorrect result for multikey count for 4 keys. {result_counts} vs. {correct_counts}",
-        )
+        assert all_correct,\
+            f"Incorrect result for multikey count for 4 keys. {result_counts} vs. {correct_counts}"
 
     # --STRING-LIKE SINGLE KEY COUNT------------------------------------------------------------
     def test_single_key_string_count(self):
@@ -730,26 +709,24 @@ class CategoricalGroupby_Test(unittest.TestCase):
         c_make_unique = Categorical(str_fa)
         result_counts = c_make_unique.count().Count
         match = bool(np.all(result_counts == correct_counts))
-        self.assertTrue(match)
+        assert match
 
         c_from_codes = Categorical(sorted_codes, complete_unique_cats, base_index=0)
         result_counts = c_from_codes.count().Count
         match = bool(np.all(result_counts == correct_counts))
-        self.assertTrue(match)
+        assert match
 
         c_from_codes_unsorted = Categorical(
             sorted_codes, unsorted_unique_cats, base_index=0
         )
         result_counts = c_from_codes_unsorted.count().Count
         match = bool(np.all(result_counts == correct_counts))
-        self.assertTrue(match)
+        assert match
         # 8/24/2018 SJK - default name for groupby key columns might change, so selected this by index
         # also, in most cases (save intenum/dict) categorical groupby no longer returns a categorical
         result_keys = c_from_codes_unsorted.count()[1]
         match = bool(np.all(result_keys == unsorted_unique_cats))
-        self.assertTrue(
-            match, msg=f"Result: {result_keys} Expected: {unsorted_unique_cats}"
-        )
+        assert match, f"Result: {result_keys} Expected: {unsorted_unique_cats}"
 
     def test_cumcount_vs_gb(self):
         arr = np.random.choice(['a', 'b', 'c', 'd', 'e'], 50)
@@ -760,12 +737,12 @@ class CategoricalGroupby_Test(unittest.TestCase):
         c_result = c.cumcount()
 
         rdiff = gb_result - c_result
-        self.assertEqual(sum(rdiff), 0)
+        assert sum(rdiff) == 0
 
         f = logical(arange(50) % 2)
         c_result = c.cumcount(filter=f)
-        self.assertTrue(bool(np.all(isnotnan(c_result[f]))))
-        self.assertTrue(bool(np.all(isnan(c_result[~f]))))
+        assert bool(np.all(isnotnan(c_result[f])))
+        assert bool(np.all(isnan(c_result[~f])))
 
     # --MULTIKEY SINGLE STRING KEY--------------------------------------------------------------
     def test_groupby_ops_multikey_single_string(self):
@@ -806,17 +783,13 @@ class CategoricalGroupby_Test(unittest.TestCase):
             a = np.isnan(correct_tup[1])
 
             if np.isnan(correct_tup[1]):
-                self.assertNotEqual(
-                    result,
-                    result,
-                    msg=f"Did not product correct result for empty category after {correct_tup[0]} operation.",
-                )
+                assert result !=\
+                    result,\
+                    f"Did not product correct result for empty category after {correct_tup[0]} operation."
             else:
-                self.assertEqual(
-                    result,
-                    correct_tup[1],
-                    f"Did not product correct result for empty category after {correct_tup[0]} operation.",
-                )
+                assert result ==\
+                    correct_tup[1],\
+                    f"Did not product correct result for empty category after {correct_tup[0]} operation."
 
     def test_igroup_dtype(self):
         '''
@@ -826,20 +799,20 @@ class CategoricalGroupby_Test(unittest.TestCase):
         '''
         c = Categorical(np.random.choice([b'a', b'b', b'c'], 1_000_000))
         c_was_int8 = np.int8 == c.dtype
-        self.assertTrue(c_was_int8)
+        assert c_was_int8
 
         _ = c.groups
         igroup_was_int32 = c.grouping.iGroup.dtype == np.int32
-        self.assertTrue(igroup_was_int32)
+        assert igroup_was_int32
 
     # --TEST ALL CONSTRUCTOR FLAGS-----------------------------------------------------------
     def test_pre_filter(self):
         c = Categorical(str_fa, filter=even_filter)
-        self.assertEqual(c._filter, None)
+        assert c._filter == None
 
         result = c.sum(ds_nums)
         one_fifty = sum(result.tens)
-        self.assertEqual(one_fifty, 150)
+        assert one_fifty == 150
 
     def test_specify_gb_data(self):
         str_col = ['a', 'a', 'b', 'c', 'a']
@@ -887,8 +860,8 @@ class CategoricalGroupby_Test(unittest.TestCase):
         cgbu_result = cgbu.sum(ds.data)
 
         for name, col in gbu_result.items():
-            self.assertTrue(bool(np.all(c_result[name] == col)))
-            self.assertTrue(bool(np.all(cgbu_result[name] == col)))
+            assert bool(np.all(c_result[name] == col))
+            assert bool(np.all(cgbu_result[name] == col))
 
     def test_gb_labels_enum(self):
         # make sure enum groupby keys are displayed as string,  not integer code
@@ -902,8 +875,8 @@ class CategoricalGroupby_Test(unittest.TestCase):
         ds_result = ds.gbu('catcol').count()
         ds_labels = ds_result[ds_result.label_get_names()][0]
 
-        self.assertEqual(c_labels.dtype.char, ds_labels.dtype.char)
-        self.assertTrue(bool(np.all(c_labels == ds_labels)))
+        assert c_labels.dtype.char == ds_labels.dtype.char
+        assert bool(np.all(c_labels == ds_labels))
 
     def test_groupby_categorical_sort(self):
         """
@@ -926,19 +899,19 @@ class CategoricalGroupby_Test(unittest.TestCase):
         diff = rt.sum(rt.abs(grp.Expected - grp.Value1))
         diff += rt.sum(rt.abs(grp.Expected - grp.Value2))
 
-        self.assertLessEqual(diff, 1e-9)
+        assert diff <= 1e-9
 
     def test_shift(self):
         """
         Test that Categorical.shift shifts the values in an array or Dataset *per group*.
         """
         result = rt.Cat([1, 1, 1, 2]).shift(arange(4), window=1)[0]
-        self.assertEqual(result[1], 0)
-        self.assertEqual(result[2], 1)
+        assert result[1] == 0
+        assert result[2] == 1
 
         result = rt.Cat([1, 1, 1, 2]).shift([5, 6, 7, 8], window=1)[0]
-        self.assertEqual(result[1], 5)
-        self.assertEqual(result[2], 6)
+        assert result[1] == 5
+        assert result[2] == 6
 
     def test_fill_backward(self):
         """
@@ -950,17 +923,17 @@ class CategoricalGroupby_Test(unittest.TestCase):
         result = cat.fill_backward(data)
 
         # The result of this function should be a Dataset.
-        self.assertIsInstance(result, rt.Dataset)
+        assert isinstance(result, rt.Dataset)
 
         # The dataset should have the same number of rows as the data arrays
         # we operated on (an invariant of apply_nonreduce/"scan"/"prefix sum").
-        self.assertEqual(result.shape[0], len(data))
+        assert result.shape[0] == len(data)
 
         # The dataset should have (N+M) columns, where N is the number
         # of keys within the Categorical and M is the number of columns
         # we performed the operation on.
         expected_col_count = len(cat.category_dict) + 1
-        self.assertEqual(result.shape[1], expected_col_count)
+        assert result.shape[1] == expected_col_count
 
         # Check the resulting data; the dtype of the data should be the
         # same as the original column.
@@ -976,17 +949,17 @@ class CategoricalGroupby_Test(unittest.TestCase):
         result = cat.fill_forward(data)
 
         # The result of this function should be a Dataset.
-        self.assertIsInstance(result, rt.Dataset)
+        assert isinstance(result, rt.Dataset)
 
         # The dataset should have the same number of rows as the data arrays
         # we operated on (an invariant of apply_nonreduce/"scan"/"prefix sum").
-        self.assertEqual(result.shape[0], len(data))
+        assert result.shape[0] == len(data)
 
         # The dataset should have (N+M) columns, where N is the number
         # of keys within the Categorical and M is the number of columns
         # we performed the operation on.
         expected_col_count = len(cat.category_dict) + 1
-        self.assertEqual(result.shape[1], expected_col_count)
+        assert result.shape[1] == expected_col_count
 
         # Check the resulting data; the dtype of the data should be the
         # same as the original column.
