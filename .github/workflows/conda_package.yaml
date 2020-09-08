@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    env:
+      ANACONDA_USER: rtosholdings
+      ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
     strategy:
       matrix:
         os: ['ubuntu-latest', 'windows-latest']
@@ -21,18 +24,24 @@ jobs:
           activate-environment: ""
       - name: Build Package
         shell: bash -l {0}
-        env:
-          ANACONDA_USER: rtosholdings
-          ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
         run: |
           set -ex
           conda create -n conda_build python=3.8 conda-build anaconda-client -y
           conda activate conda_build
           mkdir conda_pkgs_output
-          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output --label main --user ${ANACONDA_USER} --token "${ANACONDA_TOKEN}"
+          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output
+          echo "${{ github.event_name }}"
+          echo "${{ github.ref }}"
       - name: Publish artifacts
         uses: actions/upload-artifact@v2
         with:
           name: packages
           path: conda_pkgs_output/*/riptable-*.tar.bz2
           if-no-files-found: "error"
+      - name: Upload to Anaconda
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        shell: bash -l {0}
+        run: |
+          set -ex
+          conda activate conda_build
+          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
