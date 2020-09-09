@@ -4404,7 +4404,9 @@ class Categorical(GroupByOps, FastArray):
         """
         Called when a Categorical is deleted.
         """
-        pass
+        # python has trouble deleting objects with circular references
+        del self._categories_wrap
+        self._grouping = None
 
     # ------------------------------------------------------------
     @classmethod
