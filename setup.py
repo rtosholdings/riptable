@@ -9,16 +9,17 @@ import logging
 import re
 
 package_name='riptable'
-# N.B. Need to read the file and use regex to get the version number because I can't import riptable
-#      here before pip has chance to know the dependencies and install them.
-with open('riptable/_version.py', 'r') as f:
-    version = re.search('\d+\.\d+\.\d+([ab]\d+|)', f.readline()).group()
 
 setup(
     name = package_name,
     packages = [package_name],
+    use_scm_version = {
+        'version_scheme': 'post-release',
+        'write_to': 'riptable/_version.py',
+        'write_to_template': '__version__ = "{version}"',
+    },
+    setup_requires=['setuptools_scm'],
     package_dir = {package_name: 'riptable'},
-    version = version,
     description = 'Python Package for riptable studies framework',
     author = 'RTOS Holdings',
     author_email = 'thomasdimitri@gmail.com',

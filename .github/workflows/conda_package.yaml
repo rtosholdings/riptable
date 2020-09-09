@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Setup Miniconda
         uses: goanpeca/setup-miniconda@v1
         with:
@@ -26,8 +28,9 @@ jobs:
         shell: bash -l {0}
         run: |
           set -ex
-          conda create -n conda_build python=3.8 conda-build anaconda-client -y
+          conda create -n conda_build python=3.8 conda-build anaconda-client setuptools_scm -y
           conda activate conda_build
+          export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
           mkdir conda_pkgs_output
           conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output
           echo "${{ github.event_name }}"
