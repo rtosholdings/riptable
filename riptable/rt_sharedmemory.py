@@ -17,7 +17,7 @@ class SharedMemoryMeta(type):
         (Linux only)
         returns list of all riptable shared memory files, or those with a specific sharename.
         '''
-        if sys.platform == 'linux':
+        if sys.platform != 'win32':
             prefix = cls.GLOBAL_NAME
             if sharename is not None:
                 prefix += sharename + '!'
@@ -33,7 +33,7 @@ class SharedMemoryMeta(type):
 
         Will remove all shared memory in /dev/shm, or all shared memory in the same directory with a specific share name.
         '''
-        if sys.platform == 'linux':
+        if sys.platform != 'win32':
             dir = cls._get_full_paths(sharename)
             for f in dir:
                 os.remove(f)
@@ -50,7 +50,7 @@ class SharedMemoryMeta(type):
 
     #------------------------------------------------------------------------------------
     def __repr__(cls):
-        if sys.platform == 'linux':
+        if sys.platform != 'win32':
             dir = cls.listdir()
             if len(dir) == 0:
                 return "Shared memory is empty."
@@ -98,7 +98,7 @@ class SharedMemoryMeta(type):
 
     #------------------------------------------------------------------------------------
     def check_shared_memory_limit(cls):
-        if sys.platform == 'linux':
+        if sys.platform != 'win32':
             size = cls._get_file_size()
 
             if size > cls.SM_LIMIT:

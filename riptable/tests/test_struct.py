@@ -663,7 +663,7 @@ class Struct_Test(unittest.TestCase):
         self.assertTrue(isinstance(st.arr, Categorical))
 
     def _test_output(self):
-        if sys.platform == 'linux':
+        if sys.platform != 'win32':
             intt_name = b'int64'
         else:
             intt_name = b'int32'

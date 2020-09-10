@@ -39,7 +39,7 @@ class TestIndexing:
         pytest.skip("Test not yet implemented.")
 
     @pytest.mark.skipif(
-        sys.platform == 'linux',
+        sys.platform != 'win32',
         reason="This test fails on Linux, perhaps due to int/long/longlong mismatch -- need to investigate.")
     def test_mbget_int32_int64(self) -> None:
         arg0 = rt.FA([1, 2, 3, 4, 5, 6], dtype=np.int32)
@@ -54,7 +54,7 @@ class TestIndexing:
         assert_array_equal(result, expected)
 
     @pytest.mark.skipif(
-        sys.platform == 'linux',
+        sys.platform != 'win32',
         reason="This test fails on Linux, perhaps due to int/long/longlong mismatch -- need to investigate.")
     def test_mbget_bytes_int64(self) -> None:
         arg0 = rt.FA(['x', 'y', 'z', 'q', 'w', 't'])

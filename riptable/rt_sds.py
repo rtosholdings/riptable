@@ -2291,7 +2291,7 @@ def _load_sds_mem(path, name=None, sharename=None, info=False, include_all_sds=F
     meta = None
     meta_tups = None
 
-    if sys.platform == 'linux':
+    if sys.platform != 'win32':
         # strip shared memory prefix
         dir = TypeRegister.SharedMemory.listdir(sharename)
         schema = _build_schema(path, dir)
@@ -2383,7 +2383,7 @@ def _load_sds(
 
     else:
         # shared memory path
-        if sys.platform == 'linux':
+        if sys.platform != 'win32':
             # TJD this path needs to be tested more
             if has_ext:
                 return _read_sds(path, sharename=sharename, info=info, include=include, stack=stack, sections=sections, threads=threads, filter=filter)

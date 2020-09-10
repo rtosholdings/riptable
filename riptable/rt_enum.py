@@ -70,7 +70,7 @@ INVALID_DICT: Mapping[int, Any] = {
     23: np.nan,  # numpy.float16
 }
 
-if sys.platform == 'linux':
+if sys.platform != 'windows':
     INVALID_DICT: Mapping[int, Any] = {
         # keys in this dict can be generated with ndarray.dtype.num
         0: False,  # np.bool
@@ -538,7 +538,7 @@ class NumpyCharTypes:
     SignedInteger64 = 'qp'
 
     # linux gcc compiler long is int64, msvc long is int32
-    if sys.platform == 'linux':
+    if sys.platform != 'win32':
         UnsignedInteger64 = 'LQP'
         SignedInteger64 = 'lqp'
 
