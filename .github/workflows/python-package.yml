@@ -28,7 +28,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest hypothesis nose bottleneck pandas
-        python -m pip install riptide_cpp ansi2html ipython numba python-dateutil
+        python -m pip install riptide_cpp ansi2html ipython ipykernel numba python-dateutil
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -38,7 +38,13 @@ jobs:
     - name: Test with pytest
       run: |
         pytest riptable/tests
-        
+    - name: Tooling integration tests
+      run: |
+        ipython -m pytest riptable/test_tooling_integration
+    - name: Property based hypothesis tests
+      run: |
+        pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
+
   deploy:
     # since riptable is all python source code, only a source build is required from one os
     runs-on: ubuntu-latest
