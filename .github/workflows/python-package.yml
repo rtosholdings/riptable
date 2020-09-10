@@ -8,6 +8,7 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -46,6 +47,7 @@ jobs:
         pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
 
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     # since riptable is all python source code, only a source build is required from one os
     runs-on: ubuntu-latest
 
