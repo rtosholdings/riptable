@@ -5,6 +5,7 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -42,7 +43,7 @@ jobs:
           path: conda_pkgs_output/*/riptable-*.tar.bz2
           if-no-files-found: "error"
       - name: Upload to Anaconda
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
         shell: bash -l {0}
         run: |
           set -ex
