@@ -1,6 +1,6 @@
 package:
   name: riptable
-  version: "{{ load_file_regex(load_file='../riptable/_version.py', regex_pattern='\d+\.\d+\.\d+([ab]\d+|)', from_recipe_dir=True).group() }}"
+  version: "{{ environ.get('BUILD_VERSION', 'DEV') }}"
 
 build:
   number: 0
@@ -12,6 +12,7 @@ requirements:
   build:
     - python {{ python }}
     # The following requirements are in the build because setup.py requires them.
+    - setuptools_scm
     - riptide_cpp >=1.6,<1.7
     - ansi2html >=1.5.2
     - numba >=0.44
@@ -44,6 +45,7 @@ test:
 
 about:
   home: https://github.com/rtosholdings/riptable
+  license: BSD 3-Clause+Patent License
   license_file:
     - LICENSE
     - LICENSES-thirdparty.md
