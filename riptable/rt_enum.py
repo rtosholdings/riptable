@@ -70,7 +70,7 @@ INVALID_DICT: Mapping[int, Any] = {
     23: np.nan,  # numpy.float16
 }
 
-if sys.platform != 'windows':
+if sys.platform != 'win32':
     INVALID_DICT: Mapping[int, Any] = {
         # keys in this dict can be generated with ndarray.dtype.num
         0: False,  # np.bool
