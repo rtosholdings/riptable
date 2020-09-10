@@ -131,3 +131,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# IDE settings
+.idea
+.vs
+
+# OS-specific metadata files
+.DS_Store
+thumbs.db
