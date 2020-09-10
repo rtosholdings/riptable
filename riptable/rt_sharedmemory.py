@@ -22,9 +22,11 @@ class SharedMemoryMeta(type):
             if sharename is not None:
                 prefix += sharename + '!'
             plen = len(prefix)
-            dir = os.listdir(cls.SM_FOLDER)
-            return [ f[plen:] for f in dir if f.startswith(prefix) ]
-
+            try:
+                dir = os.listdir(cls.SM_FOLDER)
+                return [ f[plen:] for f in dir if f.startswith(prefix) ]
+            except Exception as e:
+                return []
     #------------------------------------------------------------------------------------
     def clear(cls, sharename=None):
         '''
@@ -65,15 +67,17 @@ class SharedMemoryMeta(type):
         '''
         Get full file paths on linux shared memory. Necessary for deleting, checking file sizes.
         '''
-        dir = os.listdir(cls.SM_FOLDER)
-        prefix = cls.GLOBAL_NAME
-        if sharename is not None:
-            prefix += sharename + '!'
         fullpaths = []
-        for f in dir:
-            if f.startswith(prefix):
-                fullpaths.append(cls.SM_FOLDER+f)
-
+        try:
+            dir = os.listdir(cls.SM_FOLDER)
+            prefix = cls.GLOBAL_NAME
+            if sharename is not None:
+                prefix += sharename + '!'
+            for f in dir:
+                if f.startswith(prefix):
+                    fullpaths.append(cls.SM_FOLDER+f)
+        except Exception as e:
+            pass
         return fullpaths
 
     #------------------------------------------------------------------------------------
@@ -91,9 +95,12 @@ class SharedMemoryMeta(type):
     def _get_file_size(cls):
         dir = cls._get_full_paths()
         total_size = 0
-        for f in dir:
-            file_info = os.stat(f)
-            total_size += file_info.st_size
+        try:
+            for f in dir:
+                file_info = os.stat(f)
+                total_size += file_info.st_size
+        except Exception as e:
+            pass
         return total_size
 
     #------------------------------------------------------------------------------------
