@@ -44,9 +44,10 @@ jobs:
     - name: Tooling integration tests
       run: |
         ipython -m pytest riptable/test_tooling_integration
-    - name: Property based hypothesis tests
-      run: |
-        pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
+    # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate    
+    #- name: Property based hypothesis tests
+    #  run: |
+    #    pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
 
   deploy:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
