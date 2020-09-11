@@ -2118,6 +2118,8 @@ class TestDataset(unittest.TestCase):
 
     def test_copyinplace(self):
         ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds)==0)
         ds.MyStrKey = Categorical(list('ABCD'))
         ds.MyIntKey = [1, 2, 3, 4]
         ds.MyDate = Date([1, 2, 3, 4])

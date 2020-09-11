@@ -1122,7 +1122,10 @@ class Dataset(Struct):
     def __len__(self):
         # Debated October 2019
         # For Dataset we will return the number of rows for length
-        return self._nrows
+        rows= self._nrows
+        if rows is None:
+            rows = 0
+        return rows
 
     # ------------------------------------------------------------
     def putmask(self, mask, values):
