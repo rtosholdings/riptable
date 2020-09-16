@@ -14,20 +14,21 @@ In order to solve the above issues:
 
 To multithread numpy we first break down numpy operations into categories:
 unary: abs, trunc, sqrt, etc.
-binary: add, sub, divide, etc.
-logical: &, |, ~, etc.
-reduce: sum, cumsum, std, etc.
-comparisons: ==, !=, <, <=, >, >=
-copy/convert: .copy(), .astype(), upcasting
-hstack/vstack
-where
-sorting/uniquesness: lexsort, searchsorted, unique (soon sort)
-datetime routines: strftime, finding the daylight savings
-linear_interp
-special grouping routines which dont exist in numpy
-special hashing routines
-ema related
-window related
-apply related and numba.prange loops (only way out to JIT multithreaded routines)
+1) binary: add, sub, divide, etc.
+2) logical: &, |, ~, etc.
+3) reduce: sum, cumsum, std, etc.
+4) comparisons: ==, !=, <, <=, >, >=
+5) copy/convert: .copy(), .astype(), upcasting
+6) hstack/vstack
+7) where, putmask
+8) binary and fancy index getitem/setitem
+8) sorting/uniquesness: lexsort, searchsorted, unique (soon sort)
+9) datetime routines: strftime, finding the daylight savings
+10) linear_interp
+11) special grouping routines which dont exist in numpy (like ismember, transform=True, ifirstkey)
+12) special hashing routines
+13) ema related
+14) window related: rolling functions in pandas
+15) apply related and numba.prange loops (only way out to JIT multithreaded routines)
 
 
