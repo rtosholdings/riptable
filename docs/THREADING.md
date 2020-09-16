@@ -30,7 +30,7 @@ unary: abs, trunc, sqrt, etc.
 13) ema related
 14) window related: rolling functions in pandas
 15) apply related and numba.prange loops (only way out to JIT multithreaded routines)
-
+16) row major to col major conversions and back (1d to 2d, record array)
 
 Further numpy has no
 1) Table/DataFrame/Dataset class
