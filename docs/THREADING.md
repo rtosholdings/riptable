@@ -32,3 +32,11 @@ unary: abs, trunc, sqrt, etc.
 15) apply related and numba.prange loops (only way out to JIT multithreaded routines)
 
 
+Further numpy has no
+1) Table/DataFrame/Dataset class
+2) Categorical (multikey) class
+3) Way to save and compress large data tables and read back stacked
+
+This prevented numpy from vertical software integration (like Apple does on the iphone).  If numpy did, it would have developed those concepts more, which would have led to more group, compression related functions in numpy.  Maturity in those areas would be beneficial.
+
+
