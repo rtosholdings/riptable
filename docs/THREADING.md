@@ -33,7 +33,7 @@ To multithread algos we categorized the operations:
 18) row major to col major conversions and back (1d to 2d, record array)
 19) concept of mask, nan, invalid, or filter (and how to loop over data)
 20) fills - forward fills, backward fills, fill_na, group fills
-21) precanned arrays: arange, random, gaussian
+21) precanned arrays: arange, zeros, ones, random, gaussian
 
 numpy will hopefully grow into
 1) Table/DataFrame/Dataset class
