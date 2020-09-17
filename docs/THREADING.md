@@ -32,10 +32,13 @@ To multithread algos we categorized the operations:
 17) apply related and numba.prange loops (only way out to JIT multithreaded routines)
 18) row major to col major conversions and back (1d to 2d, record array)
 19) concept of mask, nan, invalid, or filter (and how to loop over data)
+20) fills - forward fills, backward fills, fill_na, group fills
 
-Further numpy has not yet grown into
+numpy will hopefully grow into
 1) Table/DataFrame/Dataset class
 2) Categorical (multikey) class
 3) Save and compress large data tables and read back stacked
 
-The groupby.apply or groupby.somefunction (such as cumsum for example) requires that the cumsum operation have at minimum TWO arrays passed in: the array to operate on, and the fancy index for the group.  This is **very important**: loop using a fancy index (not a boolean mask).
+The groupby.apply or groupby.somefunction (such as cumsum for example) requires that the cumsum operation have at minimum TWO arrays passed in: the array to operate on, and the fancy index for the group.  This is **important**: loop using a fancy index (not a boolean mask).
+
+There is also array recycling.  Because Tables often contain columns of similar row length, the intermediate arrays in operations are often the same dtype and length.  Therefore instead of returning the memory for the array back to the memory manager, which may zero it out or page it out, it is sometimes better to hold on to the array.  This is called array recycling.
