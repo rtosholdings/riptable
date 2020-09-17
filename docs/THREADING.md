@@ -1,4 +1,4 @@
-**Guide to multithreading numpy routines**
+**multithreading numpy routines**
 
 This document describes techniques used to speed up the processing of large data arrays in python on Intel x64 based CPUs.
 
@@ -24,7 +24,7 @@ To multithread algos we categorized the operations:
 9) boolean and fancy index getitem/setitem
 10) sorting/uniquesness: lexsort, searchsorted, unique (soon sort)
 11) datetime routines: strftime, finding the daylight savings
-12) linear_interp
+12) interpolations, weighted averages: linear_interp
 13) special grouping routines which dont exist in numpy (like ismember, transform=True, ifirstkey)
 14) special hashing routines
 15) ema related (moving averages)
