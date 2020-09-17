@@ -630,6 +630,7 @@ def save_sds(
     share
         If the shared memory name is set, `item` will be saved to shared memory and NOT to disk. When shared memory
         is specified, a filename must be included in path. Only this will be used, the rest of the path will be discarded.
+        For Windows make sure SE_CREATE_GLOBAL_NAME flag is set.
     compress : bool, default True
         Use compression when saving the file (shared memory is always saved uncompressed)
     overwrite : bool, default False
@@ -833,7 +834,7 @@ def load_sds_mem(
     filepath  : name of sds file or directory. if no .sds extension, _load_sds will look for _root.sds
                 if no _root.sds is found, extension will be added and shared memory will be checked again.
     share : str
-        shared memory name
+        shared memory name.  For Windows make sure SE_CREATE_GLOBAL_NAME flag is set.
     include : list of str, optional
     threads: int, optional, defaults to None
         how many threads to used
@@ -1443,7 +1444,7 @@ def load_sds(
         The shared memory name. loader will check for dataset in shared memory first and if it's not there, the
         data (if the filepath is found on disk) will be loaded into the user's workspace AND shared memory.
         A sharename must be accompanied by a file name. The rest of a full path will be trimmed off internally.
-        Defaults to None.
+        Defaults to None.  For Windows make sure SE_CREATE_GLOBAL_NAME flag is set.
     info : bool
         No item data will be loaded, the hierarchy will be displayed in a tree (defaults to False).
     include_all_sds : bool

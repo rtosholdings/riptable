@@ -1448,7 +1448,19 @@ class FastArray_Test(unittest.TestCase):
         result = FastArray([1])[0] / FastArray([2])
         self.assertEqual(result, 0.5)
 
-
+    def test_int64_comparisons(self):
+        x=701389446541966656
+        y=rt.asarray([x-1,x,x+1,x,x,x]).astype(np.uint64)
+        z=rt.asarray([-x-1,-x,-x+1,x-1,x,x+1]).astype(np.int64)
+        r = y > z
+        self.assertTrue(np.all(r == [ True,  True,  True, True, False, False]))
+        r = y >= z
+        self.assertTrue(np.all(r == [ True,  True,  True, True, True, False]))
+        r = z < y
+        self.assertTrue(np.all(r == [ True,  True,  True, True, False, False]))
+        r = z == y
+        self.assertTrue(np.all(r == [ False,  False, False, False, True, False]))
+        
 # TODO: Extend the tests in the TestFastArrayNanmax / TestFastArrayNanmin classes below to cover the following cases:
 #   * non-array inputs (e.g. a list or set or scalar)
 #   * other FastArray subclass, e.g. Date

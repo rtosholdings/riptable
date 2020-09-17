@@ -1029,7 +1029,7 @@ class FastArray(np.ndarray):
             else:
                 if isinstance(test_elements, tuple):
                     raise ValueError('isin does not currently support tuples.  In the future a tuple will be used to represent a multi-key.')
-                test_elements = np.atleast_1d(test_elements)
+                test_elements = rc.AsFastArray(test_elements)
 
         try:
             # optimization: if we have just one element, we can just parallel compare that one element
