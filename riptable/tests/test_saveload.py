@@ -1254,6 +1254,15 @@ class SaveLoad_Test(unittest.TestCase):
 
         shutil.rmtree(folderpath)
 
+    def test_load_filter(self):
+        ds = Dataset({_k: list(range(_i *10, (_i +1) *10)) for _i, _k in enumerate(['a','b','c','d','e'])})
+        singlepath = r'riptable/tests/temp/stfile.sds'
+        ds.save(singlepath)
+        ds1=load_sds(singlepath, filter=[False, False, True, True, True, False, False, False, False, False])
+        ds2=load_sds(singlepath, filter=arange(2,5))
+        self.assertTrue(np.all(ds1.crc.imatrix_make() == ds2.crc.imatrix_make()))
+        os.remove(singlepath)
+
     #def test_onefile_stack(self):
     #    ds = Dataset({'arr1':arange(5), 'arr2':arange(5)})
     #    st = Struct({'ds1':ds, 'arr3':arange(5)})
