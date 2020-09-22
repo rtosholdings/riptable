@@ -4750,6 +4750,14 @@ class TimeSpanBase:
         """Timespan as float64 array of nanoseconds (same as underlying array)."""
         return self._fa
 
+    @property
+    def hhmmss(self):
+        """Timespan as int64 array in format HHMMSS."""
+        SEC_PER_MIN = 60
+        hour, remainder = divmod(self.astype(np.int64) // NANOS_PER_SECOND, 3600)
+        minutes, seconds = divmod(remainder, SEC_PER_MIN)
+        return (10_000 * hour + 100 * minutes + seconds).astype(np.int64)
+
     # ------------------------------------------------------------
     @classmethod
     def _unit_to_nano_span(cls, values, unit):
