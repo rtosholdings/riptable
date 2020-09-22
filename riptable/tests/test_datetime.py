@@ -1438,6 +1438,21 @@ class DateTime_Test(unittest.TestCase):
             result = TimeSpan.display_item_unit(v)
             self.assertTrue(result.endswith(k))
 
+    def test_timespan_hhhhmmss(self):
+        timespan = TimeSpan([
+            '09:30:17.557593707',
+            '15:31:32.216792000',
+            '11:28:23.519020994',
+            '19:46:10.838007105',
+            '09:30:29.999999999',
+            '10:40:00.000000000',
+            '00:00:00.999999999',
+            '23:59:59.999999999',
+        ])
+        expected = FastArray([93017, 153132, 112823, 194610, 93029, 104000, 0, 235959])
+        actual = timespan.hhmmss
+        self.assertTrue(np.all(expected == actual)) 
+        
     def test_round_nano_time(self):
         correct_str = "'20181231 23:59:59.999999999'"
         correct_iso = b'2018-12-31T23:59:59.999999999'
