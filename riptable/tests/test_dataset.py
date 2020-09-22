@@ -2128,6 +2128,11 @@ class TestDataset(unittest.TestCase):
         result = ds.cat(['MyStrKey', 'MyDate']).null()
         self.assertTrue(isinstance(result['MyDate'], Date))
 
+    def test_underscorename(self):
+        ds=Dataset()
+        ds.num=arange(10)
+        with self.assertRaises(IndexError):
+            ds['_num']=arange(10)        
 
 @pytest.mark.parametrize('categorical', get_all_categorical_data())
 def test_dataset_to_dataframe_roundtripping(categorical):

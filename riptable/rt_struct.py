@@ -191,14 +191,22 @@ class Struct:
         --------
         Struct.get_restricted_names
         """
+        if len(name) < 1: return False
+
+        # check for str or bytes and not leading underscore
+        if isinstance(name, str):
+            if name[0]=='_': return False
+        elif isinstance(name, bytes):
+            if name[0]==b'_': return False
+        else:
+            return False
 
         if Struct.AllNames:
-            return isinstance(name, (str, bytes))
+            return True
         elif Struct.AllowAnyName:
-            return isinstance(name, (str, bytes)) and name not in self.get_restricted_names()
+            return name not in self.get_restricted_names()
         else:
-            return isinstance(name, (str, bytes)) and name.isidentifier() and \
-               name not in self.get_restricted_names()
+            return name.isidentifier() and name not in self.get_restricted_names()
 
     # ------------------------------------------------------------
     def get_restricted_names(self):
