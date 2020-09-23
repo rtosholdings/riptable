@@ -75,3 +75,45 @@ jobs:
       run: |
         python setup.py sdist
         twine upload dist/* --verbose
+
+  conda_build:
+    runs-on: ${{ matrix.os }}
+    env:
+      ANACONDA_USER: rtosholdings
+      ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
+    strategy:
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest']
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup Miniconda
+        uses: goanpeca/setup-miniconda@v1
+        with:
+          activate-environment: ""
+      - name: Build Package
+        shell: bash -l {0}
+        run: |
+          set -ex
+          conda create -n conda_build python=3.8 conda-build anaconda-client setuptools_scm -y
+          conda activate conda_build
+          export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
+          mkdir conda_pkgs_output
+          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output
+          echo "${{ github.event_name }}"
+          echo "${{ github.ref }}"
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: packages
+          path: conda_pkgs_output/*/riptable-*.tar.bz2
+          if-no-files-found: "error"
+      - name: Upload to Anaconda
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+        shell: bash -l {0}
+        run: |
+          set -ex
+          conda activate conda_build
+          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
