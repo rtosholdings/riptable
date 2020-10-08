@@ -72,6 +72,12 @@ class Cut_Test(unittest.TestCase):
         l = FastArray([b'-0.5->0.5', b'0.5->1.5', b'1.5->2.5', b'2.5->3.5'])
         self.assertTrue((c.category_array == l).all())
 
+        # inf upcast test
+        x = np.array([0, 1, 10, 100, 5])
+        knots = [-np.inf, 2, 11, 50, np.inf]
+        c = cut(x, knots)
+        self.assertTrue((c._fa == FA([1,1,2,4,2])).all())
+
     def test_qcut(self):
         c = qcut(arange(10), 3)
         self.assertTrue(sum(c._np - FA([2, 2, 2, 2, 3, 3, 3, 4, 4, 4])) == 0)

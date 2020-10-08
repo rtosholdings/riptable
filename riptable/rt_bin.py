@@ -342,6 +342,9 @@ def _bins_to_cuts_new(x, bins, lsort=None, counts=None, right=True, labels=None,
         ids = rc.BinsToCutsSorted(x, bins, lsort, counts, mode)
         #print("bins sorted",ids, x, bins)
     else:
+        # check for int compaing to inf, if so force upcast
+        if (bins[0]==-np.inf or bins[-1]==np.inf):
+            x=x.astype(np.float64)
         ids = rc.BinsToCutsBSearch(x, bins, mode)
         #print("bins bsearch",ids, x, bins)
 
