@@ -1,4 +1,11 @@
-﻿__all__ = ['merge', 'merge2', 'merge_lookup', 'merge_asof',]
+﻿__all__ = [
+    # Original merge implementation.
+    'merge',
+    # New merge implementation.
+    'JoinIndices', 'merge2', 'merge_lookup', 'merge_indices',
+    # as-of merge
+    'merge_asof',
+]
 
 import logging
 import warnings
@@ -1680,6 +1687,377 @@ def _require_columns_present(keyset: Set[str], dataset_name:str, param_name:str,
         raise ValueError(f'The column(s) {joined_colnames} specified in the `{param_name}` argument are not present in the `{dataset_name}` Dataset.')
 
 
+def _get_perf_hint(hint, index: int, _default=None):
+    """
+    Extracts a "performance hint" value -- specified as either a scalar or 2-tuple -- for
+    either the left or right Dataset in a merge.
+
+    Parameters
+    ----------
+    hint : scalar or 2-tuple of scalars, optional
+    index : int
+        Indicates whether the hint value is being extracted for the left or right Dataset.
+        0 = left, 1 = right.
+    _default : optional
+        Optional default value, returned if `hint` is None.
+
+    Returns
+    -------
+    Any
+        The extracted performance hint value.
+    """
+    if hint is None:
+        return _default
+    elif isinstance(hint, tuple):
+        return hint[index]
+    else:
+        return hint
+
+
+def _get_or_create_keygroup(
+    keycols: List[FastArray],
+    index: int,
+    force_invalids: bool,
+    create_groupby_grouping: bool,
+    high_card,
+    hint_size
+) -> Tuple['Grouping', Optional[FastArray]]:
+    """
+    Given the key columns (i.e. the columns being joined on) from a Dataset, get or create a `Grouping`
+    object to be passed to the join algorithm.
+
+    Parameters
+    ----------
+    keycols : list of FastArray
+    index : int
+        Indicates whether the `Grouping` being constructed is for the left or right Dataset.
+        0 = left, 1 = right. Used to parse performance hints such as `high_card` or `hint_size`.
+    force_invalids : bool
+        When specified, builds a mask indicating which values are 'valid' and uses it
+        to force _invalid_ values into the invalid (0th) group in the constructed
+        Grouping instance.
+    create_groupby_grouping : bool
+        When True and `keycols` contains more than one (1) column, causes this function to create
+        and return a second `Grouping` which follows SQL "GROUP BY" semantics when determining
+        which tuples are considered null/NA.
+    high_card
+        Optional hint indicating the key data has high cardinality (many unique values).
+    hint_size
+        Optional hint at the number of unique key values.
+
+    Returns
+    -------
+    join_keygroup : Grouping
+        A Grouping object constructed from the columns specified by `keycols`.
+    groupby_keygroup : FastArray, optional
+        A `Grouping` object constructed from the columns specified by `keycols`,
+        following the semantics of SQL "GROUP BY" w.r.t. which tuples are considered non-null/NA.
+        This is optional and only returned when requested through `create_outer_merge_mask` *and*
+        it is necessary; otherwise, None is returned.
+
+    Notes
+    -----
+    The `force_invalids` parameter is important for ensuring the join algorithm adheres to ANSI SQL semantics.
+    The current (as of 2020-07-16) implementation for creating Grouping objects does not recognize invalid/NA values
+    in some (all?) cases; if we used a `Grouping` object created that way, invalid/NA values would be matched
+    against one another (during the join), which goes against how ANSI SQL semantics say NULL entries should be
+    handled during a join. When `force_invalids` is specified, this function pre-screens the data in the key columns
+    to locate invalid/NA values, builds a boolean mask of the *valid* values, and passes that mask when creating the
+    `Grouping` object, effectively forcing `Grouping` to recognize the invalid/NA values as invalid/NA values and
+    ensuring we'll get the correct (ANSI SQL) semantics from our join implementation.
+
+    If `Grouping` is ever fixed to recognize invalid/NA values at construction time, this function can be simplified
+    to simply parse the performance hints then invoke the `Grouping` creation code.
+
+    In the special case of exactly one Categorical being provided as the key, we need to detect whether there
+    are any unused categories in the Categorical (specifically, it's embedded Grouping instance); the presence
+    of these unused categories break the join algorithm since it assumes the unique values it extracts from the
+    Grouping are exactly the set which appear in the data. If unused categories are detected, the
+    `Grouping.regroup()` method is called to consolidate the grouping data and remove the extra categories.
+
+    Idea: for the multi-key (i.e. ``len(keycols) > 1``) and single-key non-`Categorical` cases, could we create the
+    `Grouping` object then create a mask on the Grouping's keys (and return them both for use by the join algorithm)
+    rather than building a mask that's the length of the whole key column(s)? That might save some time here but
+    may also slow down the join algorithm if it requires more-complex fancy/mask-indexing operations. This could
+    also simplify/streamline the way we need to create the "GROUP BY"-style validity mask for full outer joins.
+    """
+    # TODO If given a tuple of Categoricals, does Categorical.__init__() optimize the creation from them?
+    #      If so -- let's check if all items in `keycols` are Categorical and if so, use this for better performance.
+    #      Same with Grouping -- what if we have a key that's a tuple of a Categorical and a non-Categorical column?
+    #      Can we find a way to optimize the creation of the combined Grouping, perhaps by creating a Grouping for the
+    #      non-Categorical column and merging it with the .grouping from the Categorical rather than having to
+    #      re-process all of the data all over again?
+
+    # If any performance hints were specified, determine which values apply
+    # for the key(s) of the given Dataset (specified by 'index'; 0=left, 1=right).
+    _lex = _get_perf_hint(high_card, index, False)
+    _hint_size = _get_perf_hint(hint_size, index, 0)
+
+    # There's a simpler path for single-keys.
+    if len(keycols) == 1:
+        single_keycol = keycols[0]
+        # If there's only one key and it's a Categorical, we can just use the existing Grouping object.
+        if isinstance(single_keycol, Categorical):
+            # TODO: Consider emitting a warning if any perf hints have been supplied (above), since in
+            #       this case they're ignored (because we're using the existing Grouping instead of creating one).
+            cat_grouping: 'Grouping' = single_keycol.grouping
+
+            # If unused categories are present, call .regroup() to create a new Grouping with those
+            # categories removed. (See the 'Notes' section in the docstring for details.)
+            return (cat_grouping if all(cat_grouping.ncountkey > 0) else cat_grouping.regroup()), None
+
+        else:
+            # HACK: For non-Categorical single-key columns, we need to use rt.isnotnan to create
+            #       a filter for the Grouping. This is due to rt.ismember not handling NaN/invalids
+            #       in the expected way (i.e. where NaN != NaN).
+            isvalid = _create_column_valid_mask(single_keycol) if force_invalids else None
+            return TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=isvalid), None
+
+    else:
+        # HACK: For multiple keys, we apply the same approach as for single-key non-Categoricals where
+        #       we use rt.isnotnan to get a mask indicating the value elements. We do this for all the
+        #       columns then logical AND the masks together, since we want the behavior whereby a null in any
+        #       one of the components (columns) of a composite key means the whole tuple is considered null.
+        # PERF: We use the in-place version of logical AND here, so that no matter how many columns we have,
+        #       we only ever allocate / reference a maximum of two mask arrays at any one time; this helps
+        #       minimize peak memory utilization.
+        # PERF: The base case / initial value for the mask is None so that if we have _only_ columns which
+        #       don't have an invalid value -- such as strings -- we don't ever allocate a mask array.
+        #       This saves memory both by not having a mask array and also within the `Grouping` __init__ function.
+
+        valid_join_tuples_mask: Optional[FastArray] = None
+        valid_groupby_tuples_mask: Optional[FastArray] = None
+        if force_invalids:
+            for keycol in keycols:
+                isvalid = _create_column_valid_mask(keycol)
+                if valid_join_tuples_mask is None:
+                    valid_join_tuples_mask = isvalid
+                elif isvalid is not None:
+                    valid_join_tuples_mask &= isvalid
+
+                # Only needed/applicable to outer merges.
+                if create_groupby_grouping:
+                    if valid_groupby_tuples_mask is None:
+                        # Need to copy 'isvalid' to avoid sharing the same instance with 'valid_join_tuples_mask',
+                        # which'll lead to them incorrectly having the same data (since we're updating in-place).
+                        valid_groupby_tuples_mask = isvalid.copy()
+                    elif isvalid is not None:
+                        valid_groupby_tuples_mask |= isvalid
+
+        # Create the Grouping, passing in the mask we created so NaN/invalid values are handled
+        # in the way we need them to be for merging.
+        join_grouping = TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=valid_join_tuples_mask)
+        groupby_grouping = TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=valid_groupby_tuples_mask) if create_groupby_grouping else None
+        return join_grouping, groupby_grouping
+
+
+def merge_indices(
+    left: 'Dataset',
+    right: 'Dataset',
+    *,
+    on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+    how: str = 'left',
+    # TODO: Consider changing this to require_unique: Union[bool, Tuple[bool, bool]] -- the semantics would be clearer to users
+    validate: Optional[str] = None,
+    keep: Optional[Union[str, Tuple[Optional[str], Optional[str]]]] = None,
+    high_card: Optional[Union[bool, Tuple[Optional[bool], Optional[bool]]]] = None,
+    hint_size: Optional[Union[int, Tuple[Optional[int], Optional[int]]]] = None,
+    **kwargs
+) -> JoinIndices:
+    """
+    Perform a join/merge of two `Dataset`s, returning the left/right indices created by the join engine.
+
+    The returned indices can be used to index into the left and right `Dataset`s to construct a merged/joined `Dataset`.
+
+    Parameters
+    ----------
+    left : Dataset
+        Left Dataset
+    right : Dataset
+        Right Dataset
+    on : str or (str, str) or list of str or list of (str, str), optional
+        Column names to join on. Must be found in both `left` and `right`.
+    how : {'left', 'right', 'inner', 'outer'}
+        The type of merge to be performed.
+
+        * left: use only keys from `left`, as in a SQL 'left join'. Preserves the ordering of keys.
+        * right: use only keys from `right`, as in a SQL 'right join'. Preserves the ordering of keys.
+        * inner: use intersection of keys from both Datasets, as in a SQL 'inner join'. Preserves the
+          ordering of keys from `left`.
+        * outer: use union of keys from both Datasets, as in a SQL 'full outer join'.
+    validate : {'one_to_one', '1:1', 'one_to_many', '1:m', 'many_to_one', 'm:1', 'many_to_many', 'm:m'}, optional
+        Validate the uniqueness of the values in the columns specified by the `on`, `left_on`, `right_on`
+        parameters. In other words, allows the _multiplicity_ of the keys to be checked so the user
+        can prevent the merge if they want to ensure the uniqueness of the keys in one or both of the Datasets
+        being merged.
+        Note: The `keep` parameter logically takes effect before `validate` when they're both specified.
+    keep : {'first', 'last'} or (str, str), optional
+        An optional string which specifies that only the first or last occurrence
+        of each unique key within `left` and `right` should be kept. In other words,
+        resolves multiple occurrences of keys (multiplicity > 1) to a single occurrence.
+    high_card : bool or (bool, bool), optional
+        Hint to low-level grouping implementation that the key(s) of `left` and/or `right`
+        contain a high number of unique values (cardinality); the grouping logic *may* use
+        this hint to select an algorithm that can provide better performance for such cases.
+    hint_size : int or (int, int), optional
+        An estimate of the number of unique keys used for the join. Used as a performance hint
+        to the low-level grouping implementation.
+        This hint is typically ignored when `high_card` is specified.
+
+    Returns
+    -------
+    JoinIndices
+
+    Examples
+    --------
+    >>> rt.merge_indices(ds_simple_1, ds_simple_2, on=('A', 'X'), how = 'inner')
+    #   A      B   X       C
+    -   -   ----   -   -----
+    0   0   1.20   0    2.40
+    1   1   3.10   1    6.20
+    2   6   9.60   6   19.20
+    <BLANKLINE>
+    [3 rows x 4 columns] total bytes: 72.0 B
+
+    Demonstrating a 'left' merge.
+
+    >>> rt.merge_indices(ds_complex_1, ds_complex_2, on = ['A','B'], how = 'left')
+    #   B    A       C       E
+    -   -   --   -----   -----
+    0   Q    0    2.40    1.50
+    1   R    6    6.20   11.20
+    2   S    9   19.20     nan
+    3   T   11   25.90     nan
+    <BLANKLINE>
+    [4 rows x 4 columns] total bytes: 84.0 B
+
+    See Also
+    --------
+    merge2
+    """
+    # Process keyword arguments.
+    # NOTE: 'require_match' here isn't used yet; it is used in merge2, and the way it's used there is not as
+    #       efficient as it could be. That check can be moved into the join algorithm where the gbkey<->gbkey
+    #       mapping is created, at which point we'll pass in 'require_match' to specify when that check needs
+    #       to be performed.
+    require_match = bool(kwargs.pop("require_match")) if "require_match" in kwargs else False
+    skip_column_presence_check =\
+        bool(kwargs.pop("skip_column_presence_check")) if "skip_column_presence_check" in kwargs else False
+    if kwargs:
+        # There were remaining keyword args passed here which we don't understand.
+        first_kwarg = next(iter(kwargs.keys()))
+        raise ValueError(f"This function does not support the kwarg '{first_kwarg}'.")
+
+    # Collect timing stats on how long various stages of the merge operation take.
+    start = GetNanoTime()
+
+    # Convert the 'keep' argument to a normalized form so it's easier to use later.
+    # This also serves to validate the argument value.
+    keep = _normalize_keep(keep)
+
+    # TEMP: Disallow callers to pass a 'keep' value for the 'left' Dataset when performing
+    #       an outer merge. There's a bug in the join algorithm which prevents this from working
+    #       so it's better to give users an informative error message until it can be fixed.
+    if how == 'outer' and keep[0] is not None:
+        raise ValueError(
+            "Specifying a 'keep' value for the left Dataset (or both) with an outer merge is "
+            "temporarily not permitted due to a bug in the implementation.")
+
+    # Validate and normalize the 'on' column lists for each Dataset.
+    # TODO: Change this so the normalization step takes the 'on' parameter then returns a list of 2-tuples.
+    #       We can consume that list just below here, and the normalized form of the list will allow that logic to be simplified.
+    left_on = _extract_on_columns(on, None, True, 'on', is_optional=False)
+    right_on = _extract_on_columns(on, None, False, 'on', is_optional=False)
+
+    # If the column presence check is enabled (it is by default), check that all requested
+    # 'on' columns are present. This check is disabled when calling from rt.merge2() since
+    # the same check is already performed there.
+    if not skip_column_presence_check:
+        # PERF: Revisit this -- it could be made faster if ItemContainer.keys() returned a set-like object
+        # such as KeysView instead of a list; then we wouldn't need to create the sets here.
+        left_keyset = set(left.keys())
+        _require_columns_present(left_keyset, 'left', 'left_on', left_on)
+        right_keyset = set(right.keys())
+        _require_columns_present(right_keyset, 'right', 'right_on', right_on)
+
+    # Validate the pair(s) of columns from the left and right join keys have compatible types.
+    left_on_arrs = [left[col_name] for col_name in left_on]
+    right_on_arrs = [right[col_name] for col_name in right_on]
+    key_compat_errs = _verify_join_keys_compat(left_on_arrs, right_on_arrs)
+    if key_compat_errs:
+        # If the list of errors is non-empty, we have some join-key compatibility issues.
+        # Some of the "errors" may just be warnings; filter those out of the list and raise
+        # them to notify the user.
+        actual_errors : List[Exception] = []
+        for err in key_compat_errs:
+            if isinstance(err, Warning):
+                warnings.warn(err)
+            else:
+                actual_errors.append(err)
+
+        # If there are any remaining errors in the list, those are actual errors so we can't
+        # proceed any further. Combine the remaining errors into a single error message then
+        # raise a ValueError; in the future we might use something like a .NET AggregateException
+        # to wrap multiple errors into one instead to allow for different error types.
+        if actual_errors:
+            flat_errs = '\n'.join(map(str, actual_errors))  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
+            raise ValueError(f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}")
+
+    if logger.isEnabledFor(logging.INFO):
+        delta = GetNanoTime() - start
+        logger.info("Validation complete. nanos='%d'", delta)
+
+    # Construct the Grouping object for each of the join keys.
+    start = GetNanoTime()
+
+    # TODO: Should we always pass True for the 'force_invalids' argument below? The original intent was that we
+    #       may want to be able to use the default (non-forced-invalids) behavior of Grouping for optional compatibility
+    #       with rt.merge(), but that's no longer planned (users are just migrating to merge2/merge_lookup).
+    #       Note, there *may* be something to passing False for the left and right grouping, when performing a
+    #       left or right join, respectively -- before making the change to always pass True, verify all the
+    #       optimized cases where we can return e.g. None for the fancy index aren't affected by the change.
+    left_grouping, _ = _get_or_create_keygroup(left_on_arrs, 0, how != 'left', False, high_card, hint_size)
+    right_grouping, right_groupby_grouping =\
+        _get_or_create_keygroup(right_on_arrs, 1, how != 'right', how == 'outer', high_card, hint_size)
+
+    if logger.isEnabledFor(logging.INFO):
+        delta = GetNanoTime() - start
+        logger.info("Grouping creation complete. nanos='%d'", delta)
+
+    # If the caller requested validation to be performed (to make sure the keys are
+    # unique on one or both sides) do that now.
+    if validate is not None:
+        _validate_groupings(left_grouping, right_grouping, validate, keep)
+
+    # Construct fancy indices for the left/right Datasets; these will be used to index into
+    # columns of the respective datasets to produce new arrays/columns for the merged Dataset.
+    start = GetNanoTime()
+    join_indices = _create_merge_fancy_indices(left_grouping, right_grouping, right_groupby_grouping, how, keep)
+
+    if logger.isEnabledFor(logging.INFO):
+        delta = GetNanoTime() - start
+        logger.info("Join index creation complete. nanos='%d'", delta)
+
+    # If running in debug mode (without specifying -O at the command-line),
+    # verify the fancy indices will result in the same output lengths.
+    # If they're not, we'll end up with an error right towards the end of this function when
+    # everything's combined into the new Dataset instance.
+#    if __debug__:
+#        left_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.left_index, len(left))
+#        right_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.right_index, len(right))
+#        assert left_fancyindex_rowcount == right_fancyindex_rowcount,\
+#            f'Left and right rowcount differ ({left_fancyindex_rowcount} vs. {right_fancyindex_rowcount}).'
+
+    # DEBUG: Print the constructed indices.
+    if logger.isEnabledFor(logging.DEBUG):
+        left_fancyindex = join_indices.left_index
+        right_fancyindex = join_indices.right_index
+        logger.debug(f'left_fancyindex ({type(left_fancyindex)}): {left_fancyindex}')
+        logger.debug(f'right_fancyindex ({type(right_fancyindex)}): {right_fancyindex}')
+
+    return join_indices
+
+
 #TODO: Clean-up column overlap
 def merge2(
     left: 'Dataset',
@@ -1800,26 +2178,14 @@ def merge2(
     # Collect timing stats on how long various stages of the merge operation take.
     start = GetNanoTime()
 
-    # Convert the 'keep' argument to a normalized form so it's easier to use later.
-    # This also serves to validate the argument value.
-    keep = _normalize_keep(keep)
-
-    # Validate and normalize the 'on' column lists for each Dataset.
-    left_on = _extract_on_columns(on, left_on, True, 'on', is_optional=False)
-    right_on = _extract_on_columns(on, right_on, False, 'on', is_optional=False)
-
-    # TEMP: Disallow callers to pass a 'keep' value for the 'left' Dataset when performing
-    #       an outer merge. There's a bug in the join algorithm which prevents this from working
-    #       so it's better to give users an informative error message until it can be fixed.
-    if how == 'outer' and keep[0] is not None:
-        raise ValueError(
-            "Specifying a 'keep' value for the left Dataset (or both) with an outer merge is "
-            "temporarily not permitted due to a bug in the implementation.")
-
     # Normalize 'columns_left' and 'columns_right' first to simplify some logic later on
     # (by allowing us to assume they're a non-optional-but-maybe-empty List[str]).
     columns_left = _normalize_selected_columns(left, columns_left)
     columns_right = _normalize_selected_columns(right, columns_right)
+
+    # Validate and normalize the 'on' column lists for each Dataset.
+    left_on = _extract_on_columns(on, left_on, True, 'on', is_optional=False)
+    right_on = _extract_on_columns(on, right_on, False, 'on', is_optional=False)
 
     # PERF: Revisit this -- it could be made faster if ItemContainer.keys() returned a set-like object such as KeysView instead of a list; then we wouldn't need to create the sets here.
     left_keyset = set(left.keys())
@@ -1834,223 +2200,27 @@ def merge2(
     col_left_tuple, col_right_tuple, intersection_cols = \
         _construct_colname_mapping(left_on, right_on, suffixes=suffixes, columns_left=columns_left, columns_right=columns_right)
 
-    # Validate the pair(s) of columns from the left and right join keys have compatible types.
-    left_on_arrs = [left[col_name] for col_name in left_on]
-    right_on_arrs = [right[col_name] for col_name in right_on]
-    key_compat_errs = _verify_join_keys_compat(left_on_arrs, right_on_arrs)
-    if key_compat_errs:
-        # If the list of errors is non-empty, we have some join-key compatibility issues.
-        # Some of the "errors" may just be warnings; filter those out of the list and raise
-        # them to notify the user.
-        actual_errors : List[Exception] = []
-        for err in key_compat_errs:
-            if isinstance(err, Warning):
-                warnings.warn(err)
-            else:
-                actual_errors.append(err)
-
-        # If there are any remaining errors in the list, those are actual errors so we can't
-        # proceed any further. Combine the remaining errors into a single error message then
-        # raise a ValueError; in the future we might use something like a .NET AggregateException
-        # to wrap multiple errors into one instead to allow for different error types.
-        if actual_errors:
-            flat_errs = '\n'.join(map(str, actual_errors))  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
-            raise ValueError(f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}")
-
     if logger.isEnabledFor(logging.INFO):
         delta = GetNanoTime() - start
-        logger.info("Validation complete. nanos='%d'", delta)
+        logger.info("Column validation complete. nanos='%d'", delta)
 
-    def get_perf_hint(hint, index: int, _default = None):
-        if hint is None:
-            return _default
-        elif isinstance(hint, tuple):
-            return hint[index]
-        else:
-            return hint
+    # merge_indices only accepts the new-style (tuple-based) 'on' parameter, so we need to get
+    # the parameters into that form.
+    # TODO: If a caller is already specifying the new-style 'on' parameter, don't round-trip it through
+    #       _extract_on_columns above -- let's simplify the logic so that above we either just re-use 'on'
+    #       if it's specified (but not left_on/right_on) or we construct the new-style 'on' form directly there
+    #       while validating so it doesn't need to be done as an extra step.
+    if len(left_on) != len(right_on):
+        ValueError(f'Differing numbers of columns used as join-keys for the left ({len(left_on)}) and right ({len(right_on)}) Datasets.')
+    normalized_on = list(zip(left_on, right_on))
 
-    def get_or_create_keygroup(
-        keycols: List[FastArray],
-        index: int,
-        force_invalids: bool,
-        create_groupby_grouping: bool,
-        high_card,
-        hint_size
-    ) -> Tuple['Grouping', Optional[FastArray]]:
-        """
-        Given the key columns (i.e. the columns being joined on) from a Dataset, get or create a `Grouping` object to be passed to the join algorithm.
-
-        Parameters
-        ----------
-        keycols : list of FastArray
-        index : int
-            Indicates whether the `Grouping` being constructed is for the left or right Dataset.
-            0 = left, 1 = right. Used to parse performance hints such as `high_card` or `hint_size`.
-        force_invalids : bool
-            When specified, builds a mask indicating which values are 'valid' and uses it
-            to force _invalid_ values into the invalid (0th) group in the constructed
-            Grouping instance.
-        create_groupby_grouping : bool
-            When True and `keycols` contains more than one (1) column, causes this function to create
-            and return a second `Grouping` which follows SQL "GROUP BY" semantics when determining
-            which tuples are considered null/NA.
-        high_card
-            Optional hint indicating the key data has high cardinality (many unique values).
-        hint_size
-            Optional hint at the number of unique key values.
-
-        Returns
-        -------
-        join_keygroup : Grouping
-            A Grouping object constructed from the columns specified by `keycols`.
-        groupby_keygroup : FastArray, optional
-            A `Grouping` object constructed from the columns specified by `keycols`,
-            following the semantics of SQL "GROUP BY" w.r.t. which tuples are considered non-null/NA.
-            This is optional and only returned when requested through `create_outer_merge_mask` *and*
-            it is necessary; otherwise, None is returned.
-
-        Notes
-        -----
-        The `force_invalids` parameter is important for ensuring the join algorithm adheres to ANSI SQL semantics.
-        The current (as of 2020-07-16) implementation for creating Grouping objects does not recognize invalid/NA values
-        in some (all?) cases; if we used a `Grouping` object created that way, invalid/NA values would be matched
-        against one another (during the join), which goes against how ANSI SQL semantics say NULL entries should be
-        handled during a join. When `force_invalids` is specified, this function pre-screens the data in the key columns
-        to locate invalid/NA values, builds a boolean mask of the *valid* values, and passes that mask when creating the
-        `Grouping` object, effectively forcing `Grouping` to recognize the invalid/NA values as invalid/NA values and
-        ensuring we'll get the correct (ANSI SQL) semantics from our join implementation.
-
-        If `Grouping` is ever fixed to recognize invalid/NA values at construction time, this function can be simplified
-        to simply parse the performance hints then invoke the `Grouping` creation code.
-
-        In the special case of exactly one Categorical being provided as the key, we need to detect whether there
-        are any unused categories in the Categorical (specifically, it's embedded Grouping instance); the presence
-        of these unused categories break the join algorithm since it assumes the unique values it extracts from the
-        Grouping are exactly the set which appear in the data. If unused categories are detected, the
-        `Grouping.regroup()` method is called to consolidate the grouping data and remove the extra categories.
-
-        Idea: for the multi-key (i.e. ``len(keycols) > 1``) and single-key non-`Categorical` cases, could we create the
-        `Grouping` object then create a mask on the Grouping's keys (and return them both for use by the join algorithm)
-        rather than building a mask that's the length of the whole key column(s)? That might save some time here but
-        may also slow down the join algorithm if it requires more-complex fancy/mask-indexing operations. This could
-        also simplify/streamline the way we need to create the "GROUP BY"-style validity mask for full outer joins.
-        """
-        # TODO If given a tuple of Categoricals, does Categorical.__init__() optimize the creation from them?
-        #      If so -- let's check if all items in `keycols` are Categorical and if so, use this for better performance.
-        #      Same with Grouping -- what if we have a key that's a tuple of a Categorical and a non-Categorical column?
-        #      Can we find a way to optimize the creation of the combined Grouping, perhaps by creating a Grouping for the
-        #      non-Categorical column and merging it with the .grouping from the Categorical rather than having to
-        #      re-process all of the data all over again?
-
-        # If any performance hints were specified, determine which values apply
-        # for the key(s) of the given Dataset (specified by 'index'; 0=left, 1=right).
-        _lex = get_perf_hint(high_card, index, False)
-        _hint_size = get_perf_hint(hint_size, index, 0)
-
-        # There's a simpler path for single-keys.
-        if len(keycols) == 1:
-            single_keycol = keycols[0]
-            # If there's only one key and it's a Categorical, we can just use the existing Grouping object.
-            if isinstance(single_keycol, Categorical):
-                # TODO: Consider emitting a warning if any perf hints have been supplied (above), since in
-                #       this case they're ignored (because we're using the existing Grouping instead of creating one).
-                cat_grouping: 'Grouping' = single_keycol.grouping
-
-                # If unused categories are present, call .regroup() to create a new Grouping with those
-                # categories removed. (See the 'Notes' section in the docstring for details.)
-                return (cat_grouping if all(cat_grouping.ncountkey > 0) else cat_grouping.regroup()), None
-
-            else:
-                # HACK: For non-Categorical single-key columns, we need to use rt.isnotnan to create
-                #       a filter for the Grouping. This is due to rt.ismember not handling NaN/invalids
-                #       in the expected way (i.e. where NaN != NaN).
-                isvalid = _create_column_valid_mask(single_keycol) if force_invalids else None
-                return TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=isvalid), None
-
-        else:
-            # HACK: For multiple keys, we apply the same approach as for single-key non-Categoricals where
-            #       we use rt.isnotnan to get a mask indicating the value elements. We do this for all the
-            #       columns then logical AND the masks together, since we want the behavior whereby a null in any
-            #       one of the components (columns) of a composite key means the whole tuple is considered null.
-            # PERF: We use the in-place version of logical AND here, so that no matter how many columns we have,
-            #       we only ever allocate / reference a maximum of two mask arrays at any one time; this helps
-            #       minimize peak memory utilization.
-            # PERF: The base case / initial value for the mask is None so that if we have _only_ columns which
-            #       don't have an invalid value -- such as strings -- we don't ever allocate a mask array.
-            #       This saves memory both by not having a mask array and also within the `Grouping` __init__ function.
-
-            valid_join_tuples_mask: Optional[FastArray] = None
-            valid_groupby_tuples_mask: Optional[FastArray] = None
-            if force_invalids:
-                for keycol in keycols:
-                    isvalid = _create_column_valid_mask(keycol)
-                    if valid_join_tuples_mask is None:
-                        valid_join_tuples_mask = isvalid
-                    elif isvalid is not None:
-                        valid_join_tuples_mask &= isvalid
-
-                    # Only needed/applicable to outer merges.
-                    if create_groupby_grouping:
-                        if valid_groupby_tuples_mask is None:
-                            # Need to copy 'isvalid' to avoid sharing the same instance with 'valid_join_tuples_mask',
-                            # which'll lead to them incorrectly having the same data (since we're updating in-place).
-                            valid_groupby_tuples_mask = isvalid.copy()
-                        elif isvalid is not None:
-                            valid_groupby_tuples_mask |= isvalid
-
-            # Create the Grouping, passing in the mask we created so NaN/invalid values are handled
-            # in the way we need them to be for merging.
-            join_grouping = TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=valid_join_tuples_mask)
-            groupby_grouping = TypeRegister.Grouping(keycols, lex=_lex, hint_size=_hint_size, filter=valid_groupby_tuples_mask) if create_groupby_grouping else None
-            return join_grouping, groupby_grouping
-
-    # Construct the Grouping object for each of the join keys.
-    start = GetNanoTime()
-
-    # TODO: Should we always pass True for the 'force_invalids' argument below? The original intent was that we
-    #       may want to be able to use the default (non-forced-invalids) behavior of Grouping for optional compatibility
-    #       with rt.merge(), but that's no longer planned (users are just migrating to merge2/merge_lookup).
-    #       Note, there *may* be something to passing False for the left and right grouping, when performing a
-    #       left or right join, respectively -- before making the change to always pass True, verify all the
-    #       optimized cases where we can return e.g. None for the fancy index aren't affected by the change.
-    left_grouping, _ = get_or_create_keygroup(left_on_arrs, 0, how != 'left', False, high_card, hint_size)
-    right_grouping, right_groupby_grouping =\
-        get_or_create_keygroup(right_on_arrs, 1, how != 'right', how == 'outer', high_card, hint_size)
-
-    if logger.isEnabledFor(logging.INFO):
-        delta = GetNanoTime() - start
-        logger.info("Grouping creation complete. nanos='%d'", delta)
-
-    # If the caller requested validation to be performed (to make sure the keys are
-    # unique on one or both sides) do that now.
-    if validate is not None:
-        _validate_groupings(left_grouping, right_grouping, validate, keep)
-
-    # Construct fancy indices for the left/right Datasets; these will be used to index into
-    # columns of the respective datasets to produce new arrays/columns for the merged Dataset.
-    start = GetNanoTime()
-    join_indices = _create_merge_fancy_indices(left_grouping, right_grouping, right_groupby_grouping, how, keep)
+    # Call merge_indices to perform the join and return fancy indices we'll use to construct the merged Dataset.
+    kwargs['skip_column_presence_check'] = True
+    join_indices = merge_indices(
+        left, right, on=normalized_on, how=how, validate=validate,
+        keep=keep, high_card=high_card, hint_size=hint_size, **kwargs)
     left_fancyindex = join_indices.left_index
     right_fancyindex = join_indices.right_index
-
-    if logger.isEnabledFor(logging.INFO):
-        delta = GetNanoTime() - start
-        logger.info("Join index creation complete. nanos='%d'", delta)
-
-    # If running in debug mode (without specifying -O at the command-line),
-    # verify the fancy indices will result in the same output lengths.
-    # If they're not, we'll end up with an error right towards the end of this function when
-    # everything's combined into the new Dataset instance.
-#    if __debug__:
-#        left_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.left_index, len(left))
-#        right_fancyindex_rowcount = JoinIndices.result_rowcount(join_indices.right_index, len(right))
-#        assert left_fancyindex_rowcount == right_fancyindex_rowcount,\
-#            f'Left and right rowcount differ ({left_fancyindex_rowcount} vs. {right_fancyindex_rowcount}).'
-
-    # DEBUG: Print the constructed indices.
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f'left_fancyindex ({type(left_fancyindex)}): {left_fancyindex}')
-        logger.debug(f'right_fancyindex ({type(right_fancyindex)}): {right_fancyindex}')
 
     #
     # TODO: Before using the constructed fancy indices to create the new "merged" columns
@@ -2071,7 +2241,7 @@ def merge2(
 
     if logger.isEnabledFor(logging.INFO):
         # The number of rows that'll be in the merged Dataset.
-        result_num_rows = len(right_fancyindex) if left_fancyindex is None else len(left_fancyindex)
+        result_num_rows = JoinIndices.result_rowcount(join_indices.left_index, len(left))
 
         # The estimated size, in bytes, of the merged Dataset.
         # "alloc size" here indicates the amount of newly-allocated memory that will be required for the result.
@@ -2080,6 +2250,8 @@ def merge2(
         est_result_alloc_size = 0
         if intersection_cols:
             for field in intersection_cols:
+                # TODO: Need to account for outer merge, where we'll hstack the intersection cols so the
+                #       dtype will be the larger of the dtypes of the two columns (from the left/right Datasets).
                 est_result_total_size += left[field].dtype.itemsize * result_num_rows
 
             if left_fancyindex is not None and right_fancyindex is not None:
@@ -2104,10 +2276,6 @@ def merge2(
         #       and fail (or emit a warning) if it like's like we hit an OOM error and crash.
         logger.info("Estimated merged result size. alloc_size='%d'\ttotal_size='%d'", est_result_alloc_size, est_result_total_size)
 
-    # Begin creating the column data for the 'merged' Dataset.
-    out: Dict[str, FastArray] = {}
-    start = GetNanoTime()
-
     def readonly_array_wrapper(arr: FastArray) -> FastArray:
         """Create a read-only view of an array."""
         new_arr = arr.view()
@@ -2120,6 +2288,10 @@ def merge2(
     # Based on the 'copy' flag, determine which function to use in cases where
     # an input column will contain the same data in the output Dataset.
     array_copier = array_copy if copy else readonly_array_wrapper
+
+    # Begin creating the column data for the 'merged' Dataset.
+    out: Dict[str, FastArray] = {}
+    start = GetNanoTime()
 
     # Fetch/transform columns which overlap between the two Datasets (i.e. columns with these
     # names exist in both Datasets).
