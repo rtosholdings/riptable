@@ -2077,6 +2077,12 @@ class TestCategorical:
         result = c['2.2']
         assert np.all(result == [False, True, False])
 
+    def test_fill_forward(self):
+        fa = FA([1., np.nan, 1.])
+        c = Cat([1,1,1])
+        c.fill_forward(fa, inplace=True)
+        assert np.all(fa == [1., 1., 1.])
+
     # TODO pytest parameterize `compare_func_names`
     def test_all_compare_tests(self):
         # with scalar
