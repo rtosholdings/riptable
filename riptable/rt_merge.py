@@ -1830,19 +1830,30 @@ def _get_or_create_keygroup(
         if force_invalids:
             for keycol in keycols:
                 isvalid = _create_column_valid_mask(keycol)
-                if valid_join_tuples_mask is None:
-                    valid_join_tuples_mask = isvalid
-                elif isvalid is not None:
-                    valid_join_tuples_mask &= isvalid
+
+                # N.B. we elide a 3rd branch (for handling the 'isvalid is None' case) here
+                #      because it'd be equivalent to logical-ANDing an array of all True elements,
+                #      so it wouldn't have any effect.
+                if isvalid is not None:
+                    if valid_join_tuples_mask is None:
+                        valid_join_tuples_mask = isvalid
+                    else:
+                        valid_join_tuples_mask &= isvalid
 
                 # Only needed/applicable to outer merges.
                 if create_groupby_grouping:
-                    if valid_groupby_tuples_mask is None:
+                    # If 'isvalid' is None, that's considered to be the same as a boolean array of the correct
+                    # length with all True elements; since we logical-OR the masks together for the groupby-grouping,
+                    # when 'isvalid' is None we set the valid groupby tuples mask to None.
+                    if isvalid is None:
+                        valid_groupby_tuples_mask = None
+                    elif valid_groupby_tuples_mask is None:
                         # Need to copy 'isvalid' to avoid sharing the same instance with 'valid_join_tuples_mask',
                         # which'll lead to them incorrectly having the same data (since we're updating in-place).
                         valid_groupby_tuples_mask = isvalid.copy()
-                    elif isvalid is not None:
+                    else:
                         valid_groupby_tuples_mask |= isvalid
+
 
         # Create the Grouping, passing in the mask we created so NaN/invalid values are handled
         # in the way we need them to be for merging.
