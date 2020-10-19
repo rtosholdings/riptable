@@ -1821,7 +1821,7 @@ class Categorical(GroupByOps, FastArray):
         return self.isnotnan()
 
     # ------------------------------------------------------------
-    def fill_forward(self, *args, limit:int=0, fill_val=None, inplace:bool=True):
+    def fill_forward(self, *args, limit:int=0, fill_val=None,inplace:bool=False):
         """
         Forward fill the values of the categorical, by group.
         By default this is done inplace.
@@ -1834,7 +1834,7 @@ class Categorical(GroupByOps, FastArray):
         ----------------
         limit : integer, optional
             limit of how many values to fill
-        inplace: defaults to True
+        inplace: defaults to False
 
         Examples
         --------
@@ -1849,11 +1849,17 @@ class Categorical(GroupByOps, FastArray):
         rt.Cat.fill_backward
         rt.GroupBy.fill_forward
         """
-        return self.apply_nonreduce(fill_forward, *args, fill_val=fill_val, limit=limit, inplace=inplace)
+        result = self.apply_nonreduce(fill_forward, *args, fill_val=fill_val, limit=limit, inplace=True)
+        if inplace is True:
+            for i in range(len(args)):
+                x=args[i]
+                # copy inplace
+                x[...] = result[i]
+        return result
 
 
     # ------------------------------------------------------------
-    def fill_backward(self, *args, limit:int=0, fill_val=None, inplace:bool=True):
+    def fill_backward(self, *args, limit:int=0, fill_val=None, inplace:bool=False):
         """
         Backward fill the values of the categorical, by group.
         By default this is done inplace.
@@ -1866,7 +1872,7 @@ class Categorical(GroupByOps, FastArray):
         ----------------
         limit : integer, optional
             limit of how many values to fill
-        inplace: defaults to True
+        inplace: defaults to False
 
         Examples
         --------
@@ -1881,7 +1887,13 @@ class Categorical(GroupByOps, FastArray):
         rt.Cat.fill_forward
         rt.GroupBy.fill_backward
         """
-        return self.apply_nonreduce(fill_backward, *args, fill_val=fill_val, limit=limit, inplace=inplace)
+        result = self.apply_nonreduce(fill_backward, *args, fill_val=fill_val, limit=limit, inplace=True)
+        if inplace is True:
+            for i in range(len(args)):
+                x=args[i]
+                # copy inplace
+                x[...] = result[i]
+        return result
 
     # ------------------------------------------------------------
     def isfiltered(self):
