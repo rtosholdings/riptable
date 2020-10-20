@@ -32,6 +32,10 @@ from riptable import arange, Cat, FA, stack_rows
 #           if numpy adopts the 'invalid flag' at the C level -- i.e. where numpy fancy indexing might recognize an invalid value
 #           and propagate it, but may reject other negative values (like an int32 invalid in an int64 array).
 
+# TODO: Implement test to verify we're able to handle the case where a merge (merge2, merge_lookup, etc.) is performed
+#       with multiple key columns, and the same key is specified multiple times for one or both Datasets.
+#       For example: rt.merge2(left_ds, right_ds, on=['a', 'b', ('c', 'a')], how='left')
+
 
 xfail_rip260_outermerge_left_keep = pytest.mark.xfail(
     reason="RIP-260: 'keep' for the 'left' Dataset in a multi-column outer merge is broken and needs to be fixed.",
@@ -6179,6 +6183,21 @@ def test_merge2_rowcount_is_sentinel():
     # This already worked (prior to _build_right_fancyindex() getting the fix) but would have been
     # broken if/when cumsum was modified to respect integer invalids/NA values.
     assert rt.all(result['foo'].isnotnan())
+
+
+@pytest.mark.parametrize("on", [
+    ['f', 'g'],
+    ['g', 'f']
+])
+def test_merge2_outer_on_multikey_with_string(on):
+    ds1 = rt.Dataset({'f': ['1', '2', '3', '4'], 'g': [1, 2, 3, 4], 'h1': [1, 1, 1, 1]})
+    ds2 = rt.Dataset({'f': ['2', '3', '4', '5'], 'g': [2, 3, 4, 5], 'h2': [2, 2, 2, 2]})
+
+    # Just verifying this succeeds (and does not fail with an exception/error).
+    # In riptable 1.0.21 and earlier, this failed due to the _create_column_valid_mask() function
+    # returning None; the None was passed into get_or_create_keygroup(), which then choked
+    # when trying to call .copy() on the None.
+    _ = ds1.merge2(ds2, on=on, how='outer')
 
 
 def test_lookup_copy_when_right_already_unique():
