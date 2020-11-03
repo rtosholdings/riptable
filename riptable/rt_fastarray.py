@@ -27,6 +27,12 @@ except Exception:
 if TYPE_CHECKING:
     from .rt_str import FAString
 
+    # pyarrow is an optional dependency.
+    try:
+        import pyarrow as pa
+    except ImportError:
+        pass
+
 
 # Create a logger for this module.
 logger = logging.getLogger(__name__)
@@ -3057,13 +3063,14 @@ class FastArray(np.ndarray):
         >>> s.str.upper
         FastArray([b'THIS', b'THAT', b'TEST ', ..., b'THIS', b'THAT', b'TEST '],
                   dtype='|S5')
+
         >>> s.str.lower
         FastArray([b'this', b'that', b'test ', ..., b'this', b'that', b'test '],
                   dtype='|S5')
+
         >>> s.str.removetrailing()
         FastArray([b'this', b'that', b'test', ..., b'this', b'that', b'test'],
                   dtype='|S5')
-
         """
         if self.dtype.char in 'US':
             return TypeRegister.FAString(self)
@@ -3076,6 +3083,338 @@ class FastArray(np.ndarray):
             return TypeRegister.FAString(conv)
 
         raise TypeError(f"The .str function can only be used on byte string and unicode not {self.dtype!r}")
+
+    @staticmethod
+    def from_arrow(arr: Union['pa.Array', 'pa.ChunkedArray'], zero_copy_only: bool = True, writable: bool = False, auto_widen: bool = False) -> 'FastArray':
+        """
+        Convert a pyarrow `Array` to a riptable `FastArray`.
+
+        Parameters
+        ----------
+        arr : pyarrow.Array or pyarrow.ChunkedArray
+        zero_copy_only : bool, default True
+            If True, an exception will be raised if the conversion to a `FastArray` would require copying the
+            underlying data (e.g. in presence of nulls, or for non-primitive types).
+        writable : bool, default False
+            For `FastArray`s created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
+            By setting this to True, a copy of the array is made to ensure it is writable.
+        auto_widen : bool, optional, default to False
+            When False (the default), if an arrow array contains a value which would be considered
+            the 'invalid'/NA value for the equivalent dtype in a `FastArray`, raise an exception
+            because direct conversion would be lossy / change the semantic meaning of the data.
+            When True, the converted array will be widened (if possible) to the next-largest dtype
+            to ensure the data will be interpreted in the same way.
+
+        Returns
+        -------
+        FastArray
+        """
+        import pyarrow.types as pat
+
+        # Based on the type of the array, dispatch to type-specific implementations of .from_arrow().
+        pa_arr_type = arr.type
+        if pat.is_boolean(pa_arr_type) or \
+            pat.is_integer(pa_arr_type) or \
+            pat.is_floating(pa_arr_type) or \
+            pat.is_string(pa_arr_type) or \
+            pat.is_binary(pa_arr_type) or \
+            pat.is_fixed_size_binary(pa_arr_type):
+            # TODO: Check whether this column has a user-specified fill value provided; if so, pass it along to
+            #       the FastArray.from_arrow() method call below.
+            return FastArray._from_arrow(arr, zero_copy_only=zero_copy_only, writable=writable, auto_widen=auto_widen)
+
+        elif pat.is_dictionary(pa_arr_type) or pat.is_struct(pa_arr_type):
+            return TypeRegister.Categorical._from_arrow(arr, zero_copy_only=zero_copy_only, writable=writable)
+
+        elif pat.is_timestamp(pa_arr_type):
+            return TypeRegister.DateTimeNano._from_arrow(arr, zero_copy_only=zero_copy_only, writable=writable)
+
+        elif pat.is_date(pa_arr_type):
+            return TypeRegister.Date._from_arrow(arr, zero_copy_only=zero_copy_only, writable=writable)
+
+        elif pat.is_duration(pa_arr_type):
+            return TypeRegister.TimeSpan._from_arrow(arr, zero_copy_only=zero_copy_only, writable=writable)
+
+        else:
+            # Unknown/unsupported array type -- can't convert.
+            raise NotImplementedError(f"pyarrow arrays of type '{pa_arr_type}' can't be converted to riptable arrays.")
+
+    @staticmethod
+    def _from_arrow(arr: Union['pa.Array', 'pa.ChunkedArray'], zero_copy_only: bool = True, writable: bool = False, auto_widen: bool = False) -> 'FastArray':
+        """
+        Convert a pyarrow `Array` to a riptable `FastArray`.
+
+        Parameters
+        ----------
+        arr : pyarrow.Array or pyarrow.ChunkedArray
+        zero_copy_only : bool, default True
+            If True, an exception will be raised if the conversion to a `FastArray` would require copying the
+            underlying data (e.g. in presence of nulls, or for non-primitive types).
+        writable : bool, default False
+            For `FastArray`s created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
+            By setting this to True, a copy of the array is made to ensure it is writable.
+        auto_widen : bool, optional, default to False
+            When False (the default), if an arrow array contains a value which would be considered
+            the 'invalid'/NA value for the equivalent dtype in a `FastArray`, raise an exception
+            because direct conversion would be lossy / change the semantic meaning of the data.
+            When True, the converted array will be widened (if possible) to the next-largest dtype
+            to ensure the data will be interpreted in the same way.
+
+        Returns
+        -------
+        FastArray
+        """
+        import pyarrow as pa
+        import pyarrow.types as pat
+        import pyarrow.compute as pc
+
+        # Make sure the input array is one of the pyarrow array types.
+        if not isinstance(arr, (pa.Array, pa.ChunkedArray)):
+            raise TypeError("The array is not an instance of `pyarrow.Array` or `pyarrow.ChunkedArray`.")
+
+        # TEMP: ChunkedArray not currently supported.
+        if isinstance(arr, pa.ChunkedArray):
+            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
+
+        # Handle based on the type of the input array.
+        if pat.is_integer(arr.type):
+            # For arrays of primitive types, pa.DataType.to_pandas_dtype() actually returns the equivalent numpy dtype.
+            arr_dtype = arr.type.to_pandas_dtype()
+
+            # Get the riptable invalid value for this array type.
+            arr_rt_inv = INVALID_DICT[np.dtype(arr_dtype).num]
+
+            # Get min and max value of the input array, so we know if we need to promote
+            # to the next-largest dtype to be able to correctly represent nulls.
+            # This must be done even if the input array has no nulls, because otherwise the non-null
+            # values in the input corresponding to riptable integer invalids would then be recognized
+            # as such after conversion.
+            min_max_result: pa.StructScalar = pc.min_max(arr)
+            min_value = min_max_result['min']
+            max_value = min_max_result['max']
+
+            arr_pa_dtype_widened: Optional[pa.DataType] = None
+            if min_value == arr_rt_inv or max_value == arr_rt_inv:
+                # If the input array holds 64-bit integers (signed or unsigned), we can't do a lossless conversion,
+                # since there is no wider integer available.
+                if zero_copy_only:
+                    raise ValueError("Cannot perform a zero-copy conversion of an arrow array containing the riptable invalid value for the array dtype.")
+                elif arr_dtype.itemsize == 8:
+                    raise ValueError("Cannot losslessly convert an arrow array of (u)int64 containing the riptable invalid value to a riptable array.")
+                elif not auto_widen:
+                    raise ValueError("Input array requires widening for lossless conversion. Specify auto_widen=True if you want to allow the widening conversion (which requires an array copy).")
+                else:
+                    # Widen the dtype of the output array.
+                    output_dtype = np.min_scalar_type(2 * arr_rt_inv)
+                    arr_pa_dtype_widened = pa.from_numpy_dtype(output_dtype)
+
+            # Create the output array, performing a widening conversion + filling in nulls with the riptable invalid if necessary.
+            # TODO: This could be faster -- if there's a way to get a numpy boolean array from a pyarrow array's null-mask,
+            #       we can convert directly to numpy/riptable; then, widen the FastArray (which'll be parallelized);
+            #       then use rt.copy_to() / rt.putmask() to overwrite the elements of the widened FastArray
+            #       corresponding to the nulls from the mask with the riptable invalid value for the output array type.
+            if arr_pa_dtype_widened is not None:
+                arr: pa.Array = arr.cast(arr_pa_dtype_widened)
+
+            return arr.fill_null(arr_rt_inv).to_numpy(zero_copy_only=False, writable=writable).view(FastArray)
+
+        elif pat.is_floating(arr.type):
+            # Floating-point arrays can be converted directly to numpy, since pyarrow will automatically
+            # fill null values with NaN.
+            return arr.to_numpy(zero_copy_only=zero_copy_only, writable=writable).view(FastArray)
+
+        elif pat.is_boolean(arr.type):
+            # Boolean arrays can only be converted when they do not contain nulls.
+            # riptable does not support an 'invalid'/NA value for boolean, so pyarrow arrays
+            # with nulls can't be represented in riptable.
+            if arr.null_count == 0:
+                return arr.to_numpy(zero_copy_only=zero_copy_only, writable=writable).view(FastArray)
+            else:
+                raise ValueError("riptable boolean arrays do not support an invalid value, so they cannot be created from pyarrow arrays containing nulls.")
+
+        elif pat.is_string(arr.type) or pat.is_large_string(arr.type):
+            # pyarrow variable-length string arrays can _never_ be zero-copy converted to fixed-length numpy/riptable arrays
+            # because of differences in the memory layout.
+            if zero_copy_only:
+                raise ValueError("pyarrow variable-length string arrays cannot be zero-copy converted to riptable arrays.")
+
+            # Check for whether the array contains only ASCII strings.
+            # This is used to guide how the FastArray is created.
+            has_unicode = not pc.all(pc.string_is_ascii(arr))
+
+            # Convert the array to a numpy array.
+            # Unfortunately, as of pyarrow 4.0, this conversion always produces a numpy object array containing the
+            # strings (as Python strings) rather than a numpy string array.
+            # We're able to handle this to return the sensible thing for riptable users, but it does mean this conversion
+            # is slower than necessary right now.
+            # TODO: Ask pyarrow-dev about implementing an option to return a numpy 'S' or 'U' array instead, it'll be
+            #       much more efficient, even though some space will be wasted due to numpy not supporting variable-length strings.
+            # TODO: Consider converting the pyarrow array to a dictionary-encoded array -- if there are only a few uniques,
+            #       it'll be more efficient (even though doing more work) by avoiding repetitive creation of the Python string objects.
+            if arr.null_count == 0:
+                tmp = arr.to_numpy(zero_copy_only=False, writable=writable)
+
+            else:
+                # Need to fill nulls with an empty string before converting to numpy.
+                # (INVALID_DICT[np.dtype('U').num] == '').
+                tmp = arr.fill_null('').to_numpy(zero_copy_only=False, writable=writable)
+
+            result = FastArray(tmp, dtype=str, unicode=has_unicode)
+            if not writable:
+                result.flags.writeable = False
+            return result
+
+        elif pat.is_fixed_size_binary(arr.type):
+            if arr.null_count != 0:
+                return arr.to_numpy(zero_copy_only=True, writable=writable).view(FastArray)
+
+            elif zero_copy_only:
+                raise ValueError("Can't perform a zero-copy conversion of a fixed-size binary array to riptable when the input array contains nulls.")
+
+            else:
+                # If the input array contains nulls, convert them to an empty string.
+                # riptable doesn't really support nulls for string arrays (ASCII or Unicode), but when gap-filling
+                # it'll use an empty string so that seems reasonable to use here.
+                # TODO: Maybe only allow this when the input array doesn't already contain any empty strings?
+                # TODO: May need to differentiate bytes (ASCII) vs. str (Unicode) for the empty string passed to fill_null() here.
+                return arr.fill_null(b'').to_numpy(zero_copy_only=True, writable=writable).view(FastArray)
+
+        else:
+            raise ValueError(f"FastArray cannot be created from a pyarrow array of type '{arr.type}'. You may need to call the `from_arrow` method on one of the derived subclasses instead.")
+
+    def to_arrow(self, type: Optional['pa.DataType'] = None, *, preserve_fixed_bytes: bool = False, empty_strings_to_null: bool = True) -> Union['pa.Array', 'pa.ChunkedArray']:
+        """
+        Convert this `FastArray` to a `pyarrow.Array`.
+
+        Parameters
+        ----------
+        type : pyarrow.DataType, optional, defaults to None
+        preserve_fixed_bytes : bool, optional, defaults to False
+            If this `FastArray` is an ASCII string array (dtype.kind == 'S'),
+            set this parameter to True to produce a fixed-length binary array
+            instead of a variable-length string array.
+        empty_strings_to_null : bool, optional, defaults To True
+            If this `FastArray` is an ASCII or Unicode string array,
+            specify True for this parameter to convert empty strings to nulls in the output.
+            riptable inconsistently recognizes the empty string as an 'invalid',
+            so this parameter allows the caller to specify which interpretation
+            they want.
+
+        Returns
+        -------
+        pyarrow.Array or pyarrow.ChunkedArray
+
+        Notes
+        -----
+        TODO: Add bool parameter which directs the conversion to choose the most-compact output type possible?
+              This would be relevant to indices of categorical/dictionary-encoded arrays, but could also make sense
+              for regular FastArray types (e.g. to use an int8 instead of an int32 when it'd be a lossless conversion).
+        """
+        import builtins
+        import pyarrow as pa
+
+        # Derived array types MUST implement their own overload of this function
+        # for correctness; for that reason, raise an error if someone attempts to
+        # call *this* implementation of the method for a derived array type.
+        if builtins.type(self) != FastArray:
+            raise NotImplementedError(f"The `{builtins.type(self).__qualname__}` type must implement it's own override of the `to_arrow()` method.")
+
+        # riptable (at least as of 1.0.56) does not *truly* support invalid/NA values
+        # in bool or ascii/unicode string-typed arrays. Handle those dtypes specially.
+        if np.issubdtype(self.dtype, np.integer):
+            # TODO: If this array has .ndims >= 2, need to convert to pyarrow using pa.Tensor.from_numpy(...). That doesn't handle masks as of pyarrow 4.0.
+
+            # Get a mask of invalids.
+            invalids_mask = self.isnan()
+
+            # If all values are valid, don't bother creating an all-False mask, it's just wasting memory.
+            if not invalids_mask.any():
+                invalids_mask = None
+
+            # Create the pyarrow array from it + this array.
+            return pa.array(self._np, mask=invalids_mask, type=type)
+
+        elif np.issubdtype(self.dtype, np.floating):
+            # Using floating-point NaN to signal both NaN and NA/null in riptable means we
+            # need to make a decision here on whether to mark those values as NA/null values
+            # in the returned pyarrow array.
+            # For now, we don't -- we just pass the data along directly, so the caller can decide
+            # on whether they want to handle that. (Ideally, we'd have a way to parameterize this
+            # but the protocol doesn't support it as of pyarrow 4.0. In any case, only the bitmask
+            # needs to be re-created later if the user wants to consider the NaNs as NA/null values.)
+            if self.ndim >= 2:
+                # NOTE: As of pyarrow 4.0, this method doesn't support a `type` argument.
+                return pa.Tensor.from_numpy(self._np)
+            else:
+                return pa.array(self._np, type=type)
+
+        elif np.issubdtype(self.dtype, bool):
+            if self.ndim >= 2:
+                # NOTE: As of pyarrow 4.0, this method doesn't support a `type` argument.
+                return pa.Tensor.from_numpy(self._np)
+            else:
+                return pa.array(self._np, type=type)
+
+        elif np.issubdtype(self.dtype, bytes):
+            # If the caller wants to convert empty strings to nulls, get a mask of invalids.
+            if empty_strings_to_null:
+                invalids_mask = self == self.inv
+
+                # If all values are valid, don't bother creating an all-False mask, it's just wasting memory.
+                if not invalids_mask.any():
+                    invalids_mask = None
+            else:
+                invalids_mask = None
+
+            # Does the caller want to preserve the fixed-length binary data?
+            if preserve_fixed_bytes:
+                # Convert to a fixed-length binary ('bytes') type.
+                element_str_length = np.dtype(self.dtype).itemsize
+                arr_type = pa.binary(element_str_length) if type is None else type
+                return pa.array(self._np, mask=invalids_mask, type=arr_type)
+            else:
+                # Convert this array to a pyarrow variable-length string array.
+                if type is None:
+                    type = pa.string()
+                return pa.array(self._np, mask=invalids_mask, type=type)
+
+        elif np.issubdtype(self.dtype, str):
+            # If the caller wants to convert empty strings to nulls, get a mask of invalids.
+            if empty_strings_to_null:
+                invalids_mask = self == self.inv
+
+                # If all values are valid, don't bother creating an all-False mask, it's just wasting memory.
+                if not invalids_mask.any():
+                    invalids_mask = None
+            else:
+                invalids_mask = None
+
+            # pyarrow (as of v4.0) does not have a fixed-size Unicode string data type, so unlike the 'bytes'
+            # handling above for ASCII strings, we have to use the variable-length string array type.
+            if type is None:
+                type = pa.string()
+            return pa.array(self._np, mask=invalids_mask, type=type)
+
+        else:
+            raise NotImplementedError(f"FastArray with dtype '{np.dtype(self.dtype)}' is not supported.")
+
+    def __arrow_array__(self, type: Optional['pa.DataType'] = None) -> Union['pa.Array', 'pa.ChunkedArray']:
+        """
+        Implementation of the ``__arrow_array__`` protocol for conversion to a pyarrow array.
+
+        Parameters
+        ----------
+        type : pyarrow.DataType, optional, defaults to None
+
+        Returns
+        -------
+        pyarrow.Array or pyarrow.ChunkedArray
+
+        Notes
+        -----
+        https://arrow.apache.org/docs/python/extending_types.html#controlling-conversion-to-pyarrow-array-with-the-arrow-array-protocol
+        """
+        return self.to_arrow(type=type, preserve_fixed_bytes=False, empty_strings_to_null=True)
 
     #-----------------------------------------------------------
     @classmethod

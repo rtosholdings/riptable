@@ -1650,5 +1650,22 @@ def test_array_function_empty_like(np_callable, fast_array):
     assert actual.shape == fast_array.shape, 'shape mismatch'
 
 
+@pytest.mark.xfail(reason='Known bug as of riptable 1.1.0.')
+@pytest.mark.parametrize('as_unicode', [False, True])
+def test_ctor_from_str_obj_array_with_None(as_unicode: bool) -> None:
+    # Create a numpy object array containing some None values.
+    input = np.array(['abc', None, 'ghi', 'jkl', None, 'abc', 'ghi'], dtype=object)
+    none_mask = input == None
+
+    # Create the FastArray from the input.
+    result = FastArray(input, dtype=str, unicode=as_unicode)
+    assert input.shape == result.shape
+
+    # The expected output; specifically, make sure the None values in the input
+    # are converted to the riptable 'invalid' for the output array type.
+    none_results = result[none_mask]
+    assert_array_equal(none_results, rt.full(none_results.shape, result.inv, dtype=none_results.dtype))
+
+
 if __name__ == "__main__":
     tester = unittest.main()

@@ -3,26 +3,36 @@
            'parse_epoch', 'timestring_to_nano', 'datestring_to_nano', 'datetimestring_to_nano',
            'strptime_to_nano']
 
-import numpy as np
 from datetime import datetime as dt
 from datetime import date, timezone
-from dateutil import tz
 import time
+from typing import TYPE_CHECKING, Union, Tuple, List, Optional
 import warnings
-# import starfish as sf
+
+from dateutil import tz
+import numpy as np
 import riptide_cpp as rc
-from typing import Union, Tuple, List, Optional
 
 from .rt_fastarray import FastArray
-from .rt_enum import TypeRegister, DisplayArrayTypes, DisplayLength, DisplayJustification, DisplayTextDecoration, \
+from .rt_enum import (
+    TypeRegister, DisplayArrayTypes, DisplayLength, DisplayJustification, DisplayTextDecoration,
     TypeId, TimeFormat, NumpyCharTypes, INVALID_DICT, DayOfWeek, SDSFlag, MATH_OPERATION
-from .rt_numpy import mask_ori, mask_andi, mask_xori, searchsorted, arange, putmask, isnan, empty, sum, zeros, full, \
+)
+from .rt_numpy import (
+    mask_ori, mask_andi, mask_xori, searchsorted, arange, putmask, isnan, empty, sum, zeros, full,
     hstack
+)
 from .rt_hstack import hstack_any
-from .rt_timers import *
 from .Utils.rt_display_properties import ItemFormat
 from .Utils.rt_metadata import MetaData, meta_from_version, META_VERSION
 from .rt_categorical import Categorical
+
+if TYPE_CHECKING:
+    # pyarrow is an optional dependency.
+    try:
+        import pyarrow as pa
+    except ImportError:
+        pass
 
 NANOS_PER_MICROSECOND = 1_000
 NANOS_PER_MILLISECOND = 1_000_000
@@ -1658,7 +1668,7 @@ class Date(DateBase, TimeStampBase):
     #def __floordiv__(self, other): raise NotImplementedError
     #def __mod__(self, other): raise NotImplementedError
     #def __divmod__(self, other): raise NotImplementedError
-    
+
     def __pow__(self, other, modulo=None): raise NotImplementedError
 
     def __lshift__(self, other): raise NotImplementedError
@@ -1850,6 +1860,105 @@ class Date(DateBase, TimeStampBase):
         rt.Date array of previous Monday
         """
         return self - self.day_of_week
+
+    @staticmethod
+    def _from_arrow(arr: Union['pa.Array', 'pa.ChunkedArray'], zero_copy_only: bool = True, writable: bool = False) -> 'Date':
+        """
+        Create a `Date` instance from a "date32" or "date64"-typed `pyarrow.Array`.
+
+        Parameters
+        ----------
+        arr : pyarrow.Array or pyarrow.ChunkedArray
+            Must be a "date32"- or "date64"-typed pyarrow array.
+        zero_copy_only : bool, optional, defaults to False
+        writable : bool, optional, defaults to False
+
+        Returns
+        -------
+        Date
+        """
+        import pyarrow as pa
+        import pyarrow.types as pat
+
+        # Only support converting from date-typed (pa.date32(), pa.date64()) arrays.
+        if not pat.is_date(arr.type):
+            raise ValueError(f"rt.Date arrays can only be created from pyarrow arrays of type 'date32' and 'date64', not '{arr.type}'.")
+
+        # TEMP: ChunkedArray not currently supported.
+        if isinstance(arr, pa.ChunkedArray):
+            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
+
+        # If this is a date64 array (milliseconds since the UNIX epoch), we need to convert to a date32 array first;
+        # pa.date32() uses the same underlying representation (integer days since the UNIX epoch) as rt.Date.
+        if pat.is_date64(arr.type):
+            arr: pa.Array = arr.cast(pa.date32())
+
+        # Create the rt.Date array from the pyarrow array.
+        arr_int32 = arr.view(pa.int32())
+
+        # When the input pyarrow array doesn't have any NA values, this operation **can be** zero-copy
+        # depending on which options the caller has specified.
+        if arr.null_count == 0:
+            arr_int32_np = arr_int32.to_numpy(zero_copy_only=not writable, writable=writable)
+            return arr_int32_np.view(type=Date)
+        elif zero_copy_only:
+            raise RuntimeError("Unable to perform zero-copy conversion from an input array containing nulls.")
+        else:
+            # The input array has one or more nulls, so this conversion can *never* be zero-copy.
+            # Since we have to perform a copy somewhere, do the copy in pyarrow using the .replace() method
+            # so we can simultaneously fill in the null elements with the riptable 'invalid'/NA value
+            # for this array type; this also prevents pyarrow from converting the data to a floating-point
+            # dtype and filling the nulls with NaN.
+
+            # Get a pyarrow scalar with the riptable int32 invalid.
+            # rt.Date treats both the int32 'invalid' and zero as 'invalid'/NA values; the choice to use
+            # the int32 invalid is arbitrary -- this could just as easily use zero as the replacement value.
+            int32_inv_pa = pa.scalar(INVALID_DICT[np.dtype(np.int32).num], type=pa.int32())
+
+            # Fill the nulls with the riptable int32 invalid. This operation also creates a copy,
+            # because arrow arrays are immutable.
+            arr_int32_filled = arr_int32.fill_null(int32_inv_pa)
+
+            # Now do the conversion to a numpy array; it should be zero-copy.
+            # TODO: If writable=True here, it seems like we'll do a 2nd copy of the data? Is there any way to avoid it?
+            arr_int32_np = arr_int32_filled.to_numpy(zero_copy_only=not writable, writable=writable)
+
+            return arr_int32_np.view(type=Date)
+
+    def to_arrow(self, type: Optional['pa.DataType'] = None, *, preserve_fixed_bytes: bool = False, empty_strings_to_null: bool = True) -> Union['pa.Array', 'pa.ChunkedArray']:
+        """
+        Convert this `Date` to a `pyarrow.Array`.
+
+        Parameters
+        ----------
+        type : pyarrow.DataType, optional, defaults to None
+            Unused.
+        preserve_fixed_bytes : bool, optional, defaults to False
+            Unused.
+        empty_strings_to_null : bool, optional, defaults To True
+            Unused.
+
+        Returns
+        -------
+        pyarrow.Array or pyarrow.ChunkedArray
+        """
+        import pyarrow as pa
+
+        # Get the invalid mask for this array.
+        # If all values are valid, don't bother passing an all-False mask when creating the arrow array.
+        invalids_mask = self.isnan()
+        if not invalids_mask.any():
+            invalids_mask = None
+
+        # TODO: Do we need to try to implement support for the case where the `type` parameter
+        #       was specified? What should we do in that case if the type isn't compatible?
+        #       Maybe we create the pyarrow array like we're doing now, then if `type` is not None
+        #       we call .cast() on the created array and pass `type`?
+        # Create/return the pyarrow array.
+        return pa.array(self._np, mask=invalids_mask, type=pa.date32())
+
+    def __arrow_array__(self, type: Optional['pa.DataType'] = None) -> Union['pa.Array', 'pa.ChunkedArray']:
+        return self.to_arrow(type=type)
 
 
 # ========================================================
@@ -4322,7 +4431,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     #def __floordiv__(self, other): raise NotImplementedError
     #def __mod__(self, other): raise NotImplementedError
     #def __divmod__(self, other): raise NotImplementedError
-    
+
     def __pow__(self, other, modulo=None): raise NotImplementedError
 
     def __lshift__(self, other): raise NotImplementedError
@@ -4520,7 +4629,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         return cls._random(sz, to_tz=to_tz, from_tz=from_tz, inv=inv, start=start, end=end)
 
     # -------------------------------------------------------------
-    def resample(self, rule, dropna=False):
+    def resample(self, rule: str, dropna: bool = False):
         """Convenience method for frequency conversion and resampling of
         DateTimeNano arrays.
 
@@ -4644,6 +4753,129 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             resampled = time_interval(amount, unit)
 
         return resampled
+
+    @staticmethod
+    def _from_arrow(arr: Union['pa.Array', 'pa.ChunkedArray'], zero_copy_only: bool = True, writable: bool = False) -> 'DateTimeNano':
+        """
+        Create a `DateTimeNano` instance from a "timestamp"-typed `pyarrow.Array`.
+
+        Parameters
+        ----------
+        arr : pyarrow.Array or pyarrow.ChunkedArray
+            Must be a "timestamp"-typed pyarrow array.
+        zero_copy_only : bool, optional, defaults to False
+        writable : bool, optional, defaults to False
+
+        Returns
+        -------
+        DateTimeNano
+        """
+        import pyarrow as pa
+        import pyarrow.types as pat
+
+        # Only support converting from timestamp-typed arrays.
+        if not isinstance(arr, (pa.Array, pa.ChunkedArray)):
+            raise TypeError("The array is not an instance of `pyarrow.Array` or `pyarrow.ChunkedArray`.")
+        elif not pat.is_timestamp(arr.type):
+            raise ValueError(f"rt.DateTimeNano arrays can only be created from pyarrow arrays of type 'timestamp', not '{arr.type}'.")
+
+        # TEMP: ChunkedArray not currently supported.
+        if isinstance(arr, pa.ChunkedArray):
+            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
+
+        # If zero_copy_only is set but the timestamp unit isn't 'ns', we won't be able to perform
+        # a zero-copy conversion so raise an exception.
+        if zero_copy_only and arr.type.unit != 'ns':
+            raise ValueError(f"Unable to perform a zero-copy conversion for an timestamp-typed array with the unit '{arr.type.unit}'.")
+
+        # TEMP: If the input array uses a unit other than 'ns', we need to scale it to nanoseconds since that's what's
+        #       used as the representation for DateTimeNano.
+        #       This could be done more efficiently (both in terms of CPU and memory) by combining the unit conversion
+        #       with the logic below; this implementation just gets things working for now so we can
+        #       e.g. implement unit tests.
+        if arr.type.unit != 'ns':
+            ns_timestamp_type = pa.timestamp('ns', tz=arr.type.tz)
+            arr: pa.Array = arr.cast(ns_timestamp_type)
+
+        # TODO: Also need to check if this is one of the timezones supported by riptable.
+        if arr.type.tz is None:
+            raise ValueError("The input array is timezone-naive, which is not supported by riptable.")
+
+        # TODO: Need to convert the pyarrow array's timezone to a riptable TZ string,
+        #       then set that on the output array.
+        from_tz_str = TypeRegister.TimeZone.long_to_short_timezone_names.get(arr.type.tz, None)
+        if from_tz_str is None:
+            raise ValueError(f"The input array's timezone '{arr.type.tz}' is not supported by riptable.")
+
+        # Create a view of the underlying data as int64 epoch-nanoseconds.
+        arr_int64 = arr.view(pa.int64())
+
+        # When the input pyarrow array doesn't have any NA values, this operation **can be** zero-copy
+        # depending on which options the caller has specified.
+        if arr.null_count == 0:
+            arr_int64_np = arr_int64.to_numpy(zero_copy_only=not writable, writable=writable)
+            return DateTimeNano(arr_int64_np, from_tz=from_tz_str)
+        elif zero_copy_only:
+            raise RuntimeError("Unable to perform zero-copy conversion from an input array containing nulls.")
+        else:
+            # The input array has one or more nulls, so this conversion can *never* be zero-copy.
+            # Since we have to perform a copy somewhere, do the copy in pyarrow using the .replace() method
+            # so we can simultaneously fill in the null elements with the riptable 'invalid'/NA value
+            # for this array type; this also prevents pyarrow from converting the data to a floating-point
+            # dtype and filling the nulls with NaN.
+
+            # Get a pyarrow scalar with the riptable int64 invalid.
+            # rt.DateTimeNano treats both the int64 'invalid' and zero as 'invalid'/NA values; the choice to use
+            # the int64 invalid is arbitrary -- this could just as easily use zero as the replacement value.
+            int64_inv_pa = pa.scalar(INVALID_DICT[np.dtype(np.int64).num], type=pa.int64())
+
+            # Fill the nulls with the riptable int64 invalid. This operation also creates a copy,
+            # because arrow arrays are immutable.
+            arr_int64_filled = arr_int64.fill_null(int64_inv_pa)
+
+            # Now do the conversion to a numpy array; it should be zero-copy.
+            # TODO: If writable=True here, it seems like we'll do a 2nd copy of the data? Is there any way to avoid it?
+            arr_int64_np = arr_int64_filled.to_numpy(zero_copy_only=not writable, writable=writable)
+
+            return DateTimeNano(arr_int64_np, from_tz=from_tz_str)
+
+    def to_arrow(self, type: Optional['pa.DataType'] = None, *, preserve_fixed_bytes: bool = False, empty_strings_to_null: bool = True) -> Union['pa.Array', 'pa.ChunkedArray']:
+        """
+        Convert this `DateTimeNano` to a `pyarrow.Array`.
+
+        Parameters
+        ----------
+        type : pyarrow.DataType, optional, defaults to None
+            Unused.
+        preserve_fixed_bytes : bool, optional, defaults to False
+            Unused.
+        empty_strings_to_null : bool, optional, defaults To True
+            Unused.
+
+        Returns
+        -------
+        pyarrow.Array or pyarrow.ChunkedArray
+        """
+        import pyarrow as pa
+
+        # Get the tz db / ICU timezone name.
+        tz_name = TypeRegister.TimeZone.timezone_long_strings[self._timezone._from_tz]
+
+        # Create the corresponding pyarrow type.
+        arr_type = pa.timestamp('ns', tz=tz_name)
+
+        # Get the invalid mask for this array.
+        # If all values are valid, don't bother passing an all-False mask when creating the arrow array.
+        invalids_mask = self.isnan()
+        if not invalids_mask.any():
+            invalids_mask = None
+
+        # TODO: If the caller specified the `type` parameter (e.g. to have the array output
+        #       as a different timezone), create the array as below, but then cast it to the target type.
+        return pa.array(self._np, mask=invalids_mask, type=arr_type)
+
+    def __arrow_array__(self, type: Optional['pa.DataType'] = None) -> Union['pa.Array', 'pa.ChunkedArray']:
+        return self.to_arrow(type=type)
 
 
 # ========================================================
@@ -4869,7 +5101,7 @@ class TimeSpanBase:
             timestr = DateTimeBase.DEFAULT_FORMATTER(format_str, gmt_time)
 
             days = np.int64(item) // NANOS_PER_DAY
-            
+
             if days > 0:
                 timestr = str(days) + 'd ' + timestr
             if nanosecs < 0:
@@ -5363,6 +5595,110 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
 
         return instance
 
+    @staticmethod
+    def _from_arrow(arr: Union['pa.Array', 'pa.ChunkedArray'], zero_copy_only: bool = True, writable: bool = False) -> 'TimeSpan':
+        """
+        Create a `TimeSpan` instance from a "duration"-typed `pyarrow.Array`.
+
+        Parameters
+        ----------
+        arr : pyarrow.Array or pyarrow.ChunkedArray
+            Must be a "duration"-typed pyarrow array.
+        zero_copy_only : bool, optional, defaults to False
+        writable : bool, optional, defaults to False
+
+        Returns
+        -------
+        TimeSpan
+        """
+        import pyarrow as pa
+        import pyarrow.types as pat
+        #import pyarrow.compute as pc
+
+        # Only support converting from duration-typed arrays.
+        if not isinstance(arr, (pa.Array, pa.ChunkedArray)):
+            raise TypeError("The array is not an instance of `pyarrow.Array` or `pyarrow.ChunkedArray`.")
+        elif not pat.is_duration(arr.type):
+            raise ValueError(f"rt.TimeSpan arrays can only be created from pyarrow arrays of type 'duration', not '{arr.type}'.")
+
+        # TEMP: ChunkedArray not currently supported.
+        if isinstance(arr, pa.ChunkedArray):
+            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
+
+        # If the input array's type specifies a unit other than 'ns',
+        # we need to convert it to nanoseconds, because rt.TimeSpan always uses nanoseconds as the unit.
+        if arr.type.unit != 'ns':
+            if zero_copy_only:
+                raise ValueError("Cannot perform a zero-copy conversion of a pyarrow duration array with units other than 'ns'.")
+            else:
+                pa_ns_duration_ty = pa.duration('ns')
+                arr = arr.cast(pa_ns_duration_ty)
+
+        # Detect whether the values in the array are in the range [0, 2 ^ 53], in which case we *can* perform a zero-copy conversion
+        # of the data (assuming writable=False), since the integer and float representation will be the same.
+        # 2 ^ 53 nanoseconds is approx. 104 days + 6 hours.
+        # N.B. This doesn't work as expected -- seems like it's due to differences in integer vs. FP endianness in memory?
+        arr_int64_view = arr.view(pa.int64())
+        #min_max_result: pa.StructScalar = pc.min_max(arr_int64_view)
+        #min_value = min_max_result['min']
+        #max_value = min_max_result['max']
+        #in_lossless_float64_int_range = min_value.as_py() >= 0 and max_value.as_py() <= (2 ** 53)
+        in_lossless_float64_int_range = False
+
+        # Can we perform a lossless conversion to float64?
+        if in_lossless_float64_int_range:
+            f64_view_pa = arr_int64_view.view(pa.float64())
+            f64_view_np = f64_view_pa.to_numpy(zero_copy_only=not writable, writable=writable)
+            return f64_view_np.view(type=TimeSpan)
+
+        elif zero_copy_only:
+            raise ValueError("Cannot perform a zero-copy conversion of a pyarrow duration array containing negative values, or values larger than 2^53 nanoseconds.")
+
+        else:
+            # Convert from int64 ns representation to float64 representation, which in this case requires creating a new array.
+            f64_copy_pa = arr_int64_view.cast(pa.float64())
+            f64_view_np = f64_copy_pa.to_numpy(zero_copy_only=not writable, writable=writable)
+            return f64_view_np.view(type=TimeSpan)
+
+    def to_arrow(self, type: Optional['pa.DataType'] = None, *, preserve_fixed_bytes: bool = False, empty_strings_to_null: bool = True) -> Union['pa.Array', 'pa.ChunkedArray']:
+        """
+        Convert this `TimeSpan` to a `pyarrow.Array`.
+
+        Parameters
+        ----------
+        type : pyarrow.DataType, optional, defaults to None
+            Unused.
+        preserve_fixed_bytes : bool, optional, defaults to False
+            Unused.
+        empty_strings_to_null : bool, optional, defaults To True
+            Unused.
+
+        Returns
+        -------
+        pyarrow.Array or pyarrow.ChunkedArray
+        """
+        import pyarrow as pa
+
+        # Create the corresponding pyarrow type.
+        arr_type = pa.duration('ns')
+
+        # Get the invalid mask for this array.
+        # If all values are valid, don't bother passing an all-False mask when creating the arrow array.
+        invalids_mask = self.isnan()
+        if not invalids_mask.any():
+            invalids_mask = None
+
+        # Convert the float64 backing array (for this TimeSpan instance) to int64,
+        # since that's what pyarrow will use for it's internal representation.
+        int_ns_arr = self.astype(dtype=np.int64)
+
+        # TODO: If the `type` parameter is specified, should we create the array below
+        #       then try to cast it to the caller-specified type?
+        return pa.array(int_ns_arr._np, mask=invalids_mask, type=arr_type)
+
+    def __arrow_array__(self, type: Optional['pa.DataType'] = None) -> Union['pa.Array', 'pa.ChunkedArray']:
+        return self.to_arrow(type=type)
+
 
 # ==========================================================
 # Scalars
@@ -5697,7 +6033,7 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
 
     def __mul__(self, value):      return TimeSpanBase.__mul__(self, value)
 
-    def __rmul__(self, other):     return TimeSpanBase.__rmul__(self, value)
+    def __rmul__(self, value):     return TimeSpanBase.__rmul__(self, value)
 
     def __floordiv__(self, value): return TimeSpanBase.__floordiv__(self, value)
 

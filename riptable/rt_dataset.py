@@ -1,11 +1,13 @@
 ﻿# -*- coding: utf-8 -*-
 __all__ = ['Dataset', ]
 
-import warnings
-import numpy as np
+from collections import abc, Counter, namedtuple
+import operator
 import os
 from typing import Any, Callable, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, TYPE_CHECKING
-from collections import abc, Counter, namedtuple
+import warnings
+
+import numpy as np
 
 from .rt_struct import Struct
 from .rt_fastarray import FastArray
@@ -33,10 +35,21 @@ from .rt_imatrix import IMatrix
 
 if TYPE_CHECKING:
     from datetime import timedelta
-    import pandas as pd
     from .rt_accum2 import Accum2
     from .rt_categorical import Categorical
     from .rt_multiset import Multiset
+
+    # pandas is an optional dependency.
+    try:
+        import pandas as pd
+    except ImportError:
+        pass
+
+    # pyarrow is an optional dependency.
+    try:
+        import pyarrow as pa
+    except ImportError:
+        pass
 
 
 ArrayCompatible = Union[list, abc.Iterable, np.ndarray]
@@ -1382,7 +1395,7 @@ class Dataset(Struct):
     def imatrix(self) -> Optional[np.ndarray]:
         """
         Returns the 2d array created from `imatrix_make`.
-        
+
         Returns
         -------
         imatrix : np.ndarray, optional
@@ -2472,7 +2485,6 @@ class Dataset(Struct):
         for _i in range(self.get_nrows()):
             yield func(_c[_i] for _c in cols)
 
-
     def tolist(self):
         """
         Return list of lists of values, by rows.
@@ -2681,6 +2693,113 @@ class Dataset(Struct):
             else:
                 data[key] = df[key]
         return cls(data)
+
+    @staticmethod
+    def from_arrow(
+        tbl: 'pa.Table', zero_copy_only: bool = True, writable: bool = False, auto_widen: bool = False,
+        fill_value: Optional[Mapping[str, Any]] = None
+    ) -> 'Dataset':
+        """
+        Convert a pyarrow `Table` to a riptable `Dataset`.
+
+        Parameters
+        ----------
+        tbl : pyarrow.Table
+        zero_copy_only : bool, default True
+            If True, an exception will be raised if the conversion to a `FastArray` would require copying the
+            underlying data (e.g. in presence of nulls, or for non-primitive types).
+        writable : bool, default False
+            For `FastArray`s created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
+            By setting this to True, a copy of the array is made to ensure it is writable.
+        auto_widen : bool, optional, default to False
+            When False (the default), if an arrow array contains a value which would be considered
+            the 'invalid'/NA value for the equivalent dtype in a `FastArray`, raise an exception.
+            When True, the converted array
+        fill_value : Mapping[str, int or float or str or bytes or bool], optional, defaults to None
+            Optional mapping providing non-default fill values to be used. May specify as many or as few columns
+            as the caller likes. When None (or for any columns which don't have a fill value specified in the mapping)
+            the riptable invalid value for the column (given it's dtype) will be used.
+
+        Returns
+        -------
+        Dataset
+
+        Notes
+        -----
+        This function does not currently support pyarrow's nested Tables. A future version of riptable may support
+        nested Datasets in the same way (where a Dataset contains a mixture of arrays/columns or nested Datasets having
+        the same number of rows), which would make it trivial to support that conversion.
+        """
+        import pyarrow as pa
+
+        ds_cols = {}
+        for col_name, col in zip(tbl.column_names, tbl.columns):
+            if isinstance(col, (pa.Array, pa.ChunkedArray)):
+                rt_arr = FastArray.from_arrow(col, zero_copy_only=zero_copy_only, writable=writable, auto_widen=auto_widen)
+
+            else:
+                # Unknown/unsupported type being used as a column -- can't convert.
+                raise RuntimeError(f"Unable to convert column '{col_name}' from object of type '{type(col)}'.")
+
+            ds_cols[col_name] = rt_arr
+
+        return Dataset(ds_cols)
+
+    def to_arrow(self, *, preserve_fixed_bytes: bool = False, empty_strings_to_null: bool = True) -> 'pa.Table':
+        """
+        Convert a riptable `Dataset` to a pyarrow `Table`.
+
+        Parameters
+        ----------
+        preserve_fixed_bytes : bool, optional, defaults to False
+            For `FastArray` columns which are ASCII string arrays (dtype.kind == 'S'),
+            set this parameter to True to produce a fixed-length binary array
+            instead of a variable-length string array.
+        empty_strings_to_null : bool, optional, defaults To True
+            For `FastArray` columns which are  ASCII or Unicode string arrays,
+            specify True for this parameter to convert empty strings to nulls in the output.
+            riptable inconsistently recognizes the empty string as an 'invalid',
+            so this parameter allows the caller to specify which interpretation
+            they want.
+
+        Returns
+        -------
+        pyarrow.Table
+
+        Notes
+        -----
+        TODO: Maybe add a ``destroy`` bool parameter here to indicate the original arrays should be deleted
+              immediately after being converted to a pyarrow array? We'd need to handle the case where the
+              pyarrow array object was created in "zero-copy" style and wraps our original array (vs. a new
+              array having been allocated via pyarrow); in that case, it won't be safe to delete the original
+              array. Or, maybe we just call 'del' anyway to decrement the object's refcount so it can be
+              cleaned up sooner (if possible) vs. waiting for this whole method to complete and the GC and
+              riptable "Recycler" to run?
+        """
+        import pyarrow as pa
+
+        # Convert each of the columns to a pyarrow array.
+        arrow_col_dict = {}
+        for col_name in self.keys():
+            orig_col = self[col_name]
+
+            try:
+                # Convert the column/array using the FastArray.to_arrow() method (or the inherited overload
+                # for derived classes). This allows additional options to be passed when converting, to give
+                # callers more flexibility.
+                arrow_col = orig_col.to_arrow(
+                    preserve_fixed_bytes=preserve_fixed_bytes,
+                    empty_strings_to_null=empty_strings_to_null
+                )
+            except BaseException as exc:
+                # Create another exception which wraps the given exception and provides
+                # the column name in the error message to make it easier to diagnose issues.
+                raise RuntimeError(f"Unable to convert column '{col_name}' to a pyarrow array.") from exc
+
+            arrow_col_dict[col_name] = arrow_col
+
+        # Create the pyarrow.Table from the dictionary of pyarrow arrays.
+        return pa.table(arrow_col_dict)
 
     @staticmethod
     def _axis_key(axis):
