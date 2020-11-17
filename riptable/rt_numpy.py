@@ -378,14 +378,29 @@ def unique(
         # NOTE if the categorical is not dirty, filter should do nothing
         # TODO: need to set dirty flag g=arr.filter().grouping
         g=arr.grouping
-        if filter is not None:
-            g=g.regroup(filter)
-        else:
-            if g.isdirty:
-                # dirty flag means a bool or fancy index mask was applied
-                g = g.regroup()
+
+        # check for Dictionary mode
+        if (arr.category_mode == CategoryMode.Dictionary):
+            if filter is not None:
+                arr=arr.filter(filter)
             else:
-                mark_readonly = True
+                if g.isdirty:
+                    arr=arr.filter(filter)
+                else:
+                    mark_readonly = True
+
+            # get back grouping in case it changed
+            g=arr.grouping
+
+        else:
+            if filter is not None:
+                g=g.regroup(filter)
+            else:
+                if g.isdirty:
+                    # dirty flag means a bool or fancy index mask was applied
+                    g = g.regroup()
+                else:
+                    mark_readonly = True
 
         # NOTE the existing categorical is already ordered/unordered and thus will disobey the sorted flag
     else:
