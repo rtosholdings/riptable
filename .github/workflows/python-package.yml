@@ -23,8 +23,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+       env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
+       env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -56,12 +60,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+       env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
       with:
         # Set fetch-depth to 0 so all history is retrieved; this is needed so we get the git tags
         # which we use for setting the package version (via setuptools-scm).
         fetch-depth: 0
     - name: Set up Python
       uses: actions/setup-python@v2
+       env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
       with:
         python-version: '3.x'
     - name: Install dependencies
@@ -87,10 +95,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+        env:
+         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
         with:
           fetch-depth: 0
       - name: Setup Miniconda
         uses: goanpeca/setup-miniconda@v1
+        env:
+         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
         with:
           activate-environment: ""
       - name: Build Package
@@ -106,6 +118,8 @@ jobs:
           echo "${{ github.ref }}"
       - name: Publish artifacts
         uses: actions/upload-artifact@v2
+        env:
+         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
         with:
           name: packages
           path: conda_pkgs_output/*/riptable-*.tar.bz2
