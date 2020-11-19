@@ -1006,7 +1006,7 @@ class Struct:
                     # might need to copy strided data
                     if item.ndim == 1:
                         if item.strides[0] != item.itemsize:
-                            warnings.warn(f'array named {k} had bad 1d strides')
+                            warnings.warn(f'array named {itemname} had bad 1d strides')
                             item = item.copy()
 
                     itemflag += SDSFlag.Stackable
@@ -1116,6 +1116,12 @@ class Struct:
                 except:
                     pass
 
+                # Some code below needs 'k' as a str; some needs it as 'bytes'.
+                # It is possible to get 'k' as either type, so normalize here to
+                # make it easier on the code below.
+                k_bytes = k.encode() if isinstance(k, str) else k
+                k = k.decode() if isinstance(k, bytes) else k
+
                 # create a master list of item names in order
                 #meta['item_names'].append(k)
 
@@ -1159,7 +1165,7 @@ class Struct:
                             array_flags += SDSFlag.Stackable
 
                     # Matlab, C# et. al. will not read meta data, must rely on column names + enum
-                    mtup = tuple(( k.encode(), array_flags ))
+                    mtup = tuple(( k_bytes, array_flags ))
                     meta_tups.append(mtup)
 
                     all_tups.append(mtup)
@@ -1173,7 +1179,7 @@ class Struct:
                     items.append(None)
 
                     itemnum = SDSFlag.Nested | SDSFlag.OriginalContainer
-                    t = tuple(( k.encode(), itemnum ))
+                    t = tuple(( k_bytes, itemnum ))
                     all_tups.append(t)
 
                 # misc items, scalars, etc. get added to config dict
@@ -1188,7 +1194,7 @@ class Struct:
                     items.append(item)
 
                     itemnum = SDSFlag.Scalar | SDSFlag.OriginalContainer
-                    t = tuple(( k.encode(), itemnum ))
+                    t = tuple(( k_bytes, itemnum ))
                     all_tups.append(t)
 
             # add special columns like categorical categories to array list
