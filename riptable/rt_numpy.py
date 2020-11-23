@@ -2104,7 +2104,7 @@ def nansum(*args, **kwargs):
     """
     args = _convert_cat_args(args)
     if isinstance(args[0], np.ndarray):
-        return args[0].nansum()
+        return args[0].nansum(*args[1:], **kwargs)
     return np.nansum(*args, **kwargs)
 
 #-------------------------------------------------------
