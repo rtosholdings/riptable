@@ -1341,58 +1341,61 @@ def _create_merge_fancy_indices(
         # numpy API.
         right_fancy_index = _build_right_fancyindex(left_keyid_to_right_keyid_map, left_keygroup, right_keygroup, False, keep)
 
-        # Fill in the additional entries, if needed, in the fancy indices for the rows with right-only keys.
-        # Make sure to account for the possibilities that the fancy indices could be e.g. None or a boolean mask,
-        # we'll need to handle those specially.
-        # PERF: Some or all of this logic can be moved into the _build_left_fancyindex() and _build_right_fancyindex()
-        #       functions, which will allow most/all of the additional array allocations and data copying to be elided.
-        if left_fancy_index is None:
-            # Need to get every row of 'left' in order, but then also account for the rows of 'right'
-            # which don't exist in 'left' whose keys don't exist in left. We get this by calling arange
-            # with a value that covers the total number of rows, then overwriting the entries representing
-            # the right-only rows with the invalid value.
-            left_rowcount = len(left_keygroup.ikey)
-            left_fancy_index = arange(left_rowcount + len(right_only_group_rows), dtype=left_keygroup.ikey.dtype)
-            left_fancy_index[left_rowcount:] = left_fancy_index.inv
+        # Only perform the additional post-processing on the fancy indices if needed -- when there's at least one
+        # row with a right-only key. Otherwise skip it to avoid doing unnecessary work.
+        if right_only_group_rows.size > 0:
+            # Fill in the additional entries, if needed, in the fancy indices for the rows with right-only keys.
+            # Make sure to account for the possibilities that the fancy indices could be e.g. None or a boolean mask,
+            # we'll need to handle those specially.
+            # PERF: Some or all of this logic can be moved into the _build_left_fancyindex() and _build_right_fancyindex()
+            #       functions, which will allow most/all of the additional array allocations and data copying to be elided.
+            if left_fancy_index is None:
+                # Need to get every row of 'left' in order, but then also account for the rows of 'right'
+                # which don't exist in 'left' whose keys don't exist in left. We get this by calling arange
+                # with a value that covers the total number of rows, then overwriting the entries representing
+                # the right-only rows with the invalid value.
+                left_rowcount = len(left_keygroup.ikey)
+                left_fancy_index = arange(left_rowcount + len(right_only_group_rows), dtype=left_keygroup.ikey.dtype)
+                left_fancy_index[left_rowcount:] = left_fancy_index.inv
 
-        else:
-            if left_fancy_index.dtype.char == '?':
-                # The boolean mask must be converted to a fancy index, because a boolean mask must match
-                # the length of the array it's used to index into -- attempting to extend it here would make it
-                # incompatible for use with the 'left' Dataset.
-                # PERF: This could be more efficient if we had e.g. an argument in bool_to_fancy that would tell it
-                #       to allocate some additional, unused elements at the end of the array which we'd fill in later
-                #       without having to allocate yet another array and copy the data over to it.
-                left_fancy_index = bool_to_fancy(left_fancy_index)
+            else:
+                if left_fancy_index.dtype.char == '?':
+                    # The boolean mask must be converted to a fancy index, because a boolean mask must match
+                    # the length of the array it's used to index into -- attempting to extend it here would make it
+                    # incompatible for use with the 'left' Dataset.
+                    # PERF: This could be more efficient if we had e.g. an argument in bool_to_fancy that would tell it
+                    #       to allocate some additional, unused elements at the end of the array which we'd fill in later
+                    #       without having to allocate yet another array and copy the data over to it.
+                    left_fancy_index = bool_to_fancy(left_fancy_index)
 
-            extended_left_rowcount = len(left_fancy_index) + len(right_only_group_rows)
+                extended_left_rowcount = len(left_fancy_index) + len(right_only_group_rows)
 
-            # Create an extended version of the fancy index for 'left'; for the new elements representing
-            # rows with right-only keys, write invalid/NA values into them since they don't match any left rows.
-            extended_left_fancy_index = empty(extended_left_rowcount, dtype=left_keygroup.ikey.dtype)
-            extended_left_fancy_index[:len(left_fancy_index)] = left_fancy_index
-            extended_left_fancy_index[len(left_fancy_index):] = extended_left_fancy_index.inv
-            left_fancy_index = extended_left_fancy_index
+                # Create an extended version of the fancy index for 'left'; for the new elements representing
+                # rows with right-only keys, write invalid/NA values into them since they don't match any left rows.
+                extended_left_fancy_index = empty(extended_left_rowcount, dtype=left_keygroup.ikey.dtype)
+                extended_left_fancy_index[:len(left_fancy_index)] = left_fancy_index
+                extended_left_fancy_index[len(left_fancy_index):] = extended_left_fancy_index.inv
+                left_fancy_index = extended_left_fancy_index
 
-        if right_fancy_index is None:
-            # Similar to the approach for 'left' above, except w.r.t. how we fill in the elements
-            # representing rows with right-only keys.
-            right_rowcount = len(right_keygroup.ikey)
-            right_fancy_index = arange(right_rowcount + len(right_only_group_rows))
-            right_fancy_index[right_rowcount:] = right_only_group_rows
+            if right_fancy_index is None:
+                # Similar to the approach for 'left' above, except w.r.t. how we fill in the elements
+                # representing rows with right-only keys.
+                right_rowcount = len(right_keygroup.ikey)
+                right_fancy_index = arange(right_rowcount + len(right_only_group_rows))
+                right_fancy_index[right_rowcount:] = right_only_group_rows
 
-        else:
-            if right_fancy_index.dtype.char == '?':
-                right_fancy_index = bool_to_fancy(right_fancy_index)
+            else:
+                if right_fancy_index.dtype.char == '?':
+                    right_fancy_index = bool_to_fancy(right_fancy_index)
 
-            extended_right_rowcount = len(right_fancy_index) + len(right_only_group_rows)
+                extended_right_rowcount = len(right_fancy_index) + len(right_only_group_rows)
 
-            # Create an extended version of the fancy index for 'right'; for the new elements representing
-            # rows with right-only keys, we write in the indices of those rows (which we extracted earlier).
-            extended_right_fancy_index = empty(extended_right_rowcount, dtype=right_keygroup.ikey.dtype)
-            extended_right_fancy_index[:len(right_fancy_index)] = right_fancy_index
-            extended_right_fancy_index[len(right_fancy_index):] = right_only_group_rows
-            right_fancy_index = extended_right_fancy_index
+                # Create an extended version of the fancy index for 'right'; for the new elements representing
+                # rows with right-only keys, we write in the indices of those rows (which we extracted earlier).
+                extended_right_fancy_index = empty(extended_right_rowcount, dtype=right_keygroup.ikey.dtype)
+                extended_right_fancy_index[:len(right_fancy_index)] = right_fancy_index
+                extended_right_fancy_index[len(right_fancy_index):] = right_only_group_rows
+                right_fancy_index = extended_right_fancy_index
 
         # Return the constructed fancy indices for the left and right Datasets.
         return JoinIndices(left_fancy_index, right_fancy_index, len(right_only_group_rows))

@@ -3519,11 +3519,15 @@ class Grouping:
         elif ifirstgroup.shape != ncountgroup.shape:
             raise ValueError("The shape of 'ifirstgroup' must match the shape of 'ncountgroup'.")
 
-        # Determine the size of the output array
+        # Determine the size of the output array.
         output_length = ncountgroup[condition].nansum(dtype=np.int64)
 
         # Create the output array.
         result = empty(output_length, dtype=grouped_data.dtype)
+
+        # If the output array is empty, we can short-circuit.
+        if output_length == 0:
+            return result
 
         @nb.njit(cache=True)
         def impl(grouped_data, condition, ncountgroup, ifirstgroup, out):
