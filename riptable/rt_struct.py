@@ -6,9 +6,9 @@ import os
 import sys
 import logging
 import json
-from typing import List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
 from collections import OrderedDict
-from re import IGNORECASE, compile, Pattern
+from re import IGNORECASE, compile
 
 import numpy as np
 import riptide_cpp as rc
@@ -28,6 +28,12 @@ from .rt_itemcontainer import ItemContainer, ATTRIBUTE_MARGIN_COLUMN, ATTRIBUTE_
 from .rt_numpy import mask_ori, mask_andi, arange, hstack
 from .Utils.rt_display_properties import get_array_formatter
 from .rt_display import DisplayTable, DisplayDetect, DisplayString
+
+# Type-checking-only imports.
+if TYPE_CHECKING:
+    # py36 doesn't have re.Pattern so we can't do a normal import of it above.
+    # Work around it by using the 'forward reference' style annotation below.
+    import re
 
 
 # Create a logger for this module.
@@ -2546,7 +2552,7 @@ class Struct:
         return self._all_items.item_exists(name)
 
     # -------------------------------------------------------
-    def col_filter(self, items=None, like=None, regex: Optional[Pattern] = None, axis=None):
+    def col_filter(self, items=None, like=None, regex: Optional['re.Pattern'] = None, axis=None):
         """
         Subset rows or columns of dataset according to labels in the specified index.
 
