@@ -1,17 +1,20 @@
-import unittest
-import shutil
 import os
+import pathlib
+import shutil
 import sys
-import pytest
-from riptable import *
 from typing import Optional
+
+import unittest
+import pytest
+
+from riptable import *
 from riptable.rt_enum import CategoryMode, SDSFlag
-from riptable.Utils.rt_metadata import MetaData
 from riptable.rt_sds import SDSMakeDirsOn
-from riptable.tests.test_utils import get_all_categorical_data
+from riptable.Utils.rt_metadata import MetaData
 from riptable.Utils.rt_testing import assert_array_equal_, assert_categorical_equal, name
 from riptable.Utils.rt_testdata import load_test_data
 
+from riptable.tests.test_utils import get_all_categorical_data
 
 # change to true since we write into /tests directory
 SDSMakeDirsOn()
@@ -280,10 +283,10 @@ class SaveLoad_Test(unittest.TestCase):
 
     def test_single_items(self):
         arr = arange(5)
-        save_sds(r'riptable/tests/temp/temparray', arr)
-        arr2 = load_sds(r'riptable/tests/temp/temparray')
+        save_sds(pathlib.PurePath(r'riptable/tests/temp/temparray'), arr)
+        arr2 = load_sds(pathlib.PurePath(r'riptable/tests/temp/temparray'))
         self.assertTrue(bool(np.all(arr == arr2)))
-        os.remove(r'riptable/tests/temp/temparray.sds')
+        os.remove(pathlib.PurePath(r'riptable/tests/temp/temparray.sds'))
 
         cat = Categorical(['a','a','b','c','a'])
         save_sds(r'riptable/tests/temp/tempcat', cat)
@@ -452,7 +455,7 @@ class SaveLoad_Test(unittest.TestCase):
         ds2.save(files[1])
 
         with self.assertRaises(ValueError):
-            ds3 = load_sds([r'riptable/tests/temp'], stack=True)
+            _ = load_sds([r'riptable/tests/temp'], stack=True)
 
         for f in files:
             os.remove(f)
@@ -674,7 +677,7 @@ class SaveLoad_Test(unittest.TestCase):
         shutil.rmtree(r'riptable/tests/temp/tempsave')
 
     def test_load_list(self):
-        files = [
+        files = [pathlib.PurePath(x) for x in [
             r'riptable/tests/temp/tempsave/ds',
             r'riptable/tests/temp/tempsave/st',
             r'riptable/tests/temp/tempsave/cat',
@@ -683,7 +686,7 @@ class SaveLoad_Test(unittest.TestCase):
             r'riptable/tests/temp/tempsave/ts',
             r'riptable/tests/temp/tempsave/d',
             r'riptable/tests/temp/tempsave/dspan',
-        ]
+        ]]
 
         ds = Dataset({dt.__name__:arange(10, dtype=dt) for dt in arr_types})
         ds.save(files[0])
@@ -714,7 +717,7 @@ class SaveLoad_Test(unittest.TestCase):
         ds = Dataset({'col_'+str(i):arange(5) for i in range(5)})
         ds.save(r'riptable/tests/temp/tempsave/ds1')
         ds.save(r'riptable/tests/temp/tempsave/ds2')
-        files = [r'riptable/tests/temp/tempsave/ds1', r'riptable/tests/temp/tempsave/ds2']
+        files = [pathlib.PurePath(x) for x in [r'riptable/tests/temp/tempsave/ds1', r'riptable/tests/temp/tempsave/ds2']]
         inc = ['col_2','col_3']
         reload = load_sds(files, include=inc)
         for d in reload:

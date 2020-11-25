@@ -1,12 +1,14 @@
 __all__ = ['FastArray', 'Threading', 'Recycle','Ledger']
 
 import logging
-import numpy as np
+import os
+from typing import Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
 import warnings
+
+import numpy as np
+from numpy.core.numeric import ScalarType
 import riptide_cpp as rc
 
-from typing import Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
-from numpy.core.numeric import ScalarType
 from .rt_enum import gBinaryUFuncs, gBinaryLogicalUFuncs, gBinaryBitwiseUFuncs, gUnaryUFuncs, gReduceUFuncs
 from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDUCE_FUNCTIONS, gNumpyScalarType, NumpyCharTypes, MATH_OPERATION, INVALID_DICT
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
@@ -1151,10 +1153,21 @@ class FastArray(np.ndarray):
         return result
 
     #--------------------------------------------------------------------------
-    def save(self, filepath, share=None, compress=True, overwrite=True, name=None):
+    def save(self, filepath: Union[str, os.PathLike], share: Optional[str] = None, compress: bool = True, overwrite: bool = True, name: Optional[str] = None):
         '''
-        Save a single array in an .sds file
-        See save_sds()
+        Save a single array in an .sds file.
+
+        Parameters
+        ----------
+        filepath: str or os.PathLike
+        share : str, optional, default None
+        compress : bool, default True
+        overwrite : bool, default True
+        name : str, optional, default None
+
+        See Also
+        --------
+        rt_sds.save_sds
         '''
         save_sds(filepath, self, share=share, compress=compress, overwrite=overwrite, name=name)
 
