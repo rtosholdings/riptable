@@ -18,7 +18,7 @@ import numpy as np
 import riptide_cpp as rc
 
 from .rt_enum import TypeRegister, INVALID_DICT, NumpyCharTypes
-from .rt_numpy import arange, bool_to_fancy, crc32c, get_common_dtype, tile
+from .rt_numpy import arange, bool_to_fancy, crc32c, get_common_dtype, tile, empty
 
 # Type-checking-only imports.
 if TYPE_CHECKING:
@@ -179,9 +179,27 @@ def _possibly_convert_rec_array(item):
     if item.dtype.char == 'V':
         warnings.warn(f"Converting numpy record array. Performance may suffer.")
         # flip row-major to column-major
-        d = {}
-        for name in item.dtype.names:
-            d[name] = item[:][name].copy()
+        d={}
+        if True:
+            offsets=[]
+            arrays=np.empty(len(item.dtype.fields), dtype='O')
+            arrlen = len(item)
+            count =0
+            for name, v in item.dtype.fields.items():
+                offsets.append(v[1])
+                arr= empty(arrlen, dtype=v[0])
+                arrays[count] = arr
+                count += 1
+                # build dict of names and new arrays
+                d[name] = arr
+
+            # Call new routine to convert
+            rc.RecordArrayToColMajor(item, np.asarray(offsets, dtype=np.int64), arrays);
+
+        else:
+            # old way
+            for name in item.dtype.names:
+                d[name] = item[:][name].copy()
         return d
     return item
 

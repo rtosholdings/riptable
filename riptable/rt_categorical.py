@@ -24,7 +24,7 @@ from .rt_enum import (
     CategoryMode, CategoryStringMode, CategoricalOrigin, CategoricalConstructor, SDSFlag, GB_FUNCTIONS)
 from .rt_numpy import (
     mask_or, mask_and, mask_ori, mask_andi, sort, unique32, ismember, unique, argsort, zeros,
-    bool_to_fancy, full, empty, sum, putmask, nan_to_zero, issorted, crc64, hstack, isnan, ones)
+    bool_to_fancy, full, empty, sum, putmask, nan_to_zero, issorted, crc64, hstack, isnan, ones, arange)
 from .rt_hstack import hstack_any
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .Utils.rt_metadata import MetaData
@@ -3838,7 +3838,20 @@ class Categorical(GroupByOps, FastArray):
         keychain = self.gb_keychain
 
         result_ds = self.grouping._calculate_all(origdict, funcNum, func_param=func_param, keychain=keychain, user_args=user_args, tups=tups, **kwargs)
-        return self._possibly_transform(result_ds, label_keys=keychain.keys(), **kwargs)
+        result_ds = self._possibly_transform(result_ds, label_keys=keychain.keys(), **kwargs)
+
+        # new final step to make a Categorical
+        # this step is disabled as review indicates not useful
+        # a double transform back might be needed instead
+        #if isinstance(result_ds, TypeRegister.Dataset):
+        #    # get the labels
+        #    labels = result_ds.label_get_names()
+        #    if labels is not None:
+        #        # make them all categoricals
+        #        for k in labels:
+        #            col = result_ds[k]
+        #            result_ds[k] = Categorical(arange(len(col))+1, col)
+        return result_ds
 
     # ------------------------------------------------------------
     def apply(self, userfunc=None, *args, dataset=None, **kwargs):
