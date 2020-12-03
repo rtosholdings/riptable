@@ -24,7 +24,7 @@ setup(
     author = 'RTOS Holdings',
     author_email = 'thomasdimitri@gmail.com',
     url="https://github.com/rtosholdings/riptable",
-    install_requires=['numpy','riptide_cpp>=1.6.17','ansi2html','numba','python-dateutil'],
+    install_requires=['numpy','riptide_cpp>=1.6.18','ansi2html','numba','python-dateutil'],
     include_package_data=True,
     package_data={package_name: ['tests/*','tests/test_files/*', 'benchmarks/*', 'hypothesis_tests/*','Utils/*', 'test_tooling_integration/*']},
     classifiers=[
