@@ -13,7 +13,7 @@ requirements:
     - python {{ python }}
     # The following requirements are in the build because setup.py requires them.
     - setuptools_scm
-    - riptide_cpp >=1.6.18,<1.7
+    - riptide_cpp >=1.6.19,<1.7
     - ansi2html >=1.5.2
     - numba >=0.44
     - python-dateutil
