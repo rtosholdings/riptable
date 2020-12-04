@@ -150,7 +150,7 @@ def _possibly_escape_colname(parent_name, container, name):
     return name
 
 #-----------------------------------------------------------------------------------------
-def _possibly_convert_rec_array(item):
+def _possibly_convert_rec_array(item, parallel=True):
     """
     h5 often loads data into a numpy record array (void type). Flip these before converting to a dataset.
     """
@@ -158,7 +158,7 @@ def _possibly_convert_rec_array(item):
         warnings.warn(f"Converting numpy record array. Performance may suffer.")
         # flip row-major to column-major
         d={}
-        if True:
+        if parallel:
             offsets=[]
             arrays=np.empty(len(item.dtype.fields), dtype='O')
             arrlen = len(item)
@@ -170,7 +170,7 @@ def _possibly_convert_rec_array(item):
                 count += 1
                 # build dict of names and new arrays
                 d[name] = arr
-
+            #print("offsets", offsets, arrays)
             # Call new routine to convert
             rc.RecordArrayToColMajor(item, np.asarray(offsets, dtype=np.int64), arrays);
 
