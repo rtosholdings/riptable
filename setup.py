@@ -24,7 +24,7 @@ setup(
     author = 'RTOS Holdings',
     author_email = 'thomasdimitri@gmail.com',
     url="https://github.com/rtosholdings/riptable",
-    install_requires=['numpy','riptide_cpp>=1.6.20','ansi2html','numba','python-dateutil'],
+    install_requires=['numpy','riptide_cpp>=1.6.21','ansi2html','numba','python-dateutil'],
     include_package_data=True,
     package_data={package_name: ['tests/*','tests/test_files/*', 'benchmarks/*', 'hypothesis_tests/*','Utils/*', 'test_tooling_integration/*']},
     classifiers=[
@@ -33,6 +33,7 @@ setup(
          "Programming Language :: Python :: 3.6",
          "Programming Language :: Python :: 3.7",
          "Programming Language :: Python :: 3.8",
+         "Programming Language :: Python :: 3.9",
          "License :: OSI Approved :: BSD License",
          "Operating System :: OS Independent",
     ]
