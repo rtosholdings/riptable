@@ -221,7 +221,17 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
 
     sameclass = {type(o) for o in itemlist}
     if len(sameclass) != 1:
-        raise TypeError(f"itemlist must contain objects with the same class: {sameclass!r}")
+        error = True
+        if len(sameclass) == 2:
+            tempset = sameclass.copy()
+            t1 = tempset.pop()
+            t2 = tempset.pop()
+
+            # happens with Dataset and PDataset
+            if issubclass(t1, t2) or issubclass(t2, t1):
+                error =False
+        if error:
+            raise TypeError(f"itemlist must contain objects with the same class: {sameclass!r}")
 
     if cls is None:
         cls = sameclass.pop()
