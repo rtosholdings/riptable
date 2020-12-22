@@ -30,7 +30,18 @@ release = '1.0.5'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.napoleon']
+extensions = [
+    "autoapi.extension",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.doctest",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.ifconfig",
+    "sphinx.ext.viewcode",
+    "sphinx_rtd_theme",
+    'sphinx.ext.napoleon',
+]
 
 # Napoleon settings
 napoleon_google_docstring = True
@@ -69,3 +80,7 @@ html_static_path = ['_static']
 
 # TJD -- needed or sphinx fails near final stages
 master_doc = 'index'
+
+# Autoapi settings
+
+autoapi_dirs = ["../../riptable"]
