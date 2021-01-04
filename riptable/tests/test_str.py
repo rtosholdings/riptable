@@ -6,6 +6,8 @@ from riptable import *
 
 
 SYMBOLS = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM']
+NB_PARALLEL_SYMBOLS = SYMBOLS * 2000
+assert len(NB_PARALLEL_SYMBOLS) >= FAString._APPLY_PARALLEL_THRESHOLD
 
 
 class TestStr:
@@ -33,6 +35,33 @@ class TestStr:
     def test_endswith(self, str2, expected):
         result = FAString(['abab', 'ababa', 'abababb']).endswith(str2)
         assert np.array_equal(result, expected)
+
+    @parametrize("str2, expected", [
+        ('A', [True, True, False, False, False]),
+        ('AA', [True, False, False, False, False]),
+        ('', [True] * 5),
+        ('AAA', [False] * 5)
+    ])
+    def test_strstrb(self, str2, expected):
+        result = FAString(SYMBOLS).strstrb(str2)
+        assert np.array_equal(result, expected)
+
+        result = FAString(NB_PARALLEL_SYMBOLS).strstrb(str2)
+        assert np.array_equal(result, expected * 2000)
+
+    @parametrize("str2, expected", [
+        ('A', [0, 0, -1, -1, -1]),
+        ('AA', [0, -1, -1, -1, -1]),
+        ('', [0] * 5),
+        ('AAA', [-1] * 5),
+        ('B', [-1, -1, 1, -1, 1])
+    ])
+    def test_strstr(self, str2, expected):
+        result = FAString(SYMBOLS).strstr(str2)
+        assert np.array_equal(result, expected)
+
+        result = FAString(NB_PARALLEL_SYMBOLS).strstr(str2)
+        assert np.array_equal(result, expected * 2000)
 
 
 regexpb_test_cases = parametrize('str2, expected', [
