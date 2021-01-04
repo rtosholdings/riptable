@@ -1,5 +1,6 @@
 __all__ = ['FAString', ]
 
+import re
 import numpy as np
 import numba as nb
 from .rt_fastarray import FastArray
@@ -713,6 +714,26 @@ class FAString(FastArray):
             str2 = FAString(str2)
 
         return self._apply_func(self.nb_endswith, self.nb_endswith, str2, dtype=np.bool)
+
+    def regexpb(self, str2):
+        '''
+        Return a Boolean array where the value is set True if the string contains str2.
+        str2 may be a normal string or a regular expression.
+        Applies re.search on each element with str2 as the pattern.
+
+        Examples
+        --------
+        >>> FAString(['abab','ababa','abababb']).regexpb('ab$')
+        FastArray([True, False, False])
+        '''
+        if not isinstance(str2, bytes):
+            str2 = bytes(str2, 'utf-8')
+        str2 = re.compile(str2)
+        vmatch = np.vectorize(lambda x: bool(str2.search(x)))
+        bools = vmatch(self.backtostring)
+        if self._ikey is not None:
+            bools = bools[self._ikey]
+        return bools
 
 
 # keep as last line
