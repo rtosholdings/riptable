@@ -28,6 +28,24 @@ class TestStr:
         )
         assert np.all(result)
 
+    def test_lower(self):
+        result = FAString(SYMBOLS).lower
+        assert (result.tolist() == [s.lower() for s in SYMBOLS])
+
+    def test_lower_cat(self):
+        result = self.cat_symbol.str.lower
+        expected = Cat(self.cat_symbol.ikey, [s.lower() for s in SYMBOLS])
+        assert (result == expected).all()
+
+    def test_upper(self):
+        result = FAString(SYMBOLS).upper
+        assert (result.tolist() == [s.upper() for s in SYMBOLS])
+
+    def test_upper_cat(self):
+        result = self.cat_symbol.str.upper
+        expected = Cat(self.cat_symbol.ikey, [s.upper() for s in SYMBOLS])
+        assert (result == expected).all()
+
     @parametrize("str2, expected", [
         ('bb', [False, False, True]),
         ('ba', [False, True, False]),
@@ -40,7 +58,8 @@ class TestStr:
         ('A', [True, True, False, False, False]),
         ('AA', [True, False, False, False, False]),
         ('', [True] * 5),
-        ('AAA', [False] * 5)
+        ('AAA', [False] * 5),
+        ('AAPL', [True] + [False] * 4)
     ])
     def test_strstrb(self, str2, expected):
         result = FAString(SYMBOLS).strstrb(str2)
@@ -52,6 +71,7 @@ class TestStr:
     @parametrize("str2, expected", [
         ('A', [0, 0, -1, -1, -1]),
         ('AA', [0, -1, -1, -1, -1]),
+        ('AAPL', [0, -1, -1, -1, -1]),
         ('', [0] * 5),
         ('AAA', [-1] * 5),
         ('B', [-1, -1, 1, -1, 1])
@@ -62,6 +82,21 @@ class TestStr:
 
         result = FAString(NB_PARALLEL_SYMBOLS).strstr(str2)
         assert np.array_equal(result, expected * 2000)
+
+    def test_strstr_cat(self):
+        result = self.cat_symbol.str.strstr('A')
+        expected = FA([np.iinfo(np.int32).min, 0, 0, -1, -1, -1] * 3)
+        assert np.array_equal(result, expected)
+
+    def test_strlen_cat(self):
+        result = self.cat_symbol.str.strlen
+        expected = FA([np.iinfo(np.int32).min, 4, 4, 2, 4, 3] * 3)
+        assert np.array_equal(result, expected)
+
+    def test_strpbrk_cat(self):
+        result = self.cat_symbol.str.strpbrk('PZG')
+        expected = FA([np.iinfo(np.int32).min, 2, 2, -1, 0, -1] * 3)
+        assert np.array_equal(result, expected)
 
     regexpb_test_cases = parametrize('str2, expected', [
         ('.', [True] * 5),
