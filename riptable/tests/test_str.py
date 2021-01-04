@@ -63,23 +63,20 @@ class TestStr:
         result = FAString(NB_PARALLEL_SYMBOLS).strstr(str2)
         assert np.array_equal(result, expected * 2000)
 
+    regexpb_test_cases = parametrize('str2, expected', [
+        ('.', [True] * 5),
+        ('\.', [False] * 5),
+        ('A', [True, True, False, False, False]),
+        ('[A|B]', [True, True, True, False, True]),
+        ('B$', [False, False, True, False, False]),
+    ])
 
-regexpb_test_cases = parametrize('str2, expected', [
-    ('.', [True] * 5),
-    ('\.', [False] * 5),
-    ('A', [True, True, False, False, False]),
-    ('[A|B]', [True, True, True, False, True]),
-    ('B$', [False, False, True, False, False]),
-])
+    @regexpb_test_cases
+    def test_regexpb(self, str2, expected):
+        fa = FA(SYMBOLS)
+        assert np.array_equal(fa.str.regexpb(str2), expected)
 
-
-@regexpb_test_cases
-def test_regexpb(str2, expected):
-    fa = FA(SYMBOLS)
-    assert np.array_equal(fa.str.regexpb(str2), expected)
-
-
-@regexpb_test_cases
-def test_regexpb_cat(str2, expected):
-    cat = Cat(SYMBOLS * 2)   # introduce duplicity to test ikey properly
-    assert np.array_equal(cat.str.regexpb(str2), expected * 2)
+    @regexpb_test_cases
+    def test_regexpb_cat(self, str2, expected):
+        cat = Cat(SYMBOLS * 2)   # introduce duplicity to test ikey properly
+        assert np.array_equal(cat.str.regexpb(str2), expected * 2)
