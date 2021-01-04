@@ -1,37 +1,33 @@
-import unittest
+
 import pytest
+parametrize = pytest.mark.parametrize
 
 from riptable import *
-
-
-def arr_eq(a, b):
-    return bool(np.all(a == b))
-
-
-def arr_all(a):
-    return bool(np.all(a))
 
 
 SYMBOLS = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM']
 
 
-class StrTest(unittest.TestCase):
+class TestStr:
+
     def test_cat(self):
         arrsize = 200
         symbol = Cat(1 + arange(arrsize) % len(SYMBOLS), SYMBOLS)
         result = symbol.expand_array.str.startswith('AAPL') == symbol.str.startswith(
             'AAPL'
         )
-        self.assertTrue(np.all(result))
+        assert np.all(result)
 
-    def test_basic(self):
-        result = FAString(['abab', 'ababa', 'abababb']).endswith('bb')
-        self.assertTrue(np.all(result == [False, False, True]))
-        result = FAString(['abab', 'ababa', 'abababb']).endswith('ba')
-        self.assertTrue(np.all(result == [False, True, False]))
+    @parametrize("str2, expected", [
+        ('bb', [False, False, True]),
+        ('ba', [False, True, False]),
+    ])
+    def test_endswith(self, str2, expected):
+        result = FAString(['abab', 'ababa', 'abababb']).endswith(str2)
+        assert np.array_equal(result, expected)
 
 
-regexpb_test_cases = pytest.mark.parametrize('str2, expected', [
+regexpb_test_cases = parametrize('str2, expected', [
     ('.', [True] * 5),
     ('\.', [False] * 5),
     ('A', [True, True, False, False, False]),
@@ -50,7 +46,3 @@ def test_regexpb(str2, expected):
 def test_regexpb_cat(str2, expected):
     cat = Cat(SYMBOLS * 2)   # introduce duplicity to test ikey properly
     assert np.array_equal(cat.str.regexpb(str2), expected * 2)
-
-
-if __name__ == '__main__':
-    tester = unittest.main()
