@@ -362,18 +362,15 @@ class FAString(FastArray):
             # loop over all chars in the string
             rowpos = i * itemsize
             dest[i] = -1
-            # loop over all chars in the string
-            for j in range(itemsize):
+            # loop over all substrings of sufficient length
+            for j in range(itemsize - str2len + 1):
                 # check if enough space left
-                if (itemsize - j) < str2len: 
-                    break
-                c= src[rowpos + j]
-                k =0
-                while (k < str2len):
+                k = 0
+                while k < str2len:
                     if src[rowpos + j + k] != str2[k]:
                         break
                     k += 1
-                if k==str2len:
+                if k == str2len:
                     # store location of match
                     dest[i] = j
                     break
@@ -386,12 +383,9 @@ class FAString(FastArray):
         for i in range(len(src) / itemsize):
             rowpos = i * itemsize
             dest[i] = False
-            # loop over all chars in the string
-            for j in range(itemsize):
-                # check if enough space left
-                if (itemsize - j) < str2len: 
-                    break
-                k =0
+            # loop over all substrings of sufficient length
+            for j in range(itemsize - str2len + 1):
+                k = 0
                 while (k < str2len):
                     if src[rowpos + j + k] != str2[k]:
                         break
@@ -409,12 +403,9 @@ class FAString(FastArray):
         for i in nb.prange(np.int64(len(src) / itemsize)):
             rowpos = i * itemsize
             dest[i] = False
-            # loop over all chars in the string
-            for j in range(itemsize):
-                # check if enough space left
-                if (itemsize - j) < str2len: 
-                    break
-                k =0
+            # loop over all substrings of sufficient length
+            for j in range(itemsize - str2len + 1):
+                k = 0
                 while (k < str2len):
                     if src[rowpos + j + k] != str2[k]:
                         break
