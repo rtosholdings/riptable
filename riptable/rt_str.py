@@ -129,7 +129,7 @@ class FAString(FastArray):
             func(input, input._itemsize, dest, *args)
 
         if dtype is None:
-            dest =dest.view(dest._intype + str(dest._itemsize))
+            dest = dest.view(dest._intype + str(dest._itemsize))
 
         # check for categorical key re-expansion
         if self._ikey is not None:
@@ -546,7 +546,6 @@ class FAString(FastArray):
         FAString(['this','that','test']).reverse
         '''
         return self._apply_func(self.nb_reverse, self.nb_reverse)
-        return self.backtostring
 
     # -----------------------------------------------------
     @property
