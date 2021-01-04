@@ -10,11 +10,19 @@ SYMBOLS = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM']
 
 class TestStr:
 
+    cat_symbol = Cat(np.tile(np.arange(len(SYMBOLS) + 1), 3), SYMBOLS)
+
     def test_cat(self):
         arrsize = 200
         symbol = Cat(1 + arange(arrsize) % len(SYMBOLS), SYMBOLS)
         result = symbol.expand_array.str.startswith('AAPL') == symbol.str.startswith(
             'AAPL'
+        )
+        assert np.all(result)
+
+    def test_cat_filtered(self):
+        result = self.cat_symbol.expand_array.str.startswith('IBM') == self.cat_symbol.str.startswith(
+            'IBM'
         )
         assert np.all(result)
 
