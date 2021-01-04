@@ -4,7 +4,7 @@ import re
 import numpy as np
 import numba as nb
 from .rt_fastarray import FastArray
-from .rt_numpy import empty_like, empty, where
+from .rt_numpy import empty_like, empty, where, ones, zeros
 from .rt_enum import TypeRegister
 
 # NOTE YOU MUST INSTALL tbb
@@ -88,6 +88,10 @@ class FAString(FastArray):
         '''
         return self.view(self._intype + str(self._itemsize))
 
+    @property
+    def n_elements(self):
+        return len(self) // self._itemsize
+
     # -----------------------------------------------------
     def possibly_convert_tostr(self, arr):
         '''
@@ -118,8 +122,7 @@ class FAString(FastArray):
             dest._intype = self._intype
         else:
             # user requested specific output dtype
-            arrlen = len(self) // self._itemsize
-            dest = empty(arrlen, dtype)
+            dest = empty(self.n_elements, dtype)
 
         if input is None:
             func(self._itemsize, dest, *args)
@@ -639,11 +642,14 @@ class FAString(FastArray):
         FastArray([-1, 2, -1])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return zeros(self.n_elements, dtype=np.int32)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
-       
+
         return self._apply_func(self.nb_strstr, self.nb_strstr, str2, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
@@ -663,11 +669,14 @@ class FAString(FastArray):
         FastArray([False, True, False])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(self.n_elements, dtype=bool)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
-       
+
         return self._apply_func(self.nb_strstrb, self.nb_pstrstrb, str2, dtype=np.bool,
                                 filtered_fill_value=False)
 
@@ -687,6 +696,9 @@ class FAString(FastArray):
         FastArray([True, False, False])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(self.n_elements, dtype=bool)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
@@ -711,6 +723,9 @@ class FAString(FastArray):
         FastArray([True, False, False])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(self.n_elements, dtype=bool)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
