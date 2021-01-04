@@ -35,6 +35,9 @@ from .rt_enum import TypeRegister
 # 
 # subclass from FastArray
 class FAString(FastArray):
+
+    _APPLY_PARALLEL_THRESHOLD = 10_000
+
     def __new__(cls, arr, ikey=None, **kwargs):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
@@ -107,7 +110,7 @@ class FAString(FastArray):
     def _apply_func(self, func, funcp, *args, dtype=None, input=None):
         # can optionally pass in dtype
         # check when to flip into parallel mode.  > 10,000 go to parallel routine
-        if len(self) > 10_000 and funcp is not None:
+        if len(self) >= self._APPLY_PARALLEL_THRESHOLD and funcp is not None:
             func = funcp
         if dtype is None:
             dest = empty(len(self), self.dtype)
