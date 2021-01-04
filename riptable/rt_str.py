@@ -4,7 +4,7 @@ import re
 import numpy as np
 import numba as nb
 from .rt_fastarray import FastArray
-from .rt_numpy import empty_like, empty
+from .rt_numpy import empty_like, empty, where
 from .rt_enum import TypeRegister
 
 # NOTE YOU MUST INSTALL tbb
@@ -107,7 +107,7 @@ class FAString(FastArray):
         return arr
 
     # -----------------------------------------------------
-    def _apply_func(self, func, funcp, *args, dtype=None, input=None):
+    def _apply_func(self, func, funcp, *args, dtype=None, input=None, filtered_fill_value=None):
         # can optionally pass in dtype
         # check when to flip into parallel mode.  > 10,000 go to parallel routine
         if len(self) >= self._APPLY_PARALLEL_THRESHOLD and funcp is not None:
@@ -133,7 +133,12 @@ class FAString(FastArray):
 
         # check for categorical key re-expansion
         if self._ikey is not None:
-            return dest[self._ikey]
+            if dest.dtype.kind == 'S':
+                from .rt_categorical import Categorical
+                return Categorical(self._ikey + 1, dest, base_index=1)
+            else:
+                unfiltered = self._ikey >= 0
+                return where(unfiltered, dest[self._ikey], filtered_fill_value)
         return dest
 
     # -----------------------------------------------------
