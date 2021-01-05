@@ -115,3 +115,42 @@ class TestStr:
     def test_regexpb_cat(self, str2, expected):
         cat = Cat(SYMBOLS * 2)   # introduce duplicity to test ikey properly
         assert np.array_equal(cat.str.regexpb(str2), expected * 2)
+
+    substr_test_cases = parametrize("start, stop, expected", [
+        (0, 2, [s[:2] for s in SYMBOLS]),
+        (1, 3, [s[1:3] for s in SYMBOLS]),
+        (1, -1, [s[1:-1] for s in SYMBOLS]),
+        (-2, 3, [s[-2:3] for s in SYMBOLS]),
+        (-1, None, [s[-1:] for s in SYMBOLS]),
+        (-3, -1, [s[-3:-1] for s in SYMBOLS]),
+    ])
+
+    @substr_test_cases
+    def test_substr(self, start, stop, expected):
+        result = FAString(SYMBOLS).substr(start, stop)
+        assert (expected == result.tolist())
+
+    @substr_test_cases
+    def test_substr_bytes(self, start, stop, expected):
+        result = FAString(FastArray(SYMBOLS)).substr(start, stop)
+
+        assert (FastArray(expected) == result).all()
+
+    @substr_test_cases
+    def test_substr_cat(self, start, stop, expected):
+        result = self.cat_symbol.str.substr(start, stop)
+        expected = Categorical(self.cat_symbol.ikey, expected, base_index=1)
+        assert (expected == result).all()
+
+    @parametrize('pos', [0, 1, -1, -2])
+    def test_char(self, pos):
+        result = FAString(SYMBOLS).char(pos)
+        expected = [s[pos] for s in SYMBOLS]
+        assert expected == result.tolist()
+
+    @parametrize('pos', [0, 1, -1, -2])
+    def test_char_cat(self, pos):
+        result = self.cat_symbol.str.char(pos)
+        expected = Categorical(self.cat_symbol.ikey, [s[pos] for s in SYMBOLS],
+                               base_index=1)
+        assert (expected == result).all()

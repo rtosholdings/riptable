@@ -754,6 +754,58 @@ class FAString(FastArray):
             bools = bools[self._ikey] & (self._ikey >= 0)
         return bools
 
+    @staticmethod
+    @nb.njit(cache=False)
+    def _nb_substr(src, out, itemsize, start, stop, strlen):
+        n_elements = len(out)
+        max_chars = 0
+        for elem in range(n_elements):
+            elem_len = strlen[elem]
+            i, j = start, stop
+            if i < 0:
+                i += elem_len
+            if j < 0:
+                j += elem_len
+            i = max(i, 0)
+            j = min(j, elem_len)
+            for out_pos, pos in enumerate(range(i, j)):
+                char = src[itemsize * elem + pos]
+                out[elem, out_pos] = char
+                max_chars = max(max_chars, out_pos + 1)
+        return max_chars
+
+    def substr(self, start, stop=None):
+        """
+        Take a substring of each element using slice args.
+        """
+        if stop is None:
+            stop = self._itemsize
+
+        if self._ikey is None:
+            strlen = self.strlen
+        else:
+            strlen = FAString(self.backtostring).strlen
+
+        if start >= 0 and stop >= 0:
+            out = self.reshape((self.n_elements, self._itemsize))[:, start:stop]
+            n_chars = out.shape[1]
+        else:
+            out = np.zeros((self.n_elements, self._itemsize), dtype=self.dtype)
+            n_chars = self._nb_substr(self, out, self._itemsize, start, stop, strlen)
+            out = out[:, :n_chars]
+
+        out = out.ravel().view(f'<{self._intype}{n_chars}')
+        if self._ikey is not None:
+            from .rt_categorical import Categorical
+            out = Categorical(self._ikey + 1, out, base_index=1)
+        return out
+
+    def char(self, pos):
+        """
+        Take a single character from each element.
+        """
+        return self.substr(pos, None if pos == -1 else pos + 1)
+
 
 # keep as last line
 TypeRegister.FAString=FAString
