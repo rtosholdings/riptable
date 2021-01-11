@@ -270,7 +270,7 @@ def benchmark(*_benchmark_arguments, **_benchmark_kwargs):
             )
 
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs) -> Optional[Dataset]:
             benchmark_results: List[Dataset] = []
             # param_product contains a product sweep of all the parameters parameter values.
             param_product = product(
@@ -298,11 +298,11 @@ def benchmark(*_benchmark_arguments, **_benchmark_kwargs):
                             kwargs[arg_spec] = trial_param_to_value[arg_spec]
 
                     # warm up
-                    for i in range(warmup_iters):
+                    for _ in range(warmup_iters):
                         func(*args, **kwargs)
 
                     # trial run
-                    for i in range(bench_iters):
+                    for trial_idx in range(bench_iters):
                         start_time_ns = timestamper()
                         # Note, there is overhead when unpacking positional and keyword arguments within timestamper.
                         # Running cProfile with Python 3.7.1 on a dummy function that takes four positional
@@ -312,7 +312,7 @@ def benchmark(*_benchmark_arguments, **_benchmark_kwargs):
                         # - 10 million iterations has a difference of 0.801 seconds
                         # more compared to normal parameter passing.
                         func(*args, **kwargs)
-                        timing_data[i] = timestamper() - start_time_ns
+                        timing_data[trial_idx] = timestamper() - start_time_ns
 
                     # TODO - move this to its own function process_trial_params
                     # Should handle print friendly representations
@@ -325,9 +325,15 @@ def benchmark(*_benchmark_arguments, **_benchmark_kwargs):
                     trial_data = create_trial_dataset(timing_data, trial_param_to_value)
                     benchmark_results.append(trial_data)
 
-            result = Dataset.hstack(benchmark_results, destroy=True)
-
-            return result
+            # If benchmark_results is empty, there's nothing to be stacked;
+            # emit a warning then return None. Attempting to stack an empty list
+            # of Datasets results in a ValueError being raised, which may end up
+            # causing the runner to crash and the results for the whole benchmark suite
+            # not being saved.
+            if benchmark_results:
+                return Dataset.hstack(benchmark_results, destroy=True)
+            else:
+                return None
 
         return wrapper
 

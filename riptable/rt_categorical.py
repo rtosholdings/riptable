@@ -224,6 +224,8 @@ class Categories:
     default_colname = "key_0"
     multikey_spacer = " "
 
+    _grouping: Grouping
+
     list_modes    = [ CategoryMode.StringArray, CategoryMode.NumericArray ]
     dict_modes    = [ CategoryMode.IntEnum, CategoryMode.Dictionary ]
     string_modes  = [ CategoryMode.StringArray, CategoryMode.IntEnum, CategoryMode.Dictionary ]
@@ -317,7 +319,7 @@ class Categories:
 
     # ------------------------------------------------------------------------------
     @classmethod
-    def from_grouping(cls, grouping, invalid_category=None):
+    def from_grouping(cls, grouping: Grouping, invalid_category=None):
         ordered = grouping.isordered
         # grouping has already flipped bytes to unicode, or kept unicode
         unicode = True

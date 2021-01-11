@@ -1,13 +1,17 @@
-import warnings
-import numpy as np
-import unittest
-import pytest
+from contextlib import contextmanager
+import operator
 import sys
+from typing import List, Callable
+import warnings
+
+import numpy as np
 import riptable as rt
 import riptide_cpp as rc
-from numpy.testing import assert_equal
-from contextlib import contextmanager
-from typing import List, Callable
+
+import unittest
+import pytest
+from numpy.testing import assert_equal, assert_array_equal
+
 from riptable import FastArray
 from riptable.rt_enum import (
     gBinaryUFuncs,
@@ -1460,6 +1464,31 @@ class FastArray_Test(unittest.TestCase):
         self.assertTrue(np.all(r == [ True,  True,  True, True, False, False]))
         r = z == y
         self.assertTrue(np.all(r == [ False,  False, False, False, True, False]))
+
+    def test_reduction_with_identity_for_empty(self):
+        """Test reductions which are well-defined for empty inputs."""
+        assert 0 == rt.FA([], dtype=np.int32).sum()
+        assert 0 == rt.FA([], dtype=np.uint8).nansum()
+        assert 0 == rt.FA([], dtype=np.float64).nansum()
+        assert not rt.FA([], dtype=np.int16).any()
+        assert rt.FA([], dtype=np.float32).all()
+
+        # Test cases where dtype explicitly specified.
+        assert 0 == rt.FA([], dtype=np.int32).sum(dtype=np.int64)
+        assert 0 == rt.FA([], dtype=np.uint8).nansum(dtype=np.int32)
+        assert 0 == rt.FA([], dtype=np.float64).nansum(dtype=np.float64)
+
+        # Test the module form (which goes through the ufunc or array_function dispatcher).
+        assert 0 == np.sum(rt.FA([], dtype=np.int32))
+        assert 0 == np.nansum(rt.FA([], dtype=np.uint8))
+        assert 0 == np.nansum(rt.FA([], dtype=np.float64))
+        assert not np.any(rt.FA([], dtype=np.int16))
+        assert np.all(rt.FA([], dtype=np.float32))
+
+        # Test cases for module form where dtype explicitly specified.
+        assert 0 == np.sum(rt.FA([], dtype=np.int32), dtype=np.int64)
+        assert 0 == np.nansum(rt.FA([], dtype=np.uint8), dtype=np.int32)
+        assert 0 == np.nansum(rt.FA([], dtype=np.float64), dtype=np.float64)
         
 # TODO: Extend the tests in the TestFastArrayNanmax / TestFastArrayNanmin classes below to cover the following cases:
 #   * non-array inputs (e.g. a list or set or scalar)

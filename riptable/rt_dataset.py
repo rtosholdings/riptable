@@ -4,7 +4,7 @@ __all__ = ['Dataset', ]
 import warnings
 import numpy as np
 import os
-from typing import Any, Callable, Iterable, List, Mapping, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Callable, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 from collections import abc, Counter, namedtuple
 
 from .rt_struct import Struct
@@ -696,7 +696,7 @@ class Dataset(Struct):
         return self._copy(deep)
 
     # --------------------------------------------------------
-    def filter(self, rowfilter, inplace:bool=False):
+    def filter(self, rowfilter: np.ndarray, inplace:bool=False) -> 'Dataset':
         """
         Use a row filter to make a copy of the Dataset.
 
@@ -764,14 +764,14 @@ class Dataset(Struct):
     #    self.save(self, path, name, compress=False)
 
     # -------------------------------------------------------
-    def save(self, path:str='', share=None, compress:bool=True, overwrite:bool=True, name=None, onefile:bool=False,
-            bandsize=None, append=None, complevel=None):
+    def save(self, path: Union[str, os.PathLike] = '', share: Optional[str] = None, compress:bool=True, overwrite:bool=True, name: Optional[str] = None, onefile:bool=False,
+            bandsize: Optional[int] = None, append: Optional[str] = None, complevel: Optional[int] = None):
         """
         Save a dataset to a single .sds file or shared memory.
 
         Parameters
         ----------
-        path : str
+        path : str or os.PathLike
             full path to save location + file name (if no .sds extension is included, it will be added)
         share : str, optional
             Shared memory name. If set, dataset will be saved to shared memory and NOT to disk
@@ -782,11 +782,12 @@ class Dataset(Struct):
         overwrite : bool
             Defaults to True. If False, prompt the user when overwriting an existing .sds file;
             mainly useful for Struct.save(), which may call Dataset.save() multiple times.
+        name : str, optional
         bandsize : int, optional
             If set to an integer > 10000 it will compress column data every bandsize rows
         append : str, optional
             If set to a string it will append to the file with the section name.
-        complevel : optional
+        complevel : int, optional
             Compression level from 0 to 9. 2 (default) is average. 1 is faster, less compressed, 3 is slower, more compressed.
 
         Examples
@@ -819,7 +820,8 @@ class Dataset(Struct):
 
     # -------------------------------------------------------
     @classmethod
-    def load(cls, path:str='', share=None, decompress:bool=True, info:bool=False, include=None, filter=None, sections=None, threads=None ):
+    def load(cls, path: Union[str, os.PathLike] = '', share=None, decompress:bool=True, info:bool=False, include: Optional[Sequence[str]] = None,
+             filter: Optional[np.ndarray] = None, sections: Optional[Sequence[str]] = None, threads: Optional[int] = None):
         """
         Load dataset from .sds file or shared memory.
 
@@ -827,7 +829,7 @@ class Dataset(Struct):
         ----------
         path : str
             full path to load location + file name (if no .sds extension is included, it will be added)
-        share : str
+        share : str, optional
             shared memory name. loader will check for dataset in shared memory first. if it's not there, the
             data (if file found on disk) will be loaded into the user's workspace AND shared memory. a sharename
             must be accompanied by a file name. (the rest of a full path will be trimmed off internally)
@@ -835,8 +837,10 @@ class Dataset(Struct):
             **not implemented. the internal .sds loader will detect if the file is compressed
         info : bool
             Defaults to False. If True, load information about the contained arrays instead of loading them from file.
-        include
+        include : sequence of str, optional
             Defaults to None. If provided, only load certain columns from the dataset.
+        filter : np.ndarray of int or np.ndarray of bool, optional
+        sections : sequence of str, optional
         threads : int, optional
             Defaults to None. Request certain number of threads during load.
 

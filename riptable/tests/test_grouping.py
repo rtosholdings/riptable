@@ -601,6 +601,25 @@ class Grouping_Test(unittest.TestCase):
 
         assert_array_equal(rt.FA([1, 2, 6, 7, 8, 9, 15, 16, 17, 18, 19, 20]), result1)
 
+    def test_extract_groups_all_groups_off(self):
+        """Test for Grouping.extract_groups() when given a condition mask with all values set to False."""
+
+        # Create a grouping from some data.
+        key_data1 = rt.FA([1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6])
+        g1 = rt.Grouping(key_data1)
+
+        # Create another data array the same length as the key for the Grouping.
+        data1 = rt.arange(len(key_data1))
+
+        # Create a condition mask with all values set to False.
+        group_mask1 = rt.zeros(len(g1.ncountgroup), dtype=np.bool)
+
+        # Extract elements from the data array with all groups masked out -- i.e. we're trying
+        # to select data from none of the groups.
+        result1 = Grouping.extract_groups(group_mask1, data1, g1.ncountgroup, g1.ifirstgroup)
+
+        assert_array_equal(rt.FA([]), result1)
+
 
 def test_merge_cats_stringcat_with_empty():
     cat_lens = [

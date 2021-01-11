@@ -103,3 +103,25 @@ def test_mbget_with_too_large_explicit_default():
 
     # Check that the valid indices fetched the correct values.
     assert_array_equal(rt.FA([3, 28, 13, 20, 38]), result[valid_indices])
+
+
+def test_mbget_with_non_FA_subclass():
+    """Test how mbget works when the 'origin' array is NOT a FastArray (or a subclass of FA)."""
+    data = np.arange(start=3, stop=53, dtype=np.int8)
+    indices = rt.FA([0, 25, -40, 17, 100, -80, 50, -51, 35])
+
+    valid_indices = np.logical_and(indices >= -50, indices < 50)
+
+    # Call the 'mbget' function without providing an explicit default value.
+    result = rt.mbget(data, indices)
+
+    # The resulting array should have the same dtype as the values/data array.
+    assert data.dtype == result.dtype, "The result has a different dtype than the values/data array."
+
+    # The elements with out-of-bounds indices should have been assigned the
+    # riptable NA/sentinel value because a default value was not explicitly specified.
+    assert_array_equal(valid_indices, rt.isnotnan(result))
+
+    # Check that the valid indices fetched the correct values.
+    assert_array_equal(rt.FA([3, 28, 13, 20, 38]), result[valid_indices])
+    assert type(data) == np.ndarray

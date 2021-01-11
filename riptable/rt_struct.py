@@ -2,17 +2,17 @@ __all__ = ['Struct', ]
 
 import keyword
 import warnings
-import numpy as np
 import os
 import sys
 import logging
 import json
-
-import riptide_cpp as rc
-
-from typing import Optional, List, Union, Mapping, Set, Tuple
+from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
 from collections import OrderedDict
 from re import IGNORECASE, compile
+
+import numpy as np
+import riptide_cpp as rc
+
 #from IPython import get_ipython
 #from IPython.display import display, HTML
 
@@ -28,6 +28,12 @@ from .rt_itemcontainer import ItemContainer, ATTRIBUTE_MARGIN_COLUMN, ATTRIBUTE_
 from .rt_numpy import mask_ori, mask_andi, arange, hstack
 from .Utils.rt_display_properties import get_array_formatter
 from .rt_display import DisplayTable, DisplayDetect, DisplayString
+
+# Type-checking-only imports.
+if TYPE_CHECKING:
+    # py36 doesn't have re.Pattern so we can't do a normal import of it above.
+    # Work around it by using the 'forward reference' style annotation below.
+    import re
 
 
 # Create a logger for this module.
@@ -1006,7 +1012,7 @@ class Struct:
                     # might need to copy strided data
                     if item.ndim == 1:
                         if item.strides[0] != item.itemsize:
-                            warnings.warn(f'array named {k} had bad 1d strides')
+                            warnings.warn(f'array named {itemname} had bad 1d strides')
                             item = item.copy()
 
                     itemflag += SDSFlag.Stackable
@@ -1116,6 +1122,12 @@ class Struct:
                 except:
                     pass
 
+                # Some code below needs 'k' as a str; some needs it as 'bytes'.
+                # It is possible to get 'k' as either type, so normalize here to
+                # make it easier on the code below.
+                k_bytes = k.encode() if isinstance(k, str) else k
+                k = k.decode() if isinstance(k, bytes) else k
+
                 # create a master list of item names in order
                 #meta['item_names'].append(k)
 
@@ -1159,7 +1171,7 @@ class Struct:
                             array_flags += SDSFlag.Stackable
 
                     # Matlab, C# et. al. will not read meta data, must rely on column names + enum
-                    mtup = tuple(( k.encode(), array_flags ))
+                    mtup = tuple(( k_bytes, array_flags ))
                     meta_tups.append(mtup)
 
                     all_tups.append(mtup)
@@ -1173,7 +1185,7 @@ class Struct:
                     items.append(None)
 
                     itemnum = SDSFlag.Nested | SDSFlag.OriginalContainer
-                    t = tuple(( k.encode(), itemnum ))
+                    t = tuple(( k_bytes, itemnum ))
                     all_tups.append(t)
 
                 # misc items, scalars, etc. get added to config dict
@@ -1188,7 +1200,7 @@ class Struct:
                     items.append(item)
 
                     itemnum = SDSFlag.Scalar | SDSFlag.OriginalContainer
-                    t = tuple(( k.encode(), itemnum ))
+                    t = tuple(( k_bytes, itemnum ))
                     all_tups.append(t)
 
             # add special columns like categorical categories to array list
@@ -1884,13 +1896,14 @@ class Struct:
 
     # -------------------------------------------------------
     @classmethod
-    def load(cls, path='', name=None, share=None, info=False, columns=None, include_all_sds=False, include=None, threads=None, folders=None):
+    def load(cls, path: Union[str, os.PathLike] = '', name: Optional[str] = None, share: Optional[str] = None, info: bool = False,
+             columns=None, include_all_sds=False, include: Optional[Sequence[str]] = None, threads: Optional[int] = None, folders: Optional[Sequence[str]] = None):
         """
         Load a Struct from a directory or single SDS file.
 
         Parameters
         ----------
-        path : `str`
+        path : str or os.PathLike
             Full path to directory or single SDS file with Struct data.
         name : `str`, optional, default None
             Name of a nested container to search for in the root directory. Multiple tiers can be separated by '//'
@@ -1902,11 +1915,11 @@ class Struct:
         include_all_sds : bool, optional, default False
             If False, when additional files were found in a directory, and they were not in the root structs meta data, the user
             will be prompted to load them. If True, all files will be automatically loaded.
-        include : `list`, optional, default None
+        include : list of str, optional, default None
             A list of specific items to load. This list will only be applied to the root Struct - not to nested containers.
         threads : int, optional, default None
             Number of threads to use during the SDS load. Number of threads before the load will be restored after the load
-            or if the load fails. See also riptide_cpp.SetThreadWakeUp
+            or if the load fails. See also `riptide_cpp.SetThreadWakeUp`.
 
         Returns
         -------
@@ -1925,7 +1938,7 @@ class Struct:
 
     # -------------------------------------------------------
     @classmethod
-    def _info_tree(cls, path, data):
+    def _info_tree(cls, path: Union[str, os.PathLike], data):
         """
         Converts nested structure to tree view of file info for Struct and Dataset.
         Top level will be named based on single file or directory.
@@ -1935,27 +1948,29 @@ class Struct:
         return data.tree(name=name, info=True)
 
     # -------------------------------------------------------
-    def save(self, path='', name=None, share=None, overwrite=True, compress=True, onefile=False, bandsize=None):
+    def save(self, path: Union[str, os.PathLike] = '', name: Optional[str] = None, share: Optional[str] = None,
+             overwrite: bool = True, compress: bool = True, onefile: bool = False, bandsize: Optional[int] = None):
         """
         Save a struct to a directory. If the struct contains only arrays, will be saved as a single .SDS file.
 
         Parameters
         ----------
-        path : `str`
+        path : str or os.PathLike
             Full path to save. Directory will be created automatically if it doesn't exist.
             .SDS extension will be appended if a single file is being saved and is necessary.
-        name : `str`, optional
+        name : str, optional
             Name for the root structure if it's being appended to an existing struct's directory.
             The existing _root.sds does not get overwritten, and structs can be combined without a full load.
+        share : str, optional
         overwrite : bool, optional, default True
-            If True, user will not be prompted on wether or not to overwrite existing .SDS files. Otherwise,
+            If True, user will not be prompted on whether or not to overwrite existing .SDS files. Otherwise,
             prompt will appear if directory exists.
         compress : bool, optional, default True
             If True, ZStandard compression will be used when writing to SDS, otherwise, no compression
             will be used.
         onefile : bool, optional, default False
             If True will collapse all nesting Structs
-
+        bandsize : int, optional, default None
         """
         save_sds(path, self, share=share, compress=compress, overwrite=overwrite, name=name, onefile=onefile, bandsize=bandsize)
 
@@ -2537,7 +2552,7 @@ class Struct:
         return self._all_items.item_exists(name)
 
     # -------------------------------------------------------
-    def col_filter(self, items=None, like=None, regex=None, axis=None):
+    def col_filter(self, items=None, like=None, regex: Optional['re.Pattern'] = None, axis=None):
         """
         Subset rows or columns of dataset according to labels in the specified index.
 
@@ -2548,10 +2563,11 @@ class Struct:
         ----------
         items : list-like
             List of axis to restrict to (must not all be present).
-        like : string
+        like : string, optional
             Keep axis where "arg in col == True".
-        regex : string (regular expression)
-            Keep axis with re.search(regex, col) == True.
+        regex : str, optional
+            Regular expression string. Keep axis with re.search(regex, col) == True.
+        axis : int, optional
 
         Returns
         -------

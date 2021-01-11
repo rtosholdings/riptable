@@ -1,7 +1,9 @@
-from typing import Union, List
-
 __all__ = ['PDataset']
+
+import os
+from typing import Union, List
 import warnings
+
 import numpy as np
 
 from .rt_fastarray import FastArray
@@ -281,7 +283,7 @@ class PDataset(Dataset):
             )
 
         # perform a .sds load from multiple files
-        elif listtype == str or listtype == bytes:
+        elif issubclass(listtype, (str, bytes, os.PathLike)):
             ds = load_sds(dlist, stack=True)
             cutoffs = {'cutoffs': ds._pcutoffs}
             filenames = ds._pfilenames
@@ -312,13 +314,18 @@ class PDataset(Dataset):
     def _init_pnames_filenames(cls, pcount, pnames, filenames):
         '''
         Initialize filenames, pnames based on what was provided to the constructor.
+
         If no pnames provided, try to derive a date from filenames
         If no date found, or no filenames provided, use default names [p0, p1, p2 ...]
-        
-        pcount    : number of partitions, in case names need to be auto generated
-        pnames    : list of partion names or None
-        filenames : list of file paths (possibly empty)
 
+        Parameters
+        ----------
+        pcount    : int
+            number of partitions, in case names need to be auto generated
+        pnames    : list of str, optional
+            list of partition names or None
+        filenames : sequence of str, optional
+            list of file paths (possibly empty)
         '''
         if pnames is None:
             if filenames is None or len(filenames) == 0:

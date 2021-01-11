@@ -3,8 +3,9 @@ import argparse
 from datetime import datetime
 import enum
 import logging
+import pkg_resources
 import sys
-from typing import TYPE_CHECKING, Dict, List, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
 from ..rt_enum import TypeRegister
 
 if TYPE_CHECKING:
@@ -66,18 +67,53 @@ def collect_benchmarks(
     return benchmarks
 
 
+def _sort_dictionary(input: dict, reverse: bool = False) -> dict:
+    """Rebuild a dictionary with the same keys and values but where the keys are inserted in sorted order. This can be useful for display purposes."""
+    sorted_keys = sorted(input, reverse=reverse)
+    return {k: input[k] for k in sorted_keys}
+
+
+def _get_package_version(package_name: str) -> Optional[str]:
+    package_version: Optional[str] = None
+
+    # Attempt #1: Get the version from the installed package.
+    # Use pkg_resources (from setuptools) for py37 or below; TODO: use importlib.metadata once we only target py38+
+    # https://stackoverflow.com/questions/3524168/how-do-i-get-a-python-modules-version-number-through-code
+    try:
+        package_version = pkg_resources.get_distribution(package_name).version
+    except: pass
+
+    # Attempt #2: get it from the module's __version__ attribute.
+    if package_version is None:
+        package_module = sys.modules.get(package_name, None)
+        if package_module is not None and hasattr(package_module, '__version__'):
+            package_version = package_module.__version__
+
+    return package_version
+
+
+def _get_package_versions() -> Mapping[str, Any]:
+    # Package versions.
+    # TODO: Instead of picking specific package names, just include all loaded top-level modules? The data isn't
+    #       really that large and it'll give us that much more reproducibility. The next line implements that -- just uncomment.
+    #       NOTE: The hasattr() filter should be removed here -- it causes some modules like riptide_cpp not to show up in the list;
+    #             removing the check pulls in a ton of other junk though too (and causes a noticeable slowdown).
+    #             Refine the check so we get the modules we want (like riptide_cpp) without all the other stuff.
+    # package_versions = {name: get_package_version(name) for name, m in sys.modules.items() if hasattr(m, '__version__') and '.' not in name and not name.startswith('_')}
+    package_names = ['riptable', 'riptide_cpp', 'numpy', 'pandas', 'numba', 'tbb']
+    package_versions = {pkg_name: _get_package_version(pkg_name) for pkg_name in package_names}
+    return _sort_dictionary(package_versions)
+
+
 def _capture_benchmark_metadata() -> 'Struct':
     """Capture contextual metadata for a benchmark run e.g. the current date/time, riptable version, and machine information."""
     import platform
-    from .. import __version__ as rt_version
 
     benchmark_metadata = TypeRegister.Struct()
     benchmark_metadata['timestamp_utc_start'] = datetime.utcnow().isoformat()
 
     benchmark_metadata['python_version'] = platform.python_version_tuple()
     benchmark_metadata['python_implementation'] = platform.python_implementation()
-
-    benchmark_metadata['riptable_version'] = rt_version
 
     benchmark_metadata['sysname'] = platform.system()
     benchmark_metadata['nodename'] = platform.node()
@@ -271,12 +307,24 @@ def main() -> ExitCode:
 
         # Run the benchmark function; it will return a Dataset containing the
         # raw results over multiple runs.
-        benchmark_result = func()
+        try:
+            benchmark_result = func()
+        except Exception as exc:
+            # Don't want the whole benchmark run to crash if there's an error when running
+            # one of the benchmark functions. Log the exception and continue.
+            _logger.exception(f"Exception occurred when running benchmark '{name}'.", exc_info=exc)
+            continue
+
+        # If there was no result for this benchmark (or comparison),
+        # it's typically because there were no parameters for the benchmark and
+        # therefore it didn't run. Log a warning about it and continue.
+        if benchmark_results is None:
+            _logger.warning(f"No results for benchmark '{name}'. This may be due to a misconfiguration of the benchmark function.")
+            continue
 
         # If saving the results to SDS, save the raw/complete data for analysis --
         # we want all the data, rather than the rolled-up data we'd display to the console.
-        if benchmark_results is not None:
-            benchmark_results[name] = benchmark_result
+        benchmark_results[name] = benchmark_result
 
         # If the benchmark is one of the new-style benchmarks, we can automatically
         # perform a quick analysis to summarize the results for display to the console.
@@ -291,9 +339,9 @@ def main() -> ExitCode:
     if args.output_filename:
         # Capture some additional metadata about the benchmark run before saving.
         benchmark_metadata['timestamp_utc_end'] = datetime.utcnow().isoformat()
+        benchmark_metadata['packages'] = _get_package_versions()
 
         # TODO: Capture additional metadata
-        #   * loaded package versions of numpy, pandas, numba, tbb
         #   * numba threading engine (only available once we've executed at least one parallel numba function)
         #   * peak memory usage for this process?
 

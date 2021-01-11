@@ -1,12 +1,14 @@
 __all__ = ['FastArray', 'Threading', 'Recycle','Ledger']
 
 import logging
-import numpy as np
+import os
+from typing import Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
 import warnings
+
+import numpy as np
+from numpy.core.numeric import ScalarType
 import riptide_cpp as rc
 
-from typing import Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
-from numpy.core.numeric import ScalarType
 from .rt_enum import gBinaryUFuncs, gBinaryLogicalUFuncs, gBinaryBitwiseUFuncs, gUnaryUFuncs, gReduceUFuncs
 from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDUCE_FUNCTIONS, gNumpyScalarType, NumpyCharTypes, MATH_OPERATION, INVALID_DICT
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
@@ -266,6 +268,18 @@ class FastArray(np.ndarray):
     # TODO: wrap this in a class so that warnings can be turned on/off
     WarningDict = {
         "multiple_dimensions" : "FastArray contains two or more dimensions greater than one - shape:{}.  Problems may occur."
+    }
+
+    # For reduction operations, the identity element of the operation (for operations
+    # where such an element is defined).
+    # N.B. As of numpy 1.19 it does not appear there's a straightforward way of getting from
+    #   something like ``np.sum`` back to ``np.add``, from which we could get the .identity property.
+    #   If that ever changes, this dictionary would no longer be necessary so it can+should be removed.
+    _reduce_op_identity_value: Mapping[REDUCE_FUNCTIONS, Any] = {
+        REDUCE_FUNCTIONS.REDUCE_ALL: True,  # np.all(np.array([]))
+        REDUCE_FUNCTIONS.REDUCE_ANY: False, # np.any(np.array([]))
+        REDUCE_FUNCTIONS.REDUCE_NANSUM: np.add.identity,
+        REDUCE_FUNCTIONS.REDUCE_SUM: np.add.identity
     }
 
     # --------------------------------------------------------------------------
@@ -1139,10 +1153,21 @@ class FastArray(np.ndarray):
         return result
 
     #--------------------------------------------------------------------------
-    def save(self, filepath, share=None, compress=True, overwrite=True, name=None):
+    def save(self, filepath: Union[str, os.PathLike], share: Optional[str] = None, compress: bool = True, overwrite: bool = True, name: Optional[str] = None):
         '''
-        Save a single array in an .sds file
-        See save_sds()
+        Save a single array in an .sds file.
+
+        Parameters
+        ----------
+        filepath: str or os.PathLike
+        share : str, optional, default None
+        compress : bool, default True
+        overwrite : bool, default True
+        name : str, optional, default None
+
+        See Also
+        --------
+        rt_sds.save_sds
         '''
         save_sds(filepath, self, share=share, compress=compress, overwrite=overwrite, name=name)
 
@@ -1175,7 +1200,7 @@ class FastArray(np.ndarray):
             return True
 
     #--------------------------------------------------------------------------
-    def _reduce_check(self, reduceFunc, npFunc, *args, **kwargs):
+    def _reduce_check(self, reduceFunc: REDUCE_FUNCTIONS, npFunc, *args, **kwargs):
         '''
         Arg2: npFunc pass in None if no numpy equivalent function
         '''
@@ -1194,6 +1219,22 @@ class FastArray(np.ndarray):
 
         result = TypeRegister.MathLedger._REDUCE(self, reduceFunc)
 
+        # It's possible there was no result returned from the reduction function;
+        # e.g. if the input was empty. If the function being called is well-defined
+        # for empty lists -- i.e. it is a reduction operation with a defined
+        # identity element -- set the result to the identity element so the rest of
+        # the logic below will work correctly.
+        # If there is no identity element for this operation, raise an exception to
+        # let the user know; we'd raise an exception below *anyway*, and this allows
+        # us to provide the user with a more-descriptive/actionable error message.
+        if result is None:
+            op_identity_val = type(self)._reduce_op_identity_value.get(reduceFunc, None)
+            if op_identity_val is not None:
+                result = op_identity_val
+            else:
+                raise ValueError(f"Reduction '{str(reduceFunc)}' does not have an identity element so cannot be computed over an empty array.")
+
+        # Was an output dtype was explicitly specified?
         dtype = kwargs.get('dtype', None)
         if dtype is not None:
             # user forced dtype return value
