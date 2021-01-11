@@ -178,9 +178,18 @@ def _possibly_convert_rec_array(item, parallel=True):
     """
     if item.dtype.char == 'V':
         warnings.warn(f"Converting numpy record array. Performance may suffer.")
+        list_types = [*item.dtype.fields.values]
+        success = True
+        for t in list_types:
+            val = t[0].char
+            # if the record type has an object or another record type, we cannot handle
+            if val == 'O' or val =='V':
+                success = False
+                break;
+
         # flip row-major to column-major
         d={}
-        if parallel:
+        if success and parallel:
             offsets=[]
             arrays=np.empty(len(item.dtype.fields), dtype='O')
             arrlen = len(item)
