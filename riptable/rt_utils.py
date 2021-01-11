@@ -178,7 +178,7 @@ def _possibly_convert_rec_array(item, parallel=True):
     """
     if item.dtype.char == 'V':
         warnings.warn(f"Converting numpy record array. Performance may suffer.")
-        list_types = [*item.dtype.fields.values]
+        list_types = [*item.dtype.fields.values()]
         success = True
         for t in list_types:
             val = t[0].char
