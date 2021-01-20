@@ -90,6 +90,9 @@ class FAString(FastArray):
 
     @property
     def n_elements(self):
+        """
+        The number of elements in the original string array
+        """
         return len(self) // self._itemsize
 
     # -----------------------------------------------------
