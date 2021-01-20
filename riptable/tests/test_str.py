@@ -98,7 +98,7 @@ class TestStr:
         expected = FA([np.iinfo(np.int32).min, 2, 2, -1, 0, -1] * 3)
         assert np.array_equal(result, expected)
 
-    regexpb_test_cases = parametrize('str2, expected', [
+    regex_match_test_cases = parametrize('regex, expected', [
         ('.', [True] * 5),
         ('\.', [False] * 5),
         ('A', [True, True, False, False, False]),
@@ -106,15 +106,15 @@ class TestStr:
         ('B$', [False, False, True, False, False]),
     ])
 
-    @regexpb_test_cases
-    def test_regexpb(self, str2, expected):
+    @regex_match_test_cases
+    def test_regex_match(self, regex, expected):
         fa = FA(SYMBOLS)
-        assert np.array_equal(fa.str.regexpb(str2), expected)
+        assert np.array_equal(fa.str.regex_match(regex), expected)
 
-    @regexpb_test_cases
-    def test_regexpb_cat(self, str2, expected):
+    @regex_match_test_cases
+    def test_regex_match_cat(self, regex, expected):
         cat = Cat(SYMBOLS * 2)   # introduce duplicity to test ikey properly
-        assert np.array_equal(cat.str.regexpb(str2), expected * 2)
+        assert np.array_equal(cat.str.regex_match(regex), expected * 2)
 
     substr_test_cases = parametrize("start, stop, expected", [
         (0, 2, [s[:2] for s in SYMBOLS]),

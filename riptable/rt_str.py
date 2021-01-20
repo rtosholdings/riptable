@@ -737,21 +737,25 @@ class FAString(FastArray):
         return self._apply_func(self.nb_endswith, self.nb_endswith, str2, dtype=np.bool,
                                 filtered_fill_value=False)
 
-    def regexpb(self, str2):
+    def regex_match(self, regex):
         '''
         Return a Boolean array where the value is set True if the string contains str2.
         str2 may be a normal string or a regular expression.
         Applies re.search on each element with str2 as the pattern.
 
+        Parameters
+        ----------
+        regex - Perform element-wise regex matching to this regex
+
         Examples
         --------
-        >>> FAString(['abab','ababa','abababb']).regexpb('ab$')
+        >>> FAString(['abab','ababa','abababb']).regex_match('ab$')
         FastArray([True, False, False])
         '''
-        if not isinstance(str2, bytes):
-            str2 = bytes(str2, 'utf-8')
-        str2 = re.compile(str2)
-        vmatch = np.vectorize(lambda x: bool(str2.search(x)))
+        if not isinstance(regex, bytes):
+            regex = bytes(regex, 'utf-8')
+        regex = re.compile(regex)
+        vmatch = np.vectorize(lambda x: bool(regex.search(x)))
         bools = vmatch(self.backtostring)
         if self._ikey is not None:
             bools = bools[self._ikey] & (self._ikey >= 0)
