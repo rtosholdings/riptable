@@ -814,9 +814,10 @@ class FAString(FastArray):
         out = zeros((self.n_elements, n_chars), self.dtype)
         out = self._nb_substr(self, out, self._itemsize, start, stop, strlen)
         n_chars = out.shape[1]
-
-        n_chars = out.shape[1]
-        out = out.ravel().view(f'<{self._intype}{n_chars}')
+        if n_chars == 0:    # empty sub strings everywhere
+            out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
+        else:
+            out = out.ravel().view(f'<{self._intype}{n_chars}')
         if self._ikey is not None:
             from .rt_categorical import Categorical
             out = Categorical(self._ikey + 1, out, base_index=1)

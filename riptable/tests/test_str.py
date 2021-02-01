@@ -128,6 +128,7 @@ class TestStr:
         (-2, 3, [s[-2:3] for s in SYMBOLS]),
         (-1, None, [s[-1:] for s in SYMBOLS]),
         (-3, -1, [s[-3:-1] for s in SYMBOLS]),
+        (-1, 1, ['' for s in SYMBOLS]),
     ])
 
     @substr_test_cases
