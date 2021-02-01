@@ -762,11 +762,11 @@ class FAString(FastArray):
         return bools
 
     @staticmethod
-    @nb.njit(cache=False)
+    @nb.njit(parallel=True)
     def _nb_substr(src, out, itemsize, start, stop, strlen):
         n_elements = len(out)
         max_chars = 0
-        for elem in range(n_elements):
+        for elem in nb.prange(n_elements):
             elem_len = strlen[elem]
             i, j = start, stop
             if i < 0:
@@ -779,7 +779,7 @@ class FAString(FastArray):
                 char = src[itemsize * elem + pos]
                 out[elem, out_pos] = char
                 max_chars = max(max_chars, out_pos + 1)
-        return max_chars
+        return out[:, :max_chars]
 
     def substr(self, start, stop=None):
         """
@@ -795,12 +795,12 @@ class FAString(FastArray):
 
         if start >= 0 and stop >= 0:
             out = self.reshape((self.n_elements, self._itemsize))[:, start:stop]
-            n_chars = out.shape[1]
         else:
             out = np.zeros((self.n_elements, self._itemsize), dtype=self.dtype)
-            n_chars = self._nb_substr(self, out, self._itemsize, start, stop, strlen)
-            out = out[:, :n_chars]
+            out = self._nb_substr(self, out, self._itemsize, start, stop, strlen)
+        n_chars = out.shape[1]
 
+        n_chars = out.shape[1]
         out = out.ravel().view(f'<{self._intype}{n_chars}')
         if self._ikey is not None:
             from .rt_categorical import Categorical
