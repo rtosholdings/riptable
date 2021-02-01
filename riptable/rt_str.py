@@ -119,6 +119,12 @@ class FAString(FastArray):
 
         return arr
 
+    def _maybe_output_to_categorical(self, out):
+        if self._ikey is not None:
+            from .rt_categorical import Categorical
+            out = Categorical(self._ikey + 1, out, base_index=1)
+        return out
+
     # -----------------------------------------------------
     def _apply_func(self, func, funcp, *args, dtype=None, input=None, filtered_fill_value=None):
         # can optionally pass in dtype
@@ -146,8 +152,7 @@ class FAString(FastArray):
         # check for categorical key re-expansion
         if self._ikey is not None:
             if dest.dtype.kind == 'S':
-                from .rt_categorical import Categorical
-                return Categorical(self._ikey + 1, dest, base_index=1)
+                return self._maybe_output_to_categorical(dest)
             else:
                 unfiltered = self._ikey >= 0
                 return where(unfiltered, dest[self._ikey], filtered_fill_value)
@@ -818,9 +823,7 @@ class FAString(FastArray):
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
         else:
             out = out.ravel().view(f'<{self._intype}{n_chars}')
-        if self._ikey is not None:
-            from .rt_categorical import Categorical
-            out = Categorical(self._ikey + 1, out, base_index=1)
+        out = self._maybe_output_to_categorical(out)
         return out
 
     def char(self, pos):
