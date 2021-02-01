@@ -834,11 +834,50 @@ class FAString(FastArray):
         out = self._maybe_output_to_categorical(out)
         return out
 
-    def char(self, pos):
+    @staticmethod
+    @nb.njit(parallel=True, cache=True)
+    def _nb_char(src, position, itemsize, strlen, out):
+        broken_at = -1
+        for i in nb.prange(len(position)):
+            pos = position[i]
+            if pos < 0:
+                pos = strlen[i] + pos
+            if pos >= itemsize or pos < 0:
+                return i    # this triggers error below
+            out[i] = src[itemsize * i + pos]
+
+        return broken_at
+
+    def char(self, position):
         """
         Take a single character from each element.
+
+        Parameters
+        ----------
+        position: int / np.ndarray
+            The position of the character to be extracted. Negative values respect the
+            length of the individual strings.
+            If an array, the length must be equal to the number of strings.
+            An error is raised if any positions are out of bounds (>= self._itemsize).
         """
-        return self.substr(pos, None if pos == -1 else pos + 1)
+        if np.ndim(position) == 0:
+            for size in [8, 16, 32, 64]:
+                dtype = getattr(np, f'uint{size}')
+                if self._itemsize <= np.iinfo(dtype).max:
+                    break
+            position = ones(self.n_elements, dtype) * position
+
+        if len(position) != self.n_elements:
+            raise ValueError("position must be a scalar or a vector of the same length as self")
+
+        out = zeros(self.n_elements, self.dtype)
+        strlen = self._cat_strlen
+        broken_at = self._nb_char(self, position, self._itemsize, strlen, out)
+        if broken_at >= 0:
+            raise ValueError(f"Position {position[broken_at]} out of bounds "
+                             f"for string of length {self._itemsize}")
+        out = out.view(f'{self._intype}1')
+        return self._maybe_output_to_categorical(out)
 
 
 # keep as last line

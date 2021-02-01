@@ -148,15 +148,28 @@ class TestStr:
         expected = Categorical(self.cat_symbol.ikey, expected, base_index=1)
         assert (expected == result).all()
 
-    @parametrize('pos', [0, 1, -1, -2])
-    def test_char(self, pos):
-        result = FAString(SYMBOLS).char(pos)
-        expected = [s[pos] for s in SYMBOLS]
+    @parametrize('position', [0, 1, -1, -2, 3])
+    def test_char(self, position):
+        result = FAString(SYMBOLS).char(position)
+        expected = [s[position] if position < len(s) else '' for s in SYMBOLS]
         assert expected == result.tolist()
 
-    @parametrize('pos', [0, 1, -1, -2])
-    def test_char_cat(self, pos):
-        result = self.cat_symbol.str.char(pos)
-        expected = Categorical(self.cat_symbol.ikey, [s[pos] for s in SYMBOLS],
+    @parametrize('position', [0, 1, -1, -2])
+    def test_char_cat(self, position):
+        result = self.cat_symbol.str.char(position)
+        expected = Categorical(self.cat_symbol.ikey, [s[position] for s in SYMBOLS],
                                base_index=1)
         assert (expected == result).all()
+
+    def test_char_array_position(self):
+        position = [-1, 2, 0, 1, 2]
+        result = FAString(SYMBOLS).char(position)
+        expected = [s[pos] for s, pos in zip(SYMBOLS, position)]
+        assert expected == result.tolist()
+
+    @parametrize('position', [
+        -3, 6, [0, 0, 0, 0, -5]
+    ])
+    def test_char_failure(self, position):
+        with pytest.raises(ValueError, match='Position -?\d out of bounds'):
+            FAString(SYMBOLS).char(position)
