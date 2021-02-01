@@ -794,6 +794,17 @@ class FAString(FastArray):
                 max_chars = max(max_chars, out_pos + 1)
         return out[:, :max_chars]
 
+    @cached_property
+    def _cat_strlen(self):
+        """
+        Same as strlen except for Categoricals it is aligned with the categories
+        as opposed to the full array. Used for substring methods.
+        """
+        if self._ikey is None:
+            return self.strlen
+        else:
+            return FAString(self.backtostring).strlen
+
     def substr(self, start, stop=None):
         """
         Take a substring of each element using slice args.
@@ -801,10 +812,7 @@ class FAString(FastArray):
         if stop is None:
             stop = self._itemsize
 
-        if self._ikey is None:
-            strlen = self.strlen
-        else:
-            strlen = FAString(self.backtostring).strlen
+        strlen = self._cat_strlen
 
         if start < 0:
             if stop < 0:
