@@ -1,5 +1,11 @@
 __all__ = ['FAString', ]
 
+try:
+    # This will be used to cache strlen for version of Python 3.7 and higher
+    from functools import cached_property
+except ImportError:
+    cached_property = property
+
 import re
 import numpy as np
 import numba as nb
@@ -593,7 +599,7 @@ class FAString(FastArray):
         return self._apply_func(self.nb_removetrailing, self.nb_removetrailing, remove)
 
     # -----------------------------------------------------
-    @property
+    @cached_property     # only cached for Python 3.7 or higher
     def strlen(self):
         '''
         return the string length of every string (bytes or unicode)
