@@ -329,7 +329,7 @@ class FAString(FastArray):
     @nb.jit(nopython=True, cache=True)
     def nb_strlen(src, itemsize, dest):
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
             strlen= 0
@@ -340,6 +340,8 @@ class FAString(FastArray):
                 strlen += 1
             # store length of string
             dest[i] = strlen
+
+    nb_pstrlen = nb.njit(cache=True, parallel=True)(nb_strlen.py_func)
 
     # -----------------------------------------------------
     @nb.jit(nopython=True, cache=True)
@@ -601,7 +603,7 @@ class FAString(FastArray):
         >>> FAString(['this  ','that ','test']).strlen
         FastArray([6, 5, 4])
         '''
-        return self._apply_func(self.nb_strlen, self.nb_strlen, dtype=np.int32,
+        return self._apply_func(self.nb_strlen, self.nb_pstrlen, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------

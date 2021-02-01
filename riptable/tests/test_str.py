@@ -93,6 +93,11 @@ class TestStr:
         expected = FA([np.iinfo(np.int32).min, 4, 4, 2, 4, 3] * 3)
         assert np.array_equal(result, expected)
 
+    def test_strlen_parallel(self):
+        result = FAString(NB_PARALLEL_SYMBOLS).strlen
+        expected = FA([4, 4, 2, 4, 3] * 2000)
+        assert np.array_equal(result, expected)
+
     def test_strpbrk_cat(self):
         result = self.cat_symbol.str.strpbrk('PZG')
         expected = FA([np.iinfo(np.int32).min, 2, 2, -1, 0, -1] * 3)
