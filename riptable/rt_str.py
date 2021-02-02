@@ -124,6 +124,7 @@ class FAString(FastArray):
         if self._ikey is not None:
             from .rt_categorical import Categorical
             out = Categorical(self._ikey + 1, out, base_index=1)
+            out.category_make_unique(inplace=True)
         return out
 
     # -----------------------------------------------------

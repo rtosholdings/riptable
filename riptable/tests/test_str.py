@@ -122,6 +122,7 @@ class TestStr:
         assert np.array_equal(cat.str.regex_match(regex), expected * 2)
 
     substr_test_cases = parametrize("start, stop, expected", [
+        (0, 1, [s[:1] for s in SYMBOLS]),
         (0, 2, [s[:2] for s in SYMBOLS]),
         (1, 3, [s[1:3] for s in SYMBOLS]),
         (1, -1, [s[1:-1] for s in SYMBOLS]),
@@ -139,7 +140,6 @@ class TestStr:
     @substr_test_cases
     def test_substr_bytes(self, start, stop, expected):
         result = FAString(FastArray(SYMBOLS)).substr(start, stop)
-
         assert (FastArray(expected) == result).all()
 
     @substr_test_cases
@@ -147,6 +147,8 @@ class TestStr:
         result = self.cat_symbol.str.substr(start, stop)
         expected = Categorical(self.cat_symbol.ikey, expected, base_index=1)
         assert (expected == result).all()
+        # check categories are unique
+        assert len(set(result.category_array)) == len(result.category_array)
 
     @parametrize('position', [0, 1, -1, -2, 3])
     def test_char(self, position):
@@ -160,6 +162,8 @@ class TestStr:
         expected = Categorical(self.cat_symbol.ikey, [s[position] for s in SYMBOLS],
                                base_index=1)
         assert (expected == result).all()
+        # check categories are unique
+        assert len(set(result.category_array)) == len(result.category_array)
 
     def test_char_array_position(self):
         position = [-1, 2, 0, 1, 2]
