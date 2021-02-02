@@ -1,5 +1,6 @@
 __all__ = ['FAString', ]
 
+import warnings
 try:
     # This will be used to cache strlen for version of Python 3.7 and higher
     from functools import cached_property
@@ -401,7 +402,7 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     @nb.jit(nopython=True, cache=True)
-    def nb_strstrb(src, itemsize, dest, str2):
+    def nb_contains(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
         for i in range(len(src) / itemsize):
@@ -421,7 +422,7 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     @nb.jit(parallel=True, nopython=True, cache=True)
-    def nb_pstrstrb(src, itemsize, dest, str2):
+    def nb_pcontains(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
         for i in nb.prange(np.int64(len(src) / itemsize)):
@@ -641,7 +642,6 @@ class FAString(FastArray):
         return self._apply_func(self.nb_strpbrk, self.nb_strpbrk, str2, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
-
     # -----------------------------------------------------
     def strstr(self, str2):
         '''
@@ -670,10 +670,11 @@ class FAString(FastArray):
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
-    def strstrb(self, str2):
+    def contains(self, str2):
         '''
-        return a boolean array where the value is set True if the first index location of the entire substring specified in str2,
-        or False if the substring does not exist
+        Return a boolean array where the value is set True if str2 is a substring of the element
+        or False otherwise. Note this does not support regex like in Pandas.
+        Please use regex_match for that.
 
         Parameters
         ----------
@@ -681,7 +682,7 @@ class FAString(FastArray):
         
         Examples
         --------
-        >>> FAString(['this  ','that ','test']).strstrb('at')
+        >>> FAString(['this  ','that ','test']).contains('at')
         FastArray([False, True, False])
         '''
         if not isinstance(str2, FAString):
@@ -693,8 +694,15 @@ class FAString(FastArray):
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_strstrb, self.nb_pstrstrb, str2, dtype=np.bool,
+        return self._apply_func(self.nb_contains, self.nb_pcontains, str2, dtype=np.bool,
                                 filtered_fill_value=False)
+
+    def strstrb(self, str2):
+        """
+        Deprecated. Please see .contains.
+        """
+        warnings.warn("strstrb is now deprecated and has been renamed to `contains`", DeprecationWarning)
+        return self.contains(str2)
 
     # -----------------------------------------------------
     def startswith(self, str2):

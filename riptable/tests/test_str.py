@@ -61,11 +61,11 @@ class TestStr:
         ('AAA', [False] * 5),
         ('AAPL', [True] + [False] * 4)
     ])
-    def test_strstrb(self, str2, expected):
-        result = FAString(SYMBOLS).strstrb(str2)
+    def test_contains(self, str2, expected):
+        result = FAString(SYMBOLS).contains(str2)
         assert np.array_equal(result, expected)
 
-        result = FAString(NB_PARALLEL_SYMBOLS).strstrb(str2)
+        result = FAString(NB_PARALLEL_SYMBOLS).contains(str2)
         assert np.array_equal(result, expected * 2000)
 
     @parametrize("str2, expected", [
