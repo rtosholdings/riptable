@@ -2862,25 +2862,20 @@ class Categorical(GroupByOps, FastArray):
         if self.category_mode not in allowed_modes:
             raise NotImplementedError(
                 f"category_make_unique only implemented for category modes: {allowed_modes}")
-
-        unique_cats, inverse = unique(self.category_array, return_inverse=True)
-        if len(unique_cats) == len(self.category_array):
+        cat = Categorical(self.category_array, base_index=self.base_index)
+        if len(cat.category_array) == len(self.category_array):
             return None if inplace else self
 
-        filtered = self.isfiltered()
-        if inplace:
-            self._fa[:] = inverse[self._fa - self.base_index]
-            new_codes = self._fa
-            self._categories_wrap._list = unique_cats
+        if self.base_index > 0:
+            codes = hstack([FastArray(self.base_index - 1), cat._fa])
         else:
-            new_codes = inverse[self._fa - self.base_index]
+            codes = cat._fa
 
-        if self.base_index != 0:
-            new_codes += self.base_index
-            new_codes[filtered] = self.base_index - 1
-
-        if not inplace:
-            return Categorical(new_codes, unique_cats, base_index=self.base_index)
+        if inplace:
+            self._fa[:] = codes[self._fa]
+            self._categories_wrap._list = cat.category_array
+        else:
+            return Categorical(codes[self._fa], cat.category_array, base_index=self.base_index)
 
     # -------------------------------------------------------
     def map(self, mapper: Union[dict, np.array], invalid=None) -> FastArray:
