@@ -2980,3 +2980,13 @@ def test_category_make_unique_inplace(cat, expected):
     res = cat.category_make_unique(inplace=True)
     assert res is None
     assert (cat == expected).all()
+
+
+@pytest.mark.parametrize('base_index', [0, 1])
+def test_category_make_unique_multikey(base_index):
+    c1 = Categorical(np.arange(10) % 2, ['a', 'a'], base_index=base_index)
+    c2 = Categorical(np.arange(10) % 3, ['a', 'b', 'c'], base_index=base_index)
+    cat = Categorical([c1, c2], base_index=base_index)
+
+    res = cat.category_make_unique(inplace=False)
+    assert list(cat) == list(res)
