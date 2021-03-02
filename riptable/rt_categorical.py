@@ -889,7 +889,7 @@ class Categories:
         return newcat
 
     # ------------------------------------------------------------
-    def categories_as_dict(self):
+    def categories_as_dict(self) -> Mapping[str, FastArray]:
         """
         Groupby keys can be prepared for the calling Categorical.
         """
