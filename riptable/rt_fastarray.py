@@ -539,7 +539,8 @@ class FastArray(np.ndarray):
 
         Returns
         -------
-        The array name or if the name does not exist, None is retuned.
+        str, optional
+            The array name; or None if the array has not been named.
 
         See Also
         --------
@@ -563,7 +564,8 @@ class FastArray(np.ndarray):
 
         Returns
         -------
-        FastArray (or subclass)
+        FastArray
+            Returns 'self', so this will be the same type as the instance it's called on.
 
         Examples
         --------
