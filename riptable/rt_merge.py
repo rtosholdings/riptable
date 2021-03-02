@@ -2303,6 +2303,14 @@ def merge2(
     # an input column will contain the same data in the output Dataset.
     array_copier = array_copy if copy else readonly_array_wrapper
 
+    # Workaround for rt.mbget not supporting Categoricals (so it ends up using the regular
+    # integer invalids in the underlying array vs. the Categorical base index).
+    # We still do want to use mbget() when possible since we need it to support the case where
+    # we're trying to index into an np.ndarray, and eventually we want to use it to allow the
+    # caller to provide their own per-column overrides for default values.
+    def mbget_wrapper(arr: np.ndarray, index: np.ndarray, default_value = None) -> np.ndarray:
+        return mbget(arr, index, default_value) if type(arr) in (FastArray, np.ndarray) else arr[index]
+
     # Begin creating the column data for the 'merged' Dataset.
     out: Dict[str, FastArray] = {}
     start = GetNanoTime()
@@ -2328,8 +2336,8 @@ def merge2(
                 #   the output type but we compute the output length from the fancy indices; then, when copying to the
                 #   result, we use the fancy indices to pull from the source arrays rather than a straight 1-to-1 copy.
                 #   This function would allow for a few array allocations + operations to be elided here.
-                left_data = left[field] if left_fancyindex is None else mbget(left[field], left_fancyindex[:len(left_fancyindex) - join_indices.right_only_rowcount])
-                right_data = mbget(right[field], right_fancyindex[-join_indices.right_only_rowcount:])
+                left_data = left[field] if left_fancyindex is None else mbget_wrapper(left[field], left_fancyindex[:len(left_fancyindex) - join_indices.right_only_rowcount])
+                right_data = mbget_wrapper(right[field], right_fancyindex[-join_indices.right_only_rowcount:])
                 out[field] = hstack((left_data, right_data))
 
         # If we're missing one of the fancy indices, it means we can just copy the columns
@@ -2352,7 +2360,7 @@ def merge2(
             #      from the right Dataset instead.
             ds, fancyindex = (right, right_fancyindex) if how == 'right' else (left, left_fancyindex)
             for field in intersection_cols:
-                out[field] = mbget(ds[field], fancyindex)
+                out[field] = mbget_wrapper(ds[field], fancyindex)
 
     if logger.isEnabledFor(logging.INFO):
         delta = GetNanoTime() - start
@@ -2371,7 +2379,7 @@ def merge2(
             out[new_name] = array_copier(left[old_name])
     else:
         for old_name, new_name in zip(*col_left_tuple):
-            out[new_name] = mbget(left[old_name], left_fancyindex)
+            out[new_name] = mbget_wrapper(left[old_name], left_fancyindex)
 
     if logger.isEnabledFor(logging.INFO):
         delta = GetNanoTime() - start
@@ -2402,7 +2410,7 @@ def merge2(
                 raise ValueError('One or more keys from the left Dataset was missing from the right Dataset.')
 
         for old_name, new_name in zip(*col_right_tuple):
-            out[new_name] = mbget(right[old_name], right_fancyindex)
+            out[new_name] = mbget_wrapper(right[old_name], right_fancyindex)
 
     if logger.isEnabledFor(logging.INFO):
         delta = GetNanoTime() - start

@@ -1845,6 +1845,14 @@ def test_merge2_multikey_join_with_cats():
     result = rt.merge2(left_ds, right_ds, on=['InkColor', ('CartridgeInstallDate', 'PurchaseDate')], suffixes=('_installed', '_purchased'))
     assert len(result) == 8
 
+    # The Categorical columns in the resulting Dataset should not have any
+    # negative values in the underlying array. This is to check for an issue
+    # introduced in 44585e527e where mbget() started being used, but it used the
+    # normal default value for the Categorical's underlying array instead of the
+    # Categorical's base index (if it has one).
+    assert np.all(result['InkColor']._fa >= 0)
+    assert np.all(result['PurchaseDate']._fa >= 0)
+
 
 def test_merge2_nonempty_symmetric_diff():
     ds1 = rt.Dataset({'a': [1, 2, 3]})
