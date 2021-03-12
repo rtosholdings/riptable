@@ -429,7 +429,7 @@ class TimeZone():
         #is_dst = (FastArray(np.searchsorted(DST_CUTOFFS, arr)) & 1).astype(np.bool)
         #is_dst = (rc.BinsToCutsBSearch(arr, cutoffs, 0) & 1).astype(np.bool)
 
-        is_dst = (searchsorted(cutoffs, arr) & 1).astype(np.bool)
+        is_dst = (searchsorted(cutoffs, arr) & 1).astype(np.bool_)
         return is_dst
 
     #------------------------------------------------------------
