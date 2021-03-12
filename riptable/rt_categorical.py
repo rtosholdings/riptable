@@ -3598,7 +3598,7 @@ class Categorical(GroupByOps, FastArray):
         func = None
 
         # COMPARE TO INTEGER (numeric array categoricals will get handled differently)
-        if isinstance(other, (int, np.integer, float, np.float)):
+        if isinstance(other, (int, np.integer, float, np.float64)):
             # error will be raised if doesn't match categories
             if not self.isenum:
                 other = self._categories_wrap.get_category_index(other)
