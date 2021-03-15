@@ -110,7 +110,7 @@ jobs:
           conda activate conda_build
           export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
           mkdir conda_pkgs_output
-          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output
+          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output --variants "[{'python':'3.7','numpy':'1.18'},{'python':'3.7','numpy':'1.19'},{'python':'3.8','numpy':'1.18'},{'python':'3.8','numpy':'1.19'},{'python':'3.8','numpy':'1.20'},{'python':'3.9','numpy':'1.18'},{'python':'3.9','numpy':'1.19'},{'python':'3.9','numpy':'1.20'}]"
           echo "${{ github.event_name }}"
           echo "${{ github.ref }}"
       - name: Publish artifacts
