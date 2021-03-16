@@ -2520,8 +2520,8 @@ def tile(arr, reps):
 # like in matlab, convert to int8
 def logical(a):
     if isinstance(a, np.ndarray):
-        if a.dtype==np.bool: return a
-        return a.astype(np.bool)
+        if a.dtype==np.bool_: return a
+        return a.astype(np.bool_)
     return np.bool(a).view(TypeRegister.FastArray)
 
 ##-------------------------------------------------------
