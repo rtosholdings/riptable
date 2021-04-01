@@ -31,7 +31,7 @@ __all__ = [
 
 import sys
 import builtins
-from typing import Iterable, List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import inspect
 import warnings
@@ -3106,7 +3106,7 @@ def _mask_op( bool_list, funcNum, inplace = False):
     return result
 
 # ------------------------------------------------------------
-def hstack(tup, dtype=None, **kwargs):
+def hstack(tup: Sequence[np.ndarray], dtype: Optional[Union[str, type, np.dtype]] = None, **kwargs) -> np.ndarray:
     """
     see numpy hstack
     riptable can also take a dtype (it will convert all arrays to that dtype while stacking)
@@ -3115,20 +3115,27 @@ def hstack(tup, dtype=None, **kwargs):
     for special classes like categorical and dataset, it will check to see if the
     class has it's own hstack and it will call that
     """
+    # the riptable test suite causes this to segfault (in riptide_cpp 1.6.28), so it's commented out
+    # for now. When that's fixed, uncomment this to allow riptable to handle more hstacking cases
+    # instead of punting to numpy.
+    #tup = tuple(map(np.asanyarray, tup))
 
     # Check to see if we have one homogenized type
     set_of_types = {type(i) for i in tup}
+    single_arr_type = set_of_types.pop() if len(set_of_types) == 1 else None
 
-    if len(set_of_types)==1:
-        # we know the data is all the same type
-        # check if this is a special type that we know how to hstack
-        try:
-            # pass kwargs in case special type has unique keywords
-            return [*set_of_types][0].hstack(tup, **kwargs)
-        except:
-            pass
+    # Does this type have an 'hstack' method defined?
+    # If so, we *must* use it since the existence of the method indicates
+    # the array needs special treatment during hstacking; it is not safe/correct
+    # to fall back to the standard rc.HStack() / np.hstack() for such arrays.
+    if single_arr_type is not None and hasattr(single_arr_type, 'hstack'):
+        arr_type_hstack_func = getattr(single_arr_type, 'hstack')
+        # pass kwargs in case special type has unique keywords
+        return arr_type_hstack_func(tup, **kwargs)
+    elif single_arr_type is None:
+        single_arr_type = TypeRegister.FastArray
 
-    dtypenum=-1
+    dtypenum = -1
 
     if dtype is not None:
         try:
@@ -3137,9 +3144,11 @@ def hstack(tup, dtype=None, **kwargs):
             dtypenum = np.dtype(dtype).num
 
     try:
-        return rc.HStack(tup, dtypenum)
+        hstack_result = rc.HStack(tup, dtypenum)
     except:
-        return np.hstack(tup).view(TypeRegister.FastArray)
+        hstack_result = np.hstack(tup)
+
+    return hstack_result.view(single_arr_type)
 
 # ------------------------------------------------------------
 def asanyarray(a, dtype=None, order=None):

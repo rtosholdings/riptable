@@ -215,6 +215,25 @@ class TestRTNumpy:
         fa_sample_expected = rt.FA([2, 5])
         assert (fa_sample_expected == fa_sample).all(axis=None)
 
+    def test_hstack_returns_same_type(self):
+        # Create some instances of the same derived array type.
+        # TODO: Implement another version of this test using a derived array type (maybe define one just for this test)
+        #       that does not define it's own 'hstack' method. Or, test what happens if we e.g. hstack something like
+        #       rt.Date() and a list (that could be used to create an array of that type).
+        array_type = rt.Date
+
+        arrs = [
+            array_type(['20210108', '20210108', '20210115', '20210115', '20210115', '20210122', '20210129', '20210129']),
+            array_type(['20200102']),
+            array_type(['20190103', '20190204', '20190305'])
+        ]
+        total_len = sum(map(lambda x: len(x), arrs))
+
+        # rt.hstack() should return an instance of the same type.
+        result = rt.hstack(arrs)
+        assert type(result) == array_type
+        assert len(result) == total_len
+
 
 class TestMaximum:
     """Tests for the rt.maximum function."""
