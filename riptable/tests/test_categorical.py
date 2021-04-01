@@ -919,6 +919,32 @@ class TestCategorical:
         cm = Categorical.hstack([c1, c2])
         assert (cm == [1, 1, 3, 2, 2, 2, 2, 4, 4, 3]).all()
 
+    def test_hstack_fails_for_different_mode_cats(self):
+        # Create a dictionary-mode Categorical (from ISO3166 data).
+        # The dictionary is created manually below instead of using e.g.
+        #   {k: int(v) for (k, v) in ISOCountryCode.__members__.items()}
+        # so the dictionary we give to Categorical does not have the insert ordering
+        # imply an ordering of the keys/values.
+        country_code_dict = {
+            'IRL': 372, 'USA': 840, 'AUS': 36, 'HKG': 344, 'JPN': 392,
+            'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
+        }
+
+        # The values for the Categorical's backing array.
+        # This includes some value(s) not in the dictionary and not all values in the dictionary are used here.
+        country_num_codes = [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484]
+
+        cat1 = rt.Categorical(country_num_codes, country_code_dict)
+        assert cat1.category_mode == CategoryMode.Dictionary
+
+        # Create a single-key, string-mode Categorical.
+        cat2 = rt.Categorical(['AUS', 'AUS', 'HKG', 'USA', 'USA', 'IRL', 'USA', 'IRL', 'USA', 'KHM', 'IRL', 'AUS', 'MEX'])
+        assert cat2.category_mode != CategoryMode.Dictionary
+
+        # Try to hstack the two Categoricals. This should fail due to the CategoryMode values being different.
+        with pytest.raises((ValueError, TypeError)):
+            rt.hstack([cat1, cat2])
+
     def test_align(self):
         c1 = Categorical(['a', 'b', 'c'])
         c2 = Categorical(['d', 'e', 'f'])
