@@ -16,6 +16,8 @@ from riptable.Utils.rt_testdata import load_test_data
 
 from riptable.tests.test_utils import get_all_categorical_data
 
+from numpy.testing import assert_array_equal
+
 # change to true since we write into /tests directory
 SDSMakeDirsOn()
 
@@ -1257,15 +1259,6 @@ class SaveLoad_Test(unittest.TestCase):
 
         shutil.rmtree(folderpath)
 
-    def test_load_filter(self):
-        ds = Dataset({_k: list(range(_i *10, (_i +1) *10)) for _i, _k in enumerate(['a','b','c','d','e'])})
-        singlepath = r'riptable/tests/temp/stfile.sds'
-        ds.save(singlepath)
-        ds1=load_sds(singlepath, filter=[False, False, True, True, True, False, False, False, False, False])
-        ds2=load_sds(singlepath, filter=arange(2,5))
-        self.assertTrue(np.all(ds1.crc.imatrix_make() == ds2.crc.imatrix_make()))
-        os.remove(singlepath)
-
     #def test_onefile_stack(self):
     #    ds = Dataset({'arr1':arange(5), 'arr2':arange(5)})
     #    st = Struct({'ds1':ds, 'arr3':arange(5)})
@@ -1286,6 +1279,137 @@ class SaveLoad_Test(unittest.TestCase):
 
     #    for p in paths:
     #        os.remove(p)
+
+@pytest.mark.parametrize('filt', [
+    pytest.param([False, False, True, True, True, False, False, False, False, False], id='boolmask_list'),
+    pytest.param(FA([False, False, True, True, True, False, False, False, False, False]), id='boolmask_array'),
+    # Consecutive, unique values in ascending order.
+    pytest.param([2, 3, 4, 5], id='fancyindex_range_list'),
+    pytest.param(arange(2, 5), id='fancyindex_range_array'),
+    # Fancy index with unique, out-of-order values.
+    pytest.param(
+        FA([5, 3, 2, 4]), id='fancyindex_unsorted_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- produces incorrect results.")
+    ),
+    # Fancy index with repeated (non-unique) values.
+    pytest.param(
+        FA([2, 2, 3, 5, 2, 4, 4]), id='fancyindex_nonunique_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- produces incorrect results.")
+    ),
+    # Fancy index with in-bounds negative values.
+    pytest.param(
+        FA([2, -4, 4, -6]), id='fancyindex_negative_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- fails with an exception in FastArray.__setitem__().")
+    ),
+    # Fancy index with unsigned int.
+    pytest.param(FA([2, 3, 4, 5, 8], dtype=np.uint32), id='fancyindex_unsigned_array'),
+    # Fancy index with smaller-than-default int dtype.
+    pytest.param(FA([2, 3, 4, 6, 7, 8], dtype=np.int8), id='fancyindex_int8_array'),
+    # Fancy index with invalid values.
+    # Some values are the integer invalid for the fancy index's dtype, some are just out-of-bounds
+    # given the length of the dataset we're creating in the test logic below.
+    pytest.param(
+        FA([2, 3, int32.inv, 5, 8], dtype=np.int32), id='fancyindex_invalid_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- fails with an exception in FastArray.__setitem__().")
+    ),
+    pytest.param(
+        FA([2, 3, int16.inv, 5, 8], dtype=np.int32), id='fancyindex_oobinvalid_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- fails with an exception in FastArray.__setitem__().")
+    ),
+])
+def test_load_filter_nostack(filt):
+    # TODO: Create a dataset that also includes derived array types like Categorical and Date,
+    #       to test those are filtered as expected.
+    orig_ds = Dataset({_k: list(range(_i * 10, (_i + 1) * 10)) for _i, _k in enumerate(['a', 'b', 'c', 'd', 'e'])})
+    singlepath = r'riptable/tests/temp/stfile.sds'
+    orig_ds.save(singlepath)
+
+    try:
+        # Select rows from the original in-memory dataset using the filter (bool mask or fancy index).
+        inmem_filt_ds = orig_ds[filt, :]
+
+        # Re-load the dataset from disk, providing the fancy index to the SDS reader.
+        reload_filt_ds = load_sds(singlepath, filter=filt)
+    finally:
+        os.remove(singlepath)
+
+    # Assert the data filtered in memory matches the data which was filtered as it was re-loaded from disk.
+    # TODO: Use a for loop and assert_array_equal() here so we get a better diagnostic message if the test fails.
+    assert np.all(inmem_filt_ds.crc.imatrix_make() == reload_filt_ds.crc.imatrix_make())
+
+@pytest.mark.parametrize('filt', [
+    pytest.param([
+        False, True, False, True, True, True, False, False, False, False,
+        False, False, True, True, True, True, False, False, False, False, False,
+        True, False, False, False, True, True, True, False, False, False, False, False,
+        False, True, False, False, True, True, False, True, False, False, False, False, False,
+    ], id='boolmask_list'),
+    pytest.param(FA([
+        False, True, False, True, True, True, False, False, False, False,
+        False, False, True, True, True, True, False, False, False, False, False,
+        True, False, False, False, True, True, True, False, False, False, False, False,
+        False, True, False, False, True, True, False, True, False, False, False, False, False,
+    ]), id='boolmask_array'),
+    # Consecutive, unique values in ascending order.
+    pytest.param([7, 8, 9, 10, 11, 12, 13, 14], id='fancyindex_range_list'),
+    pytest.param(arange(7, 15), id='fancyindex_range_array'),
+    # Fancy index with unique, out-of-order values.
+    pytest.param(
+        FA([25, 13, 2, 34]), id='fancyindex_unsorted_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- produces incorrect results.")
+    ),
+    # Fancy index with repeated (non-unique) values.
+    pytest.param(
+        FA([12, 12, 3, 25, 12, 39, 39]), id='fancyindex_nonunique_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- produces incorrect results.")
+    ),
+    # Fancy index with in-bounds negative values.
+    pytest.param(
+        FA([2, -24, 14, -6]), id='fancyindex_negative_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- fails with an exception in FastArray.__setitem__().")
+    ),
+    # Fancy index with unsigned int.
+    pytest.param(FA([2, 3, 4, 15, 38], dtype=np.uint32), id='fancyindex_unsigned_array'),
+    # Fancy index with smaller-than-default int dtype.
+    pytest.param(FA([2, 3, 14, 26, 27, 38], dtype=np.int8), id='fancyindex_int8_array'),
+    # Fancy index with invalid values.
+    # Some values are the integer invalid for the fancy index's dtype, some are just out-of-bounds
+    # given the length of the dataset we're creating in the test logic below.
+    pytest.param(
+        FA([2, 3, int32.inv, 35, 28], dtype=np.int32), id='fancyindex_invalid_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- fails with an exception in FastArray.__setitem__().")
+    ),
+    pytest.param(
+        FA([2, 3, int16.inv, 35, 28], dtype=np.int32), id='fancyindex_oobinvalid_array',
+        marks=pytest.mark.xfail(reason="Currently broken -- fails with an exception in FastArray.__setitem__().")
+    ),
+])
+def test_load_filter_stack(filt):
+    # TODO: Create a dataset that also includes derived array types like Categorical and Date, to test those
+    #       are filtered as expected.
+    ds_count = 4
+    orig_dss = [Dataset({_k: list(range(_i * (10 + x), (_i + 1) * (10 + x))) for _i, _k in enumerate(['a', 'b', 'c', 'd', 'e'])}) for x in range(ds_count)]
+    ds_paths = [f'riptable/tests/temp/stfile_{x}.sds' for x in range(ds_count)]
+    for orig_ds, ds_path in zip(orig_dss, ds_paths):
+        orig_ds.save(ds_path)
+
+    try:
+        # Concatenate the original in-memory dataset to simulate what 'stack=True' is expected to do
+        # within rt.load_sds() below.
+        inmem_ds = Dataset.concat_rows(orig_dss)
+
+        # Select rows from the concatenated in-memory dataset using the filter (bool mask or fancy index).
+        inmem_filt_ds = inmem_ds[filt, :]
+
+        # Re-load the datasets from disk, stacking them + providing the fancy index to the SDS reader.
+        reload_filt_ds = load_sds(ds_paths, stack=True, filter=filt)
+    finally:
+        for ds_path in ds_paths:
+            os.remove(ds_path)
+
+    # Assert the data filtered in memory matches the data which was filtered as it was re-loaded from disk.
+    # TODO: Use a for loop and assert_array_equal() here so we get a better diagnostic message if the test fails.
+    assert np.all(inmem_filt_ds.crc.imatrix_make() == reload_filt_ds.crc.imatrix_make())
 
 
 # TODO fold test_sds_stack_with_categorical into the more general test_sds_stack
