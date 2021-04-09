@@ -1,5 +1,6 @@
 __all__ = ['FastArray', 'Threading', 'Recycle','Ledger']
 
+import builtins
 import logging
 import os
 from typing import TYPE_CHECKING, Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
@@ -551,7 +552,7 @@ class FastArray(np.ndarray):
         return aboveone
 
     #--------------------------------------------------------------------------
-    def get_name(self):
+    def get_name(self) -> Optional[str]:
         '''
         FastArray can hold a name.  When a Dataset puts a FastArray into a column, it may receive a name.
 
@@ -898,18 +899,41 @@ class FastArray(np.ndarray):
         return result.view(FastArray)
 
     #--------------------------------------------------------------------------
-    def _view_internal(self, type=None):
+    def _view_internal(self, type: Optional[type] = None):
         '''
         FastArray subclasses need to take this over if they want to make a shallow copy of
         a fastarray instead of viewing themselves as a fastarray (which drops their other properties).
         Taking over view directly may have a lot of unintended consequences.
         '''
-        if type is not FastArray or type is not None:
+        # If target type is not specified, the target/output type is
+        # that of the current instance.
+        if type is None:
+            type = builtins.type(self)
+
+        # TODO: Should we require -- at least for this default implementation --
+        #       that type(self) is a subclass of `type` (the type provided through the kwarg),
+        #       or vice versa? Those will be safe cases, but it's not safe for example to
+        #       do something like rt.Date([...])._view_internal(type=rt.DateTimeNano).
+        #       Derived classes could override this behavior if/when appropriate but it seems
+        #       safest to disallow these types of views in this default handler.
+
+        if type == FastArray:
+            newarr = self.view(FastArray)
+
+            # Copy array name over too, for consistency with the
+            # default handler for derived array types (below).
+            arr_name = self.get_name()
+            if arr_name is not None:
+                newarr.set_name(arr_name)
+
+            return newarr
+
+        else:
+            # Default implementation for derived array types (if they haven't overridden this method).
             newarr=self.view(type)
-            # copy all the properties
+            # copy all the properties (this will include the array name).
             newarr.__dict__ = self.__dict__.copy()
             return newarr
-        return self.view(FastArray)
 
     #--------------------------------------------------------------------------
     def copy(self, order='K'):

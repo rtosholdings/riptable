@@ -1501,6 +1501,17 @@ class FastArray_Test(unittest.TestCase):
         self.assertEqual(arr.get_name(), arr_view.get_name())
         self.assertTrue((arr == arr_view).all())
 
+    def test_view_internal_unspecified_type(self) -> None:
+        """Test how FastArray._view_internal() behaves when an output type is not explicitly specified."""
+        arr = FastArray([6, 8, 10, 10, 0, 5, 2], dtype=np.uint32)
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr._view_internal()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+
 # TODO: Extend the tests in the TestFastArrayNanmax / TestFastArrayNanmin classes below to cover the following cases:
 #   * non-array inputs (e.g. a list or set or scalar)
 #   * other FastArray subclass, e.g. Date

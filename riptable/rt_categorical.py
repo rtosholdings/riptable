@@ -1946,6 +1946,7 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     @property
     def _fa(self):
+        # TODO: Just use self._view_internal(type=FastArray) here?
         result = self.view(FastArray)
         _copy_name(self, result)
         return result
@@ -4941,6 +4942,21 @@ class Categorical(GroupByOps, FastArray):
         # python has trouble deleting objects with circular references
         del self._categories_wrap
         self._grouping = None
+
+    def _view_internal(self, type: Optional[type] = None):
+        if type is None or type == Categorical:
+            # Return a shallow copy of this instance.
+            # The returned view will have the same array name as this instance.
+            return self.copy(deep=False)
+
+        elif type == FastArray:
+            # The Categorical._fa property already creates and returns a FastArray view of
+            # the underlying array representation, so it's safe to return directly.
+            return self._fa
+
+        else:
+            # It doesn't seem sensible to re-interpret a Categorical as any other type.
+            raise ValueError(f"Creating a '{type.__qualname__}'-typed view of a Categorical is not supported.")
 
     # ------------------------------------------------------------
     @classmethod

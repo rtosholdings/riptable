@@ -2294,9 +2294,14 @@ def merge2(
             extra={'alloc_size': est_result_alloc_size, 'total_size': est_result_total_size}
         )
 
-    def readonly_array_wrapper(arr: FastArray) -> FastArray:
+    def readonly_array_wrapper(arr: np.ndarray) -> FastArray:
         """Create a read-only view of an array."""
-        new_arr = arr.view()
+        # FastArray doesn't override ndarray.view() but instead defines it's own protected method,
+        # _view_internal(). We *must* use this for FastArray and any derived classes to ensure
+        # any additional data associated with an array (e.g. the Categorical._grouping) is handled
+        # correctly; otherwise, just calling .view() here results in broken arrays which cause problems
+        # later (such as when adding them to the output Dataset at the end of a merge).
+        new_arr = arr._view_internal() if isinstance(arr, FastArray) else arr.view()
         new_arr.flags.writeable = False
         return new_arr
 

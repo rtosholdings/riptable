@@ -25,7 +25,7 @@ from riptable.tests.test_utils import (
 )
 from riptable.rt_sds import SDSMakeDirsOn
 from riptable.tests.utils import LikertDecision
-
+from riptable.testing.array_assert import assert_array_or_cat_equal
 
 
 # change to true since we write into /tests directory
@@ -2383,6 +2383,24 @@ class TestCategorical:
         c2 = c.as_singlekey(ordered=True)
         assert np.all(c1.expand_array == c2.expand_array)
         assert np.all(c3.expand_array == c2.expand_array)
+
+    def test_categorical_view_internal_unspecified_type(self) -> None:
+        """Test how Categorical._view_internal() behaves when an output type is not explicitly specified."""
+        arr = Cat([1, 2, 1, 2, 1, 2], {'Sunny': 1, 'Thunderstorms': 2})
+        # insert bad value
+        arr._fa[3] = 17
+
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr._view_internal()
+        assert type(arr) == type(arr_view)
+        assert arr.shape == arr_view.shape
+        assert not arr_view.flags.owndata
+        assert arr.get_name() == arr_view.get_name()
+        assert_array_or_cat_equal(arr, arr_view)
+
+        # Categorical-specific checks
+        assert arr.grouping is not arr_view.grouping, \
+            "Grouping objects should be equal/equivalent, but not the *same* object."
 
 
 # Cannot use the pytest.mark.parameterize decorator within classes that inherit from unittest.TestCase.
