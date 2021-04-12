@@ -22,9 +22,29 @@ __all__ = [
 
 import sys
 from collections import namedtuple
-from typing import Optional, Callable, Mapping, Any, Tuple, Type, List
+from typing import TYPE_CHECKING, ClassVar, Optional, Callable, Mapping, Any, Tuple, Type, List
 from enum import IntEnum
 import numpy as np
+
+if TYPE_CHECKING:
+    from .rt_accum2 import Accum2
+    from .rt_categorical import Categorical
+    from .rt_dataset import Dataset
+    from .rt_datetime import Date, DateBase, DateSpan, DateTimeBase, DateTimeNano, TimeSpan
+    from .rt_display import (
+        DisplayAttributes, DisplayDetect, DisplayOptions, DisplayString, DisplayTable, DisplayText
+    )
+    from .rt_fastarray import FastArray
+    from .rt_groupby import GroupBy
+    from .rt_grouping import Grouping
+    from .rt_ledger import MathLedger
+    from .rt_multiset import Multiset
+    from .rt_pdataset import PDataset
+    from .rt_sharedmemory import SharedMemory
+    from .rt_sort_cache import SortCache
+    from .rt_struct import Struct
+    from .rt_timezone import Calendar, TimeZone
+
 
 # common strings used to indicate special columns or items
 INVALID_SHORT_NAME: str = 'Inv'
@@ -996,33 +1016,33 @@ class TypeRegister:
     When special classes are loaded, they register with this class to avoid cyclical dependencies
     '''
 
-    Struct = None
-    Dataset = None
-    Multiset = None
-    GroupBy = None
-    Grouping = None
-    FastArray = None
-    MathLedger = None
-    Categorical = None
-    Categories = None
-    Accum2 = None
-    DisplayDetect = None
-    DisplayOptions = None
-    DisplayTable = None
-    DisplayString = None
-    DisplayAttributes = None
-    DisplayText = None
-    SortCache = None
-    DateTimeBase = None
-    DateTimeNano = None
-    TimeSpan = None
-    SharedMemory = None
-    TimeZone = None
-    Calendar = None
-    DateBase = None
-    Date = None
-    DateSpan = None
-    PDataset = None
+    Struct: ClassVar[Type['Struct']] = None
+    Dataset: ClassVar[Type['Dataset']] = None
+    Multiset: ClassVar[Type['Multiset']] = None
+    GroupBy: ClassVar[Type['GroupBy']] = None
+    Grouping: ClassVar[Type['Grouping']] = None
+    FastArray: ClassVar[Type['FastArray']] = None
+    MathLedger: ClassVar[Type['MathLedger']] = None
+    Categorical: ClassVar[Type['Categorical']] = None
+    Categories: ClassVar[Type['Categories']] = None
+    Accum2: ClassVar[Type['Accum2']] = None
+    DisplayDetect: ClassVar[Type['DisplayDetect']] = None
+    DisplayOptions: ClassVar[Type['DisplayOptions']] = None
+    DisplayTable: ClassVar[Type['DisplayTable']] = None
+    DisplayString: ClassVar[Type['DisplayString']] = None
+    DisplayAttributes: ClassVar[Type['DisplayAttributes']] = None
+    DisplayText: ClassVar[Type['DisplayText']] = None
+    SortCache: ClassVar[Type['SortCache']] = None
+    DateTimeBase: ClassVar[Type['DateTimeBase']] = None
+    DateTimeNano: ClassVar[Type['DateTimeNano']] = None
+    TimeSpan: ClassVar[Type['TimeSpan']] = None
+    SharedMemory: ClassVar[Type['SharedMemory']] = None
+    TimeZone: ClassVar[Type['TimeZone']] = None
+    Calendar: ClassVar[Type['Calendar']] = None
+    DateBase: ClassVar[Type['DateBase']] = None
+    Date: ClassVar[Type['Date']] = None
+    DateSpan: ClassVar[Type['DateSpan']] = None
+    PDataset: ClassVar[Type['PDataset']] = None
 
     @classmethod
     def validate_registry(cls):
