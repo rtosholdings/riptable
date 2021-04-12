@@ -6356,6 +6356,40 @@ def test_merge_lookup_inplace_multi():
     assert_array_equal(foo.strcol, rt.FA([b'', b'Lombard', b'', b'', b'', b'']))
 
 
+def test_merge_lookup_derived_type_cols_nocopy():
+    """
+    Test how ``merge_lookup`` creates views of derived array columns (such as Categorical)
+    when ``copy=False`` is specified and columns don't need to be deep-copied -- because they'll
+    have the same data in the output as they do in one of the input Datasets.
+    This is a repro test for https://github.com/rtosholdings/riptable/issues/136 .
+    """
+    left_ds = rt.Dataset()
+    left_ds['InkColor'] = rt.Cat(['Cyan', 'Magenta', 'Yellow', 'Black', 'Magenta', 'Cyan', 'Black', 'Yellow'])
+    left_ds['CartridgeInstallDate'] = rt.Date(['2019-06-19', '2019-06-19', '2020-01-15', '2020-05-22', '2020-02-10', '2020-02-10', '2020-03-17', '2020-03-17'])
+
+    right_ds = rt.Dataset()
+    right_ds['InkColor'] = rt.Cat(['Cyan', 'Magenta', 'Yellow', 'Black'])
+    right_ds['PurchaseDate'] = rt.Cat(rt.Date(['2019-06-19', '2020-02-10', '2020-03-17', '2019-12-01']))
+
+    # Check for issue detailed in riptable issue #136 where FastArray-derived column types
+    # carrying additional data (e.g. Categorical) were broken by incorrectly/unsafely creating
+    # a view of them in merge2 (used by merge_lookup), causing an exception to be raised at
+    # the end of merge2 where the output Dataset is created from a dictionary containing the
+    # merged column data.
+    # The exception caused by the bug:
+    #   AttributeError: 'Categorical' object has no attribute '_grouping'
+    result = rt.merge_lookup(left_ds, right_ds, on='InkColor', suffixes=('_installed', '_purchased'), copy=False)
+    assert left_ds.get_nrows() == result.get_nrows()
+
+    # The Categorical columns in the resulting Dataset should not have any
+    # negative values in the underlying array. This is to check for an issue
+    # introduced in 44585e527e where mbget() started being used, but it used the
+    # normal default value for the Categorical's underlying array instead of the
+    # Categorical's base index (if it has one).
+    assert np.all(result['InkColor']._fa >= 0)
+    assert np.all(result['PurchaseDate']._fa >= 0)
+
+
 class MergeAsofTest(unittest.TestCase):
     def test_merge_asof(self):
         def check_merge_asof(ds, ds1, ds2):
