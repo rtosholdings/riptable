@@ -25,7 +25,7 @@ from riptable.tests.test_utils import (
 )
 from riptable.rt_sds import SDSMakeDirsOn
 from riptable.tests.utils import LikertDecision
-
+from riptable.testing.array_assert import assert_array_or_cat_equal
 
 
 # change to true since we write into /tests directory
@@ -2379,7 +2379,7 @@ class TestCategorical:
         assert arr.shape == arr_view.shape
         assert not arr_view.flags.owndata
         assert arr.get_name() == arr_view.get_name()
-        assert_array_equal(arr, arr_view)
+        assert_array_or_cat_equal(arr, arr_view)
 
         # Categorical-specific checks
         assert arr.grouping is not arr_view.grouping, \
