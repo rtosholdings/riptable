@@ -21,6 +21,7 @@ def assert_categorical_equal(
     err_msg: Optional[str] = '',
     relaxed_check: bool = False,
     check_cat_names: bool = True,
+    check_cat_types: bool = True,
     exact_dtype_match: bool = True,
 ) -> None:
     # TODO: Add optional flag parameters to customize the checks; e.g. we might want
@@ -33,11 +34,6 @@ def assert_categorical_equal(
         raise TypeError("'x' is not a Categorical.")
     elif not isinstance(y, Categorical):
         raise TypeError("'y' is not a Categorical.")
-
-    if isinstance(x.category_array, DateTimeBase) or isinstance(y.category_array, DateTimeBase):
-        relaxed_check = True
-        check_cat_names = False
-        exact_dtype_match = False
 
     extra_info = f"{x} {verbose_categorical(x)}\n\n{y} {verbose_categorical(y)}"
 
@@ -57,6 +53,27 @@ def assert_categorical_equal(
     if len(x_cat_dict) != len(y_cat_dict):
         raise AssertionError(f"The Categoricals have different category arities (# of category columns): {len(x_cat_dict)} vs. {len(y_cat_dict)}.\n{extra_info}")
 
+    # Check category names match, in the same order.
+    if check_cat_names:
+        x_cat_names = list(x_cat_dict.keys())
+        y_cat_names = list(y_cat_dict.keys())
+        if x_cat_names != y_cat_names:
+            raise AssertionError(
+                f"The category name(s) are different between the two Categoricals:\t{x_cat_names} vs. {y_cat_names}.\n{extra_info}")
+
+    # Check the category types (Python types) match, in the same order.
+    if check_cat_types:
+        # The category array types must match exactly; if we only checked the dtypes (below) or that
+        # one type was equal to or a subtype of the other, the semantic meaning of the data could be
+        # lost. For example, consider if this array was a raw integer array in one Categorical and a
+        # Date array in the other -- even if they contain the same underlying data, the Date type provides
+        # some different interpretation/semantics on top of that data compared to a plain array.
+        x_cat_names_and_types = [(k, type(v).__qualname__) for k, v in x_cat_dict.items()]
+        y_cat_names_and_types = [(k, type(v).__qualname__) for k, v in y_cat_dict.items()]
+        if x_cat_names_and_types != y_cat_names_and_types:
+            raise AssertionError(
+                f"The category array(s) have different types between the Categoricals:\t{x_cat_names_and_types} vs. {y_cat_names_and_types}.\n{extra_info}")
+
     # If we're doing the relaxed check, just use .expand_array to expand the Categoricals to arrays
     # (or tuples of normal arrays) then check whether the pairs of arrays are equal.
     if relaxed_check:
@@ -64,18 +81,6 @@ def assert_categorical_equal(
         y_expanded_arrays = y.expand_dict
 
         for i, ((x_cat_name, x_exp_arr), (y_cat_name, y_exp_arr)) in enumerate(zip(x_expanded_arrays.items(), y_expanded_arrays.items())):
-            # Check category names match, in the same order.
-            if check_cat_names and x_cat_name != y_cat_name:
-                raise AssertionError(
-                    f"The category arrays at index {i} have different names: '{x_cat_name}' vs '{y_cat_name}'.\n{extra_info}")
-
-            # rt.DateTimeNano category_array loses type info by transitioning from DateTimeNano to FastArray
-            if not isinstance(x.category_array, DateTimeBase):
-                # See the equivalent check below in the 'strict' version for a comment
-                # on why the types must be exactly the same.
-                assert type(x_exp_arr) == type(y_exp_arr), \
-                    f"The category arrays at index {i} have different types: {type(x_exp_arr)} vs. {type(y_exp_arr)}.\n{extra_info}"
-
             assert_array_equal(x_exp_arr, y_exp_arr, err_msg=err_msg + extra_info)
             isnan_kinds = 'iuf'  # dtype 'kinds' for which FastArray supports .isnan()
             if np.dtype(x_exp_arr.dtype).kind in isnan_kinds:
@@ -86,21 +91,6 @@ def assert_categorical_equal(
     else:
         # Check categories match.
         for i, ((x_cat_name, x_cat_arr), (y_cat_name, y_cat_arr)) in enumerate(zip(x_cat_dict.items(), y_cat_dict.items())):
-            # Check category names match, in the same order.
-            if check_cat_names and x_cat_name != y_cat_name:
-                raise AssertionError(
-                    f"The category arrays at index {i} have different names: '{x_cat_name}' vs '{y_cat_name}'.\n{extra_info}")
-
-            # rt.DateTimeNano category_array loses type info by transitioning from DateTimeNano to FastArray
-            if not isinstance(x.category_array, DateTimeBase):
-                # The category array types must match exactly; if we only checked the dtypes (below) or that
-                # one type was equal to or a subtype of the other, the semantic meaning of the data could be
-                # lost. For example, consider if this array was a raw integer array in one Categorical and a
-                # Date array in the other -- even if they contain the same underlying data, the Date type provides
-                # some different interpretation/semantics on top of that data compared to a plain array.
-                assert type(x_cat_arr) == type(y_cat_arr), \
-                    f"The category arrays at index {i} have different types: {type(x_cat_arr)} vs. {type(y_cat_arr)}.\n{extra_info}"
-
             # Check category dtypes match. If we're doing the relaxed form of this check,
             # only require that the dtypes have the same 'kind'.
             x_cat_arr_dtype = np.dtype(x_cat_arr.dtype)
@@ -126,6 +116,9 @@ def assert_categorical_equal(
                     x_cat_arr.isnan(), y_cat_arr.isnan(),
                     err_msg=f"Different NaN/invalid values between the category arrays at index {i}.\n{extra_info}")
 
+        # The category array(s) match, check the underlying data matches too.
+        assert_array_equal(x._fa, y._fa)
+
 
 def assert_array_or_cat_equal(
     x: np.ndarray,
@@ -134,6 +127,7 @@ def assert_array_or_cat_equal(
     err_msg: Optional[str] = '',
     relaxed_cat_check: bool = False,
     check_cat_names: bool = True,
+    check_cat_types: bool = True,
     exact_dtype_match: bool = True,
 ):
     # TODO: Add optional flag parameters to customize the checks; e.g. we might want
@@ -150,8 +144,12 @@ def assert_array_or_cat_equal(
     # it with an inf/-inf.
     if isinstance(x, Categorical):
         assert_categorical_equal(
-            x, y, err_msg=err_msg, relaxed_check=relaxed_cat_check,
-            check_cat_names=check_cat_names, exact_dtype_match=exact_dtype_match)
+            x, y, err_msg=err_msg,
+            relaxed_check=relaxed_cat_check,
+            check_cat_names=check_cat_names,
+            check_cat_types=check_cat_types,
+            exact_dtype_match=exact_dtype_match
+        )
 
     # TODO: Implement handler for DateTimeNano which checks the timezones match up for the two instances.
 
