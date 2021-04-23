@@ -2062,6 +2062,10 @@ def absolute(*args,**kwargs):
     return _unary_func(np.absolute,*args,**kwargs)
 
 #-------------------------------------------------------
+def power(*args,**kwargs):
+    return _unary_func(np.power,*args,**kwargs)
+
+#-------------------------------------------------------
 def abs(*args,**kwargs):
     """
     This will check for numpy array first and call np.abs
