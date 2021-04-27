@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Collection, Dict, List, NamedTuple, Optional, 
 import numpy as np
 import numba as nb
 
+from .config import get_global_settings
 from .rt_utils import alignmk, mbget, merge_prebinned, get_default_value
 from .rt_timers import GetNanoTime
 from .rt_numpy import (
@@ -548,7 +549,7 @@ def _get_keep_ncountgroup(grouping: 'Grouping', keep: Optional[str]) -> FastArra
 # TODO: There seems to be some flakiness or race condition when parallel=True for this function;
 #       the output is sometimes different given the same inputs, which leads to correctness issues.
 #       The issue does not occur when parallel=False or when NUMBA_DISABLE_JIT=1 is set (to disable jitting).
-@nb.njit(parallel=False, cache=True, nogil=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def _build_right_fancyindex_impl(
     left_rows_with_right_keyids: np.ndarray,
     right_iFirstGroup: np.ndarray,
@@ -604,7 +605,7 @@ def _build_right_fancyindex_impl(
                     right_fancyindex[fancy_row_offset + i] = right_iGroup[curr_group_offset + i]
 
 
-@nb.njit(parallel=True, cache=True, nogil=True)
+@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
 def _fancy_index_fetch_keymap(left_keyid_to_right_keyid_map: np.ndarray, left_ikey: np.ndarray, invalid_value: int, output: np.ndarray):
     """
     This function is a temporary, performance-oriented workaround for the left<->right key mappings being
@@ -788,7 +789,7 @@ def _build_right_fancyindex(
     return right_fancyindex
 
 
-@nb.njit(parallel=True, cache=True, nogil=True)
+@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
 def _partial_repeat(arr: np.ndarray, repeats_cumsum: np.ndarray, output: np.ndarray):
     """
     Partial implementation of np.repeat.
@@ -834,7 +835,7 @@ def _partial_repeat(arr: np.ndarray, repeats_cumsum: np.ndarray, output: np.ndar
             output[output_start_index + j] = arr[i]
 
 
-@nb.njit(parallel=True, cache=True, nogil=True)
+@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
 def _fused_arange_repeat(repeats_cumsum: np.ndarray, output: np.ndarray):
     """
     Fused implementation of np.arange and np.repeat.
