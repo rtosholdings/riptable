@@ -2512,6 +2512,41 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue((TimeSpan(['12:00:00'])[0] == '12:00:00').all())
 
 
+class TestTimeZone(unittest.TestCase):
+    def test_equal_positive(self) -> None:
+        tz1 = TimeZone(from_tz='NYC', to_tz='GMT')
+        tz2 = TimeZone(from_tz='NYC', to_tz='GMT')
+
+        # The two instances should be considered equal since they have
+        # equal `from_tz` and `to_tz` inputs.
+        self.assertEqual(tz1, tz2)
+
+    def test_equal_negative_diff_fromtz(self) -> None:
+        tz1 = TimeZone(from_tz='GMT', to_tz='NYC')
+        tz2 = TimeZone(from_tz='NYC', to_tz='NYC')
+
+        # The two instances should be considered unequal since they have
+        # unequal `from_tz` inputs.
+        self.assertNotEqual(tz1, tz2)
+
+    def test_equal_negative_diff_totz(self) -> None:
+        tz1 = TimeZone(from_tz='NYC', to_tz='NYC')
+        tz2 = TimeZone(from_tz='NYC', to_tz='GMT')
+
+        # The two instances should be considered unequal since they have
+        # unequal `to_tz` inputs.
+        self.assertNotEqual(tz1, tz2)
+
+    def test_repr(self) -> None:
+        test_tz = TimeZone(from_tz='NYC', to_tz='GMT')
+
+        # Quick check that we can call repr() on the object (without some kind of
+        # exception being raised) and that it returns a reasonable result.
+        test_tz_repr = repr(test_tz)
+        self.assertEqual(test_tz_repr, "TimeZone(from_tz='NYC', to_tz='GMT')")
+
+
+
 # TODO RIP-486 add tests for other date types from rt_datetime
 @pytest.mark.parametrize(
     "typ,arrays",
