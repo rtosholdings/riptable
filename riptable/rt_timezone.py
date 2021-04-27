@@ -1,4 +1,8 @@
-__all__ = ['TimeZone']
+from __future__ import annotations
+
+__all__ = [
+    'TimeZone'
+]
 
 import numpy as np
 
@@ -310,28 +314,39 @@ DUBLIN_OFFSET_DST = -1
 DUBLIN_OFFSET = 0
 
 
-class TimeZone():
-    '''
-    Stores daylight savings cutoff information so UTC times can be translated to zone-specifc times.
-    Every DateTimeNano object holds a TimeZone object.
-    All timezone-related conversions / fixups will be handled by the TimeZone class
+class TimeZone:
+    """
+    Stores daylight savings cutoff information so UTC times can be translated to zone-specific times.
+    Every `DateTimeNano` object holds a `TimeZone` object.
+    All timezone-related conversions / fixups will be handled by the `TimeZone` class.
 
-    Each TimeZone instance holds the following variables:
+    Parameters
+    ----------
+    from_tz : str, defaults to None
+    to_tz : str
 
-    _from_tz      : shorthand timezone string from the constructor - the timezone that the time originates from
-    _dst_cutoffs  : lookup array for converting times from constructor to UTC nano in GMT time
+    Attributes
+    ----------
+    _from_tz : str
+        shorthand timezone string from the constructor - the timezone that the time originates from
+    _dst_cutoffs : numpy.ndarray
+        lookup array for converting times from constructor to UTC nano in GMT time
+    _to_tz : str
+        shorthand timezone string from the constructor - the timezone that the time will be displayed in
+    _timezone_str
+        Python-friendly timezone string used for displaying individual times.
+        NOTE: This is actually a property, not a regular attribute.
+    _dst_reverse : numpy.ndarray
+        lookup array for DateTimeNano to display time in the correct timezone, accounting for daylight savings.
+    _offset
+        offset from GMT for display (non daylight savings)
+    _fix_offset
+        the offset from the timezone of origin
 
-    _to_tz        : shorthand timezone string from the constructor - the timezone that the time will be displayed in
-    _timezone_str : Python-friendly timezone string used for displaying individual times
-    _dst_reverse  : lookup array for DateTimeNano to display time in the correct timezone, accounting for daylight savings
-    _offset       : offset from GMT for display (non daylight savings)
-    _fix_offset   : the offset from the timezone of origin
-
-    Notes:
+    Notes
     -----
     'UTC' is not a timezone, but accepted as an alias for GMT
-
-    '''
+    """
     valid_timezones = ('NYC', 'DUBLIN', 'GMT', 'UTC')
     timezone_long_strings = {
         'NYC'    : 'America/New_York',
@@ -339,10 +354,10 @@ class TimeZone():
         'GMT'    : 'GMT',
         'UTC'    : 'GMT'
     }
-    tz_error_msg = f"If constructuring from strings specify a timezone in from_tz keyword. Valid options: {valid_timezones}. Example: dtn = DateTimeNano(['2018-12-13 10:30:00'], from_tz='NYC')"
+    tz_error_msg = f"If constructing from strings specify a timezone in from_tz keyword. Valid options: {valid_timezones}. Example: dtn = DateTimeNano(['2018-12-13 10:30:00'], from_tz='NYC')"
 
     #------------------------------------------------------------
-    def __init__(self, from_tz=None, to_tz='NYC'):
+    def __init__(self, from_tz: str = None, to_tz: str = 'NYC'):
 
         if from_tz is None:
             raise ValueError(self.tz_error_msg)
@@ -448,6 +463,15 @@ class TimeZone():
             result = where(is_dst, dst_offset, reg_offset)
 
         return result
+
+    def __repr__(self):
+        return f"{type(self).__qualname__}(from_tz='{self._from_tz}', to_tz='{self._to_tz}')"
+
+    def __eq__(self, other: TimeZone):
+        return \
+            self.__class__ == other.__class__ and \
+            self._from_tz == other._from_tz and \
+            self._to_tz == other._to_tz
 
     #------------------------------------------------------------
     def copy(self):
