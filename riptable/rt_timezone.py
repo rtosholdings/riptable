@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 __all__ = [
     'TimeZone'
 ]
@@ -467,7 +465,7 @@ class TimeZone:
     def __repr__(self):
         return f"{type(self).__qualname__}(from_tz='{self._from_tz}', to_tz='{self._to_tz}')"
 
-    def __eq__(self, other: TimeZone):
+    def __eq__(self, other: 'TimeZone'):
         return \
             self.__class__ == other.__class__ and \
             self._from_tz == other._from_tz and \
