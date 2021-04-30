@@ -1,4 +1,6 @@
-__all__ = ['FAString', ]
+__all__ = [
+    'FAString'
+]
 
 import warnings
 try:
@@ -10,9 +12,12 @@ except ImportError:
 import re
 import numpy as np
 import numba as nb
+
+from .config import get_global_settings
 from .rt_fastarray import FastArray
 from .rt_numpy import empty_like, empty, where, ones, zeros
 from .rt_enum import TypeRegister
+
 
 # NOTE YOU MUST INSTALL tbb
 # conda install tbb
@@ -39,7 +44,7 @@ from .rt_enum import TypeRegister
 # Keeping it as 1d and remembering the itemsize is 10% faster on large arrays, and even faster on small arrays
 # If recycling kicks in (only works on 1d arrays), it is 30% faster
 # Also note: On Windows as of Aug 2019, prange is much slower without tbb installed
-# 
+#
 # subclass from FastArray
 class FAString(FastArray):
 
@@ -202,7 +207,7 @@ class FAString(FastArray):
         return self._apply_func(func, func, *args, dtype=dtype, input=self)
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_upper_inplace(src, itemsize):
         # loop over all rows
         for i in range(len(src) / itemsize):
@@ -216,7 +221,7 @@ class FAString(FastArray):
                     src[rowpos+j] = c-32
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_upper(src, itemsize, dest):
         # loop over all rows
         for i in range(len(src) / itemsize):
@@ -231,7 +236,7 @@ class FAString(FastArray):
                     dest[rowpos+j] = c
 
     # -----------------------------------------------------
-    @nb.jit(parallel=True, nopython=True, cache=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def nb_pupper(src, itemsize, dest):
         # loop over all rows
         for i in nb.prange(np.int64(len(src) / itemsize)):
@@ -246,7 +251,7 @@ class FAString(FastArray):
                     dest[rowpos+j] = c
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_lower(src, itemsize, dest):
         # loop over all rows
         for i in range(len(src) / itemsize):
@@ -261,7 +266,7 @@ class FAString(FastArray):
                     dest[rowpos+j] = c
 
     # -----------------------------------------------------
-    @nb.jit(parallel=True, nopython=True, cache=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def nb_plower(src, itemsize, dest):
         # loop over all rows
         for i in nb.prange(len(src) / itemsize):
@@ -276,7 +281,7 @@ class FAString(FastArray):
                     dest[rowpos+j] = c
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_removetrailing(src, itemsize, dest, removechar):
         # loop over all rows
         for i in range(len(src) / itemsize):
@@ -298,7 +303,7 @@ class FAString(FastArray):
 
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_reverse_inplace(src, itemsize):
         # loop over all rows
         for i in range(len(src) / itemsize):
@@ -318,7 +323,7 @@ class FAString(FastArray):
                 end -= 1
 
     # -----------------------------------------------------
-    @nb.jit( cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_reverse(src, itemsize, dest):
         # loop over all rows
         for i in range(len(src) / itemsize):
@@ -339,7 +344,7 @@ class FAString(FastArray):
 
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_strlen(src, itemsize, dest):
         # loop over all rows
         for i in nb.prange(len(src) // itemsize):
@@ -357,7 +362,7 @@ class FAString(FastArray):
     nb_pstrlen = nb.njit(cache=True, parallel=True)(nb_strlen.py_func)
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_strpbrk(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -380,7 +385,7 @@ class FAString(FastArray):
                 dest[i] = -1
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_strstr(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -402,7 +407,7 @@ class FAString(FastArray):
                     break
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_contains(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -422,7 +427,7 @@ class FAString(FastArray):
                     break
 
     # -----------------------------------------------------
-    @nb.jit(parallel=True, nopython=True, cache=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def nb_pcontains(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -442,7 +447,7 @@ class FAString(FastArray):
                     break
 
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_endswith(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -473,7 +478,7 @@ class FAString(FastArray):
                         dest[i] = True
                     
     # -----------------------------------------------------
-    @nb.jit(nopython=True, cache=True)
+    @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_startswith(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -495,7 +500,7 @@ class FAString(FastArray):
                     dest[i] = True
 
     # -----------------------------------------------------
-    @nb.jit(parallel=True, nopython=True, cache=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def nb_pstartswith(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows

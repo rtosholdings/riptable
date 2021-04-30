@@ -4,9 +4,8 @@ import shutil
 import sys
 from typing import Optional
 
-import unittest
-import pytest
-
+from numpy.random import default_rng
+import riptable as rt
 from riptable import *
 from riptable.rt_enum import CategoryMode, SDSFlag
 from riptable.rt_sds import SDSMakeDirsOn
@@ -15,6 +14,12 @@ from riptable.Utils.rt_testing import assert_array_equal_, assert_categorical_eq
 from riptable.Utils.rt_testdata import load_test_data
 
 from riptable.tests.test_utils import get_all_categorical_data
+
+from riptable.testing.array_assert import assert_array_or_cat_equal
+from riptable.testing.randgen import create_test_dataset
+
+import unittest
+import pytest
 
 # change to true since we write into /tests directory
 SDSMakeDirsOn()
@@ -1404,6 +1409,106 @@ def test_empty_roundtrip(data, tmpdir):
     data2 = load_sds(p)
     assert isinstance(data2, data.__class__)
     assert data.shape == data2.shape, f'saved shape should equal original shape'
+
+
+@pytest.mark.parametrize('rng_seed', [590518374])
+@pytest.mark.parametrize('include_date', [
+    pytest.param(False, marks=pytest.mark.xfail(reason="Test fails due to the issue described in https://github.com/rtosholdings/riptable/issues/138")),
+    pytest.param(True, marks=pytest.mark.xfail(reason="Categorical with Date-typed category does not currently preserve the type (Date) of the category data during round-tripping through SDS."))
+])
+def test_multi_section_sds_stacked_load_of_single_cat(tmp_path, request, rng_seed: int, include_date: bool) -> None:
+    """
+    Test that loading a column(s) from a single SDS file containing multiple 'sections'
+    (due to appending or using rt.sds_concat()) works as expected.
+    The column(s) should have the correct length and be gap-filled wherever the column(s) do(es)
+    not appear in some section(s) of the file.
+
+    This test is a repro/test for https://github.com/rtosholdings/riptable/issues/138
+    """
+    rng = default_rng(rng_seed)
+
+    # Randomly generate the rowcounts for the test datasets we'll generate.
+    ds_count = 10
+    min_rowcount = 5
+    max_rowcount = 20
+    ds_rowcounts = rng.integers(low=min_rowcount, high=max_rowcount, size=ds_count, endpoint=True)
+
+    # Generate the test datasets.
+    test_dss = [
+        create_test_dataset(
+            rng=rng, rowcount=int(x),
+            include_dict_cat=True,
+            include_date=include_date
+        )
+        for x in ds_rowcounts
+    ]
+    test_ds_keys = set(test_dss[0].keys())
+
+    # For some of the test datasets, drop the 'deliverable_symbol' column --
+    # this lets us test SDS performs gap-filling as expected when loading.
+    drop_cat_col_prob = 0.3
+    fa_col_name = 'open_price'
+    cat_col_name = 'deliverable_symbol'
+    dropped_col_names = [fa_col_name, cat_col_name]
+    for dropped_col_name in dropped_col_names:
+        assert dropped_col_name in test_dss[0]  # sanity check to make sure we don't attempt to drop a non-existent column.
+    drop_cat_col = rng.choice(2, size=len(test_dss), replace=True, p=[drop_cat_col_prob, 1.0 - drop_cat_col_prob]).astype(np.bool_)
+    assert 0 < drop_cat_col.sum() < len(test_dss), "Bad random data for drop-column flags."
+
+    for do_drop_cat, test_ds in zip(drop_cat_col, test_dss):
+        if do_drop_cat:
+            test_ds.col_remove(dropped_col_names)
+
+    # Save the datasets to a single SDS file by creating the file then appending to it.
+    data_path = tmp_path / f"{request.node.originalname}-{rng_seed}.sds"
+    test_dss[0].save(data_path, overwrite=True)
+    for i in range(1, len(test_dss)):
+        test_dss[i].save(data_path, append=f"test_section_{i}")
+
+    # Row-concat the in-memory Datasets so we have an expected result
+    # to compare the output of rt.load_sds(..., stack=True) against.
+    inmem_stacked_ds = rt.Dataset.concat_rows(test_dss)
+    assert test_ds_keys == set(inmem_stacked_ds.keys())
+
+    # First, check whether the Categorical column is gap-filled as expected when we load the entire Dataset.
+    sds_stacked_allcols_ds = rt.load_sds(data_path, include=inmem_stacked_ds.keys(), stack=True)
+    assert test_ds_keys == set(sds_stacked_allcols_ds.keys())
+    assert inmem_stacked_ds.get_nrows() == sds_stacked_allcols_ds.get_nrows()
+    for col_name in test_ds_keys:
+        inmem_col = inmem_stacked_ds[col_name]
+        sds_loaded_col = sds_stacked_allcols_ds[col_name]
+
+        # Verify the columns match up.
+        assert_array_or_cat_equal(
+            inmem_col, sds_loaded_col,
+            err_msg=f"The array data for column '{col_name}' does not match the expected result.",
+            # Categorical equality comparison options.
+            relaxed_cat_check=True
+        )
+
+    # For debugging purposes, determine how many rows are in the datasets where the column was dropped.
+    dropped_row_count = sum(map(lambda do_drop, ds: ds.get_nrows() if do_drop else 0, drop_cat_col, test_dss))
+    print(f"Datasets where the target column was dropped account for {dropped_row_count} rows.")
+
+    # Try to load the column(s) we randomly dropped from some of the Datasets.
+    dropped_col_name_lists = []
+    # First try loading all of the dropped columns plus one column present in all sections.
+    dropped_col_name_lists.append(['close_price', *dropped_col_names])
+    dropped_col_name_lists.append(dropped_col_names)
+    dropped_col_name_lists.extend([[x] for x in dropped_col_names])
+    for dropped_col_name_list in dropped_col_name_lists:
+        with rt.load_sds(data_path, include=dropped_col_name_list, stack=True) as sds_stacked_dropcol_ds:
+            assert sds_stacked_dropcol_ds.get_ncols() == len(dropped_col_name_list)
+            for dropped_col_name in dropped_col_name_list:
+                assert dropped_col_name in sds_stacked_dropcol_ds
+            for dropped_col_name in dropped_col_name_list:
+                assert_array_or_cat_equal(
+                    inmem_stacked_ds[dropped_col_name],
+                    sds_stacked_dropcol_ds[dropped_col_name],
+                    err_msg=f"The array data for column '{dropped_col_name}' does not match the expected result.\tDropped columns: {dropped_col_name_list}",
+                    # Categorical equality comparison options.
+                    relaxed_cat_check=True
+                )
 
 
 if __name__ == "__main__":

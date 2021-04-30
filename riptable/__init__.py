@@ -199,6 +199,7 @@ from .rt_numpy import (
     log,
     log10,
     absolute,
+    power,
 )
 
 from .rt_grouping import Grouping, hstack_groupings, combine2groups, merge_cats

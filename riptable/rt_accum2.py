@@ -162,6 +162,20 @@ class Accum2(GroupByOps, FastArray):
         return super().__len__()
 
     # ------------------------------------------------------------
+    def __del__(self):
+        """
+        Called when a Categorical is deleted.
+        """
+        # python has trouble deleting objects with circular references
+        del self.grouping
+        self.grouping = None
+        del self._cat_cols
+        del self._cat_rows
+        if self._dataset: del self._dataset
+        if self._gb_keychain: del self._gb_keychain
+        if self._ylabel: del self._ylabel
+
+    # ------------------------------------------------------------
     @property
     def size(self):
         return self.__len__()

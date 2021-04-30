@@ -1,10 +1,18 @@
 __all__ = ['GroupByOps']
+#import abc
+from typing import TYPE_CHECKING, Optional
 import warnings
+
 import numpy as np
 import riptide_cpp as rc
+
 from .rt_enum import GB_FUNCTIONS, GB_STRING_ALLOWED, GB_FUNC_COUNT, GB_PACKUNPACK, TypeRegister, ApplyType
+from .rt_grouping import Grouping
 from .rt_numpy import zeros_like, bool_to_fancy, empty_like, groupbyhash
-from .rt_timers import tt
+
+if TYPE_CHECKING:
+    from .rt_dataset import Dataset
+
 
 #=====================================================================================================
 #=====================================================================================================
@@ -46,6 +54,13 @@ class GroupByOps(object):
         'amin' : 'min',
         'amax' : 'max',
     }
+
+    # TODO: Consider making GroupByOps an abc, and defining .grouping as a property;
+    #       that'll be a bit cleaner and more robust than using a type annotation here
+    #       to indicate the derived classes are expected to have a property/attribute
+    #       with that name (per the docstring for GroupByOps).
+    #       Maybe also include 'gb_keychain' and '_dataset', they're both used within this class.
+    grouping: Grouping
 
 
     def __init__(self):
@@ -126,7 +141,7 @@ class GroupByOps(object):
         return self._iter_internal()
 
     #---------------------------------------------------------------
-    def _iter_internal(self, dataset=None):
+    def _iter_internal(self, dataset: Optional['Dataset'] = None):
         '''
         Generates pairs of labels and the stored dataset sliced by their fancy indices.
         Right now, this is only called by categorical. Groupby has a faster way of return dataset slices.
@@ -179,7 +194,7 @@ class GroupByOps(object):
             yield self.key_from_bin(i), cds
 
     #---------------------------------------------------------------
-    def get_groupings(self, filter=None):
+    def get_groupings(self, filter: Optional[np.ndarray] = None):
         '''
         Parameters
         ----------

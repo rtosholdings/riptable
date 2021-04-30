@@ -539,7 +539,8 @@ class FastArray(np.ndarray):
 
         Returns
         -------
-        The array name or if the name does not exist, None is retuned.
+        str, optional
+            The array name; or None if the array has not been named.
 
         See Also
         --------
@@ -563,7 +564,8 @@ class FastArray(np.ndarray):
 
         Returns
         -------
-        FastArray (or subclass)
+        FastArray
+            Returns 'self', so this will be the same type as the instance it's called on.
 
         Examples
         --------
@@ -812,7 +814,7 @@ class FastArray(np.ndarray):
         '''
         if isinstance(fld, np.ndarray):
             #result= super(FastArray, self).__getitem__(fld).view(FastArray)
-            if fld.dtype == np.bool:
+            if fld.dtype == np.bool_:
                 # make sure no striding
                 # NOTE: will fail on self.dtype.byteorder as little endian
                 if self.flags.f_contiguous:
@@ -1138,7 +1140,7 @@ class FastArray(np.ndarray):
             raise ValueError(f'keep must be either "first", "last" or False')
 
         # create an return array all set to True
-        result = ones(len(arr), dtype=np.bool)
+        result = ones(len(arr), dtype=np.bool_)
 
         g = Grouping(arr._fa if hasattr(arr,'_fa') else arr)
 
@@ -1818,7 +1820,7 @@ class FastArray(np.ndarray):
     #-------------------------------------------------------
     def _internal_self_compare(self, math_op, periods=1, fancy=False):
         ''' internal routine used for differs and transitions '''
-        result = empty_like(self, dtype=np.bool)
+        result = empty_like(self, dtype=np.bool_)
 
         if periods == 0:
             raise ValueError("periods of 0 is invalid for transitions")
@@ -2392,7 +2394,7 @@ class FastArray(np.ndarray):
                                 if (FastArray.Verbose > 2):
                                     print(f"**logical function called {ufunc} args: {args}")
                                 is_logical = 1
-                                final_dtype = np.bool
+                                final_dtype = np.bool_
 
 
                         if fast_function is None:
@@ -2545,7 +2547,7 @@ class FastArray(np.ndarray):
                     if (len(args[0])==0): raise ValueError("min/max arg is an empty sequence.")
 
                     # min/max/nanmin/nanmax -- same result
-                    if dtype == np.bool:
+                    if dtype == np.bool_:
                         result =np.bool(result)
                     else:
                         result=dtype.type(result)
@@ -2568,7 +2570,7 @@ class FastArray(np.ndarray):
             if ufunc.nin==2:
                 final_num=-1
                 if final_dtype is not None:
-                    if final_dtype == np.bool:
+                    if final_dtype == np.bool_:
                         final_num=0
                     else:
                         final_num=final_dtype.num
