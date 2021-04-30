@@ -2976,3 +2976,43 @@ def test_multikey_categorical_isin(a, b, a_in_b, b_in_a):
     f_msg = 'expected to be consistent with cat1.as_singlekey().isin(cat2.as_singlekey()) operation.'
     assert_array_equal(a.as_singlekey().isin(b.as_singlekey()), a.isin(b), f_msg)
     assert_array_equal(b.as_singlekey().isin(a.as_singlekey()), b.isin(a), f_msg)
+
+
+_make_unique_test_cases = pytest.mark.parametrize('cat, expected', [
+    (rt.Cat([1, 1, 2, 2], ['a', 'a']), rt.Cat([1, 1, 1, 1], ['a'])),
+    (rt.Cat([2, 2, 2, 2], ['a', 'a']), rt.Cat([1, 1, 1, 1], ['a'])),
+    (rt.Cat([1, 2, 3, 3], ['a', 'a', 'b']), rt.Cat([1, 1, 2, 2], ['a', 'b'])),
+    (rt.Cat([0, 0, 1, 1], ['a', 'a'], base_index=0), rt.Cat([0, 0, 0, 0], ['a'], base_index=0)),
+    (rt.Cat([1, 1, 1, 1], ['a', 'a'], base_index=0), rt.Cat([0, 0, 0, 0], ['a'], base_index=0)),
+    (rt.Cat([0, 0, 1, 1], ['a', 'b'], base_index=0), rt.Cat([0, 0, 1, 1], ['a', 'b'], base_index=0)),
+
+    (rt.Cat([1, 1, 2, 2, 3], [99, 99, 101], ), rt.Cat([1, 1, 1, 1, 2], [99, 101])),
+    (rt.Cat([0, 0, 1, 1], [99, 99], base_index=0), rt.Cat([0, 0, 0, 0], [99], base_index=0)),
+    (rt.Cat([0, 0, 1, 1], [99, 101], base_index=0), rt.Cat([0, 0, 1, 1], [99, 101], base_index=0)),
+
+    (rt.Cat([0, 0, 1, 1, 2, 2], ['a', 'a'], ), rt.Cat([0, 0, 1, 1, 1, 1], ['a'], )),
+    (rt.Cat([0, 0, 1, 1, 2, 2, 3, 3], ['a', 'a', 'b'], ), rt.Cat([0, 0, 1, 1, 1, 1, 2, 2], ['a', 'b'], )),
+])
+
+
+@_make_unique_test_cases
+def test_category_make_unique_not_inplace(cat, expected):
+    res = cat.category_make_unique(inplace=False)
+    assert (res == expected).all()
+
+
+@_make_unique_test_cases
+def test_category_make_unique_inplace(cat, expected):
+    res = cat.category_make_unique(inplace=True)
+    assert res is None
+    assert (cat == expected).all()
+
+
+@pytest.mark.parametrize('base_index', [0, 1])
+def test_category_make_unique_multikey(base_index):
+    c1 = Categorical(np.arange(10) % 2, ['a', 'a'], base_index=base_index)
+    c2 = Categorical(np.arange(10) % 3, ['a', 'b', 'c'], base_index=base_index)
+    cat = Categorical([c1, c2], base_index=base_index)
+
+    res = cat.category_make_unique(inplace=False)
+    assert list(cat) == list(res)

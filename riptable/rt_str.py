@@ -2,12 +2,20 @@ __all__ = [
     'FAString'
 ]
 
+import warnings
+try:
+    # This will be used to cache strlen for version of Python 3.7 and higher
+    from functools import cached_property
+except ImportError:
+    cached_property = property
+
+import re
 import numpy as np
 import numba as nb
 
 from .config import get_global_settings
 from .rt_fastarray import FastArray
-from .rt_numpy import empty_like, empty
+from .rt_numpy import empty_like, empty, where, ones, zeros
 from .rt_enum import TypeRegister
 
 
@@ -39,6 +47,9 @@ from .rt_enum import TypeRegister
 #
 # subclass from FastArray
 class FAString(FastArray):
+
+    _APPLY_PARALLEL_THRESHOLD = 10_000
+
     def __new__(cls, arr, ikey=None, **kwargs):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
@@ -89,6 +100,13 @@ class FAString(FastArray):
         '''
         return self.view(self._intype + str(self._itemsize))
 
+    @property
+    def n_elements(self):
+        """
+        The number of elements in the original string array
+        """
+        return len(self) // self._itemsize
+
     # -----------------------------------------------------
     def possibly_convert_tostr(self, arr):
         '''
@@ -107,11 +125,18 @@ class FAString(FastArray):
 
         return arr
 
+    def _maybe_output_to_categorical(self, out):
+        if self._ikey is not None:
+            from .rt_categorical import Categorical
+            out = Categorical(self._ikey + 1, out, base_index=1)
+            out.category_make_unique(inplace=True)
+        return out
+
     # -----------------------------------------------------
-    def _apply_func(self, func, funcp, *args, dtype=None, input=None):
+    def _apply_func(self, func, funcp, *args, dtype=None, input=None, filtered_fill_value=None):
         # can optionally pass in dtype
         # check when to flip into parallel mode.  > 10,000 go to parallel routine
-        if len(self) > 10_000 and funcp is not None:
+        if len(self) >= self._APPLY_PARALLEL_THRESHOLD and funcp is not None:
             func = funcp
         if dtype is None:
             dest = empty(len(self), self.dtype)
@@ -119,8 +144,7 @@ class FAString(FastArray):
             dest._intype = self._intype
         else:
             # user requested specific output dtype
-            arrlen = len(self) // self._itemsize
-            dest = empty(arrlen, dtype)
+            dest = empty(self.n_elements, dtype)
 
         if input is None:
             func(self._itemsize, dest, *args)
@@ -130,11 +154,15 @@ class FAString(FastArray):
             func(input, input._itemsize, dest, *args)
 
         if dtype is None:
-            dest =dest.view(dest._intype + str(dest._itemsize))
+            dest = dest.view(dest._intype + str(dest._itemsize))
 
         # check for categorical key re-expansion
         if self._ikey is not None:
-            return dest[self._ikey]
+            if dest.dtype.kind == 'S':
+                return self._maybe_output_to_categorical(dest)
+            else:
+                unfiltered = self._ikey >= 0
+                return where(unfiltered, dest[self._ikey], filtered_fill_value)
         return dest
 
     # -----------------------------------------------------
@@ -319,7 +347,7 @@ class FAString(FastArray):
     @nb.njit(cache=get_global_settings().enable_numba_cache)
     def nb_strlen(src, itemsize, dest):
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
             strlen= 0
@@ -330,6 +358,8 @@ class FAString(FastArray):
                 strlen += 1
             # store length of string
             dest[i] = strlen
+
+    nb_pstrlen = nb.njit(cache=True, parallel=True)(nb_strlen.py_func)
 
     # -----------------------------------------------------
     @nb.njit(cache=get_global_settings().enable_numba_cache)
@@ -363,36 +393,30 @@ class FAString(FastArray):
             # loop over all chars in the string
             rowpos = i * itemsize
             dest[i] = -1
-            # loop over all chars in the string
-            for j in range(itemsize):
+            # loop over all substrings of sufficient length
+            for j in range(itemsize - str2len + 1):
                 # check if enough space left
-                if (itemsize - j) < str2len: 
-                    break
-                c= src[rowpos + j]
-                k =0
-                while (k < str2len):
+                k = 0
+                while k < str2len:
                     if src[rowpos + j + k] != str2[k]:
                         break
                     k += 1
-                if k==str2len:
+                if k == str2len:
                     # store location of match
                     dest[i] = j
                     break
 
     # -----------------------------------------------------
     @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_strstrb(src, itemsize, dest, str2):
+    def nb_contains(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
         for i in range(len(src) / itemsize):
             rowpos = i * itemsize
             dest[i] = False
-            # loop over all chars in the string
-            for j in range(itemsize):
-                # check if enough space left
-                if (itemsize - j) < str2len: 
-                    break
-                k =0
+            # loop over all substrings of sufficient length
+            for j in range(itemsize - str2len + 1):
+                k = 0
                 while (k < str2len):
                     if src[rowpos + j + k] != str2[k]:
                         break
@@ -404,18 +428,15 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
-    def nb_pstrstrb(src, itemsize, dest, str2):
+    def nb_pcontains(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
         for i in nb.prange(np.int64(len(src) / itemsize)):
             rowpos = i * itemsize
             dest[i] = False
-            # loop over all chars in the string
-            for j in range(itemsize):
-                # check if enough space left
-                if (itemsize - j) < str2len: 
-                    break
-                k =0
+            # loop over all substrings of sufficient length
+            for j in range(itemsize - str2len + 1):
+                k = 0
                 while (k < str2len):
                     if src[rowpos + j + k] != str2[k]:
                         break
@@ -556,7 +577,6 @@ class FAString(FastArray):
         FAString(['this','that','test']).reverse
         '''
         return self._apply_func(self.nb_reverse, self.nb_reverse)
-        return self.backtostring
 
     # -----------------------------------------------------
     @property
@@ -591,7 +611,7 @@ class FAString(FastArray):
         return self._apply_func(self.nb_removetrailing, self.nb_removetrailing, remove)
 
     # -----------------------------------------------------
-    @property
+    @cached_property     # only cached for Python 3.7 or higher
     def strlen(self):
         '''
         return the string length of every string (bytes or unicode)
@@ -601,7 +621,8 @@ class FAString(FastArray):
         >>> FAString(['this  ','that ','test']).strlen
         FastArray([6, 5, 4])
         '''
-        return self._apply_func(self.nb_strlen, self.nb_strlen, dtype=np.int32)
+        return self._apply_func(self.nb_strlen, self.nb_pstrlen, dtype=np.int32,
+                                filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
     def strpbrk(self, str2):
@@ -624,8 +645,8 @@ class FAString(FastArray):
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
        
-        return self._apply_func(self.nb_strpbrk, self.nb_strpbrk, str2, dtype=np.int32)
-
+        return self._apply_func(self.nb_strpbrk, self.nb_strpbrk, str2, dtype=np.int32,
+                                filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
     def strstr(self, str2):
@@ -643,18 +664,23 @@ class FAString(FastArray):
         FastArray([-1, 2, -1])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return zeros(self.n_elements, dtype=np.int32)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
-       
-        return self._apply_func(self.nb_strstr, self.nb_strstr, str2, dtype=np.int32)
+
+        return self._apply_func(self.nb_strstr, self.nb_strstr, str2, dtype=np.int32,
+                                filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
-    def strstrb(self, str2):
+    def contains(self, str2):
         '''
-        return a boolean array where the value is set True if the first index location of the entire substring specified in str2,
-        or False if the substring does not exist
+        Return a boolean array where the value is set True if str2 is a substring of the element
+        or False otherwise. Note this does not support regex like in Pandas.
+        Please use regex_match for that.
 
         Parameters
         ----------
@@ -662,16 +688,27 @@ class FAString(FastArray):
         
         Examples
         --------
-        >>> FAString(['this  ','that ','test']).strstrb('at')
+        >>> FAString(['this  ','that ','test']).contains('at')
         FastArray([False, True, False])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(self.n_elements, dtype=bool)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
-       
-        return self._apply_func(self.nb_strstrb, self.nb_pstrstrb, str2, dtype=np.bool)
+
+        return self._apply_func(self.nb_contains, self.nb_pcontains, str2, dtype=np.bool,
+                                filtered_fill_value=False)
+
+    def strstrb(self, str2):
+        """
+        Deprecated. Please see .contains.
+        """
+        warnings.warn("strstrb is now deprecated and has been renamed to `contains`", DeprecationWarning)
+        return self.contains(str2)
 
     # -----------------------------------------------------
     def startswith(self, str2):
@@ -689,12 +726,16 @@ class FAString(FastArray):
         FastArray([True, False, False])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(self.n_elements, dtype=bool)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
        
-        return self._apply_func(self.nb_startswith, self.nb_pstartswith, str2, dtype=np.bool)
+        return self._apply_func(self.nb_startswith, self.nb_pstartswith, str2, dtype=np.bool,
+                                filtered_fill_value=False)
 
     # -----------------------------------------------------
     def endswith(self, str2):
@@ -712,12 +753,145 @@ class FAString(FastArray):
         FastArray([True, False, False])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(self.n_elements, dtype=bool)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_endswith, self.nb_endswith, str2, dtype=np.bool)
+        return self._apply_func(self.nb_endswith, self.nb_endswith, str2, dtype=np.bool,
+                                filtered_fill_value=False)
+
+    def regex_match(self, regex):
+        '''
+        Return a Boolean array where the value is set True if the string contains str2.
+        str2 may be a normal string or a regular expression.
+        Applies re.search on each element with str2 as the pattern.
+
+        Parameters
+        ----------
+        regex - Perform element-wise regex matching to this regex
+
+        Examples
+        --------
+        >>> FAString(['abab','ababa','abababb']).regex_match('ab$')
+        FastArray([True, False, False])
+        '''
+        if not isinstance(regex, bytes):
+            regex = bytes(regex, 'utf-8')
+        regex = re.compile(regex)
+        vmatch = np.vectorize(lambda x: bool(regex.search(x)))
+        bools = vmatch(self.backtostring)
+        if self._ikey is not None:
+            bools = bools[self._ikey] & (self._ikey >= 0)
+        return bools
+
+    @staticmethod
+    @nb.njit(parallel=True)
+    def _nb_substr(src, out, itemsize, start, stop, strlen):
+        n_elements = len(out)
+        max_chars = 0
+        for elem in nb.prange(n_elements):
+            elem_len = strlen[elem]
+            i, j = start, stop
+            if i < 0:
+                i += elem_len
+            if j < 0:
+                j += elem_len
+            i = max(i, 0)
+            j = min(j, elem_len)
+            for out_pos, pos in enumerate(range(i, j)):
+                char = src[itemsize * elem + pos]
+                out[elem, out_pos] = char
+                max_chars = max(max_chars, out_pos + 1)
+        return out[:, :max_chars]
+
+    @cached_property
+    def _cat_strlen(self):
+        """
+        Same as strlen except for Categoricals it is aligned with the categories
+        as opposed to the full array. Used for substring methods.
+        """
+        if self._ikey is None:
+            return self.strlen
+        else:
+            return FAString(self.backtostring).strlen
+
+    def substr(self, start, stop=None):
+        """
+        Take a substring of each element using slice args.
+        """
+        if stop is None:
+            stop = self._itemsize
+
+        strlen = self._cat_strlen
+
+        if start < 0:
+            if stop < 0:
+                n_chars = stop - start
+            else:
+                n_chars = stop  # we can't tell what the max length at this point
+        elif stop < 0:
+            pos_stop = self._itemsize - stop
+            n_chars = pos_stop - start
+        else:
+            n_chars = stop - start
+        out = zeros((self.n_elements, n_chars), self.dtype)
+        out = self._nb_substr(self, out, self._itemsize, start, stop, strlen)
+        n_chars = out.shape[1]
+        if n_chars == 0:    # empty sub strings everywhere
+            out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
+        else:
+            out = out.ravel().view(f'<{self._intype}{n_chars}')
+        out = self._maybe_output_to_categorical(out)
+        return out
+
+    @staticmethod
+    @nb.njit(parallel=True, cache=True)
+    def _nb_char(src, position, itemsize, strlen, out):
+        broken_at = -1
+        for i in nb.prange(len(position)):
+            pos = position[i]
+            if pos < 0:
+                pos = strlen[i] + pos
+            if pos >= itemsize or pos < 0:
+                return i    # this triggers error below
+            out[i] = src[itemsize * i + pos]
+
+        return broken_at
+
+    def char(self, position):
+        """
+        Take a single character from each element.
+
+        Parameters
+        ----------
+        position: int / np.ndarray
+            The position of the character to be extracted. Negative values respect the
+            length of the individual strings.
+            If an array, the length must be equal to the number of strings.
+            An error is raised if any positions are out of bounds (>= self._itemsize).
+        """
+        if np.ndim(position) == 0:
+            for size in [8, 16, 32, 64]:
+                dtype = getattr(np, f'uint{size}')
+                if self._itemsize <= np.iinfo(dtype).max:
+                    break
+            position = ones(self.n_elements, dtype) * position
+
+        if len(position) != self.n_elements:
+            raise ValueError("position must be a scalar or a vector of the same length as self")
+
+        out = zeros(self.n_elements, self.dtype)
+        strlen = self._cat_strlen
+        broken_at = self._nb_char(self, position, self._itemsize, strlen, out)
+        if broken_at >= 0:
+            raise ValueError(f"Position {position[broken_at]} out of bounds "
+                             f"for string of length {self._itemsize}")
+        out = out.view(f'{self._intype}1')
+        return self._maybe_output_to_categorical(out)
 
 
 # keep as last line

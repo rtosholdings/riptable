@@ -2853,6 +2853,47 @@ class Categorical(GroupByOps, FastArray):
         self.groupby_reset()
 
     # -------------------------------------------------------
+    def category_make_unique(self, inplace=True):
+        """
+        Remove duplicated categories by replacing categories with the unique set and
+        remapping codes. Gets out early if categories are already unique.
+        """
+        allowed_modes = {CategoryMode.NumericArray, CategoryMode.StringArray, CategoryMode.MultiKey}
+        if self.category_mode not in allowed_modes:
+            raise NotImplementedError(
+                f"category_make_unique only implemented for category modes: {allowed_modes}")
+        elif self.category_mode == CategoryMode.MultiKey and inplace:
+            raise NotImplementedError("Cannot do category_make_unique inplace for multikey")
+
+        if self.ismultikey:
+            return self._category_make_unique_multi_key()
+
+        cat = Categorical(self.category_array, base_index=self.base_index)
+        if len(cat.category_array) == len(self.category_array):
+            return None if inplace else self
+
+        if self.base_index > 0:
+            codes = hstack([FastArray(self.base_index - 1), cat._fa])
+        else:
+            codes = cat._fa
+
+        if inplace:
+            self._fa[:] = codes[self._fa]
+            self._categories_wrap._list = cat.category_array
+        else:
+            return Categorical(codes[self._fa], cat.category_array, base_index=self.base_index)
+
+    def _category_make_unique_multi_key(self):
+        """
+        Remove duplicated categories by replacing categories with the unique set and
+        remapping codes. Gets out early if categories are already unique.
+        """
+        cat_arrays = [c.expand_array for c in self._categories.values()]
+        unique_cats, inverse = unique(cat_arrays, return_inverse=True)
+        unique_cat = Categorical(dict(zip(self, unique_cats)), base_index=self.base_index)
+        return unique_cat[inverse[self._fa - self.base_index]]
+
+    # -------------------------------------------------------
     def map(self, mapper: Union[dict, np.array], invalid=None) -> FastArray:
         """
         Maps existing categories to new categories and returns a re-expanded array.
