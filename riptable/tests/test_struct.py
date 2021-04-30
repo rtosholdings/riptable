@@ -12,6 +12,7 @@ import numpy as np
 from riptable import Struct, FastArray, Dataset, Categorical
 from riptable.rt_enum import TypeRegister
 from riptable.rt_numpy import arange
+from riptable.rt_display import DisplayString
 
 
 class Struct_Test(unittest.TestCase):
@@ -799,6 +800,13 @@ class Struct_Test(unittest.TestCase):
         self.assertGreaterEqual(
             physical, np.asarray(st.c).nbytes + st.c.category_array.nbytes
         )
+
+    def test_tree(self):
+        '''sanity check that .tree() at least returns something, even for empty Struct'''
+        s = Struct()
+        self.assertIsInstance(s.tree(), DisplayString)
+        s['foo'] = Dataset({'bar': arange(5)})
+        self.assertIsInstance(s.tree(), DisplayString)
 
 
 if __name__ == "__main__":

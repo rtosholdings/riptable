@@ -197,6 +197,9 @@ class DisplayNested:
         structure[self.fmtstart + name + self.fmtend] = {}
         structure = structure[self.fmtstart + name + self.fmtend]
 
+        if not len(data):
+            return
+
         maxlen = len(max(list(data.keys()), key=len))
 
         for k, v in data.items():
