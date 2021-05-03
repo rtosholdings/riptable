@@ -824,7 +824,8 @@ class FAString(FastArray):
         Take a substring of each element using slice args.
         """
         if stop is None:
-            stop = self._itemsize
+            # emulate behaviour of slice
+            start, stop = 0, start
 
         strlen = self._cat_strlen
 
