@@ -121,34 +121,34 @@ class TestStr:
         cat = Cat(SYMBOLS * 2)   # introduce duplicity to test ikey properly
         assert np.array_equal(cat.str.regex_match(regex), expected * 2)
 
-    substr_test_cases = parametrize("start, stop", [
+    substr_test_cases = parametrize("start_stop", [
         (0, 1),
         (0, 2),
         (1, 3),
         (1, -1),
         (-2, 3),
-        (2, None),
-        (-1, None),
+        (2,),
+        (-1,),
         (-3, -1),
         (-1, 1),
     ])
 
     @substr_test_cases
-    def test_substr(self, start, stop):
-        result = FAString(SYMBOLS).substr(start, stop)
-        expected = [s[start:stop] for s in SYMBOLS]
+    def test_substr(self, start_stop):
+        expected = [s[slice(*start_stop)] for s in SYMBOLS]
+        result = FAString(SYMBOLS).substr(*start_stop)
         assert (expected == result.tolist())
 
     @substr_test_cases
-    def test_substr_bytes(self, start, stop, expected):
-        result = FAString(FastArray(SYMBOLS)).substr(start, stop)
-        expected = [s[start:stop] for s in SYMBOLS]
+    def test_substr_bytes(self, start_stop):
+        expected = [s[slice(*start_stop)] for s in SYMBOLS]
+        result = FAString(FastArray(SYMBOLS)).substr(*start_stop)
         assert (FastArray(expected) == result).all()
 
     @substr_test_cases
-    def test_substr_cat(self, start, stop, expected):
-        result = self.cat_symbol.str.substr(start, stop)
-        expected = [s[start:stop] for s in SYMBOLS]
+    def test_substr_cat(self, start_stop):
+        result = self.cat_symbol.str.substr(*start_stop)
+        expected = [s[slice(*start_stop)] for s in SYMBOLS]
         expected = Categorical(self.cat_symbol.ikey, expected, base_index=1)
         assert (expected == result).all()
         # check categories are unique
