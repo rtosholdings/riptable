@@ -1,6 +1,7 @@
 import pytest
 parametrize = pytest.mark.parametrize
 
+import riptable as rt
 from riptable import *
 
 
@@ -10,7 +11,8 @@ from ..testing.array_assert import assert_array_or_cat_equal
 
 
 SYMBOLS = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM']
-NB_PARALLEL_SYMBOLS = SYMBOLS * 2000
+PARALLEL_MULTIPLIER = 2000
+NB_PARALLEL_SYMBOLS = SYMBOLS * PARALLEL_MULTIPLIER
 assert len(NB_PARALLEL_SYMBOLS) >= FAString._APPLY_PARALLEL_THRESHOLD
 
 
@@ -68,7 +70,7 @@ class TestStr:
         assert_array_equal(result, expected)
 
         result = FAString(NB_PARALLEL_SYMBOLS).contains(str2)
-        assert_array_equal(result, expected * 2000)
+        assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
     @parametrize("str2, expected", [
         ('A', [0, 0, -1, -1, -1]),
@@ -83,26 +85,29 @@ class TestStr:
         assert_array_equal(result, expected)
 
         result = FAString(NB_PARALLEL_SYMBOLS).strstr(str2)
-        assert_array_equal(result, expected * 2000)
+        assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
     def test_strstr_cat(self):
         result = self.cat_symbol.str.strstr('A')
-        expected = FA([np.iinfo(np.int32).min, 0, 0, -1, -1, -1] * 3)
+        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
+        expected = rt.FA([inv, 0, 0, -1, -1, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     def test_strlen_cat(self):
         result = self.cat_symbol.str.strlen
-        expected = FA([np.iinfo(np.int32).min, 4, 4, 2, 4, 3] * 3)
+        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
+        expected = rt.FA([inv, 4, 4, 2, 4, 3], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     def test_strlen_parallel(self):
-        result = FAString(NB_PARALLEL_SYMBOLS).strlen
-        expected = FA([4, 4, 2, 4, 3] * 2000)
+        result = rt.FAString(NB_PARALLEL_SYMBOLS).strlen
+        expected = rt.FA([4, 4, 2, 4, 3], dtype=result.dtype).tile(PARALLEL_MULTIPLIER)
         assert_array_equal(result, expected)
 
     def test_strpbrk_cat(self):
         result = self.cat_symbol.str.strpbrk('PZG')
-        expected = FA([np.iinfo(np.int32).min, 2, 2, -1, 0, -1] * 3)
+        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
+        expected = rt.FA([inv, 2, 2, -1, 0, -1] * 3)
         assert_array_equal(result, expected)
 
     regex_match_test_cases = parametrize('regex, expected', [
