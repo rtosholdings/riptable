@@ -107,7 +107,7 @@ class TestStr:
     def test_strpbrk_cat(self):
         result = self.cat_symbol.str.strpbrk('PZG')
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
-        expected = rt.FA([inv, 2, 2, -1, 0, -1] * 3)
+        expected = rt.FA([inv, 2, 2, -1, 0, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     regex_match_test_cases = parametrize('regex, expected', [

@@ -23,7 +23,7 @@ from .rt_numpy import empty_like, empty, where, ones, zeros
 from .rt_enum import TypeRegister
 
 
-# Partially-specialize the numba.njit decorator to simplify it's use in the FAString class below.
+# Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
 _njit_serial = partial(nb.njit, parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 _njit_par = partial(nb.njit, parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
 
@@ -37,7 +37,6 @@ class FAStrDispatchPair(NamedTuple):
     def create(py_func: callable) -> 'FAStrDispatchPair':
         func_serial = _njit_serial(py_func)
         func_par = _njit_par(py_func)
-        print(f"Type of func_serial: {type(func_serial).__qualname__}")
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
