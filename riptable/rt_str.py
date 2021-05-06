@@ -2,7 +2,10 @@ __all__ = [
     'FAString'
 ]
 
+from functools import partial
+from typing import List, NamedTuple, Optional, Union
 import warnings
+
 try:
     # This will be used to cache strlen for version of Python 3.7 and higher
     from functools import cached_property
@@ -12,11 +15,29 @@ except ImportError:
 import re
 import numpy as np
 import numba as nb
+from numba.core.dispatcher import Dispatcher
 
 from .config import get_global_settings
 from .rt_fastarray import FastArray
 from .rt_numpy import empty_like, empty, where, ones, zeros
 from .rt_enum import TypeRegister
+
+
+# Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
+_njit_serial = partial(nb.njit, parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
+_njit_par = partial(nb.njit, parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
+
+class FAStrDispatchPair(NamedTuple):
+    """A pair of numba-based functions; one compiled for serial execution and the other for parallel execution."""
+
+    serial: Dispatcher
+    parallel: Dispatcher
+
+    @staticmethod
+    def create(py_func: callable) -> 'FAStrDispatchPair':
+        func_serial = _njit_serial(py_func)
+        func_par = _njit_par(py_func)
+        return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
 # NOTE YOU MUST INSTALL tbb
@@ -47,7 +68,20 @@ from .rt_enum import TypeRegister
 #
 # subclass from FastArray
 class FAString(FastArray):
+    """
+    String accessor class for `FastArray`.
 
+    Notes
+    -----
+    TODO: Consider making this class generic, so if we call ``.str`` on a `FastArray`, we'll get an ``FAString[FastArray]``,
+          but if we call ``.str`` on a `Categorical`, we'll get an ``FAString[Categorical]``. This might be useful when
+          annotating the return values of some methods on FAString.
+    TODO: Consider whether we should implement a derived ``CategoricalString`` class, an instance of which would be
+          returned when calling ``Categorical.str``; the ``CategoricalString`` class could override the implementations
+          of some methods to provide improved performance / semantics by e.g. operating on the category strings.
+          This refactoring would also remove the need for this class to check for and know the details of how to deal with
+          Categoricals -- that logic could be encapsulated entirely in the ``CategoricalString`` class.
+    """
     _APPLY_PARALLEL_THRESHOLD = 10_000
 
     def __new__(cls, arr, ikey=None, **kwargs):
@@ -207,10 +241,9 @@ class FAString(FastArray):
         return self._apply_func(func, func, *args, dtype=dtype, input=self)
 
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_upper_inplace(src, itemsize):
+    def _nb_upper_inplace(src, itemsize):
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
             # loop over all chars in the string
@@ -221,10 +254,9 @@ class FAString(FastArray):
                     src[rowpos+j] = c-32
 
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_upper(src, itemsize, dest):
+    def _nb_upper(src, itemsize, dest):
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(np.int64(len(src) // itemsize)):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
@@ -236,25 +268,9 @@ class FAString(FastArray):
                     dest[rowpos+j] = c
 
     # -----------------------------------------------------
-    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
-    def nb_pupper(src, itemsize, dest):
+    def _nb_lower(src, itemsize, dest):
         # loop over all rows
-        for i in nb.prange(np.int64(len(src) / itemsize)):
-            rowpos = i * itemsize
-            # loop over all chars in the string
-            for j in range(itemsize):
-                c=src[rowpos+j]
-                if c >= 97 and c <= 122:
-                    # convert to ASCII upper
-                    dest[rowpos+j] = c-32
-                else:
-                    dest[rowpos+j] = c
-
-    # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_lower(src, itemsize, dest):
-        # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(np.int64(len(src) // itemsize)):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
@@ -266,25 +282,9 @@ class FAString(FastArray):
                     dest[rowpos+j] = c
 
     # -----------------------------------------------------
-    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
-    def nb_plower(src, itemsize, dest):
+    def _nb_removetrailing(src, itemsize, dest, removechar):
         # loop over all rows
-        for i in nb.prange(len(src) / itemsize):
-            rowpos = i * itemsize
-            # loop over all chars in the string
-            for j in range(itemsize):
-                c=src[rowpos+j]
-                if c >= 65 and c <= 90:
-                    # convert to ASCII lower
-                    dest[rowpos+j] = c+32
-                else:
-                    dest[rowpos+j] = c
-
-    # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_removetrailing(src, itemsize, dest, removechar):
-        # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string backwards
             rowpos = i * itemsize
             startpos = itemsize
@@ -301,12 +301,10 @@ class FAString(FastArray):
                 c=src[rowpos + startpos]
                 dest[rowpos + startpos] = c
 
-
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_reverse_inplace(src, itemsize):
+    def _nb_reverse_inplace(src, itemsize):
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             rowpos = i * itemsize
             # find length of string
             strlen=0
@@ -323,10 +321,9 @@ class FAString(FastArray):
                 end -= 1
 
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_reverse(src, itemsize, dest):
+    def _nb_reverse(src, itemsize, dest):
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             rowpos = i * itemsize
             # find length of string
             strlen=0
@@ -342,10 +339,8 @@ class FAString(FastArray):
                 dest[rowpos + srcpos] = 0
                 srcpos +=1
 
-
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_strlen(src, itemsize, dest):
+    def _nb_strlen(src, itemsize, dest):
         # loop over all rows
         for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
@@ -359,14 +354,11 @@ class FAString(FastArray):
             # store length of string
             dest[i] = strlen
 
-    nb_pstrlen = nb.njit(cache=True, parallel=True)(nb_strlen.py_func)
-
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_strpbrk(src, itemsize, dest, str2):
+    def _nb_strpbrk(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
             found =0
@@ -385,11 +377,10 @@ class FAString(FastArray):
                 dest[i] = -1
 
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_strstr(src, itemsize, dest, str2):
+    def _nb_strstr(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
             dest[i] = -1
@@ -407,11 +398,10 @@ class FAString(FastArray):
                     break
 
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_contains(src, itemsize, dest, str2):
+    def _nb_contains(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(np.int64(len(src) // itemsize)):
             rowpos = i * itemsize
             dest[i] = False
             # loop over all substrings of sufficient length
@@ -427,31 +417,10 @@ class FAString(FastArray):
                     break
 
     # -----------------------------------------------------
-    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
-    def nb_pcontains(src, itemsize, dest, str2):
+    def _nb_endswith(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
-        for i in nb.prange(np.int64(len(src) / itemsize)):
-            rowpos = i * itemsize
-            dest[i] = False
-            # loop over all substrings of sufficient length
-            for j in range(itemsize - str2len + 1):
-                k = 0
-                while (k < str2len):
-                    if src[rowpos + j + k] != str2[k]:
-                        break
-                    k += 1
-                if k==str2len:
-                    # indicate we have a match
-                    dest[i] = True
-                    break
-
-    # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_endswith(src, itemsize, dest, str2):
-        str2len = len(str2)
-        # loop over all rows
-        for i in range(len(src) / itemsize):
+        for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
             dest[i] = False
@@ -478,30 +447,7 @@ class FAString(FastArray):
                         dest[i] = True
                     
     # -----------------------------------------------------
-    @nb.njit(cache=get_global_settings().enable_numba_cache)
-    def nb_startswith(src, itemsize, dest, str2):
-        str2len = len(str2)
-        # loop over all rows
-        for i in range(len(src) / itemsize):
-            # loop over all chars in the string
-            rowpos = i * itemsize
-            dest[i] = False
-            # loop over all chars in the string
-            # check if enough space left
-            if itemsize >= str2len: 
-                k =0
-                # check if only the beginning matches
-                while (k < str2len):
-                    if src[rowpos + k] != str2[k]:
-                        break
-                    k += 1
-                if k==str2len:
-                    # indicate we have a match
-                    dest[i] = True
-
-    # -----------------------------------------------------
-    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
-    def nb_pstartswith(src, itemsize, dest, str2):
+    def _nb_startswith(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
         for i in nb.prange(np.int64(len(src) / itemsize)):
@@ -534,7 +480,7 @@ class FAString(FastArray):
         FastArray(['THIS','THAT','TEST'], dtype='<U4')
         
         '''
-        return self._apply_func(self.nb_upper, self.nb_pupper)
+        return self._apply_func(self.nb_upper, self.nb_upper_par)
 
     # -----------------------------------------------------
     @property
@@ -549,7 +495,7 @@ class FAString(FastArray):
         FastArray(['this','that','test'], dtype='<U4')
 
         '''
-        return self._apply_func(self.nb_lower, self.nb_lower)
+        return self._apply_func(self.nb_lower, self.nb_lower_par)
 
     # -----------------------------------------------------
     @property
@@ -562,6 +508,7 @@ class FAString(FastArray):
         --------
         FAString(['this','that','test']).upper_inplace
         '''
+        # TODO: Enable parallel version + dispatching based on array length.
         self.nb_upper_inplace(self._itemsize)
         return self.backtostring
 
@@ -576,7 +523,7 @@ class FAString(FastArray):
         --------
         FAString(['this','that','test']).reverse
         '''
-        return self._apply_func(self.nb_reverse, self.nb_reverse)
+        return self._apply_func(self.nb_reverse, self.nb_reverse_par)
 
     # -----------------------------------------------------
     @property
@@ -589,6 +536,7 @@ class FAString(FastArray):
         --------
         FAString(['this','that','test']).reverse_inplace
         '''
+        # TODO: Enable parallel version + dispatching based on array length.
         self.nb_reverse_inplace(self._itemsize)
         return self.backtostring
 
@@ -606,9 +554,8 @@ class FAString(FastArray):
         --------
         >>> FAString(['this  ','that ','test']).removetrailing()
         FastArray(['this','that','test'], dtype='<U6')
-
         '''
-        return self._apply_func(self.nb_removetrailing, self.nb_removetrailing, remove)
+        return self._apply_func(self.nb_removetrailing, self.nb_removetrailing_par, remove)
 
     # -----------------------------------------------------
     @cached_property     # only cached for Python 3.7 or higher
@@ -621,7 +568,7 @@ class FAString(FastArray):
         >>> FAString(['this  ','that ','test']).strlen
         FastArray([6, 5, 4])
         '''
-        return self._apply_func(self.nb_strlen, self.nb_pstrlen, dtype=np.int32,
+        return self._apply_func(self.nb_strlen, self.nb_strlen_par, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
@@ -645,7 +592,7 @@ class FAString(FastArray):
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
        
-        return self._apply_func(self.nb_strpbrk, self.nb_strpbrk, str2, dtype=np.int32,
+        return self._apply_func(self.nb_strpbrk, self.nb_strpbrk_par, str2, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
@@ -672,7 +619,7 @@ class FAString(FastArray):
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_strstr, self.nb_strstr, str2, dtype=np.int32,
+        return self._apply_func(self.nb_strstr, self.nb_strstr_par, str2, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
@@ -700,7 +647,7 @@ class FAString(FastArray):
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_contains, self.nb_pcontains, str2, dtype=np.bool,
+        return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=np.bool,
                                 filtered_fill_value=False)
 
     def strstrb(self, str2):
@@ -734,7 +681,7 @@ class FAString(FastArray):
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
        
-        return self._apply_func(self.nb_startswith, self.nb_pstartswith, str2, dtype=np.bool,
+        return self._apply_func(self.nb_startswith, self.nb_startswith_par, str2, dtype=np.bool,
                                 filtered_fill_value=False)
 
     # -----------------------------------------------------
@@ -761,7 +708,7 @@ class FAString(FastArray):
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_endswith, self.nb_endswith, str2, dtype=np.bool,
+        return self._apply_func(self.nb_endswith, self.nb_endswith_par, str2, dtype=np.bool,
                                 filtered_fill_value=False)
 
     def regex_match(self, regex):
@@ -788,8 +735,6 @@ class FAString(FastArray):
             bools = bools[self._ikey] & (self._ikey >= 0)
         return bools
 
-    @staticmethod
-    @nb.njit(parallel=True)
     def _nb_substr(src, out, itemsize, start, stop, strlen):
         n_elements = len(out)
         max_chars = 0
@@ -819,7 +764,7 @@ class FAString(FastArray):
         else:
             return FAString(self.backtostring).strlen
 
-    def substr(self, start, stop=None):
+    def substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None):
         """
         Take a substring of each element using slice args.
         """
@@ -839,8 +784,9 @@ class FAString(FastArray):
             n_chars = pos_stop - start
         else:
             n_chars = stop - start
+
         out = zeros((self.n_elements, n_chars), self.dtype)
-        out = self._nb_substr(self, out, self._itemsize, start, stop, strlen)
+        out = self._nb_substr(out, self._itemsize, start, stop, strlen)
         n_chars = out.shape[1]
         if n_chars == 0:    # empty sub strings everywhere
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
@@ -849,32 +795,40 @@ class FAString(FastArray):
         out = self._maybe_output_to_categorical(out)
         return out
 
-    @staticmethod
-    @nb.njit(parallel=True, cache=True)
     def _nb_char(src, position, itemsize, strlen, out):
-        broken_at = -1
+        broken_at = len(position)
         for i in nb.prange(len(position)):
             pos = position[i]
             if pos < 0:
                 pos = strlen[i] + pos
+
             if pos >= itemsize or pos < 0:
-                return i    # this triggers error below
-            out[i] = src[itemsize * i + pos]
+                # Parallel reduction on this index.
+                # Otherwise, returning here prevents the function from being parallelized.
+                broken_at = np.minimum(broken_at, i)    # this triggers error below (in `char()`).
 
-        return broken_at
+                # TODO: Set out[i] to some invalid value?
+                out[i] = 0
+            else:
+                out[i] = src[itemsize * i + pos]
 
-    def char(self, position):
+        return broken_at if broken_at < len(position) else -1
+
+    def char(self, position: Union[int, List[int], np.ndarray]):
         """
         Take a single character from each element.
 
         Parameters
         ----------
-        position: int / np.ndarray
+        position: int or list of int or np.ndarray
             The position of the character to be extracted. Negative values respect the
             length of the individual strings.
             If an array, the length must be equal to the number of strings.
             An error is raised if any positions are out of bounds (>= self._itemsize).
         """
+        position = np.asanyarray(position)
+
+        # Handle scalars
         if np.ndim(position) == 0:
             for size in [8, 16, 32, 64]:
                 dtype = getattr(np, f'uint{size}')
@@ -887,12 +841,59 @@ class FAString(FastArray):
 
         out = zeros(self.n_elements, self.dtype)
         strlen = self._cat_strlen
-        broken_at = self._nb_char(self, position, self._itemsize, strlen, out)
+        broken_at = self._nb_char(position, self._itemsize, strlen, out)
         if broken_at >= 0:
             raise ValueError(f"Position {position[broken_at]} out of bounds "
                              f"for string of length {self._itemsize}")
         out = out.view(f'{self._intype}1')
         return self._maybe_output_to_categorical(out)
+
+
+    # Use the specialized decorators to create both a serial and parallel version of each
+    # numba function (so we only need one definition of each), then add it to FAString.
+    nb_upper_inplace = _njit_serial(_nb_upper_inplace)
+    nb_upper_inplace_par = _njit_par(_nb_upper_inplace)
+
+    nb_upper = _njit_serial(_nb_upper)
+    nb_upper_par = _njit_par(_nb_upper)
+
+    # TODO: nb_lower_inplace
+
+    nb_lower = _njit_serial(_nb_lower)
+    nb_lower_par = _njit_par(_nb_lower)
+
+    nb_removetrailing = _njit_serial(_nb_removetrailing)
+    nb_removetrailing_par = _njit_par(_nb_removetrailing)
+
+    nb_reverse_inplace = _njit_serial(_nb_reverse_inplace)
+    nb_reverse_inplace_par = _njit_par(_nb_reverse_inplace)
+
+    nb_reverse = _njit_serial(_nb_reverse)
+    nb_reverse_par = _njit_par(_nb_reverse)
+
+    nb_strlen = _njit_serial(_nb_strlen)
+    nb_strlen_par = _njit_par(_nb_strlen)
+
+    nb_strpbrk = _njit_serial(_nb_strpbrk)
+    nb_strpbrk_par = _njit_par(_nb_strpbrk)
+
+    nb_strstr = _njit_serial(_nb_strstr)
+    nb_strstr_par = _njit_par(_nb_strstr)
+
+    nb_contains = _njit_serial(_nb_contains)
+    nb_contains_par = _njit_par(_nb_contains)
+
+    nb_endswith = _njit_serial(_nb_endswith)
+    nb_endswith_par = _njit_par(_nb_endswith)
+
+    nb_startswith = _njit_serial(_nb_startswith)
+    nb_startswith_par = _njit_par(_nb_startswith)
+
+    nb_substr = _njit_serial(_nb_substr)
+    nb_substr_par = _njit_par(_nb_substr)
+
+    nb_char = _njit_serial(_nb_char)
+    nb_char_par = _njit_par(_nb_char)
 
 
 # keep as last line
