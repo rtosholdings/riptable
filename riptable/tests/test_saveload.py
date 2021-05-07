@@ -10,7 +10,7 @@ from riptable import *
 from riptable.rt_enum import CategoryMode, SDSFlag
 from riptable.rt_sds import SDSMakeDirsOn
 from riptable.Utils.rt_metadata import MetaData
-from riptable.Utils.rt_testing import assert_array_equal_, assert_categorical_equal, name
+from riptable.Utils.rt_testing import assert_array_equal_, name
 from riptable.Utils.rt_testdata import load_test_data
 
 from riptable.tests.test_utils import get_all_categorical_data
@@ -1320,7 +1320,14 @@ def test_sds_stack_with_categorical(container_type, data, stack, stack_count, tm
 
         act = actual[key]
         if isinstance(exp, Categorical):
-            assert_categorical_equal(act, exp, verbose=True)
+            assert_array_or_cat_equal(
+                act, exp,
+                err_msg=f"Data does not match up for key '{key}'.",
+                # Categories may not exactly be equal (they may be a subset of one another, for example),
+                # perhaps because some categories aren't actually used. Use the relaxed check which only
+                # cares that the categories match up for the actual data.
+                relaxed_cat_check=True
+            )
         elif isinstance(exp, Struct):
             assert act.equals(exp)
         else:
@@ -1371,7 +1378,14 @@ def test_sds_stack(data, stack, stack_count, tmpdir):
                   f'expected of type {type(data)}\n{repr(data)}' + \
                   f'actual of type {type(act)}\n{repr(act)}'
         if isinstance(exp, Categorical):
-            assert_categorical_equal(act, exp, verbose=True)
+            assert_array_or_cat_equal(
+                act, exp,
+                err_msg=f"Data does not match up for key '{k}'.",
+                # Categories may not exactly be equal (they may be a subset of one another, for example),
+                # perhaps because some categories aren't actually used. Use the relaxed check which only
+                # cares that the categories match up for the actual data.
+                relaxed_cat_check=True
+            )
         elif isinstance(exp, FastArray):
             assert_array_equal_(act, exp, err_msg=err_msg)
         elif isinstance(data, Struct):
