@@ -141,6 +141,13 @@ class FAString(FastArray):
         """
         return len(self) // self._itemsize
 
+    @property
+    def _output_length(self):
+        """
+        The number of elements in output arrays, taking into account Categoricals
+        """
+        return len(self._ikey) if self._ikey is not None else self.n_elements
+
     # -----------------------------------------------------
     def possibly_convert_tostr(self, arr):
         '''
@@ -590,6 +597,9 @@ class FAString(FastArray):
         FastArray([2, 2, -1])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return zeros(self._output_length, dtype=np.int32)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
@@ -615,7 +625,7 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return zeros(self.n_elements, dtype=np.int32)
+                return zeros(self._output_length, dtype=np.int32)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
@@ -643,7 +653,7 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self.n_elements, dtype=bool)
+                return ones(self._output_length, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
@@ -677,7 +687,7 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self.n_elements, dtype=bool)
+                return ones(self._output_length, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
@@ -704,7 +714,7 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self.n_elements, dtype=bool)
+                return ones(self._output_length, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
