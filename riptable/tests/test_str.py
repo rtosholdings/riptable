@@ -228,6 +228,18 @@ class TestFAString:
             'IBM'
         ))
 
+    @parametrize("func, expected", [
+        ('index', 0),
+        ('index_any_of', 0),
+        ('contains', True),
+        ('startswith', True),
+        ('endswith', True),
+    ])
+    def test_empty_string_comparisons_cat(self, func, expected):
+        result = getattr(self.cat_symbol.str, func)('')
+        expected = np.tile(expected, len(self.cat_symbol))
+        assert_array_equal(result, expected)
+
     def test_strlen_cat(self):
         result = self.cat_symbol.str.strlen
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
