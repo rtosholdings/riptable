@@ -40,6 +40,13 @@ class FAStrDispatchPair(NamedTuple):
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
+def _deprecate_naming(old_func, new_func):
+    def wrapped(self, str2):
+        warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning)
+        return getattr(self, new_func)(str2)
+    return wrapped
+
+
 # NOTE YOU MUST INSTALL tbb
 # conda install tbb
 # to confirm...
