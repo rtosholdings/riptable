@@ -4164,10 +4164,7 @@ class Categorical(GroupByOps, FastArray):
             string_list = self.category_array
 
             # indicate we are a categorical that requires expansion
-            ikey = self.ikey
-            if self.base_index > 0:
-                ikey = ikey - self.base_index
-            return FAString(string_list, ikey=ikey)
+            return FAString(string_list, ikey=self.ikey - 1)
 
         elif self.ismultikey:
             raise ValueError(f"Could not use .str in multikey mode.")
