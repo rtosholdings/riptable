@@ -61,6 +61,11 @@ class TestFAString:
 
     cat_symbol = Cat(np.tile(np.arange(len(SYMBOLS) + 1), 3), SYMBOLS)
 
+    def test_cat_base_index_0(self):
+        cat = rt.Categorical(np.tile([0, 1], 100), ['abc ', 'bcd'], base_index=0)
+        result = cat.str.removetrailing()
+        expected = rt.Categorical(np.tile([1, 2], 100), np.asarray(['abc', 'bcd']).astype('S4'), base_index=1)
+        assert_array_or_cat_equal(result, expected)
 
     @parametrize('position', [0, 1, -1, -2, 3])
     def test_char(self, position):
@@ -112,6 +117,15 @@ class TestFAString:
         #       Also test parallel case.
         result = FAString(['abab', 'ababa', 'abababb']).endswith(str2)
         assert_array_equal(result, expected)
+
+    @parametrize('base_index', [0, 1])
+    def test_ikey(self, base_index):
+        cat = Cat(base_index + np.arange(4), SYMBOLS, base_index=base_index)
+        assert (cat.str._ikey == np.arange(4)).all()
+
+    def test_ikey_filtered(self):
+        cat = Cat(np.arange(4), SYMBOLS, base_index=1)
+        assert (cat.str._ikey == np.arange(-1, 3)).all()
 
     def test_lower(self):
         result = FAString(SYMBOLS).lower
@@ -297,4 +311,3 @@ class TestFAString:
     #
     # TODO: upper_inplace tests
     #
-
