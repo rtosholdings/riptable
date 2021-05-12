@@ -170,6 +170,9 @@ class FAString(FastArray):
     def _apply_func(self, func, funcp, *args, dtype=None, input=None, filtered_fill_value=None):
         # can optionally pass in dtype
         # check when to flip into parallel mode.  > 10,000 go to parallel routine
+        # TODO: Can't just check len(self) for parallelism here; if operating on a string-mode Categorical
+        #       the parallelism decision should be based on e.g. len(my_cat.category_array), not the length
+        #       of the categorical itself.
         if len(self) >= self._APPLY_PARALLEL_THRESHOLD and funcp is not None:
             func = funcp
         if dtype is None:
@@ -287,19 +290,19 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string backwards
             rowpos = i * itemsize
-            startpos = itemsize
-            while (startpos >0):
-                startpos-=1
-                c=src[rowpos + startpos]
-                if c == 0 or c==removechar:
-                    dest[rowpos + startpos] = 0
-                else:
-                    dest[rowpos + startpos] = c
+
+            startpos = -1
+            for startpos in range(itemsize - 1, -1, -1):
+                c = src[rowpos + startpos]
+                is_trailing_char = c == 0 or c == removechar
+                out_char = 0 if is_trailing_char else c
+                dest[rowpos + startpos] = out_char
+
+                if not is_trailing_char:
                     break
-            while (startpos >0):
-                startpos-=1
-                c=src[rowpos + startpos]
-                dest[rowpos + startpos] = c
+
+            for pos in range(startpos - 1, -1, -1):
+                dest[rowpos + pos] = src[rowpos + pos]
 
     # -----------------------------------------------------
     def _nb_reverse_inplace(src, itemsize):
