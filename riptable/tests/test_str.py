@@ -108,11 +108,10 @@ class TestFAString:
         ('ba', [False, True, False]),
     ])
     def test_endswith(self, str2, expected):
+        # TODO: Expand test to include when the underlying array is a Categorical.
+        #       Also test parallel case.
         result = FAString(['abab', 'ababa', 'abababb']).endswith(str2)
         assert_array_equal(result, expected)
-
-    def test_endswith_cat(self, str2, expected):
-        pytest.skip("Test not yet implemented.")
 
     def test_lower(self):
         result = FAString(SYMBOLS).lower
