@@ -2,7 +2,7 @@ __all__ = ['FastArray', 'Threading', 'Recycle','Ledger']
 
 import logging
 import os
-from typing import Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
+from typing import TYPE_CHECKING, Optional, Any, Callable, Tuple, Mapping, Union, List, Dict, Sequence
 import warnings
 
 import numpy as np
@@ -22,6 +22,10 @@ try:
     import bottleneck as bn
 except Exception:
     pass
+
+if TYPE_CHECKING:
+    from .rt_str import FAString
+
 
 # Create a logger for this module.
 logger = logging.getLogger(__name__)
@@ -3020,7 +3024,7 @@ class FastArray(np.ndarray):
 
     #-----------------------------------------------------------
     @property
-    def str(self):
+    def str(self) -> 'FAString':
         r"""Casts an array of byte strings or unicode as ``FAString``.
 
         Enables a variety of useful string manipulation methods.
