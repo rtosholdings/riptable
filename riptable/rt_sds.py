@@ -995,8 +995,8 @@ def _multistack_categoricals(spec_name, meta_list, indices, listcats, idx_cutoff
         base_index = None
         indices, listcats = merge_cats(indices, listcats, unique_cutoffs=unique_cutoffs, from_mapping=True, ordered=ordered, verbose=SDSVerbose)
         # TJD added check
-        code=listcats[0][0]
-        if isinstance(code, (int, np.integer)):
+        # This check works even if the arrays returned in `listcats` are empty.
+        if np.issubdtype(listcats[0].dtype, np.integer):
             # EXCPECT first value is string, and second is int
             newcats = dict(zip(listcats[1], listcats[0]))
         else:
