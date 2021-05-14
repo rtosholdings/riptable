@@ -229,8 +229,8 @@ class TestFAString:
         ))
 
     @parametrize("func, expected", [
-        ('index', 0),
-        ('index_any_of', 0),
+        ('strstr', 0),
+        ('strpbrk', 0),
         ('contains', True),
         ('startswith', True),
         ('endswith', True),
