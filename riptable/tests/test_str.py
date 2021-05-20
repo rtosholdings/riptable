@@ -61,6 +61,11 @@ class TestFAString:
 
     cat_symbol = Cat(np.tile(np.arange(len(SYMBOLS) + 1), 3), SYMBOLS)
 
+    def test_cat_base_index_0(self):
+        cat = rt.Categorical(np.tile([0, 1], 100), ['abc ', 'bcd'], base_index=0)
+        result = cat.str.removetrailing()
+        expected = rt.Categorical(np.tile([0, 1], 100), np.asarray(['abc', 'bcd']).astype('S4'), base_index=0)
+        assert_array_or_cat_equal(result, expected)
 
     @parametrize('position', [0, 1, -1, -2, 3])
     def test_char(self, position):
@@ -103,16 +108,17 @@ class TestFAString:
         result = FAString(NB_PARALLEL_SYMBOLS).contains(str2)
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
-    @parametrize("func, expected", [
-        ('index', 0),
-        ('index_any_of', 0),
-        ('contains', True),
-        ('startswith', True),
-        ('endswith', True),
+    @parametrize("func, expected, filtered", [
+        ('index', 0, rt.rt_str.MIN_INT),
+        ('index_any_of', 0, rt.rt_str.MIN_INT),
+        ('contains', True, False),
+        ('startswith', True, False),
+        ('endswith', True, False),
     ])
-    def test_empty_string_comparisons_cat(self, func, expected):
+    def test_empty_string_comparisons_cat(self, func, expected, filtered):
         result = getattr(self.cat_symbol.str, func)('')
-        expected = np.tile(expected, len(self.cat_symbol))
+        expected = rt.tile(expected, len(self.cat_symbol)).astype(result.dtype)
+        expected[self.cat_symbol.isfiltered()] = filtered
         assert_array_equal(result, expected)
 
     @parametrize("str2, expected", [
