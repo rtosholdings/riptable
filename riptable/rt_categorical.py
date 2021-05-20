@@ -32,7 +32,7 @@ from .Utils.rt_metadata import MetaData
 # groupby imports
 from .rt_groupbyops import GroupByOps
 from .rt_groupbykeys import GroupByKeys
-from .rt_str import FAString
+from .rt_str import CatString
 from .rt_fastarraynumba import fill_forward, fill_backward
 
 if TYPE_CHECKING:
@@ -4157,22 +4157,7 @@ class Categorical(GroupByOps, FastArray):
     # -----------------------------------------------------
     @property
     def str(self):
-        # we already are a str
-        if self.isenum:
-            raise ValueError(f"Could not use str in enum mode.  Email for help")
-        elif self.issinglekey:
-            string_list = self.category_array
-
-            # indicate we are a categorical that requires expansion
-            ikey = self.ikey
-            if self.base_index > 0:
-                ikey = ikey - self.base_index
-            return FAString(string_list, ikey=ikey)
-
-        elif self.ismultikey:
-            raise ValueError(f"Could not use .str in multikey mode.")
-        else:
-            raise ValueError(f"Could not use .str in {CategoryMode(self.category_mode).name}.")
+        return CatString(self)
 
     # ------------------------------------------------------------
     def expand_any(self, categories):
