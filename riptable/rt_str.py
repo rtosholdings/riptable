@@ -93,7 +93,7 @@ class FAString(FastArray):
     """
     _APPLY_PARALLEL_THRESHOLD = 10_000
 
-    def __new__(cls, arr, ikey=None, **kwargs):
+    def __new__(cls, arr, **kwargs):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
             if np.isscalar(arr):
@@ -123,9 +123,8 @@ class FAString(FastArray):
         instance = instance.view(cls)
 
         # remember the intype and itemsize
-        instance._intype=intype
-        instance._itemsize =itemsize
-        instance._ikey = ikey
+        instance._intype = intype
+        instance._itemsize = itemsize
         return instance
 
     # -----------------------------------------------------
@@ -150,13 +149,6 @@ class FAString(FastArray):
         """
         return len(self) // self._itemsize
 
-    @property
-    def _output_length(self):
-        """
-        The number of elements in output arrays, taking into account Categoricals
-        """
-        return len(self._ikey) if self._ikey is not None else self.n_elements
-
     # -----------------------------------------------------
     def possibly_convert_tostr(self, arr):
         '''
@@ -175,15 +167,8 @@ class FAString(FastArray):
 
         return arr
 
-    def _maybe_output_to_categorical(self, out):
-        if self._ikey is not None:
-            from .rt_categorical import Categorical
-            out = Categorical(self._ikey + 1, out, base_index=1)
-            out.category_make_unique(inplace=True)
-        return out
-
     # -----------------------------------------------------
-    def _apply_func(self, func, funcp, *args, dtype=None, input=None, filtered_fill_value=None):
+    def _apply_func(self, func, funcp, *args, dtype=None, input=None):
         # can optionally pass in dtype
         # check when to flip into parallel mode.  > 10,000 go to parallel routine
         # TODO: Can't just check len(self) for parallelism here; if operating on a string-mode Categorical
@@ -209,13 +194,6 @@ class FAString(FastArray):
         if dtype is None:
             dest = dest.view(dest._intype + str(dest._itemsize))
 
-        # check for categorical key re-expansion
-        if self._ikey is not None:
-            if dest.dtype.kind == 'S':
-                return self._maybe_output_to_categorical(dest)
-            else:
-                unfiltered = self._ikey >= 0
-                return where(unfiltered, dest[self._ikey], filtered_fill_value)
         return dest
 
     # -----------------------------------------------------
@@ -587,8 +565,7 @@ class FAString(FastArray):
         >>> FAString(['this  ','that ','test']).strlen
         FastArray([6, 5, 4])
         '''
-        return self._apply_func(self.nb_strlen, self.nb_strlen_par, dtype=np.int32,
-                                filtered_fill_value=np.iinfo(np.int32).min)
+        return self._apply_func(self.nb_strlen, self.nb_strlen_par, dtype=np.int32)
 
     # -----------------------------------------------------
     def index_any_of(self, str2):
@@ -607,15 +584,14 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return zeros(self._output_length, dtype=np.int32)
+                return zeros(self.n_elements, dtype=np.int32)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
-       
-        return self._apply_func(self.nb_index_any_of, self.nb_index_any_of_par, str2, dtype=np.int32,
-                                filtered_fill_value=np.iinfo(np.int32).min)
+
+        return self._apply_func(self.nb_index_any_of, self.nb_index_any_of_par, str2, dtype=np.int32)
 
     strpbrk = _deprecate_naming('strpbrk', 'index_any_of')
 
@@ -636,15 +612,14 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return zeros(self._output_length, dtype=np.int32)
+                return zeros(self.n_elements, dtype=np.int32)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_index, self.nb_index_par, str2, dtype=np.int32,
-                                filtered_fill_value=np.iinfo(np.int32).min)
+        return self._apply_func(self.nb_index, self.nb_index_par, str2, dtype=np.int32)
 
     strstr = _deprecate_naming('strstr', 'index')
 
@@ -666,15 +641,14 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self._output_length, dtype=bool)
+                return ones(self.n_elements, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=np.bool,
-                                filtered_fill_value=False)
+        return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=np.bool)
 
     strstrb = _deprecate_naming('strstrb', 'contains')
 
@@ -695,15 +669,14 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self._output_length, dtype=bool)
+                return ones(self.n_elements, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
-       
-        return self._apply_func(self.nb_startswith, self.nb_startswith_par, str2, dtype=np.bool,
-                                filtered_fill_value=False)
+
+        return self._apply_func(self.nb_startswith, self.nb_startswith_par, str2, dtype=np.bool)
 
     # -----------------------------------------------------
     def endswith(self, str2):
@@ -722,15 +695,14 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self._output_length, dtype=bool)
+                return ones(self.n_elements, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_endswith, self.nb_endswith_par, str2, dtype=np.bool,
-                                filtered_fill_value=False)
+        return self._apply_func(self.nb_endswith, self.nb_endswith_par, str2, dtype=np.bool)
 
     def regex_match(self, regex):
         '''
@@ -752,8 +724,6 @@ class FAString(FastArray):
         regex = re.compile(regex)
         vmatch = np.vectorize(lambda x: bool(regex.search(x)))
         bools = vmatch(self.backtostring)
-        if self._ikey is not None:
-            bools = bools[self._ikey] & (self._ikey >= 0)
         return bools
 
     def _nb_substr(src, out, itemsize, start, stop, strlen):
@@ -774,17 +744,6 @@ class FAString(FastArray):
                 max_chars = max(max_chars, out_pos + 1)
         return out[:, :max_chars]
 
-    @cached_property
-    def _cat_strlen(self):
-        """
-        Same as strlen except for Categoricals it is aligned with the categories
-        as opposed to the full array. Used for substring methods.
-        """
-        if self._ikey is None:
-            return self.strlen
-        else:
-            return FAString(self.backtostring).strlen
-
     def substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None):
         """
         Take a substring of each element using slice args.
@@ -793,7 +752,7 @@ class FAString(FastArray):
             # emulate behaviour of slice
             start, stop = 0, start
 
-        strlen = self._cat_strlen
+        strlen = self.strlen
 
         if start < 0:
             if stop < 0:
@@ -813,7 +772,6 @@ class FAString(FastArray):
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
         else:
             out = out.ravel().view(f'<{self._intype}{n_chars}')
-        out = self._maybe_output_to_categorical(out)
         return out
 
     def _nb_char(src, position, itemsize, strlen, out):
@@ -861,13 +819,12 @@ class FAString(FastArray):
             raise ValueError("position must be a scalar or a vector of the same length as self")
 
         out = zeros(self.n_elements, self.dtype)
-        strlen = self._cat_strlen
-        broken_at = self._nb_char(position, self._itemsize, strlen, out)
+        broken_at = self._nb_char(position, self._itemsize, self.strlen, out)
         if broken_at >= 0:
             raise ValueError(f"Position {position[broken_at]} out of bounds "
                              f"for string of length {self._itemsize}")
         out = out.view(f'{self._intype}1')
-        return self._maybe_output_to_categorical(out)
+        return out
 
 
     # Use the specialized decorators to create both a serial and parallel version of each
