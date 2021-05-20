@@ -11,6 +11,8 @@ try:
     from functools import cached_property
 except ImportError:
     cached_property = property
+from functools import wraps
+
 
 import re
 import numpy as np
@@ -915,5 +917,81 @@ class FAString(FastArray):
     nb_char_par = _njit_par(_nb_char)
 
 
+MIN_INT = np.iinfo(np.int32).min
+
+
+def _populate_wrappers(cls):
+    """
+    Decorator for the CatString class which populates the string methods and sets the defaults for
+    filtered value fills.
+    """
+    for method, filter_value_fill in [
+        ('upper', None),
+        ('lower', None),
+        ('reverse', None),
+        ('removetrailing', None),
+        ('strlen', MIN_INT),
+        ('index_any_of', MIN_INT),
+        ('index', MIN_INT),
+        ('contains', False),
+        ('startswith', False),
+        ('endswith', False),
+        ('regex_match', False),
+        ('substr', None),
+        ('char', None)
+    ]:
+        setattr(cls, method, cls._build_method(method, filter_value_fill))
+    return cls
+
+
+@_populate_wrappers
+class CatString:
+    """
+    Provides access to FAString methods for Categoricals.
+    All string methods are wrappers of the FAString equivalent with
+    categorical re-expansion and option for how to fill filtered elements.
+    """
+    def __init__(self, cat):
+        from .rt_categorical import CategoryMode
+        self.cat = cat
+        if cat.isenum:
+            raise ValueError(f"Could not use str in enum mode.  Email for help")
+        elif cat.issinglekey:
+            string_list = cat.category_array
+            self.fastring = FAString(string_list)
+
+        elif cat.ismultikey:
+            raise ValueError(f"Could not use .str in multikey mode.")
+        else:
+            raise ValueError(f"Could not use .str in {CategoryMode(cat.category_mode).name}.")
+
+    @classmethod
+    def _build_method(cls, method, filter_value_fill):
+        """
+        General purpose factory for FAString wrappers.
+        """
+        func = getattr(FAString, method)
+        is_property = isinstance(func, (cached_property, property))
+
+        @wraps(func)
+        def wrapper(self, *args, filter_fill_value=filter_value_fill, **kwargs):
+            from .rt_categorical import Categorical
+            if is_property:
+                out = getattr(self.fastring, method)
+            else:
+                out = func(self.fastring, *args, **kwargs)
+            if out.dtype.kind == 'S':
+                out = Categorical(self.cat._fa.copy(), out, base_index=self.cat.base_index)
+                out.category_make_unique(inplace=True)
+                return out
+            else:
+                return where(self.cat.isfiltered(), filter_fill_value, out[self.cat.ikey - 1])
+
+        if is_property:
+            wrapper = property(wrapper)
+        return wrapper
+
+
 # keep as last line
 TypeRegister.FAString=FAString
+TypeRegister.CatString = CatString
