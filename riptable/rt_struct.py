@@ -40,6 +40,14 @@ if TYPE_CHECKING:
 # TODO: Maybe just put this inside Struct as e.g. cls._logger?
 logger = logging.getLogger(__name__)
 
+
+class _DefaultGetAttrPlaceholder:
+    pass
+
+
+_default_getattr_placeholder = _DefaultGetAttrPlaceholder()
+
+
 class Struct:
     """
     The Struct class is at the root of much of the riptable class design; both Dataset and Multiset
@@ -458,7 +466,8 @@ class Struct:
             # self._setattr(name,value)
             super().__setattr__(name, value)
             return
-        if self.is_locked():
+
+        elif self.is_locked():
             # another keyword/reserved word block needs to go here
             if hasattr(self, name):
                 # locked but not a new item
@@ -468,16 +477,32 @@ class Struct:
             else:
                 # locked and item is new
                 raise AttributeError(f'Not allowed to create new item {name} in locked object.')
+
+        elif self.__contains__(name):
+            # Name already exists as an item in the Struct, so we know it's not a reserved name.
+            # We can just overwrite it without having to do additional checks to determine if
+            # we're going to overwrite a method, etc.
+            self._replaceitem(name, value)
+
         else:  # never called _lock(), so go on
-            if hasattr(self, name):
-                obj = getattr(self, name)
-                if callable(obj):
-                    # special protect certain names which would ruin class
-                    warnings.warn(f'The method {name} is readonly and cannot be assigned.')
-                    return AttributeError(f'The method {name} is readonly and cannot be assigned.')
-                self._replaceitem(name, value)
-            else:
+            # If this object has an attribute with the given name but it's _not_ in the ItemContainer,
+            # it's likely we're going to overwrite a method and we don't allow that.
+            obj = getattr(self, name, _default_getattr_placeholder)
+            if callable(obj):
+                # special protect certain names which would ruin class
+                warnings.warn(f'The method {name} is readonly and cannot be assigned.')
+                return AttributeError(f'The method {name} is readonly and cannot be assigned.')
+            elif obj is _default_getattr_placeholder:
                 self._addnewitem(name, value)
+            else:
+                # Log the name and type(obj) here -- there shouldn't really be anything hitting
+                # this branch anymore, so if there is somehow it'd be good to have some data on
+                # how we're getting here.
+                logger.debug(
+                    "Replacing non-item attribute '%s' in `__setattr__`.", name,
+                    extra={'name': name, 'attr': obj}
+                )
+                self._replaceitem(name, value)
 
     # ------------------------------------------------------------
     def __getattr__(self, name):
