@@ -154,14 +154,12 @@ def SDSRebuildRootOff() -> None:
 
 def _anypath_to_bytes(s: AnyPath) -> bytes:
     """Normalize `str`, `bytes`, or `os.PathLike` to a `bytes`."""
-    s = os.fspath(s)
-    return s.encode() if isinstance(s, str) else s
+    return os.fsencode(s)
 
 
 def _anypath_to_str(s: AnyPath) -> str:
     """Normalize `str`, `bytes`, or `os.PathLike` to a `str`."""
-    s = os.fspath(s)
-    return s.decode() if isinstance(s, bytes) else s
+    return os.fsdecode(s)
 
 #-----------------------------------------------------------------------------------------
 def sds_os(func: Callable, path: AnyPath) -> Any:
@@ -759,20 +757,28 @@ def _sds_raw_info(filepath: AnyPath, share: Optional[Union[bytes, str]] = None, 
     -------
     a list of sds tuples
     '''
-    # Normalize any os.PathLike or bytes paths to str
-    filepath = _anypath_to_str(filepath)
+    def _normalize_path(filepath):
+        # Normalize any os.PathLike or bytes paths to str
+        filepath = _anypath_to_str(filepath)
 
-    if not sds_endswith(filepath):
-        if sds_isdir(filepath):
-            # should we return an error also?
-            filepath = filepath + os.sep + '_root.sds'
-        else:
-            filepath = filepath+SDS_EXTENSION
-    else:
-        if sds_isdir(filepath):
+        if not sds_endswith(filepath):
+            if sds_isdir(filepath):
+                # should we return an error also?
+                return filepath + os.sep + '_root.sds'
+            else:
+                return filepath+SDS_EXTENSION
+        elif sds_isdir(filepath):
             raise ValueError(f'The filename {filepath} is a directory and ends with .sds so sds_info will not work.  Consider sds_tree(filepath) instead.')
+        else:
+            return filepath
 
-    return decompress_dataset_internal(filepath, info=True, sections=sections, threads=threads)
+    if isinstance(filepath, (str, bytes, os.PathLike)):
+        filepath = _normalize_path(filepath)
+    else:
+        # Assume this is a Sequence[AnyPath]
+        filepath = [_normalize_path(x) for x in filepath]
+
+    return decompress_dataset_internal(filepath, sharename=share, info=True, sections=sections, threads=threads)
 
 
 #-----------------------------------------------------------------------------------------
@@ -811,7 +817,7 @@ def sds_dir(filepath: AnyPath, share: Optional[str] = None) -> List[str]:
 
 
 #-----------------------------------------------------------------------------------------
-def sds_info(filepath: AnyPath, share: Optional[Union[bytes, str]] = None, sections: Optional[List[str]] = None, threads: Optional[int] = None):
+def sds_info(filepath: Union[AnyPath, Sequence[AnyPath]], share: Optional[Union[bytes, str]] = None, sections: Optional[List[str]] = None, threads: Optional[int] = None):
 
     # TODO: match the Matlab output (should it look the same, or print more information from array info?)
     return _sds_raw_info(filepath, share=share, sections=sections, threads=threads)
