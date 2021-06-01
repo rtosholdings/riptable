@@ -29,6 +29,8 @@ class TestSDS:
         test_ds.save(test_ds_path)
 
         # Call rt.sds_info(), passing in the path where the test dataset was saved.
+        if not include_extension:
+            test_ds_path = test_ds_path.parent / test_ds_path.stem
         test_ds_infos = rt.sds_info(test_ds_path)
         assert isinstance(test_ds_infos, Sequence)
         assert len(test_ds_infos) == 1
