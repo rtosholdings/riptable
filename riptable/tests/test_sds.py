@@ -34,7 +34,9 @@ class TestSDS:
         test_ds_infos = rt.sds_info(test_ds_path)
         assert isinstance(test_ds_infos, Sequence)
         assert len(test_ds_infos) == 1
-        assert isinstance(test_ds_infos[0], rc.sds_file_info)
+        # TEMP: Disabled until riptide_cpp CI pypi builds are fixed, otherwise this next line breaks in CI
+        #       when running with riptide_cpp <1.6.28
+        #assert isinstance(test_ds_infos[0], rc.sds_file_info)
 
         # TODO: Add some additional assertions -- check that `test_ds_info` has info for
         #       all of the columns in the test dataset, that the column shapes are correct
@@ -62,7 +64,9 @@ class TestSDS:
         test_ds_infos = rt.sds_info(test_ds_paths)
         assert isinstance(test_ds_infos, Sequence)
         assert len(test_ds_infos) == dataset_count
-        assert all([isinstance(x, rc.sds_file_info) for x in test_ds_infos])
+        # TEMP: Disabled until riptide_cpp CI pypi builds are fixed, otherwise this next line breaks in CI
+        #       when running with riptide_cpp <1.6.28
+        #assert all([isinstance(x, rc.sds_file_info) for x in test_ds_infos])
 
         # TODO: Add some additional assertions -- check that each info in `test_ds_infos` corresponds
         #       to the same test dataset (in the same position in the input path list), that it has info for
