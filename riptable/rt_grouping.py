@@ -3231,7 +3231,8 @@ class Grouping:
         else:
             if accum2:
                 raise TypeError(f"Nothing was calculated for Accum2 operation.")
-            print("Warning: nothing calculated.")
+            elif Grouping.DebugMode:
+                print("Warning: nothing calculated.")
 
         #create a new dataset from the groupby results
         if Grouping.DebugMode: print("calculateallpacked!", len(accum[0]), accum)
