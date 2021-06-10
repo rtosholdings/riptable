@@ -40,6 +40,13 @@ class FAStrDispatchPair(NamedTuple):
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
+def _deprecate_naming(old_func, new_func):
+    def wrapped(self, str2):
+        warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning)
+        return getattr(self, new_func)(str2)
+    return wrapped
+
+
 # NOTE YOU MUST INSTALL tbb
 # conda install tbb
 # to confirm...
@@ -140,6 +147,13 @@ class FAString(FastArray):
         The number of elements in the original string array
         """
         return len(self) // self._itemsize
+
+    @property
+    def _output_length(self):
+        """
+        The number of elements in output arrays, taking into account Categoricals
+        """
+        return len(self._ikey) if self._ikey is not None else self.n_elements
 
     # -----------------------------------------------------
     def possibly_convert_tostr(self, arr):
@@ -358,7 +372,7 @@ class FAString(FastArray):
             dest[i] = strlen
 
     # -----------------------------------------------------
-    def _nb_strpbrk(src, itemsize, dest, str2):
+    def _nb_index_any_of(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
         for i in nb.prange(len(src) // itemsize):
@@ -380,7 +394,7 @@ class FAString(FastArray):
                 dest[i] = -1
 
     # -----------------------------------------------------
-    def _nb_strstr(src, itemsize, dest, str2):
+    def _nb_index(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
         for i in nb.prange(len(src) // itemsize):
@@ -575,7 +589,7 @@ class FAString(FastArray):
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
     # -----------------------------------------------------
-    def strpbrk(self, str2):
+    def index_any_of(self, str2):
         '''
         return the first index location any of the characters that are part of str2,
         or -1 if none of the characters match
@@ -586,20 +600,25 @@ class FAString(FastArray):
         
         Examples
         --------
-        >>> FAString(['this  ','that ','test']).strpbrk('ia')
+        >>> FAString(['this  ','that ','test']).index_any_of('ia')
         FastArray([2, 2, -1])
         '''
         if not isinstance(str2, FAString):
+            if str2 == '':
+                return zeros(self._output_length, dtype=np.int32)
+
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
        
-        return self._apply_func(self.nb_strpbrk, self.nb_strpbrk_par, str2, dtype=np.int32,
+        return self._apply_func(self.nb_index_any_of, self.nb_index_any_of_par, str2, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
 
+    strpbrk = _deprecate_naming('strpbrk', 'index_any_of')
+
     # -----------------------------------------------------
-    def strstr(self, str2):
+    def index(self, str2):
         '''
         return the first index location of the entire substring specified in str2,
         or -1 if the substring does not exist
@@ -610,20 +629,22 @@ class FAString(FastArray):
         
         Examples
         --------
-        >>> FAString(['this  ','that ','test']).strstr('at')
+        >>> FAString(['this  ','that ','test']).index('at')
         FastArray([-1, 2, -1])
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return zeros(self.n_elements, dtype=np.int32)
+                return zeros(self._output_length, dtype=np.int32)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
                 return TypeError(f"A single string must be passed for str2 not {str2!r}")
             str2 = FAString(str2)
 
-        return self._apply_func(self.nb_strstr, self.nb_strstr_par, str2, dtype=np.int32,
+        return self._apply_func(self.nb_index, self.nb_index_par, str2, dtype=np.int32,
                                 filtered_fill_value=np.iinfo(np.int32).min)
+
+    strstr = _deprecate_naming('strstr', 'index')
 
     # -----------------------------------------------------
     def contains(self, str2):
@@ -643,7 +664,7 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self.n_elements, dtype=bool)
+                return ones(self._output_length, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
@@ -653,12 +674,7 @@ class FAString(FastArray):
         return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=np.bool,
                                 filtered_fill_value=False)
 
-    def strstrb(self, str2):
-        """
-        Deprecated. Please see .contains.
-        """
-        warnings.warn("strstrb is now deprecated and has been renamed to `contains`", DeprecationWarning)
-        return self.contains(str2)
+    strstrb = _deprecate_naming('strstrb', 'contains')
 
     # -----------------------------------------------------
     def startswith(self, str2):
@@ -677,7 +693,7 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self.n_elements, dtype=bool)
+                return ones(self._output_length, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
@@ -704,7 +720,7 @@ class FAString(FastArray):
         '''
         if not isinstance(str2, FAString):
             if str2 == '':
-                return ones(self.n_elements, dtype=bool)
+                return ones(self._output_length, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
             if len(str2) != 1:
@@ -877,11 +893,11 @@ class FAString(FastArray):
     nb_strlen = _njit_serial(_nb_strlen)
     nb_strlen_par = _njit_par(_nb_strlen)
 
-    nb_strpbrk = _njit_serial(_nb_strpbrk)
-    nb_strpbrk_par = _njit_par(_nb_strpbrk)
+    nb_index_any_of = _njit_serial(_nb_index_any_of)
+    nb_index_any_of_par = _njit_par(_nb_index_any_of)
 
-    nb_strstr = _njit_serial(_nb_strstr)
-    nb_strstr_par = _njit_par(_nb_strstr)
+    nb_index = _njit_serial(_nb_index)
+    nb_index_par = _njit_par(_nb_index)
 
     nb_contains = _njit_serial(_nb_contains)
     nb_contains_par = _njit_par(_nb_contains)

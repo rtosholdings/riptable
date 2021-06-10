@@ -103,6 +103,18 @@ class TestFAString:
         result = FAString(NB_PARALLEL_SYMBOLS).contains(str2)
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
+    @parametrize("func, expected", [
+        ('index', 0),
+        ('index_any_of', 0),
+        ('contains', True),
+        ('startswith', True),
+        ('endswith', True),
+    ])
+    def test_empty_string_comparisons_cat(self, func, expected):
+        result = getattr(self.cat_symbol.str, func)('')
+        expected = np.tile(expected, len(self.cat_symbol))
+        assert_array_equal(result, expected)
+
     @parametrize("str2, expected", [
         ('bb', [False, False, True]),
         ('ba', [False, True, False]),
@@ -111,6 +123,51 @@ class TestFAString:
         # TODO: Expand test to include when the underlying array is a Categorical.
         #       Also test parallel case.
         result = FAString(['abab', 'ababa', 'abababb']).endswith(str2)
+        assert_array_equal(result, expected)
+
+    @parametrize("str2, expected", [
+        ('A', [0, 0, -1, -1, -1]),
+        ('AA', [0, -1, -1, -1, -1]),
+        ('AAPL', [0, -1, -1, -1, -1]),
+        ('', [0] * 5),
+        ('AAA', [-1] * 5),
+        ('B', [-1, -1, 1, -1, 1])
+    ])
+    def test_index(self, str2, expected):
+        result = FAString(SYMBOLS).index(str2)
+        assert_array_equal(result, expected)
+
+        result = FAString(NB_PARALLEL_SYMBOLS).index(str2)
+        assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
+
+        # test old alias
+        result = FAString(SYMBOLS).strstr(str2)
+        assert_array_equal(result, expected)
+
+    def test_index_cat(self):
+        result = self.cat_symbol.str.index('A')
+        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
+        expected = rt.FA([inv, 0, 0, -1, -1, -1], dtype=result.dtype).tile(3)
+        assert_array_equal(result, expected)
+
+    def test_index_any_of(self):
+        result = FAString(SYMBOLS).index_any_of('PZG')
+        expected = rt.FA([2, 2, -1, 0, -1])
+        assert_array_equal(result, expected)
+
+        result = FAString(NB_PARALLEL_SYMBOLS).index_any_of('PZG')
+        expected = rt.FA([2, 2, -1, 0, -1] * PARALLEL_MULTIPLIER)
+        assert_array_equal(result, expected)
+
+        # test old alias
+        result = FAString(SYMBOLS).strpbrk('PZG')
+        expected = rt.FA([2, 2, -1, 0, -1])
+        assert_array_equal(result, expected)
+
+    def test_index_any_of_cat(self):
+        result = self.cat_symbol.str.index_any_of('PZG')
+        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
+        expected = rt.FA([inv, 2, 2, -1, 0, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     def test_lower(self):
@@ -223,33 +280,6 @@ class TestFAString:
     def test_strlen_parallel(self):
         result = rt.FAString(NB_PARALLEL_SYMBOLS).strlen
         expected = rt.FA([4, 4, 2, 4, 3], dtype=result.dtype).tile(PARALLEL_MULTIPLIER)
-        assert_array_equal(result, expected)
-
-    def test_strpbrk_cat(self):
-        result = self.cat_symbol.str.strpbrk('PZG')
-        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
-        expected = rt.FA([inv, 2, 2, -1, 0, -1], dtype=result.dtype).tile(3)
-        assert_array_equal(result, expected)
-
-    @parametrize("str2, expected", [
-        ('A', [0, 0, -1, -1, -1]),
-        ('AA', [0, -1, -1, -1, -1]),
-        ('AAPL', [0, -1, -1, -1, -1]),
-        ('', [0] * 5),
-        ('AAA', [-1] * 5),
-        ('B', [-1, -1, 1, -1, 1])
-    ])
-    def test_strstr(self, str2, expected):
-        result = FAString(SYMBOLS).strstr(str2)
-        assert_array_equal(result, expected)
-
-        result = FAString(NB_PARALLEL_SYMBOLS).strstr(str2)
-        assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
-
-    def test_strstr_cat(self):
-        result = self.cat_symbol.str.strstr('A')
-        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
-        expected = rt.FA([inv, 0, 0, -1, -1, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     substr_test_cases = parametrize("start_stop", [
