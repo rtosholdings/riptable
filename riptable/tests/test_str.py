@@ -140,10 +140,28 @@ class TestFAString:
         result = FAString(NB_PARALLEL_SYMBOLS).index(str2)
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
+        # test old alias
+        result = FAString(SYMBOLS).strstr(str2)
+        assert_array_equal(result, expected)
+
     def test_index_cat(self):
         result = self.cat_symbol.str.index('A')
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
         expected = rt.FA([inv, 0, 0, -1, -1, -1], dtype=result.dtype).tile(3)
+        assert_array_equal(result, expected)
+
+    def test_index_any_of(self):
+        result = FAString(SYMBOLS).index_any_of('PZG')
+        expected = rt.FA([2, 2, -1, 0, -1])
+        assert_array_equal(result, expected)
+
+        result = FAString(NB_PARALLEL_SYMBOLS).index_any_of('PZG')
+        expected = rt.FA([2, 2, -1, 0, -1] * PARALLEL_MULTIPLIER)
+        assert_array_equal(result, expected)
+
+        # test old alias
+        result = FAString(SYMBOLS).strpbrk('PZG')
+        expected = rt.FA([2, 2, -1, 0, -1])
         assert_array_equal(result, expected)
 
     def test_index_any_of_cat(self):
