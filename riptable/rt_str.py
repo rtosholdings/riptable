@@ -17,7 +17,7 @@ from numba.core.dispatcher import Dispatcher
 from .config import get_global_settings
 from .rt_fastarray import FastArray
 
-from .rt_numpy import empty_like, empty, where, ones, zeros
+from .rt_numpy import empty, where, ones, zeros, unique
 from .rt_enum import TypeRegister
 from .Utils.common import cached_property
 
@@ -714,6 +714,94 @@ class FAString(FastArray):
         vmatch = np.vectorize(lambda x: bool(regex.search(x)))
         bools = vmatch(self.backtostring)
         return bools
+
+    def extract(self, regex: str, expand: Optional[bool] = None,
+                fillna: str = '', names=None, apply_unique: bool = True) -> Union[FastArray, "Dataset"]:
+        '''
+        Extract one or more pattern groups into a Dataset or FastArray.
+        For one capture group the default is to return a FastArray
+        but this can be overridden by passing expand=True or by providing names.
+        Column names can be specified within the regex using (?P<name>) in the search group(s)
+        or by passing the names argument which may be more convenient.
+
+        Parameters
+        ----------
+        regex - Contains the patterns to search for
+        expand - set to True to return a Dataset for a single capture group.
+        fillna - Used for rows where no regex does not match
+        names - Optional list of strings provides keys for resultant dataset
+        apply_unique - When True we apply the regex to the unique values and then expand using the reverse index.
+        This is optimal for repetitive data and benign for unique or close highly non-repetitive data
+
+        Examples
+        --------
+        >>> osi = rt.FastArray(['SPX UO 12/15/23 C5700', 'SPXW UO 09/17/21 C3650'])
+        >>> osi.str.extract('\w+')
+        FastArray([b'SPX', b'SPXW'], dtype='|S4')
+        >>> osi.str.exract('(?P<root>\w+)')
+        #   root
+        -   ----
+        0   SPX
+        1   SPXW
+        >>> osi.str.exract('(\w+).* (\d{2}/\d{2}/\d{2})', names=['root', 'expiration'])
+        #   root   expiration
+        -   ----   ----------
+        0   SPX    12/15/23
+        1   SPXW   09/17/21
+        >>> osi.str.extract('\w+W', expand=True)
+        #   group_0
+        -   -------
+        0
+        1   SPXW
+        '''
+        if apply_unique:
+            unique_values, index = unique(self.backtostring, return_inverse=True)
+            result = unique_values.str.extract(regex, expand=expand, fillna=fillna,
+                                               names=names, apply_unique=False)
+            return result[index] if isinstance(result, FastArray) else result[index, :]
+
+        if not isinstance(regex, bytes):
+            regex = bytes(regex, 'utf-8')
+        compiled = re.compile(regex)
+
+        ngroups = compiled.groups
+        if ngroups == 0:
+            # convenience where we treat the entire pattern as a capture group
+            regex = f'({regex.decode()})'
+            return self.extract(bytes(regex, 'utf-8'), expand=expand, fillna=fillna, names=names)
+
+        # expand defaults to False if we have one capture group and do not specify names
+        if expand is None:
+            expand = ngroups > 1 or names is not None
+        elif expand is False and ngroups > 1:
+            raise ValueError("expand cannot be False with multiple capture groups")
+
+        if names is None:
+            names = [f'group_{i}' for i in range(ngroups)]
+            for name, index in compiled.groupindex.items():
+                names[index - 1] = name
+        elif len(names) != ngroups:
+            raise ValueError(f"Number of names, {len(names)}, does not match number of groups, {ngroups}")
+
+        strings = self.backtostring
+        # we define a list containing an empty array for each group
+        # use Python lists as we do not know how manyh chars will be in the resultant arrays.
+        # Performance in comparable to unsing pre-allocated numpy arrays with ~600K unique elements
+        out_arrs = [[fillna] * len(strings) for _ in range(ngroups)]
+
+        for i, s in enumerate(strings):
+            result = compiled.search(s)
+            if result is not None:
+                result = result.groups()
+                for s, arr in zip(result, out_arrs):
+                    arr[i] = s
+
+        if expand:
+            from .rt_dataset import Dataset
+            out = Dataset(dict(zip(names, out_arrs)))
+        else:
+            out = FastArray(out_arrs[0])
+        return out
 
     def _nb_substr(src, out, itemsize, start, stop, strlen):
         n_elements = len(out)
