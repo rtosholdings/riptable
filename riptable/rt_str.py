@@ -21,10 +21,10 @@ from .rt_numpy import empty, where, ones, zeros, unique
 from .rt_enum import TypeRegister
 from .Utils.common import cached_property
 
-
 # Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
 _njit_serial = partial(nb.njit, parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 _njit_par = partial(nb.njit, parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
+
 
 class FAStrDispatchPair(NamedTuple):
     """A pair of numba-based functions; one compiled for serial execution and the other for parallel execution."""
@@ -39,6 +39,7 @@ class FAStrDispatchPair(NamedTuple):
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
+
 def _warn_deprecated_naming(old_func, new_func):
     warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=2)
 
@@ -51,18 +52,18 @@ def _warn_deprecated_naming(old_func, new_func):
 # >>> 'tbb'
 #
 # NOTE this class was first written reshaping the array as 2d
-#----
-#if intype[1]=='S':
+# ----
+# if intype[1]=='S':
 #    return self.view(np.uint8).reshape((len(self), self.itemsize))
-#if intype[1]=='U':
+# if intype[1]=='U':
 #    return self.view(np.uint32).reshape((len(self), self.itemsize//4))
-#---- 
-#then pass to numba as 2d using shape[0] outer loop, shape[1] inner loop with [row,col] accessors
-#---
-#then flip back to string
-#if self.itemsize == 4:
+# ----
+# then pass to numba as 2d using shape[0] outer loop, shape[1] inner loop with [row,col] accessors
+# ---
+# then flip back to string
+# if self.itemsize == 4:
 #    result=self.ravel().view('U'+str(self.shape[1]))
-#else:
+# else:
 #    result=self.ravel().view('S'+str(self.shape[1]))
 #
 # Keeping it as 1d and remembering the itemsize is 10% faster on large arrays, and even faster on small arrays
@@ -80,26 +81,26 @@ class FAString(FastArray):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
             if np.isscalar(arr):
-                arr=np.asanyarray([arr])
+                arr = np.asanyarray([arr])
             else:
-                arr=np.asanyarray(arr)
+                arr = np.asanyarray(arr)
 
-        intype=arr.dtype.char
-        if intype=='O':
+        intype = arr.dtype.char
+        if intype == 'O':
             # try to convert to string (might have come from pandas)
             # default to unicode (note: FastArray attempts 'S' first)
             arr = arr.astype('U')
-            intype=arr.dtype.char
+            intype = arr.dtype.char
 
         itemsize = np.int64(arr.itemsize)
 
-        if intype=='S':
+        if intype == 'S':
             # convert to two dim one byte array
             instance = arr.view(np.uint8)
-        elif intype=='U':
+        elif intype == 'U':
             # convert to two dim four byte array
             instance = arr.view(np.uint32)
-            itemsize = itemsize //4
+            itemsize = itemsize // 4
         else:
             raise TypeError(f"FAString can only be used on byte string and unicode not {arr.dtype!r}")
 
@@ -141,9 +142,9 @@ class FAString(FastArray):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
             if not isinstance(arr, (list, tuple)):
-                arr=np.asanyarray([arr])
-            else: 
-                arr=np.asanyarray(arr)
+                arr = np.asanyarray([arr])
+            else:
+                arr = np.asanyarray(arr)
 
         if arr.dtype.char != self._intype:
             arr = arr.astype(self._intype)
@@ -228,10 +229,10 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
-                c=src[rowpos+j]
+                c = src[rowpos + j]
                 if c >= 97 and c <= 122:
                     # convert to ASCII upper
-                    src[rowpos+j] = c-32
+                    src[rowpos + j] = c - 32
 
     # -----------------------------------------------------
     def _nb_upper(src, itemsize, dest):
@@ -240,12 +241,12 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
-                c=src[rowpos+j]
+                c = src[rowpos + j]
                 if c >= 97 and c <= 122:
                     # convert to ASCII upper
-                    dest[rowpos+j] = c-32
+                    dest[rowpos + j] = c - 32
                 else:
-                    dest[rowpos+j] = c
+                    dest[rowpos + j] = c
 
     # -----------------------------------------------------
     def _nb_lower(src, itemsize, dest):
@@ -254,12 +255,12 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
-                c=src[rowpos+j]
+                c = src[rowpos + j]
                 if c >= 65 and c <= 90:
                     # convert to ASCII lower
-                    dest[rowpos+j] = c+32
+                    dest[rowpos + j] = c + 32
                 else:
-                    dest[rowpos+j] = c
+                    dest[rowpos + j] = c
 
     # -----------------------------------------------------
     def _nb_removetrailing(src, itemsize, dest, removechar):
@@ -287,11 +288,11 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             rowpos = i * itemsize
             # find length of string
-            strlen=0
+            strlen = 0
             while (strlen < itemsize):
-                if src[rowpos + strlen] ==0: break
-                strlen +=1
-            end = rowpos + strlen -1
+                if src[rowpos + strlen] == 0: break
+                strlen += 1
+            end = rowpos + strlen - 1
             start = rowpos
             while (start < end):
                 temp = src[end]
@@ -306,18 +307,18 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             rowpos = i * itemsize
             # find length of string
-            strlen=0
+            strlen = 0
             while (strlen < itemsize):
-                if src[rowpos + strlen] ==0: break
-                strlen +=1
-            srcpos=0
-            while(strlen > 0):
+                if src[rowpos + strlen] == 0: break
+                strlen += 1
+            srcpos = 0
+            while (strlen > 0):
                 strlen -= 1
                 dest[rowpos + strlen] = src[rowpos + srcpos]
                 srcpos += 1
-            while(srcpos < itemsize):
+            while (srcpos < itemsize):
                 dest[rowpos + srcpos] = 0
-                srcpos +=1
+                srcpos += 1
 
     # -----------------------------------------------------
     def _nb_strlen(src, itemsize, dest):
@@ -325,7 +326,7 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
-            strlen= 0
+            strlen = 0
             # loop over all chars in the string
             for j in range(itemsize):
                 if src[rowpos + j] == 0:
@@ -341,12 +342,12 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
-            found =0
+            found = 0
             # loop over all chars in the string
             for j in range(itemsize):
-                c= src[rowpos + j]
+                c = src[rowpos + j]
                 for k in range(str2len):
-                    if c==str2[k]:
+                    if c == str2[k]:
                         # store location of match
                         dest[i] = j
                         found = 1
@@ -391,7 +392,7 @@ class FAString(FastArray):
                     if src[rowpos + j + k] != str2[k]:
                         break
                     k += 1
-                if k==str2len:
+                if k == str2len:
                     # indicate we have a match
                     dest[i] = True
                     break
@@ -407,25 +408,25 @@ class FAString(FastArray):
 
             # loop over all chars in the string
             # check if enough space left
-            if itemsize >= str2len: 
-                k =itemsize
-                while ((k > 0) and (src[rowpos + k -1]==0)):
+            if itemsize >= str2len:
+                k = itemsize
+                while ((k > 0) and (src[rowpos + k - 1] == 0)):
                     k -= 1
 
                 # check if still enough space left
-                if k >= str2len: 
+                if k >= str2len:
 
-                    k2=str2len
+                    k2 = str2len
                     # check if only the end matches
                     while (k2 > 0):
-                        if src[rowpos + k -1] != str2[k2-1]:
+                        if src[rowpos + k - 1] != str2[k2 - 1]:
                             break
                         k -= 1
-                        k2 -=1
-                    if k2==0:
+                        k2 -= 1
+                    if k2 == 0:
                         # indicate we have a match
                         dest[i] = True
-                    
+
     # -----------------------------------------------------
     def _nb_startswith(src, itemsize, dest, str2):
         str2len = len(str2)
@@ -436,14 +437,14 @@ class FAString(FastArray):
             dest[i] = False
             # loop over all chars in the string
             # check if enough space left
-            if itemsize >= str2len: 
-                k =0
+            if itemsize >= str2len:
+                k = 0
                 # check if only the beginning matches
                 while (k < str2len):
                     if src[rowpos + k] != str2[k]:
                         break
                     k += 1
-                if k==str2len:
+                if k == str2len:
                     # indicate we have a match
                     dest[i] = True
 
@@ -538,7 +539,7 @@ class FAString(FastArray):
         return self._apply_func(self.nb_removetrailing, self.nb_removetrailing_par, remove)
 
     # -----------------------------------------------------
-    @cached_property     # only cached for Python 3.7 or higher
+    @cached_property  # only cached for Python 3.7 or higher
     def strlen(self):
         '''
         return the string length of every string (bytes or unicode)
@@ -713,6 +714,7 @@ class FAString(FastArray):
         regex = re.compile(regex)
         vmatch = np.vectorize(lambda x: bool(regex.search(x)))
         bools = vmatch(self.backtostring)
+
         return bools
 
     def extract(self, regex: str, expand: Optional[bool] = None,
@@ -845,7 +847,7 @@ class FAString(FastArray):
         out = zeros((self.n_elements, n_chars), self.dtype)
         out = self._nb_substr(out, self._itemsize, start, stop, strlen)
         n_chars = out.shape[1]
-        if n_chars == 0:    # empty sub strings everywhere
+        if n_chars == 0:  # empty sub strings everywhere
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
         else:
             out = out.ravel().view(f'<{self._intype}{n_chars}')
@@ -861,7 +863,7 @@ class FAString(FastArray):
             if pos >= itemsize or pos < 0:
                 # Parallel reduction on this index.
                 # Otherwise, returning here prevents the function from being parallelized.
-                broken_at = np.minimum(broken_at, i)    # this triggers error below (in `char()`).
+                broken_at = np.minimum(broken_at, i)  # this triggers error below (in `char()`).
 
                 # TODO: Set out[i] to some invalid value?
                 out[i] = 0
@@ -902,7 +904,6 @@ class FAString(FastArray):
                              f"for string of length {self._itemsize}")
         out = out.view(f'{self._intype}1')
         return out
-
 
     # Use the specialized decorators to create both a serial and parallel version of each
     # numba function (so we only need one definition of each), then add it to FAString.
@@ -1043,5 +1044,5 @@ class CatString:
 
 
 # keep as last line
-TypeRegister.FAString=FAString
+TypeRegister.FAString = FAString
 TypeRegister.CatString = CatString

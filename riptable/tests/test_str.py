@@ -2,11 +2,11 @@ import math
 from typing import Tuple
 
 import pytest
+
 parametrize = pytest.mark.parametrize
 
 import riptable as rt
 from riptable import *
-
 
 from numpy.testing import assert_array_equal
 from ..testing.array_assert import assert_array_or_cat_equal
@@ -16,7 +16,6 @@ SYMBOLS = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM']
 PARALLEL_MULTIPLIER = 2000
 NB_PARALLEL_SYMBOLS = SYMBOLS * PARALLEL_MULTIPLIER
 assert len(NB_PARALLEL_SYMBOLS) >= FAString._APPLY_PARALLEL_THRESHOLD
-
 
 _top_25_US_cities_by_population_2019_state_names = [
     'New York', 'California', 'Illinois', 'Texas', 'Arizona',
@@ -32,8 +31,10 @@ unit tests of string functions.
 https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population
 """
 
+
 def _tile_array(arr: np.ndarray, tile_count: int) -> np.ndarray:
     return arr.tile(tile_count) if hasattr(arr, 'tile') else np.tile(arr, tile_count)
+
 
 def _make_parallelizable_array(arr: np.ndarray) -> Tuple[np.ndarray, int]:
     # assumes C-contiguous layout here
@@ -254,7 +255,8 @@ class TestFAString:
 
     @pytest.mark.parametrize('strings', [
         pytest.param(
-            [(x + (' ' * (((len(x) * 17) + idx) % 3)) if idx % 3 != 0 else x) for idx, x in enumerate(_top_25_US_cities_by_population_2019_state_names)],
+            [(x + (' ' * (((len(x) * 17) + idx) % 3)) if idx % 3 != 0 else x) for idx, x in
+             enumerate(_top_25_US_cities_by_population_2019_state_names)],
             id="modified US state names"
         )
     ])
@@ -265,7 +267,8 @@ class TestFAString:
     @pytest.mark.parametrize('unicode', [pytest.param(False, id='ascii'), pytest.param(True, id='unicode')])
     @pytest.mark.parametrize('parallel', [pytest.param(False, id='serial'), pytest.param(True, id='parallel')])
     @pytest.mark.parametrize('chars', [pytest.param(' ', id='space'), 's'])
-    def test_removetrailing(self, strings: list, arr_type_factory: callable, unicode: bool, parallel: bool, chars) -> None:
+    def test_removetrailing(self, strings: list, arr_type_factory: callable, unicode: bool, parallel: bool,
+                            chars) -> None:
         dtype_str = '<U' if unicode else '|S'
         if not unicode:
             strings = [x.encode() for x in strings]
@@ -404,4 +407,3 @@ class TestFAString:
     #
     # TODO: upper_inplace tests
     #
-
