@@ -911,14 +911,9 @@ class CatString:
     def __init__(self, cat):
         from .rt_categorical import CategoryMode
         self.cat = cat
-        if cat.isenum:
-            raise ValueError(f"Could not use str in enum mode.  Email for help")
-        elif cat.issinglekey:
+        if cat.category_mode == CategoryMode.StringArray:
             string_list = cat.category_array
             self.fastring = FAString(string_list)
-
-        elif cat.ismultikey:
-            raise ValueError(f"Could not use .str in multikey mode.")
         else:
             raise ValueError(f"Could not use .str in {CategoryMode(cat.category_mode).name}.")
 
