@@ -407,3 +407,78 @@ class TestFAString:
     #
     # TODO: upper_inplace tests
     #
+
+
+class TestExtract:
+    duplicity = 2
+    osi = rt.FastArray(['SPX UO 12/15/23 C5700',
+                        'SPX UO 07/16/21 P3480',
+                        'SPXW UO 07/16/21 P3190',
+                        'SPXW UO 06/30/21 C4100',
+                        'SPXW UO 09/17/21 C3650'] * duplicity)
+
+    expirations = [b'12/15/23', b'07/16/21', b'07/16/21', b'06/30/21', b'09/17/21'] * duplicity
+    roots = [b'SPX', b'SPX', b'SPXW', b'SPXW', b'SPXW'] * duplicity
+    strikes = [b'5700', b'3480', b'3190', b'4100', b'3650'] * duplicity
+
+    dataset_out_test_cases = parametrize('pattern, expected', [
+        ('(\w+).* (\d{2}/\d{2}/\d{2})',
+         dict(group_0=roots,
+              group_1=expirations)),
+
+        ('(?P<root>\w+).*(\d{2}/\d{2}/\d{2})',
+         dict(root=roots,
+              group_1=expirations)),
+
+        ('(?P<root>\w+).*(?P<expiration>\d{2}/\d{2}/\d{2})',
+         dict(root=roots,
+              expiration=expirations)),
+
+        (' [C|P](?P<strike>\d+)$',
+         dict(strike=strikes)),
+
+        ('(?P<root>\w+W).*(?P<expiration>\d{2}/\d{2}/\d{2})',
+         dict(root=[root if b'W' in s else '' for s, root in zip(osi, roots)],
+              expiration=[exp if b'W' in s else '' for s, exp in zip(osi, expirations)]))
+    ], ids=['non-names', 'some-names', 'all-names', 'single-named', 'some-unmatched'])
+
+    @parametrize('apply_unique', [True, False])
+    @dataset_out_test_cases
+    def test_extract_dataset(self, pattern, expected, apply_unique):
+        result = self.osi.str.extract(pattern, expand=True, apply_unique=apply_unique)
+        [assert_array_or_cat_equal(FastArray(expected[key]), result[key], ) for key in result]
+
+    array_out_test_cases = parametrize("pattern, expected", [
+        (' [C|P](\d+)', strikes),
+        ('\w{2}', [s[:2] for s in roots]),
+    ], ids=['group', 'no-group'])
+
+    @array_out_test_cases
+    def test_extract_array(self, pattern, expected):
+        result = self.osi.str.extract(pattern)
+        expected = rt.FastArray(expected)
+        assert_array_or_cat_equal(expected, result)
+
+    @parametrize("kwargs, key", [
+        (dict(expand=True), 'group_0'),
+        (dict(names=['extract']), 'extract')
+    ])
+    @array_out_test_cases
+    def test_single_group_datasets(self, pattern, expected, kwargs, key):
+        result = self.osi.str.extract(pattern, **kwargs)
+        assert isinstance(result, Dataset)
+        assert result.keys() == [key]
+        assert_array_equal(expected, result[key])
+
+    @dataset_out_test_cases
+    def test_categorical_extract_dataset(self, pattern, expected):
+        result = rt.Cat(self.osi).str.extract(pattern, expand=True, )
+        [assert_array_or_cat_equal(Categorical(expected[key]), result[key],
+                                   relaxed_cat_check=True, check_cat_names=False)
+         for key in result]
+
+    @array_out_test_cases
+    def test_categorical_extract_array(self, pattern, expected):
+        result = rt.Cat(self.osi).str.extract(pattern)
+        assert_array_or_cat_equal(Categorical(expected), result,
+                                  relaxed_cat_check=True, check_cat_names=False)
