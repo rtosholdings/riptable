@@ -1042,6 +1042,17 @@ class CatString:
 
         return property(wrapper)
 
+    def extract(self, regex: str, expand: Optional[bool] = None,
+                fillna: str = '', names=None) -> Union["Categorical", "Dataset"]:
+        from .rt_dataset import Dataset
+        out = self.fastring.extract(regex, expand=expand, fillna=fillna, names=names, apply_unique=False)
+        if isinstance(out, Dataset):
+            return Dataset({key: self._convert_fastring_output(col) for key, col in out.items()})
+        else:
+            return self._convert_fastring_output(out)
+
+    extract.__doc__ = FAString.__doc__   # might be misleading since we drop the apply_unique argument
+
 
 # keep as last line
 TypeRegister.FAString = FAString
