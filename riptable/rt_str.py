@@ -917,6 +917,15 @@ class CatString:
         else:
             raise ValueError(f"Could not use .str in {CategoryMode(cat.category_mode).name}.")
 
+    def _convert_fastring_output(self, out, filter_fill_value):
+        from .rt_categorical import Categorical
+        if out.dtype.kind in ['S', 'U']:
+            out = Categorical(self.cat._fa.copy(), out, base_index=self.cat.base_index)
+            out.category_make_unique(inplace=True)
+            return out
+        else:
+            return where(self.cat.isfiltered(), filter_fill_value, out[self.cat.ikey - 1])
+
     @classmethod
     def _build_method(cls, method, filter_value_fill):
         """
@@ -927,17 +936,11 @@ class CatString:
 
         @wraps(func)
         def wrapper(self, *args, filter_fill_value=filter_value_fill, **kwargs):
-            from .rt_categorical import Categorical
             if is_property:
                 out = getattr(self.fastring, method)
             else:
                 out = func(self.fastring, *args, **kwargs)
-            if out.dtype.kind == 'S':
-                out = Categorical(self.cat._fa.copy(), out, base_index=self.cat.base_index)
-                out.category_make_unique(inplace=True)
-                return out
-            else:
-                return where(self.cat.isfiltered(), filter_fill_value, out[self.cat.ikey - 1])
+            return self._convert_fastring_output(out, filter_fill_value)
 
         if is_property:
             wrapper = property(wrapper)
