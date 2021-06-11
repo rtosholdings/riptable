@@ -79,9 +79,11 @@ def assert_categorical_equal(
         # lost. For example, consider if this array was a raw integer array in one Categorical and a
         # Date array in the other -- even if they contain the same underlying data, the Date type provides
         # some different interpretation/semantics on top of that data compared to a plain array.
-        x_cat_names_and_types = [(k, type(v).__qualname__) for k, v in x_cat_dict.items()]
-        y_cat_names_and_types = [(k, type(v).__qualname__) for k, v in y_cat_dict.items()]
-        if x_cat_names_and_types != y_cat_names_and_types:
+        x_cat_types = [type(v).__qualname__ for v in x_cat_dict.values()]
+        y_cat_types = [type(v).__qualname__ for v in y_cat_dict.values()]
+        if x_cat_types != y_cat_types:
+            x_cat_names_and_types = [(k, type(v).__qualname__) for k, v in x_cat_dict.items()]
+            y_cat_names_and_types = [(k, type(v).__qualname__) for k, v in y_cat_dict.items()]
             raise AssertionError(
                 f"The category array(s) have different types between the Categoricals:\t{x_cat_names_and_types} vs. {y_cat_names_and_types}.\n{extra_info}")
 
