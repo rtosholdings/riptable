@@ -921,6 +921,10 @@ class CatString:
         else:
             raise ValueError(f"Could not use .str in {CategoryMode(cat.category_mode).name}.")
 
+    @cached_property
+    def _isfiltered(self):
+        return self.cat.isfiltered()
+
     def _convert_fastring_output(self, out, filter_fill_value):
         from .rt_categorical import Categorical
         if out.dtype.kind in ['S', 'U']:
@@ -928,7 +932,7 @@ class CatString:
             out.category_make_unique(inplace=True)
             return out
         else:
-            return where(self.cat.isfiltered(), filter_fill_value, out[self.cat.ikey - 1])
+            return where(self._isfiltered, filter_fill_value, out[self.cat.ikey - 1])
 
     @classmethod
     def _build_method(cls, method, filter_value_fill):
