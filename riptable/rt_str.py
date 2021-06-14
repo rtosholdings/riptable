@@ -5,6 +5,7 @@ __all__ = [
 from functools import partial
 from typing import List, NamedTuple, Optional, Union
 import warnings
+import inspect
 
 try:
     # This will be used to cache strlen for version of Python 3.7 and higher
@@ -880,7 +881,9 @@ def _populate_wrappers(cls):
     Decorator for the CatString class which populates the string methods and sets the defaults for
     filtered value fills.
     """
-    for method, filter_value_fill in [
+    functions = dict(inspect.getmembers(FAString, inspect.isfunction))
+    properties = dict(inspect.getmembers(FAString, lambda o: isinstance(o, (cached_property, property))))
+    for name, filter_value_fill in [
         ('upper', None),
         ('lower', None),
         ('reverse', None),
@@ -895,7 +898,13 @@ def _populate_wrappers(cls):
         ('substr', None),
         ('char', None)
     ]:
-        setattr(cls, method, cls._build_method(method, filter_value_fill))
+        if name in functions:
+            wrapper = cls._build_method(functions[name], filter_value_fill)
+        elif name in properties:
+            wrapper = cls._build_property(name, filter_value_fill)
+        else:
+            raise RuntimeError(f'{name} is not defined on FAString as a function or property')
+        setattr(cls, name, wrapper)
     return cls
 
 
@@ -906,6 +915,7 @@ class CatString:
     All string methods are wrappers of the FAString equivalent with
     categorical re-expansion and option for how to fill filtered elements.
     """
+
     def __init__(self, cat):
         from .rt_categorical import CategoryMode
         self.cat = cat
@@ -927,22 +937,24 @@ class CatString:
     @classmethod
     def _build_method(cls, method, filter_value_fill):
         """
-        General purpose factory for FAString wrappers.
+        General purpose factory for FAString function wrappers.
         """
-        func = getattr(FAString, method)
-        is_property = isinstance(func, (cached_property, property))
-
-        @wraps(func)
+        @wraps(method)
         def wrapper(self, *args, filter_fill_value=filter_value_fill, **kwargs):
-            if is_property:
-                out = getattr(self.fastring, method)
-            else:
-                out = func(self.fastring, *args, **kwargs)
+            out = method(self.fastring, *args, **kwargs)
             return self._convert_fastring_output(out, filter_fill_value)
 
-        if is_property:
-            wrapper = property(wrapper)
         return wrapper
+
+    @classmethod
+    def _build_property(cls, name, filter_value_fill):
+        """
+        General purpose factory for FAString property wrappers.
+        """
+        def wrapper(self):
+            return self._convert_fastring_output(getattr(self.fastring, name), filter_value_fill)
+
+        return property(wrapper)
 
 
 # keep as last line
