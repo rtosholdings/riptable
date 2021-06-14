@@ -7,11 +7,6 @@ from typing import List, NamedTuple, Optional, Union
 import warnings
 import inspect
 
-try:
-    # This will be used to cache strlen for version of Python 3.7 and higher
-    from functools import cached_property
-except ImportError:
-    cached_property = property
 from functools import wraps
 
 
@@ -25,6 +20,7 @@ from .rt_fastarray import FastArray
 
 from .rt_numpy import empty_like, empty, where, ones, zeros
 from .rt_enum import TypeRegister, INVALID_POINTER_32
+from .Utils.common import cached_property
 
 
 # Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.

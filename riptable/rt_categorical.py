@@ -11,11 +11,6 @@ __all__ = [
 from enum import IntEnum, EnumMeta
 from typing import Any, Collection, Dict, List, Mapping, Optional, Tuple, Union, TYPE_CHECKING
 import warnings
-try:
-    # This will be used to cache Categorical.str for versions of Python 3.7 and higher
-    from functools import cached_property
-except ImportError:
-    cached_property = property
 
 import numpy as np
 
@@ -33,6 +28,7 @@ from .rt_numpy import (
 from .rt_hstack import hstack_any
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .Utils.rt_metadata import MetaData
+from .Utils.common import cached_property
 
 # groupby imports
 from .rt_groupbyops import GroupByOps
