@@ -12,7 +12,6 @@ from numpy.testing import assert_array_equal
 from ..testing.array_assert import assert_array_or_cat_equal
 
 
-
 SYMBOLS = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM']
 PARALLEL_MULTIPLIER = 2000
 NB_PARALLEL_SYMBOLS = SYMBOLS * PARALLEL_MULTIPLIER
@@ -109,8 +108,8 @@ class TestFAString:
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
     @parametrize("func, expected, filtered", [
-        ('index', 0, rt.rt_str.MIN_INT),
-        ('index_any_of', 0, rt.rt_str.MIN_INT),
+        ('index', 0, rt.rt_enum.INVALID_POINTER_32),
+        ('index_any_of', 0, rt.rt_enum.INVALID_POINTER_32),
         ('contains', True, False),
         ('startswith', True, False),
         ('endswith', True, False),

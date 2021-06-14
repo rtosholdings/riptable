@@ -21,8 +21,9 @@ from numba.core.dispatcher import Dispatcher
 
 from .config import get_global_settings
 from .rt_fastarray import FastArray
+
 from .rt_numpy import empty_like, empty, where, ones, zeros
-from .rt_enum import TypeRegister
+from .rt_enum import TypeRegister, INVALID_POINTER_32
 
 
 # Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
@@ -874,9 +875,6 @@ class FAString(FastArray):
     nb_char_par = _njit_par(_nb_char)
 
 
-MIN_INT = np.iinfo(np.int32).min
-
-
 def _populate_wrappers(cls):
     """
     Decorator for the CatString class which populates the string methods and sets the defaults for
@@ -887,9 +885,9 @@ def _populate_wrappers(cls):
         ('lower', None),
         ('reverse', None),
         ('removetrailing', None),
-        ('strlen', MIN_INT),
-        ('index_any_of', MIN_INT),
-        ('index', MIN_INT),
+        ('strlen', INVALID_POINTER_32),
+        ('index_any_of', INVALID_POINTER_32),
+        ('index', INVALID_POINTER_32),
         ('contains', False),
         ('startswith', False),
         ('endswith', False),
