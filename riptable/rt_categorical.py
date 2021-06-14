@@ -11,6 +11,11 @@ __all__ = [
 from enum import IntEnum, EnumMeta
 from typing import Any, Collection, Dict, List, Mapping, Optional, Tuple, Union, TYPE_CHECKING
 import warnings
+try:
+    # This will be used to cache Categorical.str for versions of Python 3.7 and higher
+    from functools import cached_property
+except ImportError:
+    cached_property = property
 
 import numpy as np
 
@@ -4155,7 +4160,7 @@ class Categorical(GroupByOps, FastArray):
             return self
 
     # -----------------------------------------------------
-    @property
+    @cached_property
     def str(self):
         return CatString(self)
 
