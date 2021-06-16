@@ -169,6 +169,7 @@ def _ASTYPE(self, dtype):
 
     return self.astype(dtype)
 
+
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 class FastArray(np.ndarray):
@@ -1108,7 +1109,10 @@ class FastArray(np.ndarray):
         return ret
 
     #--------------------------------------------------------------------------
-    def sample(self, N=10, filter=None):
+    def sample(
+        self, N: int = 10, filter: Optional[np.ndarray] = None,
+        seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None
+    ):
         '''
         Examples
         --------
@@ -1116,7 +1120,7 @@ class FastArray(np.ndarray):
         >>> a.sample(3)
         FastArray([0, 4, 9])
         '''
-        return sample(self, N=N, filter=filter)
+        return sample(self, N=N, filter=filter, seed=seed)
 
     #--------------------------------------------------------------------------
     def duplicated(self, keep='first', high_unique=False):

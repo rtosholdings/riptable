@@ -186,34 +186,32 @@ class TestRTNumpy:
     def test_sample(self):
         # Test Dataset.sample
         ds = rt.Dataset({'num': [1, 2, 3, 4, 5], 'str': ['ab', 'bc', 'cd', 'de', 'ef']})
-        np.random.seed(1)
-        ds_sample = ds.sample(3, rt.FA([True, True, True, False, True]))
-        ds_sample_expected = rt.Dataset({'num': [1, 3, 5], 'str': ['ab', 'cd', 'ef']})
-        assert (ds_sample_expected == ds_sample).all(axis=None)
+        ds_sample = ds.sample(3, rt.FA([True, True, True, False, True]), seed=1)
+        ds_sample_expected = rt.Dataset({'num': [1, 2, 5], 'str': ['ab', 'bc', 'ef']})
+        assert ds_sample.keys() == ds_sample_expected.keys()
+        for col_name in ds_sample_expected.keys():
+            assert_array_equal(ds_sample_expected[col_name], ds_sample[col_name], err_msg=f"Column '{col_name}' differs.")
 
         # Test FastArray.sample
         fa = rt.FA([1, 2, 3, 4, 5])
-        np.random.seed(1)
-        fa_sample = fa.sample(2, rt.FA([False, True, True, False, True]))
-        fa_sample_expected = rt.FA([2, 5])
-        assert (fa_sample_expected == fa_sample).all(axis=None)
+        fa_sample = fa.sample(2, rt.FA([False, True, True, False, True]), seed=1)
+        fa_sample_expected = rt.FA([2, 3])
+        assert_array_equal(fa_sample_expected, fa_sample)
 
         # Test overflow
-        fa_sample = fa.sample(10, rt.FA([False, True, False, False, True]))
+        fa_sample = fa.sample(10, rt.FA([False, True, False, False, True]), seed=1)
         fa_sample_expected = rt.FA([2, 5])
-        assert (fa_sample_expected == fa_sample).all(axis=None)
+        assert_array_equal(fa_sample_expected, fa_sample)
 
         # Test no filter
-        np.random.seed(1)
-        fa_sample = fa.sample(2)
+        fa_sample = fa.sample(2, seed=1)
         fa_sample_expected = rt.FA([2, 3])
-        assert (fa_sample_expected == fa_sample).all(axis=None)
+        assert_array_equal(fa_sample_expected, fa_sample)
 
         # Test fancy index
-        np.random.seed(1)
-        fa_sample = fa.sample(2, rt.FA([1, 3, 4]))
-        fa_sample_expected = rt.FA([2, 5])
-        assert (fa_sample_expected == fa_sample).all(axis=None)
+        fa_sample = fa.sample(2, rt.FA([1, 3, 4]), seed=1)
+        fa_sample_expected = rt.FA([2, 4])
+        assert_array_equal(fa_sample_expected, fa_sample)
 
     def test_hstack_returns_same_type(self):
         # Create some instances of the same derived array type.
