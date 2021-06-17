@@ -11,7 +11,7 @@ from collections.abc import Iterable
 import keyword
 from math import modf
 import os
-from typing import TYPE_CHECKING, Callable, Optional, List, Sequence, Union
+from typing import TYPE_CHECKING, Callable, Optional, List, Sequence, TypeVar, Union
 import warnings
 
 import numpy as np
@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from .rt_dataset import Dataset
     from .rt_struct import Struct
 
+
+_T = TypeVar('_T')
 
 #-----------------------------------------------------------------------------------------
 def load_h5(
@@ -971,9 +973,12 @@ def str_replace(arr, old, new, missing=''):
 
 
 # -------------------------------------------------------
-def sample(obj, N: int=10, filter=None):
+def sample(
+    obj: _T, N: int = 10, filter: Optional[np.ndarray] = None,
+    seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None
+) -> _T:
     """
-    Select N random samples from Dataset or FastArray.
+    Select N random samples from `Dataset` or `FastArray`.
 
     Parameters
     ----------
@@ -996,8 +1001,11 @@ def sample(obj, N: int=10, filter=None):
         else:
             M = filter
         N = min(N, M.shape[0])
-    # np.random.choice accepts as M either an int, which implicitly means 1-M, or a list of numbers
-    idx = np.random.choice(M, N, replace=False)
+
+    # N.B. The newer Generator-based .choice() implementation is significantly faster than np.random.choice().
+    # .choice() accepts as M either an int, which implicitly means 1-M, or a list of numbers
+    prng = np.random.default_rng(seed=seed)
+    idx = prng.choice(M, N, replace=False)
     idx.sort()
     if len(obj.shape) == 1:
         return obj[idx]

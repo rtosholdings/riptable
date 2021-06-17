@@ -4388,8 +4388,11 @@ class Dataset(Struct):
             i += max_cols
 
     # -------------------------------------------------------
-    def sample(self, N: int = 10, filter=None) -> 'Dataset':
-        return sample(self, N=N, filter=filter)
+    def sample(
+            self, N: int = 10, filter: Optional[np.ndarray] = None,
+            seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None
+    ) -> 'Dataset':
+        return sample(self, N=N, filter=filter, seed=seed)
 
     # -------------------------------------------------------
     def _get_columns(self, cols: Union[str, Iterable[str]]) -> List[FastArray]:
