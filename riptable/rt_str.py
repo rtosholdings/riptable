@@ -879,25 +879,25 @@ def _populate_wrappers(cls):
     """
     functions = dict(inspect.getmembers(FAString, inspect.isfunction))
     properties = dict(inspect.getmembers(FAString, lambda o: isinstance(o, (cached_property, property))))
-    for name, filter_value_fill in [
-        ('upper', None),
-        ('lower', None),
-        ('reverse', None),
-        ('removetrailing', None),
-        ('strlen', INVALID_POINTER_32),
-        ('index_any_of', INVALID_POINTER_32),
-        ('index', INVALID_POINTER_32),
-        ('contains', False),
-        ('startswith', False),
-        ('endswith', False),
-        ('regex_match', False),
-        ('substr', None),
-        ('char', None)
+    for name in [
+        'upper',
+        'lower',
+        'reverse',
+        'removetrailing',
+        'strlen',
+        'index_any_of',
+        'index',
+        'contains',
+        'startswith',
+        'endswith',
+        'regex_match',
+        'substr',
+        'char'
     ]:
         if name in functions:
-            wrapper = cls._build_method(functions[name], filter_value_fill)
+            wrapper = cls._build_method(functions[name])
         elif name in properties:
-            wrapper = cls._build_property(name, filter_value_fill)
+            wrapper = cls._build_property(name)
         else:
             raise RuntimeError(f'{name} is not defined on FAString as a function or property')
         setattr(cls, name, wrapper)
@@ -925,34 +925,36 @@ class CatString:
     def _isfiltered(self):
         return self.cat.isfiltered()
 
-    def _convert_fastring_output(self, out, filter_fill_value):
+    def _convert_fastring_output(self, out):
         from .rt_categorical import Categorical
-        if out.dtype.kind in ['S', 'U']:
+        if out.dtype.kind in 'SU':
             out = Categorical(self.cat._fa.copy(), out, base_index=self.cat.base_index)
             out.category_make_unique(inplace=True)
             return out
         else:
-            return where(self._isfiltered, filter_fill_value, out[self.cat.ikey - 1])
+            return where(self._isfiltered, out.inv, out[self.cat.ikey - 1])
 
     @classmethod
-    def _build_method(cls, method, filter_value_fill):
+    def _build_method(cls, method):
         """
         General purpose factory for FAString function wrappers.
         """
+
         @wraps(method)
-        def wrapper(self, *args, filter_fill_value=filter_value_fill, **kwargs):
+        def wrapper(self, *args, **kwargs):
             out = method(self.fastring, *args, **kwargs)
-            return self._convert_fastring_output(out, filter_fill_value)
+            return self._convert_fastring_output(out)
 
         return wrapper
 
     @classmethod
-    def _build_property(cls, name, filter_value_fill):
+    def _build_property(cls, name):
         """
         General purpose factory for FAString property wrappers.
         """
+
         def wrapper(self):
-            return self._convert_fastring_output(getattr(self.fastring, name), filter_value_fill)
+            return self._convert_fastring_output(getattr(self.fastring, name))
 
         return property(wrapper)
 
