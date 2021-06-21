@@ -928,8 +928,7 @@ class CatString:
     def _convert_fastring_output(self, out):
         from .rt_categorical import Categorical
         if out.dtype.kind in 'SU':
-            out = Categorical(self.cat._fa.copy(), out, base_index=self.cat.base_index)
-            out.category_make_unique(inplace=True)
+            out = Categorical._from_maybe_non_unique_labels(self.cat._fa, out, base_index=self.cat.base_index)
             return out
         else:
             return where(self._isfiltered, out.inv, out[self.cat.ikey - 1])
