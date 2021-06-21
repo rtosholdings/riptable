@@ -6,6 +6,11 @@ from typing import Mapping, List, Tuple, Optional
 import numpy as np
 import riptable as rt
 
+try:
+    from functools import cached_property
+except ImportError:
+    cached_property = property
+
 
 _SEED = 1234
 """

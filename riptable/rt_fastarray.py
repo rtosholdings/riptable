@@ -12,6 +12,7 @@ import riptide_cpp as rc
 from .rt_enum import gBinaryUFuncs, gBinaryLogicalUFuncs, gBinaryBitwiseUFuncs, gUnaryUFuncs, gReduceUFuncs
 from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDUCE_FUNCTIONS, gNumpyScalarType, NumpyCharTypes, MATH_OPERATION, INVALID_DICT
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
+from .Utils.common import cached_property
 from .rt_mlutils import normalize_minmax, normalize_zscore
 from .rt_numpy import ismember, ones, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray, crc32c
 from .rt_sds import save_sds
@@ -3027,7 +3028,7 @@ class FastArray(np.ndarray):
         return result.values
 
     #-----------------------------------------------------------
-    @property
+    @cached_property
     def str(self) -> 'FAString':
         r"""Casts an array of byte strings or unicode as ``FAString``.
 
