@@ -2879,7 +2879,7 @@ class Categorical(GroupByOps, FastArray):
         return Categorical(pointer, categories, base_index=base_index)
 
     # -------------------------------------------------------
-    def category_make_unique(self, inplace=True):
+    def category_make_unique(self):
         """
         Remove duplicated categories by replacing categories with the unique set and
         remapping codes. Gets out early if categories are already unique.
@@ -2888,26 +2888,11 @@ class Categorical(GroupByOps, FastArray):
         if self.category_mode not in allowed_modes:
             raise NotImplementedError(
                 f"category_make_unique only implemented for category modes: {allowed_modes}")
-        elif self.category_mode == CategoryMode.MultiKey and inplace:
-            raise NotImplementedError("Cannot do category_make_unique inplace for multikey")
 
         if self.ismultikey:
             return self._category_make_unique_multi_key()
 
-        cat = Categorical(self.category_array, base_index=self.base_index)
-        if len(cat.category_array) == len(self.category_array):
-            return None if inplace else self
-
-        if self.base_index > 0:
-            codes = hstack([FastArray(self.base_index - 1), cat._fa])
-        else:
-            codes = cat._fa
-
-        if inplace:
-            self._fa[:] = codes[self._fa]
-            self._categories_wrap._list = cat.category_array
-        else:
-            return Categorical(codes[self._fa], cat.category_array, base_index=self.base_index)
+        return Categorical._from_maybe_non_unique_labels(self._fa, self._categories, self.base_index)
 
     def _category_make_unique_multi_key(self):
         """
