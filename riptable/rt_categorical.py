@@ -2853,6 +2853,31 @@ class Categorical(GroupByOps, FastArray):
             raise ValueError(f"Cannot remove category from locked Categorical. Call unlock() first.")
         self.groupby_reset()
 
+    @classmethod
+    def _from_maybe_non_unique_labels(cls, values, categories, base_index=1):
+        """
+        Remove duplicated categories by replacing categories with the unique set and
+        remapping codes. Gets out early if categories are already unique.
+        """
+        unique_cat = cls(categories, base_index=base_index)
+        allowed_modes = {CategoryMode.NumericArray, CategoryMode.StringArray}
+        if unique_cat.category_mode not in allowed_modes:
+            raise NotImplementedError(
+                f"category_make_unique only implemented for category modes: {allowed_modes}")
+
+        if len(categories) == len(unique_cat._categories):
+            return Categorical(values, categories, base_index=base_index)
+
+        pointer, categories = unique_cat._fa, unique_cat._categories
+
+        if base_index > 0:
+            pointer = pointer[values - base_index]
+            pointer[values == 0] = 0
+        else:
+            pointer = pointer[values]
+
+        return Categorical(pointer, categories, base_index=base_index)
+
     # -------------------------------------------------------
     def category_make_unique(self, inplace=True):
         """
