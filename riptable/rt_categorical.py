@@ -2853,8 +2853,33 @@ class Categorical(GroupByOps, FastArray):
             raise ValueError(f"Cannot remove category from locked Categorical. Call unlock() first.")
         self.groupby_reset()
 
+    @classmethod
+    def _from_maybe_non_unique_labels(cls, values, categories, base_index=1):
+        """
+        Remove duplicated categories by replacing categories with the unique set and
+        remapping codes. Gets out early if categories are already unique.
+        """
+        unique_cat = cls(categories, base_index=base_index)
+        allowed_modes = {CategoryMode.NumericArray, CategoryMode.StringArray}
+        if unique_cat.category_mode not in allowed_modes:
+            raise NotImplementedError(
+                f"category_make_unique only implemented for category modes: {allowed_modes}")
+
+        if len(categories) == len(unique_cat._categories):
+            return Categorical(values, categories, base_index=base_index)
+
+        pointer, categories = unique_cat._fa, unique_cat._categories
+
+        if base_index > 0:
+            pointer = pointer[values - base_index]
+            pointer[values == 0] = 0
+        else:
+            pointer = pointer[values]
+
+        return Categorical(pointer, categories, base_index=base_index)
+
     # -------------------------------------------------------
-    def category_make_unique(self, inplace=True):
+    def category_make_unique(self):
         """
         Remove duplicated categories by replacing categories with the unique set and
         remapping codes. Gets out early if categories are already unique.
@@ -2863,26 +2888,11 @@ class Categorical(GroupByOps, FastArray):
         if self.category_mode not in allowed_modes:
             raise NotImplementedError(
                 f"category_make_unique only implemented for category modes: {allowed_modes}")
-        elif self.category_mode == CategoryMode.MultiKey and inplace:
-            raise NotImplementedError("Cannot do category_make_unique inplace for multikey")
 
         if self.ismultikey:
             return self._category_make_unique_multi_key()
 
-        cat = Categorical(self.category_array, base_index=self.base_index)
-        if len(cat.category_array) == len(self.category_array):
-            return None if inplace else self
-
-        if self.base_index > 0:
-            codes = hstack([FastArray(self.base_index - 1), cat._fa])
-        else:
-            codes = cat._fa
-
-        if inplace:
-            self._fa[:] = codes[self._fa]
-            self._categories_wrap._list = cat.category_array
-        else:
-            return Categorical(codes[self._fa], cat.category_array, base_index=self.base_index)
+        return Categorical._from_maybe_non_unique_labels(self._fa, self._categories, self.base_index)
 
     def _category_make_unique_multi_key(self):
         """
