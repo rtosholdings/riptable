@@ -1,5 +1,6 @@
 __all__ = [
-    'FAString'
+    'FAString',
+    'CatString',
 ]
 
 from functools import partial
@@ -787,7 +788,7 @@ class FAString(FastArray):
 
         strings = self.backtostring
         # we define a list containing an empty array for each group
-        # use Python lists as we do not know how manyh chars will be in the resultant arrays.
+        # use Python lists as we do not know how many chars will be in the resultant arrays.
         # Performance in comparable to unsing pre-allocated numpy arrays with ~600K unique elements
         out_arrs = [[fillna] * len(strings) for _ in range(ngroups)]
 
