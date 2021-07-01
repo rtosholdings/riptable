@@ -9,7 +9,6 @@ import inspect
 
 from functools import wraps
 
-
 import re
 import numpy as np
 import numba as nb
@@ -19,7 +18,7 @@ from .config import get_global_settings
 from .rt_fastarray import FastArray
 
 from .rt_numpy import empty_like, empty, where, ones, zeros
-from .rt_enum import TypeRegister, INVALID_POINTER_32
+from .rt_enum import TypeRegister
 from .Utils.common import cached_property
 
 
@@ -40,11 +39,8 @@ class FAStrDispatchPair(NamedTuple):
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
-def _deprecate_naming(old_func, new_func):
-    def wrapped(self, str2):
-        warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning)
-        return getattr(self, new_func)(str2)
-    return wrapped
+def _warn_deprecated_naming(old_func, new_func):
+    warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=2)
 
 
 # NOTE YOU MUST INSTALL tbb
@@ -77,21 +73,10 @@ def _deprecate_naming(old_func, new_func):
 class FAString(FastArray):
     """
     String accessor class for `FastArray`.
-
-    Notes
-    -----
-    TODO: Consider making this class generic, so if we call ``.str`` on a `FastArray`, we'll get an ``FAString[FastArray]``,
-          but if we call ``.str`` on a `Categorical`, we'll get an ``FAString[Categorical]``. This might be useful when
-          annotating the return values of some methods on FAString.
-    TODO: Consider whether we should implement a derived ``CategoricalString`` class, an instance of which would be
-          returned when calling ``Categorical.str``; the ``CategoricalString`` class could override the implementations
-          of some methods to provide improved performance / semantics by e.g. operating on the category strings.
-          This refactoring would also remove the need for this class to check for and know the details of how to deal with
-          Categoricals -- that logic could be encapsulated entirely in the ``CategoricalString`` class.
     """
     _APPLY_PARALLEL_THRESHOLD = 10_000
 
-    def __new__(cls, arr, **kwargs):
+    def __new__(cls, arr):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
             if np.isscalar(arr):
@@ -591,7 +576,9 @@ class FAString(FastArray):
 
         return self._apply_func(self.nb_index_any_of, self.nb_index_any_of_par, str2, dtype=np.int32)
 
-    strpbrk = _deprecate_naming('strpbrk', 'index_any_of')
+    def strpbrk(self, str2):
+        _warn_deprecated_naming('strpbrk', 'index_any_of')
+        return self.index_any_of(str2)
 
     # -----------------------------------------------------
     def index(self, str2):
@@ -619,7 +606,9 @@ class FAString(FastArray):
 
         return self._apply_func(self.nb_index, self.nb_index_par, str2, dtype=np.int32)
 
-    strstr = _deprecate_naming('strstr', 'index')
+    def strstr(self, str2):
+        _warn_deprecated_naming('strstr', 'index')
+        return self.index(str2)
 
     # -----------------------------------------------------
     def contains(self, str2):
@@ -648,7 +637,9 @@ class FAString(FastArray):
 
         return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=np.bool)
 
-    strstrb = _deprecate_naming('strstrb', 'contains')
+    def strstrb(self, str2):
+        _warn_deprecated_naming('strstrb', 'contains')
+        return self.contains(str2)
 
     # -----------------------------------------------------
     def startswith(self, str2):
@@ -892,7 +883,12 @@ def _populate_wrappers(cls):
         'endswith',
         'regex_match',
         'substr',
-        'char'
+        'char',
+
+        # Deprecated methods.
+        'strstr',
+        'strstrb',
+        'strpbrk'
     ]:
         if name in functions:
             wrapper = cls._build_method(functions[name])

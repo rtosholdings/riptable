@@ -107,6 +107,51 @@ class TestFAString:
         result = FAString(NB_PARALLEL_SYMBOLS).contains(str2)
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
+    @pytest.mark.skip(reason="Test adapted from `test_contains` but expected results need to be adapted for `cat_symbol` data.")
+    @parametrize("str2, expected", [
+        ('A', [True, True, False, False, False]),
+        ('AA', [True, False, False, False, False]),
+        ('', [True] * 5),
+        ('AAA', [False] * 5),
+        ('AAPL', [True] + [False] * 4)
+    ])
+    def test_contains_cat(self, str2, expected):
+        result = self.cat_symbol.str.contains(str2)
+        assert_array_equal(result, expected)
+
+        # No parallel test for CatString. It internally uses FAString on the
+        # category label array, and that code path is already tested elsewhere.
+
+    @parametrize("str2, expected", [
+        ('A', [True, True, False, False, False]),
+        ('AA', [True, False, False, False, False]),
+        ('', [True] * 5),
+        ('AAA', [False] * 5),
+        ('AAPL', [True] + [False] * 4)
+    ])
+    def test_strstrb(self, str2, expected):
+        result = FAString(SYMBOLS).strstrb(str2)
+        assert_array_equal(result, expected)
+
+        result = FAString(NB_PARALLEL_SYMBOLS).strstrb(str2)
+        assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
+
+    @pytest.mark.skip(
+        reason="Test adapted from `test_contains` but expected results need to be adapted for `cat_symbol` data.")
+    @parametrize("str2, expected", [
+        ('A', [True, True, False, False, False]),
+        ('AA', [True, False, False, False, False]),
+        ('', [True] * 5),
+        ('AAA', [False] * 5),
+        ('AAPL', [True] + [False] * 4)
+    ])
+    def test_strstrb_cat(self, str2, expected):
+        result = self.cat_symbol.str.strstrb(str2)
+        assert_array_equal(result, expected)
+
+        # No parallel test for CatString. It internally uses FAString on the
+        # category label array, and that code path is already tested elsewhere.
+
     @parametrize("func, expected, filtered", [
         ('index', 0, rt.rt_enum.INVALID_POINTER_32),
         ('index_any_of', 0, rt.rt_enum.INVALID_POINTER_32),
@@ -285,6 +330,33 @@ class TestFAString:
     def test_strlen_parallel(self):
         result = rt.FAString(NB_PARALLEL_SYMBOLS).strlen
         expected = rt.FA([4, 4, 2, 4, 3], dtype=result.dtype).tile(PARALLEL_MULTIPLIER)
+        assert_array_equal(result, expected)
+
+    def test_strpbrk_cat(self):
+        result = self.cat_symbol.str.strpbrk('PZG')
+        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
+        expected = rt.FA([inv, 2, 2, -1, 0, -1], dtype=result.dtype).tile(3)
+        assert_array_equal(result, expected)
+
+    @parametrize("str2, expected", [
+        ('A', [0, 0, -1, -1, -1]),
+        ('AA', [0, -1, -1, -1, -1]),
+        ('AAPL', [0, -1, -1, -1, -1]),
+        ('', [0] * 5),
+        ('AAA', [-1] * 5),
+        ('B', [-1, -1, 1, -1, 1])
+    ])
+    def test_strstr(self, str2, expected):
+        result = FAString(SYMBOLS).strstr(str2)
+        assert_array_equal(result, expected)
+
+        result = FAString(NB_PARALLEL_SYMBOLS).strstr(str2)
+        assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
+
+    def test_strstr_cat(self):
+        result = self.cat_symbol.str.strstr('A')
+        inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
+        expected = rt.FA([inv, 0, 0, -1, -1, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     substr_test_cases = parametrize("start_stop", [
