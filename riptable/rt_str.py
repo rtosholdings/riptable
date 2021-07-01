@@ -719,7 +719,7 @@ class FAString(FastArray):
         return bools
 
     def extract(self, regex: str, expand: Optional[bool] = None,
-                fillna: str = '', names=None, apply_unique: bool = True) -> Union[FastArray, "Dataset"]:
+                fillna: str = '', names=None, apply_unique: bool = True):
         '''
         Extract one or more pattern groups into a Dataset or FastArray.
         For one capture group the default is to return a FastArray
@@ -1044,7 +1044,7 @@ class CatString:
         return property(wrapper)
 
     def extract(self, regex: str, expand: Optional[bool] = None,
-                fillna: str = '', names=None) -> Union["Categorical", "Dataset"]:
+                fillna: str = '', names=None):
         from .rt_dataset import Dataset
         out = self.fastring.extract(regex, expand=expand, fillna=fillna, names=names, apply_unique=False)
         if isinstance(out, Dataset):
