@@ -757,10 +757,11 @@ class FAString(FastArray):
         0
         1   SPXW
         '''
+        kwargs = dict(expand=expand, fillna=fillna, names=names, apply_unique=apply_unique)
         if apply_unique:
+            kwargs['apply_unique'] = False
             unique_values, index = unique(self.backtostring, return_inverse=True)
-            result = unique_values.str.extract(regex, expand=expand, fillna=fillna,
-                                               names=names, apply_unique=False)
+            result = unique_values.str.extract(regex, **kwargs)
             return result[index] if isinstance(result, FastArray) else result[index, :]
 
         if not isinstance(regex, bytes):
@@ -770,8 +771,7 @@ class FAString(FastArray):
         ngroups = compiled.groups
         if ngroups == 0:
             # convenience where we treat the entire pattern as a capture group
-            regex = f'({regex.decode()})'
-            return self.extract(bytes(regex, 'utf-8'), expand=expand, fillna=fillna, names=names)
+            return self.extract(f'({regex.decode()})', **kwargs)
 
         # expand defaults to False if we have one capture group and do not specify names
         if expand is None:
