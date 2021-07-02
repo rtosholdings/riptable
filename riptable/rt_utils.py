@@ -987,6 +987,10 @@ def sample(
         Number of rows to sample.
     filter : array-like (bool or rownums), optional
         Filter for rows to sample.
+    seed : {None, int, array_like[ints], SeedSequence, Generator}, optional, defaults to None
+        A seed to initialize the `Generator`. If None, the generator is initialized using
+        fresh, random entropy data gathered from the OS.
+        See the docstring for `np.random.default_rng` for additional details.
 
     Returns
     -------

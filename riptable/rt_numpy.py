@@ -89,7 +89,7 @@ def get_dtype(val):
         final = val.dtype
     except:
         if isinstance(val,bool):
-            final = np.dtype(np.bool)
+            final = np.dtype(bool)
 
         elif isinstance(val, int):
             val = abs(val)
@@ -149,7 +149,7 @@ def get_common_dtype(x, y) -> np.dtype:
     >>> get_common_type(arange(10), arange(10.0))
     dtype('float64')
 
-    >>> get_common_type(arange(10).astype(np.bool), True)
+    >>> get_common_type(arange(10).astype(bool), True)
     dtype('bool')
     """
     type1 = get_dtype(x)
@@ -224,7 +224,7 @@ def get_common_dtype(x, y) -> np.dtype:
     return common
 
 
-def empty(shape, dtype: Union[str, np.dtype, type] = np.float, order: str = 'C') -> 'FastArray':
+def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = 'C') -> 'FastArray':
     #return LedgerFunction(np.empty, shape, dtype=dtype, order=order)
 
     # make into list of ints
@@ -726,7 +726,7 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
     is_multikey = False
 
     if len_a == 0 or len_b == 0:
-        return zeros(len(a), dtype=np.bool), full(len_a, INVALID_DICT[np.dtype(np.int32).num])
+        return zeros(len(a), dtype=bool), full(len_a, INVALID_DICT[np.dtype(np.int32).num])
 
     if isinstance(a, TypeRegister.Categorical) or isinstance(b, TypeRegister.Categorical):
         if isinstance(a, TypeRegister.Categorical):
@@ -1458,7 +1458,7 @@ def groupbyhash(list_arrays, hint_size:int=0, filter=None, hash_mode:int=2, cuto
     A filter (boolean array) can be passed to ``groupbyhash``; this causes ``groupbyhash`` to only operate
     on the elements of the input array where the filter has a corresponding True value.
 
-    >>> f = (c % 3).astype(np.bool)
+    >>> f = (c % 3).astype(bool)
     >>> rt.groupbyhash(c, filter=f)
     {'iKey': FastArray([   0,    1,    2, ...,    0, 5250, 1973]),
      'iFirstKey': FastArray([    1,     2,     3, ..., 54422, 58655, 68250]),
@@ -1899,7 +1899,7 @@ def where(condition, x=None, y=None):
         # punt to normal numpy since more than one dimension
         return LedgerFunction(np.where,condition,x,y)
 
-    if condition.dtype != np.bool:
+    if condition.dtype != bool:
         #NOTE: believe numpy just flips it to boolean using astype, where object arrays handled differently with None and 0
         condition = condition != 0
 
@@ -2526,6 +2526,8 @@ def logical(a):
     if isinstance(a, np.ndarray):
         if a.dtype==np.bool_: return a
         return a.astype(np.bool_)
+    # TODO: Check for scalar here? Then we can be maybe use np.asanyarray(..., dtype=bool).view(TypeRegister.FastArray)
+    #       to replace the use of the deprecated `np.bool`.
     return np.bool(a).view(TypeRegister.FastArray)
 
 ##-------------------------------------------------------
@@ -2542,9 +2544,7 @@ class bool_(np.bool_):
     See Also
     --------
     np.bool_
-    np.bool
     """
-
     # Allow np.bool.inv  to work
     inv = INVALID_DICT[0]
 
@@ -2959,7 +2959,7 @@ def bitcount(a: Union[int, Sequence, np.array]) -> Union[int, np.array]:
         # check if we can use the fast routine
         if not isinstance(a, np.ndarray):
             a = np.asanyarray(a)
-        if np.issubdtype(a.dtype, np.integer) or a.dtype == np.bool:
+        if np.issubdtype(a.dtype, np.integer) or a.dtype == bool:
             if not a.flags.c_contiguous:
                 a = a.copy()
             return rc.BitCount(a)
@@ -3002,7 +3002,7 @@ def bool_to_fancy(arr: np.ndarray, both:bool=False):
     Examples
     --------
     >>> np.random.seed(12345)
-    >>> bools = np.random.randint(2, size=20, dtype=np.int8).astype(np.bool_)
+    >>> bools = np.random.randint(2, size=20, dtype=np.int8).astype(bool)
     >>> rt.bool_to_fancy(bools)
     FastArray([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 12, 15, 17, 18, 19])
 

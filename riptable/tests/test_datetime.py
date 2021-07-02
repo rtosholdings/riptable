@@ -1347,7 +1347,7 @@ class DateTime_Test(unittest.TestCase):
         with self.assertRaises(TypeError):
             dtn = DateTimeNano({1, 2, 3}, from_tz='NYC')
         with self.assertRaises(TypeError):
-            dtn = DateTimeNano(zeros(5, dtype=np.bool), from_tz='NYC')
+            dtn = DateTimeNano(zeros(5, dtype=bool), from_tz='NYC')
 
     def test_classname(self):
         dtn = DateTimeNano(['2000-01-01 00:00:00'], from_tz='NYC')

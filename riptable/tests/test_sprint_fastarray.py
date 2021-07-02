@@ -16,7 +16,7 @@ from math import isclose
 
 float_types = [np.float32, np.float64]
 int_types = [
-    np.bool,
+    np.bool_,
     np.int8,
     np.uint8,
     np.int16,
@@ -30,7 +30,7 @@ int_types = [
     np.uint64,
 ]
 string_types = [np.bytes_, np.str_]
-warning_types = [np.object, np.complex64, np.complex128, np.float16]
+warning_types = [object, np.complex64, np.complex128, np.float16]
 
 # nan_funcs   = [ np.nanargmax, np.nanargmin, np.nancumprod, np.nancumsum, np.nanmax,
 #                np.nanmean, np.nanmedian, np.nanmin, np.nanpercentile, np.nanprod,
@@ -49,7 +49,7 @@ invalid_data = [slice(1, 2, 3), ..., {'a': 1}]  # add type, elipses, dict
 np.random.seed(1234)
 
 
-def almost_eq(fa, arr, places=5, rtol=1e-5, atol=1e-5, equal_nan=True):
+def almost_eq(fa: FastArray, arr: np.ndarray, places=5, rtol=1e-5, atol=1e-5, equal_nan=True):
     epsilon = 10 ** (-places)
     rtol = epsilon
 
@@ -351,7 +351,7 @@ class FastArray_Test(unittest.TestCase):
         si64 = NumpyCharTypes.SignedInteger64
         f64 = NumpyCharTypes.Float64
         input_types = [
-            np.bool,
+            np.bool_,
             np.int8,
             np.uint8,
             np.int16,
@@ -595,7 +595,7 @@ class FastArray_Test(unittest.TestCase):
 
         num_types = int_types + float_types
         # TODO: add separate test for boolean arrays to prevent natural crash
-        # num_types.remove(np.bool)
+        # num_types.remove(np.bool_)
         math_ufuncs = [
             np.absolute,
             np.abs,

@@ -335,7 +335,7 @@ class TestDataMeta(type):
         if cls._rand_bool is not None and len(cls._rand_bool) != cls.length:
             cls._rand_bool = None
         if cls._rand_bool is None:
-            cls._rand_bool = np.random.randint(0, 2, cls.length, dtype=np.bool).view(
+            cls._rand_bool = np.random.randint(0, 2, cls.length, dtype=bool).view(
                 treg.FastArray
             )
         return cls._rand_bool

@@ -17,8 +17,8 @@ def test_numeric_accuracy(dt_char, lex):
     target_dtype = np.dtype(dt_char)
 
     # N.B. It's important to use .view() instead of .astype() here so the case
-    #      for np.bool is tested thoroughly; .astype(np.bool) will convert the
-    #      values to 0/1, but .view(np.bool) will not -- so it will check that
+    #      for np.bool_ is tested thoroughly; .astype(bool) will convert the
+    #      values to 0/1, but .view(bool) will not -- so it will check that
     #      lower-level logic does proper C-style bool conversion (zero=false, non-zero=true).
     nums = rand_nums.view(target_dtype)
     np_un, np_idx, np_inv, np_cnt = np.unique(
@@ -103,8 +103,8 @@ def test_bool_accuracy(dt_char, lex):
     target_dtype = np.dtype(dt_char)
 
     # N.B. It's important to use .view() instead of .astype() here so the case
-    #      for np.bool is tested thoroughly; .astype(np.bool) will convert the
-    #      values to 0/1, but .view(np.bool) will not -- so it will check that
+    #      for np.bool is tested thoroughly; .astype(bool) will convert the
+    #      values to 0/1, but .view(bool) will not -- so it will check that
     #      lower-level logic does proper C-style bool conversion (zero=false, non-zero=true).
     nums = rand_nums.view(target_dtype)
     np_un, np_idx, np_inv, np_cnt = np.unique(

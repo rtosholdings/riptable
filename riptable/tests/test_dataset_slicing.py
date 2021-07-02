@@ -7,7 +7,7 @@ from riptable.rt_enum import INVALID_DICT
 
 
 master_type_dict = {
-    'bool': np.array([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=np.bool),
+    'bool': np.array([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=bool),
     'int8': np.array(
         [
             26,

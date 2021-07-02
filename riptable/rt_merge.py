@@ -949,7 +949,7 @@ def _build_left_fancyindex(
             # TODO: As in code further down in this function, the creation of this array requires some workarounds to
             #       handle the difference between 0-based "key index" values and 1-based key ids that work more naturally
             #       with grouping arrays. This causes some additional allocations (and complexity) so should be cleaned up.
-            left_group_exists_in_right = full(left_keygroup.ncountgroup.shape, False, dtype=np.bool)
+            left_group_exists_in_right = full(left_keygroup.ncountgroup.shape, False, dtype=bool)
             left_group_exists_in_right[1:][right_keyid_to_left_keyid_map[right_key_exists_in_left]] = True
 
             if keep_left is None:
@@ -1133,7 +1133,7 @@ class JoinIndices(NamedTuple):
         """
         if index_arr is None:
             return dset_rowcount
-        elif index_arr.dtype == np.bool:
+        elif index_arr.dtype == bool:
             return sum(index_arr)
         else:
             return len(index_arr)
@@ -1287,7 +1287,7 @@ def _create_merge_fancy_indices(
         left_keyid_to_right_keyid_map[right_keyid_to_left_keyid_map[right_key_exists_in_left]] = bool_to_fancy(right_key_exists_in_left)
 
         # Get the rows from 'right' which have keys that aren't in 'left'.
-        right_only_group_mask = empty(right_keygroup.ncountgroup.shape, dtype=np.bool)
+        right_only_group_mask = empty(right_keygroup.ncountgroup.shape, dtype=bool)
         # Include the invalid/NA group from 'right', per definition of a full outer join.
         right_only_group_mask[0] = right_keygroup.ncountgroup[0] > 0
         right_only_group_mask[1:] = ~right_key_exists_in_left
@@ -3319,7 +3319,7 @@ class _AsOfMerge:
             #     f_forward = isnan(backward_distance)
             #     f_forward |= (forward_distance < backward_distance)
             #     f_forward &= isnotnan(forward_distance)
-            f_forward_closer = full(len(right_fancyindex_backward), False, dtype=np.bool)
+            f_forward_closer = full(len(right_fancyindex_backward), False, dtype=bool)
 
             # Determine the distance between the left_on and right_on columns in both the forward and backwards directions.
             # TODO: What should we do when the 'on' columns are integers and operations below underflow/overflow?

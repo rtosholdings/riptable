@@ -80,7 +80,7 @@ def integer_valid_range(dtype: np.dtype) -> Tuple[int, int]:
         raise ValueError(f"'{dtype}' is not an integral/integer dtype.")
 
     # Handle bool specially
-    if dtype == np.bool:
+    if np.issubdtype(dtype, bool):
         return (0, 1)
 
     # Get the info for this integer dtype
@@ -114,7 +114,7 @@ def integer_range(dtype: np.dtype, include_invalid: bool = False) -> Tuple[int, 
         raise ValueError(f"'{dtype}' is not an integral/integer dtype.")
 
     # Handle bool specially
-    if dtype == np.bool:
+    if np.issubdtype(dtype, bool):
         return (0, 1)
 
     # Determine the range based on whether the caller wants to include
