@@ -90,7 +90,7 @@ class TestFAString:
         -3, 6, [0, 0, 0, 0, -5]
     ])
     def test_char_failure(self, position):
-        with pytest.raises(ValueError, match='Position -?\d out of bounds'):
+        with pytest.raises(ValueError, match=r'Position -?\d out of bounds'):
             FAString(SYMBOLS).char(position)
 
     @parametrize("str2, expected", [
@@ -231,7 +231,7 @@ class TestFAString:
 
     regex_match_test_cases = parametrize('regex, expected', [
         ('.', [True] * 5),
-        ('\.', [False] * 5),
+        (r'\.', [False] * 5),
         ('A', [True, True, False, False, False]),
         ('[A|B]', [True, True, True, False, True]),
         ('B$', [False, False, True, False, False]),

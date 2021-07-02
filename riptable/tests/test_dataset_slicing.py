@@ -5,7 +5,6 @@ import unittest
 from riptable import Dataset, Cat
 from riptable.rt_enum import INVALID_DICT
 
-
 master_type_dict = {
     'bool': np.array([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=bool),
     'int8': np.array(
@@ -220,7 +219,7 @@ master_type_dict = {
             INVALID_DICT[np.dtype('bytes').num],
             b'zkdfjlw',
             b'a',
-            b';][{}[\|||+=_-',
+            br';][{}[\|||+=_-',
             b'qwernvldkj',
             b'abefgkejf',
         ],
@@ -240,7 +239,7 @@ master_type_dict = {
             'rrrrn2fhfewl',
             'zkdfjlw',
             'a',
-            ';][{}[\|||+=_-',
+            r';][{}[\|||+=_-',
             'qwernvldkj',
             INVALID_DICT[np.dtype('str_').num],
         ],

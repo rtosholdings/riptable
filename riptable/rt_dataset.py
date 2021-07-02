@@ -5313,7 +5313,7 @@ class Dataset(Struct):
     #--------------------------------------------------------------------------
     @classmethod
     def concat_columns(cls, dsets, do_copy:bool, on_duplicate:str='raise', on_mismatch:str='warn'):
-        """
+        r"""
         Concatenates a list of Datasets or Structs horizontally.
 
         Parameters
