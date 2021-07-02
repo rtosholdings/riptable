@@ -228,8 +228,8 @@ class TestDataset(unittest.TestCase):
             self.assertEqual(ds1[_k].dtype, np.dtype(np.int16))
         for _k in list('US'):
             self.assertEqual(ds1[_k].dtype, dtypes0[_k])
-        ds.S = ds.A.astype(np.str)
-        ds.S = ds.B.astype(np.str)
+        ds.S = ds.A.astype(str)
+        ds.S = ds.B.astype(str)
         # 9/28/2018 SJK: Dataset no longer flips Unicode arrays to Categorical, removed unicode column
         ds1 = ds.astype(np.float16, ignore_non_computable=True)
         for _k in list('ABCG'):
@@ -1560,7 +1560,7 @@ class TestDataset(unittest.TestCase):
 
     def test_arith_ops_08(self):
         ds1 = self.get_basic_dataset(nrows=100).astype(np.float32)
-        ds1.S = ds1.a.astype(np.str)
+        ds1.S = ds1.a.astype(str)
         ds2 = ds1.copy()
         ds1[2, :] /= 2
         self.assertTrue((ds1[2, :] == ds2[2, :] / 2).all(axis=None))

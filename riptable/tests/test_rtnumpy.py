@@ -368,7 +368,7 @@ class TestNanmax:
 
         # The result should either be a Python string, a numpy string scalar, or a Categorical scalar (if we implement one).
         is_py_str = isinstance(result, (bytes, str))
-        is_np_scalar = isinstance(result, np.str)
+        is_np_scalar = isinstance(result, (np.bytes_, np.str_))
         is_rt_cat = isinstance(result, rt.Categorical)
         assert is_py_str or is_np_scalar or is_rt_cat
 
@@ -446,7 +446,7 @@ class TestNanmin:
 
         # The result should either be a Python string, a numpy string scalar, or a Categorical scalar (if we implement one).
         is_py_str = isinstance(result, (bytes, str))
-        is_np_scalar = isinstance(result, np.str)
+        is_np_scalar = isinstance(result, (np.bytes_, np.str_))
         is_rt_cat = isinstance(result, rt.Categorical)
         assert is_py_str or is_np_scalar or is_rt_cat
 

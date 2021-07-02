@@ -328,11 +328,12 @@ class Dataset(Struct):
                     if c == 'O':
                         # make sure, scalar type so no python objects like dicts come through
                         # try float, but most objects will flip to bytes or unicode
-                        if isinstance(v[0], (str, np.str, bytes, np.bytes_, int, float, bool, np.integer, np.floating, np.bool_)):
+                        # TODO: Simplify to use np.isscalar() here?
+                        if isinstance(v[0], (str, np.str_, bytes, np.bytes_, int, float, bool, np.integer, np.floating, np.bool_)):
                             try:
                                 # attempt to autodetect based on first element
                                 # NOTE: if the first element is a float and Nan.. does that mean keep looking?
-                                if isinstance(v[0], (str, np.str)):
+                                if isinstance(v[0], (str, np.str_)):
                                     # NOTE this might get converted to 'S' if unicode is False for FastArrays
                                     v=v.astype('U')
                                 elif isinstance(v[0], (bytes, np.bytes_)):
@@ -5946,7 +5947,7 @@ class Dataset(Struct):
         >>> d = {'name': ['bob', 'mary', 'sue', 'john'],
         ...     'letters': [['A', 'B', 'C'], ['D'], ['E', 'F', 'G'], 'H']}
         >>> ds1 = rt.Dataset.from_jagged_dict(d)
-        >>> nd = rt.INVALID_DICT[np.dtype(np.str).num]
+        >>> nd = rt.INVALID_DICT[np.dtype(str).num]
         >>> ds2 = rt.Dataset({'name': ['bob', 'mary', 'sue', 'john'],
         ...     'letters0': ['A','D','E','H'], 'letters1': ['B',nd,'F',nd],
         ...     'letters2': ['C',nd,'G',nd]})
