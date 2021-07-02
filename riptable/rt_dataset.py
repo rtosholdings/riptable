@@ -295,19 +295,19 @@ class Dataset(Struct):
         --------
         String objects:
 
-        >>> ds = rt.Dataset({'col1': np.array(['a','b','c'], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array(['a','b','c'], dtype=object)})
         >>> ds.col1
         FastArray([b'a', b'b', b'c'], dtype='|S1')
 
         Numeric objects:
 
-        >>> ds = rt.Dataset({'col1': np.array([1.,2.,3.], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array([1.,2.,3.], dtype=object)})
         >>> ds.col1
         FastArray([1., 2., 3.])
 
         Mixed type objects:
 
-        >>> ds = rt.Dataset({'col1': np.array([np.nan, 'str', 1], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array([np.nan, 'str', 1], dtype=object)})
         ValueError: could not convert string to float: 'str'
         TypeError: Cannot handle a numpy object array of type <class 'float'>
 
@@ -316,7 +316,7 @@ class Dataset(Struct):
 
         Mixed type objects starting with string:
 
-        >>> ds = rt.Dataset({'col1': np.array(['str', np.nan, 1], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array(['str', np.nan, 1], dtype=object)})
         >>> ds.col1
         FastArray([b'str', b'nan', b'1'], dtype='|S3')
         """
