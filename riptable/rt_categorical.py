@@ -698,7 +698,8 @@ class Categories:
         The Categorical instance will compare these integers to those in its underlying array to generate a boolean mask.
         """
         if self.issinglekey:
-            if isinstance(fld, (str, bytes, int, np.integer, float, np.float)):
+            # TODO: Simplify to use np.isscalar().
+            if isinstance(fld, (str, bytes, int, np.integer, float, np.float_)):
                 fld = [fld]
             string_matches = []
             for s in fld:
