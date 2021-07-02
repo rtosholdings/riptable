@@ -1600,8 +1600,8 @@ class TestDataset(unittest.TestCase):
         df["B"] = df["A"].astype('category')
         ds = Dataset({'A': df.A, 'B': df.B})
         self.assertIsInstance(ds.B, TypeRegister.Categorical)
-        self.assertTrue((df.A == ds.A.astype(np.unicode)).all())
-        self.assertTrue((df.B == ds.B.as_string_array.astype(np.unicode)).all())
+        self.assertTrue((df.A == ds.A.astype(str)).all())
+        self.assertTrue((df.B == ds.B.as_string_array.astype(str)).all())
 
     def _test_output(self):
         ds = self.get_basic_dataset()[:4, :3]
@@ -1885,7 +1885,7 @@ class TestDataset(unittest.TestCase):
         ds = Dataset.from_pandas(df)
         self.assertIsInstance(ds.B, TypeRegister.Categorical)
         self.assertIsInstance(ds.C, TypeRegister.Categorical)
-        self.assertTrue((df.A == ds.A.astype(np.unicode)).all())
+        self.assertTrue((df.A == ds.A.astype(str)).all())
         for key in 'BCDEF':
             self.assertTrue((df[key] == _bytes_to_string(ds[key].expand_array)).all())
         for (key, tz) in [
