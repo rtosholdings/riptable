@@ -1319,7 +1319,7 @@ class Struct:
         '''
         info_str = ['scalar']
         typename = scalar_tup[1]
-        typename = str(np.typeDict[typename].__name__)
+        typename = str(np.sctypeDict[typename].__name__)
         itemsize = str(scalar_tup[3])
 
         info_str.append(typename)
@@ -1340,7 +1340,7 @@ class Struct:
         info_str = []
         info_str.append("FA")
         info_str.append(str(shape))
-        info_str.append(str(np.typeDict[typenum].__name__))
+        info_str.append(str(np.sctypeDict[typenum].__name__))
         info_str.append("i"+str(itemsize))
         return info_str
 

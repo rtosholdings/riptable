@@ -2074,7 +2074,7 @@ def skeleton_from_meta_data(container_type, filepath, meta, arrays, meta_tups, f
         elif dtypenum == 19:
             return np.dtype('U'+str(itemsize // 4))
         else:
-            return np.dtype(np.typeDict[dtypenum])
+            return np.dtype(np.sctypeDict[dtypenum])
 
     def info_to_struct(f):
         def wrapper(item_tup, sds_tup, filepath):
