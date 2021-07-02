@@ -20,7 +20,7 @@ the benchmarks while also allowing the benchmarks to be repeatable.
 
 _INT_16_MAX = np.iinfo(np.int16).max
 _INT_32_MAX = np.iinfo(np.int32).max
-_INT_MAX = np.int(1 << 33)  # 8_589_934_592
+_INT_MAX = np.int64(1 << 33)  # 8_589_934_592
 
 
 def trial_size(low=250, high=_INT_16_MAX, scale_factor=2):
