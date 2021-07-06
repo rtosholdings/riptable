@@ -25,6 +25,9 @@ from numpy.testing import (
 from numpy.compat import pickle
 from riptable import FastArray as FA
 
+# riptable: small modification to allow this code to work with both older and newer
+#           versions of numpy [1.18, 1.21].
+_numpy_version = tuple(int(x) for x in np.version.version.split('.'))
 
 UNARY_UFUNCS = [
     obj for obj in np.core.umath.__dict__.values() if isinstance(obj, np.ufunc)
@@ -44,11 +47,13 @@ class TestUfuncKwargs(object):
         assert_raises(TypeError, np.add, 1, 2, wherex=[True])
 
     def test_sig_signature(self):
-        assert_raises(ValueError, np.add, 1, 2, sig='ii->i', signature='ii->i')
+        ex_type = TypeError if _numpy_version >= (1, 21, 0) else ValueError
+        assert_raises(ex_type, np.add, 1, 2, sig='ii->i', signature='ii->i')
 
     def test_sig_dtype(self):
-        assert_raises(RuntimeError, np.add, 1, 2, sig='ii->i', dtype=int)
-        assert_raises(RuntimeError, np.add, 1, 2, signature='ii->i', dtype=int)
+        ex_type = TypeError if _numpy_version >= (1, 21, 0) else ValueError
+        assert_raises(ex_type, np.add, 1, 2, sig='ii->i', dtype=int)
+        assert_raises(ex_type, np.add, 1, 2, signature='ii->i', dtype=int)
 
     def test_extobj_refcount(self):
         # Should not segfault with USE_DEBUG.
