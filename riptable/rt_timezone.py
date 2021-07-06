@@ -437,10 +437,10 @@ class TimeZone:
         if cutoffs is None:
             cutoffs = self._dst_cutoffs
         if cutoffs is None:
-            return zeros(len(arr), dtype=np.bool)
+            return zeros(len(arr), dtype=bool)
 
-        #is_dst = (FastArray(np.searchsorted(DST_CUTOFFS, arr)) & 1).astype(np.bool)
-        #is_dst = (rc.BinsToCutsBSearch(arr, cutoffs, 0) & 1).astype(np.bool)
+        #is_dst = (FastArray(np.searchsorted(DST_CUTOFFS, arr)) & 1).astype(bool)
+        #is_dst = (rc.BinsToCutsBSearch(arr, cutoffs, 0) & 1).astype(bool)
 
         is_dst = (searchsorted(cutoffs, arr) & 1).astype(np.bool_)
         return is_dst

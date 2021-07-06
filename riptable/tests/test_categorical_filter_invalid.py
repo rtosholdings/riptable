@@ -173,7 +173,7 @@ class TestCategoricalFilterInvalid:
 
         # same uniques
         arr = np.random.choice(['a', 'b', 'c'], 50)
-        filter = ones(50, dtype=np.bool)
+        filter = ones(50, dtype=bool)
         filter[:5] = False
         c = Categorical(arr)
         c_pre = Categorical(arr, filter=filter)

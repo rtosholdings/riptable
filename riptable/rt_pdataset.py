@@ -661,14 +661,14 @@ class PDataset(Dataset):
         slice(0, 1447138, None)
 
         '''
-        if isinstance(index, (int, np.int)):
+        if isinstance(index, (int, np.integer)):
             if index == 0:
                 return slice(0, self.pcutoffs[index])
             else:
                 return slice(self.pcutoffs[index - 1], self.pcutoffs[index])
 
         raise IndexError(
-            f'Cannot slice a parition with type {type(index)!r}.  Use an integer instead.'
+            f'Cannot slice a partition with type {type(index)!r}.  Use an integer instead.'
         )
 
     # -------------------------------------------------------
@@ -684,7 +684,7 @@ class PDataset(Dataset):
         >>> pds.partition(0)
         '''
 
-        if isinstance(index, (int, np.int)):
+        if isinstance(index, (int, np.integer)):
             # this will route to the dataset
             return self._copy(rows=self.pslice(index))
 
@@ -709,7 +709,7 @@ class PDataset(Dataset):
             return super().__getitem__(index)
         except:
             # if it fails, maybe it was a partition selection
-            if isinstance(index, (int, np.int)):
+            if isinstance(index, (int, np.integer)):
                 # convert int to string to lookup
                 index = str(index)
 

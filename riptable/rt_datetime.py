@@ -4499,6 +4499,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             Start year for range of random times. If no end year provided, all times will be within start year
         end : int, optional, default None
             End year for range of random times. Only used if `start` provided.
+
         Same as DateTimeNano.random(), but random invalid mask is also generated.
 
         Examples
@@ -4514,7 +4515,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         --------
         DateTimeNano.random
         '''
-        inv = np.random.randint(0, 2, sz, dtype=np.bool)
+        # TODO: Use np.random.default_rng() here instead.
+        inv = np.random.randint(0, 2, sz, dtype=bool)
         return cls._random(sz, to_tz=to_tz, from_tz=from_tz, inv=inv, start=start, end=end)
 
     # -------------------------------------------------------------

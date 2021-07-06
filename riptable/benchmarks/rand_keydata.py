@@ -449,7 +449,7 @@ class SCDArrayGen(Problem):
         xl = np.full(index_size, self.lo)
         xu = np.full(index_size, self.hi)
 
-        super().__init__(n_var=self.index_size, n_constr=2, xl=xl, xu=xu, type_var=np.int)
+        super().__init__(n_var=self.index_size, n_constr=2, xl=xl, xu=xu, type_var=int)
 
     def s_error(self, arr):
         return abs(self.s_metric(arr) - self.s)

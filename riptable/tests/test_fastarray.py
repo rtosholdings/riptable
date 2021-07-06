@@ -63,7 +63,7 @@ array_sizes = [
 # these will break a lot of ufuncs because of division by zero, nans, etc.
 # TODO: add unit tests to make sure they break correctly
 numeric_types_with_invalid = {
-    'bool': FastArray([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=np.bool),
+    'bool': FastArray([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=bool),
     'int8': FastArray(
         [
             26,
@@ -268,7 +268,7 @@ numeric_types_with_invalid = {
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=UserWarning)
     all_types = {
-        'bool': FastArray([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=np.bool),
+        'bool': FastArray([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=bool),
         'int8': FastArray(
             [
                 26,

@@ -153,7 +153,7 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
 
     #------------------------------
     def hstack_dict(itemdict, **kwargs):
-        '''
+        r"""
         Will create a Categorical from the keys in the dictionary.
 
         Examples
@@ -166,7 +166,7 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
         ...    mydict[f'cat{j}']=ds
         >>> z, mycat = rt.stack_rows(mydict)
         >>> z.mycat
-        '''
+        """
         dictlen = len(itemdict)
         if dictlen ==0:
             raise ValueError(f'List of dictionary items to stack was empty.')

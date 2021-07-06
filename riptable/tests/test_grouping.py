@@ -612,7 +612,7 @@ class Grouping_Test(unittest.TestCase):
         data1 = rt.arange(len(key_data1))
 
         # Create a condition mask with all values set to False.
-        group_mask1 = rt.zeros(len(g1.ncountgroup), dtype=np.bool)
+        group_mask1 = rt.zeros(len(g1.ncountgroup), dtype=bool)
 
         # Extract elements from the data array with all groups masked out -- i.e. we're trying
         # to select data from none of the groups.

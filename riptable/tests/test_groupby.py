@@ -26,7 +26,7 @@ arr_types = [
     np.float64,
 ]
 arr_types_string = [np.bytes_, np.str_]
-test_data = {'bool': np.array([True, False, True, False, True], dtype=np.bool)}
+test_data = {'bool': np.array([True, False, True, False, True], dtype=bool)}
 for dt in arr_types + arr_types_string:
     test_data[dt.__name__] = np.array(num_list, dtype=dt)
 test_data['categorical'] = Categorical([str(i) for i in num_list])

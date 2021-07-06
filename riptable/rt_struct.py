@@ -1319,7 +1319,7 @@ class Struct:
         '''
         info_str = ['scalar']
         typename = scalar_tup[1]
-        typename = str(np.typeDict[typename].__name__)
+        typename = str(np.sctypeDict[typename].__name__)
         itemsize = str(scalar_tup[3])
 
         info_str.append(typename)
@@ -1340,7 +1340,7 @@ class Struct:
         info_str = []
         info_str.append("FA")
         info_str.append(str(shape))
-        info_str.append(str(np.typeDict[typenum].__name__))
+        info_str.append(str(np.sctypeDict[typenum].__name__))
         info_str.append("i"+str(itemsize))
         return info_str
 
@@ -4147,7 +4147,7 @@ class Struct:
                     # cannot hstack string repr with column name
                     try:
                         if data.ndim == 1:
-                            items = data[:self._summary_len].astype(np.str)
+                            items = data[:self._summary_len].astype(str)
                         else:
                             items = np.array([str(i) for i in data[:self._summary_len]])
                     except:
@@ -4204,8 +4204,8 @@ class Struct:
             sizes.append(size)
             summary_items.append(items)
 
-        main_data = [np.array(names, dtype=np.str), np.array(types, dtype=np.str),
-                     np.array(sizes, dtype=np.str)]
+        main_data = [np.array(names, dtype=str), np.array(types, dtype=str),
+                     np.array(sizes, dtype=str)]
 
         summary_items = np.array(summary_items)
 

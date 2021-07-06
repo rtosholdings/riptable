@@ -240,13 +240,13 @@ class MathLedger(Struct):
 
         if fastfunction == MATH_OPERATION.BITWISE_NOT:
             # speed up this common operation
-            if isinstance(tupleargs, tuple) and tupleargs[0].dtype == np.bool:
+            if isinstance(tupleargs, tuple) and tupleargs[0].dtype == bool:
                 return cls._BASICMATH_TWO_INPUTS(
                     (tupleargs[0], True, tupleargs[1]),
                     MATH_OPERATION.BITWISE_XOR,
                     final_num,
                 )
-            elif tupleargs.dtype == np.bool:
+            elif tupleargs.dtype == bool:
                 return cls._BASICMATH_TWO_INPUTS(
                     (tupleargs, True), MATH_OPERATION.BITWISE_XOR, final_num
                 )

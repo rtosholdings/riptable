@@ -1,4 +1,3 @@
-# $Id: //Depot/Source/SFW/riptable/Python/core/riptable/tests/test_dataset.py#72 $
 import pytest
 import unittest
 import re
@@ -8,6 +7,7 @@ import pandas as pd
 from collections import namedtuple
 import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
+import riptable as rt
 from riptable import FastArray
 from riptable import Struct
 from riptable import Dataset
@@ -228,8 +228,8 @@ class TestDataset(unittest.TestCase):
             self.assertEqual(ds1[_k].dtype, np.dtype(np.int16))
         for _k in list('US'):
             self.assertEqual(ds1[_k].dtype, dtypes0[_k])
-        ds.S = ds.A.astype(np.str)
-        ds.S = ds.B.astype(np.str)
+        ds.S = ds.A.astype(str)
+        ds.S = ds.B.astype(str)
         # 9/28/2018 SJK: Dataset no longer flips Unicode arrays to Categorical, removed unicode column
         ds1 = ds.astype(np.float16, ignore_non_computable=True)
         for _k in list('ABCG'):
@@ -1560,7 +1560,7 @@ class TestDataset(unittest.TestCase):
 
     def test_arith_ops_08(self):
         ds1 = self.get_basic_dataset(nrows=100).astype(np.float32)
-        ds1.S = ds1.a.astype(np.str)
+        ds1.S = ds1.a.astype(str)
         ds2 = ds1.copy()
         ds1[2, :] /= 2
         self.assertTrue((ds1[2, :] == ds2[2, :] / 2).all(axis=None))
@@ -1574,15 +1574,15 @@ class TestDataset(unittest.TestCase):
         self.assertTrue((ds1 == ds2)[1:9:2, 6:].all(axis=None))
 
     def test_dataset_objects(self):
-        ds = Dataset({'float_obj': np.array([1.0, 2.0, 3.0], dtype=np.object)})
+        ds = Dataset({'float_obj': np.array([1.0, 2.0, 3.0], dtype=object)})
         self.assertTrue(ds.float_obj.dtype.char in NumpyCharTypes.AllFloat)
 
         # mixed object will always default to flip to string now SJK 3/7/2019
-        ds = Dataset({'mixed_object': np.array([np.nan, 'str', 1], dtype=np.object)})
+        ds = Dataset({'mixed_object': np.array([np.nan, 'str', 1], dtype=object)})
         self.assertTrue(ds.mixed_object.dtype.char == 'S')
 
         ds = Dataset(
-            {'mixed_string_start': np.array(['str', np.nan, 1], dtype=np.object)}
+            {'mixed_string_start': np.array(['str', np.nan, 1], dtype=object)}
         )
 
     def test_sample(self):
@@ -1600,8 +1600,8 @@ class TestDataset(unittest.TestCase):
         df["B"] = df["A"].astype('category')
         ds = Dataset({'A': df.A, 'B': df.B})
         self.assertIsInstance(ds.B, TypeRegister.Categorical)
-        self.assertTrue((df.A == ds.A.astype(np.unicode)).all())
-        self.assertTrue((df.B == ds.B.as_string_array.astype(np.unicode)).all())
+        self.assertTrue((df.A == ds.A.astype(str)).all())
+        self.assertTrue((df.B == ds.B.as_string_array.astype(str)).all())
 
     def _test_output(self):
         ds = self.get_basic_dataset()[:4, :3]
@@ -1885,7 +1885,7 @@ class TestDataset(unittest.TestCase):
         ds = Dataset.from_pandas(df)
         self.assertIsInstance(ds.B, TypeRegister.Categorical)
         self.assertIsInstance(ds.C, TypeRegister.Categorical)
-        self.assertTrue((df.A == ds.A.astype(np.unicode)).all())
+        self.assertTrue((df.A == ds.A.astype(str)).all())
         for key in 'BCDEF':
             self.assertTrue((df[key] == _bytes_to_string(ds[key].expand_array)).all())
         for (key, tz) in [
@@ -2060,7 +2060,7 @@ class TestDataset(unittest.TestCase):
         self.assertTrue(ds.equals(ds))
         self.assertTrue(ds.equals(ds2) == False)
 
-    def test_pivot(self):
+    def test_pivot2(self):
         ds2 = Dataset(
             {
                 'date': [20190101] * 4,
@@ -2132,7 +2132,41 @@ class TestDataset(unittest.TestCase):
         ds=Dataset()
         ds.num=arange(10)
         with self.assertRaises(IndexError):
-            ds['_num']=arange(10)        
+            ds['_num']=arange(10)
+
+    def test_overwrite_column_with_scalar(self) -> None:
+        # Test that a Dataset column can be overwritten with a scalar,
+        # and that scalar is broadcast to the correct size to match the Dataset.
+        # This is a regression test for some behavior that appears to be broken by
+        # https://github.com/rtosholdings/riptable/commit/811960b3de521e19a1945602fb5a8b2193845b1d
+        ds = rt.Dataset({
+            'a': rt.full(20, 1.2345, dtype=np.float32),
+            'b': rt.arange(20, dtype=np.uint64),
+            'c': rt.FA([11, -13, -17, 19, 23]).tile(4)
+        })
+        orig_rowcount = ds.get_nrows()
+
+        # Overwrite each of the columns with a scalar value.
+        scalars = {
+            'a': np.int16(12345), 'b': True, 'c': "hello"
+        }
+        assert set(ds.keys()) == set(scalars.keys())
+
+        for col_name in ds.keys():
+            ds[col_name] = scalars[col_name]
+
+        assert ds.get_nrows() == orig_rowcount
+
+        # Make sure each of the columns has the expected type and value
+        # given the scalar that was assigned to it.
+        for col_name in ds.keys():
+            col = ds[col_name]
+            scalar_value = scalars[col_name]
+            expected_dtype = scalar_value.dtype if isinstance(scalar_value, np.generic) else np.min_scalar_type(scalar_value)
+            assert col.dtype == expected_dtype
+            assert_array_equal(col, scalar_value)
+
+
 
 @pytest.mark.parametrize('categorical', get_all_categorical_data())
 def test_dataset_to_dataframe_roundtripping(categorical):

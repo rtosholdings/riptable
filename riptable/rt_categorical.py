@@ -698,7 +698,8 @@ class Categories:
         The Categorical instance will compare these integers to those in its underlying array to generate a boolean mask.
         """
         if self.issinglekey:
-            if isinstance(fld, (str, bytes, int, np.integer, float, np.float)):
+            # TODO: Simplify to use np.isscalar().
+            if isinstance(fld, (str, bytes, int, np.integer, float, np.float_)):
                 fld = [fld]
             string_matches = []
             for s in fld:
@@ -1913,7 +1914,7 @@ class Categorical(GroupByOps, FastArray):
         if self.base_index == 1:
             return self._fa == 0
         else:
-            return zeros(len(self),dtype=np.bool)
+            return zeros(len(self),dtype=bool)
 
     # ------------------------------------------------------------
     def set_name(self, name):
@@ -3144,7 +3145,7 @@ class Categorical(GroupByOps, FastArray):
         elif self.isenum:
             return self.grouping.isin(x)
 
-        elif isinstance(values, (bool, np.bool, bytes, str, int, np.integer, float, np.floating)):
+        elif isinstance(values, (bool, np.bool_, bytes, str, int, np.integer, float, np.floating)):
             x = np.array([x])
         # numpy will find the common dtype (strings will always win)
         elif isinstance(x, (list, tuple)):

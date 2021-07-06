@@ -743,8 +743,8 @@ class Accum2(GroupByOps, FastArray):
                 im = im[1:,:]
 
             # create row and col mask, init to all True
-            boolmaskY = ones(len(totalsY), dtype=np.bool)
-            boolmaskX = ones(len(totalsX), dtype=np.bool)
+            boolmaskY = ones(len(totalsY), dtype=bool)
+            boolmaskX = ones(len(totalsX), dtype=bool)
 
             # do both horizontal and vertical calculations which are dirty
             newTotalsX, newTotalsY =  cls._apply_2d_operation(func, im, True)

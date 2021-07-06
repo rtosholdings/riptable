@@ -7,6 +7,8 @@ __all__ = [
     'numpy_array_to_dataset',
 ]
 
+from typing import TYPE_CHECKING
+
 import numpy
 from riptable.rt_datetime import UTC_1970_SPLITS, DateTimeNano
 import riptable as rt
@@ -14,25 +16,12 @@ import riptable as rt
 # TODO: Add more thorough type checking support, e.g, what to do with int64, uint64, datetime
 # TODO: Should we convert to multiple columns for 64 bits, e.g, date, time-of-day for datetime?
 
+if TYPE_CHECKING:
+    from ..rt_dataset import Dataset
 
-def _is_float_encodable(xtype):
-    return xtype in (
-        int,
-        float,
-        numpy.integer,
-        numpy.floating,
-        numpy.int8,
-        numpy.int16,
-        numpy.int32,
-        numpy.int64,
-        numpy.uint8,
-        numpy.uint16,
-        numpy.uint32,
-        numpy.uint64,
-        numpy.float16,
-        numpy.float32,
-        numpy.float64,
-    )
+
+def _is_float_encodable(xtype: numpy.dtype):
+    return numpy.issubdtype(xtype, numpy.integer) or numpy.issubdtype(xtype, numpy.floating)
 
 
 def _normalize_column(x, field_key):
@@ -56,7 +45,7 @@ def _normalize_column(x, field_key):
     return vals, original_type, is_categorical, category_values
 
 
-def dataset_as_matrix(ds, save_metadata=True, column_data={}):
+def dataset_as_matrix(ds: 'Dataset', save_metadata: bool = True, column_data={}):
     columns = list(ds.keys())
     nrows = ds.shape[0]
     ncols = ds.shape[1]  # TODO: may expand this for 64-bit columns
@@ -82,7 +71,10 @@ def dataset_as_matrix(ds, save_metadata=True, column_data={}):
         return out_array
 
 
-def numpy_array_to_dict(inarray, columns=None):
+def numpy_array_to_dict(inarray: numpy.ndarray, columns=None):
+    # TODO: Consolidate with the new `_possibly_convert_rec_array()` function in rt_utils.py
+    #       that does some of this conversion in C++ and can take advantage of multi-threading.
+
     if len(inarray.shape) > 2:
         raise TypeError('Only 1 and 2-dimensional arrays are supported')
     out = dict()
@@ -124,7 +116,7 @@ def numpy_array_to_dict(inarray, columns=None):
         return out
 
 
-def numpy_array_to_dataset(inarray, columns=None):
+def numpy_array_to_dataset(inarray: numpy.ndarray, columns=None):
     out = rt.Dataset(numpy_array_to_dict(inarray, columns=columns))
     return out
 

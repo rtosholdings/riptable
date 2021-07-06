@@ -218,8 +218,9 @@ class DisplayNested:
                 elif type(v) == TypeRegister.Categorical:
                     item_formatter = _cat_info
 
+                # TODO: Use np.isscalar() here instead?
                 elif isinstance(
-                    v, (int, float, bool, np.integer, np.floating, np.bool, str, bytes)
+                    v, (int, float, bool, np.bool_, np.integer, np.floating, str, np.str_, bytes, np.bytes_)
                 ):
                     item_formatter = _scalar_info
 
@@ -274,8 +275,10 @@ class DisplayNested:
                         file_str += self.inline_svg['array']
                     file_str += f"<p>{k}"
                     file_str += f" {type(v).__name__} {_arr_info(v)}"  # {v.dtype}"
+
+                # TODO: Use np.isscalar() here instead?
                 elif isinstance(
-                    v, (int, float, bool, np.integer, np.floating, np.bool, str, bytes)
+                    v, (int, float, bool, np.bool_, np.integer, np.floating, str, np.str_, bytes, np.bytes_)
                 ):
                     if showicon:
                         file_str += self.inline_svg['object']

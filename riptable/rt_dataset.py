@@ -295,19 +295,19 @@ class Dataset(Struct):
         --------
         String objects:
 
-        >>> ds = rt.Dataset({'col1': np.array(['a','b','c'], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array(['a','b','c'], dtype=object)})
         >>> ds.col1
         FastArray([b'a', b'b', b'c'], dtype='|S1')
 
         Numeric objects:
 
-        >>> ds = rt.Dataset({'col1': np.array([1.,2.,3.], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array([1.,2.,3.], dtype=object)})
         >>> ds.col1
         FastArray([1., 2., 3.])
 
         Mixed type objects:
 
-        >>> ds = rt.Dataset({'col1': np.array([np.nan, 'str', 1], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array([np.nan, 'str', 1], dtype=object)})
         ValueError: could not convert string to float: 'str'
         TypeError: Cannot handle a numpy object array of type <class 'float'>
 
@@ -316,7 +316,7 @@ class Dataset(Struct):
 
         Mixed type objects starting with string:
 
-        >>> ds = rt.Dataset({'col1': np.array(['str', np.nan, 1], dtype=np.object)})
+        >>> ds = rt.Dataset({'col1': np.array(['str', np.nan, 1], dtype=object)})
         >>> ds.col1
         FastArray([b'str', b'nan', b'1'], dtype='|S3')
         """
@@ -328,19 +328,20 @@ class Dataset(Struct):
                     if c == 'O':
                         # make sure, scalar type so no python objects like dicts come through
                         # try float, but most objects will flip to bytes or unicode
-                        if isinstance(v[0], (str, np.str, bytes, np.bytes_, int, float, bool, np.integer, np.floating, np.bool)):
+                        # TODO: Simplify to use np.isscalar() here?
+                        if isinstance(v[0], (str, np.str_, bytes, np.bytes_, int, float, bool, np.integer, np.floating, np.bool_)):
                             try:
                                 # attempt to autodetect based on first element
                                 # NOTE: if the first element is a float and Nan.. does that mean keep looking?
-                                if isinstance(v[0], (str, np.str)):
+                                if isinstance(v[0], (str, np.str_)):
                                     # NOTE this might get converted to 'S' if unicode is False for FastArrays
                                     v=v.astype('U')
                                 elif isinstance(v[0], (bytes, np.bytes_)):
                                     v=v.astype('S')
                                 elif isinstance(v[0], (int, np.integer)):
                                     v=v.astype(np.int64)
-                                elif isinstance(v[0], (bool, np.bool)):
-                                    v=v.astype(np.bool)
+                                elif isinstance(v[0], (bool, np.bool_)):
+                                    v=v.astype(np.bool_)
                                 else:
                                     v = v.astype(np.float64)
                             except:
@@ -1364,7 +1365,7 @@ class Dataset(Struct):
         """
         # this is repeat code from FastArray isin, but this way, the values only need to be converted once for each column
         #x = values
-        #if isinstance(values, (bool, np.bool, bytes, str, int, np.integer, float, np.floating)):
+        #if isinstance(values, (bool, np.bool_, bytes, str, int, np.integer, float, np.floating)):
         #    x = np.array([x])
 
         ## numpy will find the common dtype (strings will always win)
@@ -2726,7 +2727,7 @@ class Dataset(Struct):
             return any(_col_any(_val) for _cn, _val in self.items())
         if axis == 1:
             # for each col,  !=0 to get back bool array.  then inplace OR all those results, careful with string arrays
-            temparray=zeros(len(self), dtype=np.bool)
+            temparray=zeros(len(self), dtype=bool)
             for arr in self.values():
                 if arr.dtype.num <= 13:
                     # inplace OR for numerical data
@@ -2790,7 +2791,7 @@ class Dataset(Struct):
         ifirstgroup= g['iFirstGroup']
         ncountgroup = g['nCountGroup']
 
-        result = ones(igroup.shape, dtype=np.bool)
+        result = ones(igroup.shape, dtype=bool)
 
         # return row of first occurrence
         if keep == 'first':
@@ -3017,7 +3018,7 @@ class Dataset(Struct):
             return all(_col_all(_val) for _cn, _val in self.items())
         if axis == 1:
             # for each col,  !=0 to get back bool array.  then inplace AND all those results, careful with string arrays
-            temparray=ones(len(self), dtype=np.bool)
+            temparray=ones(len(self), dtype=bool)
             for arr in self.values():
                 if arr.dtype.num <= 13:
                     # inplace AND for numerical data
@@ -4389,9 +4390,28 @@ class Dataset(Struct):
 
     # -------------------------------------------------------
     def sample(
-            self, N: int = 10, filter: Optional[np.ndarray] = None,
-            seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None
+        self, N: int = 10, filter: Optional[np.ndarray] = None,
+        seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None
     ) -> 'Dataset':
+        """
+        Select N random samples from `Dataset` or `FastArray`.
+
+        Parameters
+        ----------
+        N : int, optional, defaults to 10
+            Number of rows to sample.
+        filter : array-like (bool or rownums), optional, defaults to None
+            Filter for rows to sample.
+        seed : {None, int, array_like[ints], SeedSequence, Generator}, optional, defaults to None
+            A seed to initialize the `Generator`. If None, the generator is initialized using
+            fresh, random entropy data gathered from the OS.
+            See the docstring for `np.random.default_rng` for additional details.
+
+        Returns
+        -------
+        Dataset
+        """
+
         return sample(self, N=N, filter=filter, seed=seed)
 
     # -------------------------------------------------------
@@ -5293,7 +5313,7 @@ class Dataset(Struct):
     #--------------------------------------------------------------------------
     @classmethod
     def concat_columns(cls, dsets, do_copy:bool, on_duplicate:str='raise', on_mismatch:str='warn'):
-        """
+        r"""
         Concatenates a list of Datasets or Structs horizontally.
 
         Parameters
@@ -5927,7 +5947,7 @@ class Dataset(Struct):
         >>> d = {'name': ['bob', 'mary', 'sue', 'john'],
         ...     'letters': [['A', 'B', 'C'], ['D'], ['E', 'F', 'G'], 'H']}
         >>> ds1 = rt.Dataset.from_jagged_dict(d)
-        >>> nd = rt.INVALID_DICT[np.dtype(np.str).num]
+        >>> nd = rt.INVALID_DICT[np.dtype(str).num]
         >>> ds2 = rt.Dataset({'name': ['bob', 'mary', 'sue', 'john'],
         ...     'letters0': ['A','D','E','H'], 'letters1': ['B',nd,'F',nd],
         ...     'letters2': ['C',nd,'G',nd]})

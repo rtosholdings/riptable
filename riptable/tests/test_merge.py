@@ -1645,8 +1645,8 @@ def test_merge_create_fancy_indices_with_invalids(
     # Test #1: Filter every other row in both Categoricals. Use this as a rough bounds-check by comparing
     # the number of rows in this result to the original merge_result -- it should have at most the same
     # number of rows as the original.
-    left_filt = (np.arange(len(left_on)) % 2).astype(np.bool)
-    right_filt = (np.arange(len(right_on)) % 2).astype(np.bool)
+    left_filt = (np.arange(len(left_on)) % 2).astype(bool)
+    right_filt = (np.arange(len(right_on)) % 2).astype(bool)
 
     filtered_on = f'{on}_filtered'
 
@@ -1772,8 +1772,8 @@ def test_merge2_handles_invalids(
     # Test #1: Filter every other row in both Categoricals. We use this as a rough bounds-check by comparing
     # the number of rows in this result to the original merge_result -- it should have at most the same
     # number of rows as the original.
-    left_filt = (np.arange(len(left_on)) % 2).astype(np.bool)
-    right_filt = (np.arange(len(right_on)) % 2).astype(np.bool)
+    left_filt = (np.arange(len(left_on)) % 2).astype(bool)
+    right_filt = (np.arange(len(right_on)) % 2).astype(bool)
 
     filtered_on = f'{on}_filtered'
 

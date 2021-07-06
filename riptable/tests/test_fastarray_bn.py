@@ -19,7 +19,7 @@ try:
     class FastArray_BN_Test(unittest.TestCase):
         def test_masking(self):
             np_bools = [
-                np.random.randint(low=0, high=2, size=10_000_000).astype(np.bool)
+                np.random.randint(low=0, high=2, size=10_000_000).astype(bool)
                 for i in range(6)
             ]
 

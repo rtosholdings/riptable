@@ -328,7 +328,7 @@ def sds_endswith(path: Union[bytes, str, List[Union[bytes, str]]], add: bool = F
 
 #-----------------------------------------------------------------------------------------
 def sds_flatten(rootpath: AnyPath) -> None:
-    """
+    r"""
     `sds_flatten` brings all structs and nested structures in sub-directories into the main directory.
 
     Parameters
@@ -783,7 +783,7 @@ def _sds_raw_info(filepath: AnyPath, share: Optional[Union[bytes, str]] = None, 
 
 #-----------------------------------------------------------------------------------------
 def sds_dir(filepath: AnyPath, share: Optional[str] = None) -> List[str]:
-    """
+    r"""
     Returns list of ``Dataset`` or ``Struct`` item names as strings.
     Only returns top level item names of ``Struct`` directory.
 
@@ -825,7 +825,7 @@ def sds_info(filepath: Union[AnyPath, Sequence[AnyPath]], share: Optional[Union[
 
 #-----------------------------------------------------------------------------------------
 def sds_tree(filepath: AnyPath, threads: Optional[int] = None):
-    '''
+    r'''
     Explicitly display a tree of data for .sds file or directory.
     Only loads info, not data.
 
@@ -1218,10 +1218,10 @@ def _convert_to_mask(filter):
             # convert fancy index to bool
             if len(filter) > 0:
                 maxval = np.max(filter)
-                mask = zeros(maxval + 1, dtype=np.bool)
+                mask = zeros(maxval + 1, dtype=bool)
                 mask[filter] = True
             else:
-                mask = zeros(0, dtype=np.bool)
+                mask = zeros(0, dtype=bool)
             return mask
     else:
         raise TypeError(f'The filter must be a numpy array of booleans or integers not {type(filter)}.')
@@ -1266,7 +1266,7 @@ def _stack_sds_files(filenames, share=None, info=False, include=None, folders=No
 
 #-----------------------------------------------------------------------------------------
 def _stack_sds_dirs(filenames, share=None, info:bool=False, include=[], folders=[], sections=None, threads=None):
-    '''
+    r'''
     Dictionary will be created for final `rc.MultiStackFiles` call.
 
     >>> dirs = ['D:\junk\foobar\20190201', 'D:\junk\foobar\20190204', 'D:\junk\foobar\20190205']
@@ -1465,7 +1465,7 @@ def load_sds(
     verbose: bool = False,
     reserve: float = 0.0
 ) -> 'Struct':
-    """
+    r"""
     Load a dataset from single ``.sds`` file or struct from directory of ``.sds`` files.
 
     When ``stack=True``, generic loader for a single ``.sds`` file or directory of multiple ``.sds`` files.
@@ -1687,7 +1687,7 @@ def decompress_dataset_internal(
     mustexist: bool = False,
     goodfiles: Optional[Tuple[List[str], AnyPath]] = None
 ) -> List[Tuple[bytes, List[np.ndarray], List[tuple]]]:
-    """
+    r"""
     Parameters
     ----------
     filename : str or bytes or os.PathLike or sequence of str
@@ -2074,7 +2074,7 @@ def skeleton_from_meta_data(container_type, filepath, meta, arrays, meta_tups, f
         elif dtypenum == 19:
             return np.dtype('U'+str(itemsize // 4))
         else:
-            return np.dtype(np.typeDict[dtypenum])
+            return np.dtype(np.sctypeDict[dtypenum])
 
     def info_to_struct(f):
         def wrapper(item_tup, sds_tup, filepath):
@@ -2606,7 +2606,7 @@ def _load_sds(
 
 #------------------------------------------------------------------------------------
 def _sds_load_from_schema(schema, path, dir, filename=None, root=None, sharename=None, include=None, info=False, nocrawl=np.ndarray, multiload=None, multiload_idx=None, multiload_schema=None, threads=None):
-    '''
+    r'''
     Recursive function for loading data or info from .sds directory.
     Nested structures are stored:
 
