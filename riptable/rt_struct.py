@@ -4147,7 +4147,7 @@ class Struct:
                     # cannot hstack string repr with column name
                     try:
                         if data.ndim == 1:
-                            items = data[:self._summary_len].astype(np.str)
+                            items = data[:self._summary_len].astype(str)
                         else:
                             items = np.array([str(i) for i in data[:self._summary_len]])
                     except:
@@ -4204,8 +4204,8 @@ class Struct:
             sizes.append(size)
             summary_items.append(items)
 
-        main_data = [np.array(names, dtype=np.str), np.array(types, dtype=np.str),
-                     np.array(sizes, dtype=np.str)]
+        main_data = [np.array(names, dtype=str), np.array(types, dtype=str),
+                     np.array(sizes, dtype=str)]
 
         summary_items = np.array(summary_items)
 
