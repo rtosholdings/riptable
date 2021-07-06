@@ -51,7 +51,7 @@ class TestUfuncKwargs(object):
         assert_raises(ex_type, np.add, 1, 2, sig='ii->i', signature='ii->i')
 
     def test_sig_dtype(self):
-        ex_type = TypeError if _numpy_version >= (1, 21, 0) else ValueError
+        ex_type = TypeError if _numpy_version >= (1, 21, 0) else RuntimeError
         assert_raises(ex_type, np.add, 1, 2, sig='ii->i', dtype=int)
         assert_raises(ex_type, np.add, 1, 2, signature='ii->i', dtype=int)
 
