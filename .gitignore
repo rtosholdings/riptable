@@ -54,6 +54,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+riptable/tests/temp/
 
 # Translations
 *.mo
@@ -135,6 +136,7 @@ dmypy.json
 # IDE settings
 .idea
 .vs
+.vscode/
 
 # OS-specific metadata files
 .DS_Store
