@@ -809,8 +809,7 @@ class FAString(FastArray):
                     arr[i] = s
 
         if expand:
-            from .rt_dataset import Dataset
-            out = Dataset(dict(zip(names, out_arrs)))
+            out = TypeRegister.Dataset(dict(zip(names, out_arrs)))
         else:
             out = FastArray(out_arrs[0])
         return out
@@ -1021,9 +1020,8 @@ class CatString:
         return self.cat.isfiltered()
 
     def _convert_fastring_output(self, out):
-        from .rt_categorical import Categorical
         if out.dtype.kind in 'SU':
-            out = Categorical._from_maybe_non_unique_labels(self.cat._fa, out, base_index=self.cat.base_index)
+            out = TypeRegister.Categorical._from_maybe_non_unique_labels(self.cat._fa, out, base_index=self.cat.base_index)
             return out
         else:
             return where(self._isfiltered, out.inv, out[self.cat.ikey - 1])
@@ -1054,14 +1052,13 @@ class CatString:
 
     def extract(self, regex: str, expand: Optional[bool] = None,
                 fillna: str = '', names=None):
-        from .rt_dataset import Dataset
         out = self.fastring.extract(regex, expand=expand, fillna=fillna, names=names, apply_unique=False)
-        if isinstance(out, Dataset):
-            return Dataset({key: self._convert_fastring_output(col) for key, col in out.items()})
+        if isinstance(out, TypeRegister.Dataset):
+            return TypeRegister.Dataset({key: self._convert_fastring_output(col) for key, col in out.items()})
         else:
             return self._convert_fastring_output(out)
 
-    extract.__doc__ = FAString.__doc__   # might be misleading since we drop the apply_unique argument
+    extract.__doc__ = FAString.__doc__  # might be misleading since we drop the apply_unique argument
 
 
 # keep as last line
