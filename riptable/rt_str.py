@@ -785,7 +785,7 @@ class FAString(FastArray):
         # expand defaults to False if we have one capture group and do not specify names
         if expand is None:
             expand = ngroups > 1 or names is not None
-        elif expand is False and ngroups > 1:
+        elif not expand and ngroups > 1:
             raise ValueError("expand cannot be False with multiple capture groups")
 
         if names is None:
