@@ -719,7 +719,8 @@ class FAString(FastArray):
         return bools
 
     def extract(self, regex: str, expand: Optional[bool] = None,
-                fillna: str = '', names=None, apply_unique: bool = True):
+                fillna: str = '', names=None, apply_unique: bool = True
+                ) -> Union[FastArray, TypeRegister.Dataset]:
         '''
         Extract one or more pattern groups into a Dataset or FastArray.
         For one capture group the default is to return a FastArray
@@ -729,28 +730,36 @@ class FAString(FastArray):
 
         Parameters
         ----------
-        regex - Contains the patterns to search for
-        expand - set to True to return a Dataset for a single capture group.
-        fillna - Used for rows where no regex does not match
-        names - Optional list of strings provides keys for resultant dataset
-        apply_unique - When True we apply the regex to the unique values and then expand using the reverse index.
-        This is optimal for repetitive data and benign for unique or close highly non-repetitive data
+        regex: str
+            Contains the patterns to search for
+        expand: bool
+            set to True to return a Dataset for a single capture group.
+        fillna: str
+            Used for rows where no regex does not match
+        names: List[str]
+            Optional list of strings provides keys for resultant dataset
+        apply_unique: bool
+            When True we apply the regex to the unique values and then expand using the reverse index.
+            This is optimal for repetitive data and benign for unique or close highly non-repetitive data
 
         Examples
         --------
         >>> osi = rt.FastArray(['SPX UO 12/15/23 C5700', 'SPXW UO 09/17/21 C3650'])
         >>> osi.str.extract('\w+')
         FastArray([b'SPX', b'SPXW'], dtype='|S4')
-        >>> osi.str.exract('(?P<root>\w+)')
+
+        >>> osi.str.extract('(?P<root>\w+)')
         #   root
         -   ----
         0   SPX
         1   SPXW
-        >>> osi.str.exract('(\w+).* (\d{2}/\d{2}/\d{2})', names=['root', 'expiration'])
+
+        >>> osi.str.extract('(\w+).* (\d{2}/\d{2}/\d{2})', names=['root', 'expiration'])
         #   root   expiration
         -   ----   ----------
         0   SPX    12/15/23
         1   SPXW   09/17/21
+
         >>> osi.str.extract('\w+W', expand=True)
         #   group_0
         -   -------
