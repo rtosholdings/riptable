@@ -284,6 +284,12 @@ import riptide_cpp as rc
 
 from .rt_enum import TypeRegister
 
+# matplotlib may not be installed.
+try:
+    from . import rt_matplotlib
+except ModuleNotFoundError:
+    pass
+
 # if environment is IPython/Jupyter, force config options here
 try:
     # disable outputcache only for ipython by default
