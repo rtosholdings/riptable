@@ -1,11 +1,11 @@
 from typing import List, Optional
+import abc
 import datetime
 import pytz
 import dateutil.rrule
 from matplotlib import units, ticker, dates
 
 import riptable as rt
-import abc
 
 __all__ = []
 
