@@ -5640,10 +5640,7 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
         _from = kwargs.get('_from', None)
 
         # TimeSpan has no timezone
-        if _from is not None:
-            self._display_length = _from._display_length
-        else:
-            self._display_length = DisplayLength.Long
+        self._display_length = getattr(_from, '_display_length', DisplayLength.Long)
 
     def get_item_format(self):
         item_format = ItemFormat(
