@@ -815,6 +815,42 @@ class FAString(FastArray):
         out = out.view(f'{self._intype}1')
         return out
 
+    def strip(self, chars=' \t\r\n\v\f'):
+        # Convert the chars to strip to an array of uint8's.  This could probably be made cleaner.
+        to_strip = np.array([*chars.encode('ascii')], dtype='u1')
+        return self._apply_func(self.nb_strip, self.nb_strip_par, to_strip)
+
+    def _nb_strip(src, itemsize, dest, to_strip):
+        n_items = np.int64(len(src) // itemsize)
+        for idx in nb.prange(n_items):
+            start_idx = idx * itemsize
+            end_idx = start_idx + itemsize
+
+            head_pos = start_idx
+            for head_pos in range(start_idx, end_idx):
+                char = src[head_pos]
+                if char != 0 and char not in to_strip:
+                    break
+
+            tail_pos = end_idx - 1
+            for tail_pos in range(end_idx - 1, start_idx - 1, -1):
+                char = src[tail_pos]
+                if char != 0 and char not in to_strip:
+                    break
+
+            read_pos = head_pos
+            write_pos = start_idx
+            while read_pos <= tail_pos:
+                dest[write_pos] = src[read_pos]
+                read_pos += 1
+                write_pos += 1
+
+            while write_pos < end_idx:
+                dest[write_pos] = 0
+                write_pos += 1
+
+        return
+
 
     # Use the specialized decorators to create both a serial and parallel version of each
     # numba function (so we only need one definition of each), then add it to FAString.
@@ -861,6 +897,9 @@ class FAString(FastArray):
 
     nb_char = _njit_serial(_nb_char)
     nb_char_par = _njit_par(_nb_char)
+
+    nb_strip = _njit_serial(_nb_strip)
+    nb_strip_par = _njit_par(_nb_strip)
 
 
 def _populate_wrappers(cls):
