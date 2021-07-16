@@ -110,7 +110,7 @@ class DTTicker(abc.ABC):
         self.year_aligned_ticks = [tick for tick in self.month_aligned_ticks if tick.month == 0]
         return
 
-    
+    @abc.abstractmethod
     def make_formats(self):
         raise NotImplementedError()
 
