@@ -21,6 +21,7 @@ from .rt_numpy import empty_like, empty, where, ones, zeros
 from .rt_enum import TypeRegister
 from .Utils.common import cached_property
 
+import builtins
 
 # Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
 _njit_serial = partial(nb.njit, parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
@@ -815,7 +816,7 @@ class FAString(FastArray):
         out = out.view(f'{self._intype}1')
         return out
 
-    def strip(self, chars=' \t\r\n\v\f'):
+    def strip(self, chars: builtins.str = ' \t\r\n\v\f'):
         # Convert the chars to strip to an array of uint8's.  This could probably be made cleaner.
         to_strip = np.array([*chars.encode('ascii')], dtype='u1')
         return self._apply_func(self.nb_strip, self.nb_strip_par, to_strip)
