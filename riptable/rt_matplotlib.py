@@ -5,6 +5,9 @@ import dateutil.rrule
 from matplotlib import units, ticker, dates
 
 import riptable as rt
+import abc
+
+__all__ = []
 
 sizes_ns = {
     'MICROSECONDLY': 1_000,
@@ -33,7 +36,7 @@ def dt_to_ns(dt):
     return int(dt.timestamp() * NANOS_PER_SECOND)
 
 
-class DTTicker:
+class DTTicker(abc.ABC):
     tz: pytz.tzfile.DstTzInfo
     interva: int
     start_ns: int
@@ -86,9 +89,11 @@ class DTTicker:
         self.aligned_utc = self.aligned_local.astimezone(datetime.timezone.utc)
         return
 
+    @abc.abstractmethod
     def get_aligned(self):
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def make_ticks(self):
         raise NotImplementedError()
 
@@ -105,6 +110,7 @@ class DTTicker:
         self.year_aligned_ticks = [tick for tick in self.month_aligned_ticks if tick.month == 0]
         return
 
+    
     def make_formats(self):
         raise NotImplementedError()
 
@@ -435,7 +441,7 @@ class DateTimeScalarConverter(units.ConversionInterface):
         return info
 
 
-class TSTicker:
+class TSTicker(abc.ABC):
     step_us = None
 
     def __init__(
@@ -460,6 +466,7 @@ class TSTicker:
         self.aligned_td = self.get_aligned()
         return
 
+    @abc.abstractmethod
     def get_aligned(self):
         raise NotImplementedError()
 
@@ -484,6 +491,7 @@ class TSTicker:
         self.hour_aligned_ticks = [tick for tick in self.minute_aligned_ticks if tick.seconds % 3600 == 0]
         self.day_aligned_ticks = [tick for tick in self.hour_aligned_ticks if tick.seconds == 0]
 
+    @abc.abstractmethod
     def make_formats(self):
         raise NotImplementedError()
 
