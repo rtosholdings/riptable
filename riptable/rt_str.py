@@ -1,9 +1,13 @@
 __all__ = [
-    'FAString'
+    'FAString',
+    'CatString',
 ]
 
 from functools import partial
-from typing import List, NamedTuple, Optional, Union
+from typing import List, NamedTuple, Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .rt_dataset import Dataset
+
 import warnings
 import inspect
 
@@ -17,14 +21,14 @@ from numba.core.dispatcher import Dispatcher
 from .config import get_global_settings
 from .rt_fastarray import FastArray
 
-from .rt_numpy import empty_like, empty, where, ones, zeros
+from .rt_numpy import empty, where, ones, zeros, unique
 from .rt_enum import TypeRegister
 from .Utils.common import cached_property
-
 
 # Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
 _njit_serial = partial(nb.njit, parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 _njit_par = partial(nb.njit, parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
+
 
 class FAStrDispatchPair(NamedTuple):
     """A pair of numba-based functions; one compiled for serial execution and the other for parallel execution."""
@@ -39,6 +43,7 @@ class FAStrDispatchPair(NamedTuple):
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
+
 def _warn_deprecated_naming(old_func, new_func):
     warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=2)
 
@@ -51,18 +56,18 @@ def _warn_deprecated_naming(old_func, new_func):
 # >>> 'tbb'
 #
 # NOTE this class was first written reshaping the array as 2d
-#----
-#if intype[1]=='S':
+# ----
+# if intype[1]=='S':
 #    return self.view(np.uint8).reshape((len(self), self.itemsize))
-#if intype[1]=='U':
+# if intype[1]=='U':
 #    return self.view(np.uint32).reshape((len(self), self.itemsize//4))
-#---- 
-#then pass to numba as 2d using shape[0] outer loop, shape[1] inner loop with [row,col] accessors
-#---
-#then flip back to string
-#if self.itemsize == 4:
+# ----
+# then pass to numba as 2d using shape[0] outer loop, shape[1] inner loop with [row,col] accessors
+# ---
+# then flip back to string
+# if self.itemsize == 4:
 #    result=self.ravel().view('U'+str(self.shape[1]))
-#else:
+# else:
 #    result=self.ravel().view('S'+str(self.shape[1]))
 #
 # Keeping it as 1d and remembering the itemsize is 10% faster on large arrays, and even faster on small arrays
@@ -80,26 +85,26 @@ class FAString(FastArray):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
             if np.isscalar(arr):
-                arr=np.asanyarray([arr])
+                arr = np.asanyarray([arr])
             else:
-                arr=np.asanyarray(arr)
+                arr = np.asanyarray(arr)
 
-        intype=arr.dtype.char
-        if intype=='O':
+        intype = arr.dtype.char
+        if intype == 'O':
             # try to convert to string (might have come from pandas)
             # default to unicode (note: FastArray attempts 'S' first)
             arr = arr.astype('U')
-            intype=arr.dtype.char
+            intype = arr.dtype.char
 
         itemsize = np.int64(arr.itemsize)
 
-        if intype=='S':
+        if intype == 'S':
             # convert to two dim one byte array
             instance = arr.view(np.uint8)
-        elif intype=='U':
+        elif intype == 'U':
             # convert to two dim four byte array
             instance = arr.view(np.uint32)
-            itemsize = itemsize //4
+            itemsize = itemsize // 4
         else:
             raise TypeError(f"FAString can only be used on byte string and unicode not {arr.dtype!r}")
 
@@ -141,9 +146,9 @@ class FAString(FastArray):
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
             if not isinstance(arr, (list, tuple)):
-                arr=np.asanyarray([arr])
-            else: 
-                arr=np.asanyarray(arr)
+                arr = np.asanyarray([arr])
+            else:
+                arr = np.asanyarray(arr)
 
         if arr.dtype.char != self._intype:
             arr = arr.astype(self._intype)
@@ -228,10 +233,10 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
-                c=src[rowpos+j]
+                c = src[rowpos + j]
                 if c >= 97 and c <= 122:
                     # convert to ASCII upper
-                    src[rowpos+j] = c-32
+                    src[rowpos + j] = c - 32
 
     # -----------------------------------------------------
     def _nb_upper(src, itemsize, dest):
@@ -240,12 +245,12 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
-                c=src[rowpos+j]
+                c = src[rowpos + j]
                 if c >= 97 and c <= 122:
                     # convert to ASCII upper
-                    dest[rowpos+j] = c-32
+                    dest[rowpos + j] = c - 32
                 else:
-                    dest[rowpos+j] = c
+                    dest[rowpos + j] = c
 
     # -----------------------------------------------------
     def _nb_lower(src, itemsize, dest):
@@ -254,12 +259,12 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # loop over all chars in the string
             for j in range(itemsize):
-                c=src[rowpos+j]
+                c = src[rowpos + j]
                 if c >= 65 and c <= 90:
                     # convert to ASCII lower
-                    dest[rowpos+j] = c+32
+                    dest[rowpos + j] = c + 32
                 else:
-                    dest[rowpos+j] = c
+                    dest[rowpos + j] = c
 
     # -----------------------------------------------------
     def _nb_removetrailing(src, itemsize, dest, removechar):
@@ -287,11 +292,11 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             rowpos = i * itemsize
             # find length of string
-            strlen=0
+            strlen = 0
             while (strlen < itemsize):
-                if src[rowpos + strlen] ==0: break
-                strlen +=1
-            end = rowpos + strlen -1
+                if src[rowpos + strlen] == 0: break
+                strlen += 1
+            end = rowpos + strlen - 1
             start = rowpos
             while (start < end):
                 temp = src[end]
@@ -306,18 +311,18 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             rowpos = i * itemsize
             # find length of string
-            strlen=0
+            strlen = 0
             while (strlen < itemsize):
-                if src[rowpos + strlen] ==0: break
-                strlen +=1
-            srcpos=0
-            while(strlen > 0):
+                if src[rowpos + strlen] == 0: break
+                strlen += 1
+            srcpos = 0
+            while (strlen > 0):
                 strlen -= 1
                 dest[rowpos + strlen] = src[rowpos + srcpos]
                 srcpos += 1
-            while(srcpos < itemsize):
+            while (srcpos < itemsize):
                 dest[rowpos + srcpos] = 0
-                srcpos +=1
+                srcpos += 1
 
     # -----------------------------------------------------
     def _nb_strlen(src, itemsize, dest):
@@ -325,7 +330,7 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
-            strlen= 0
+            strlen = 0
             # loop over all chars in the string
             for j in range(itemsize):
                 if src[rowpos + j] == 0:
@@ -341,12 +346,12 @@ class FAString(FastArray):
         for i in nb.prange(len(src) // itemsize):
             # loop over all chars in the string
             rowpos = i * itemsize
-            found =0
+            found = 0
             # loop over all chars in the string
             for j in range(itemsize):
-                c= src[rowpos + j]
+                c = src[rowpos + j]
                 for k in range(str2len):
-                    if c==str2[k]:
+                    if c == str2[k]:
                         # store location of match
                         dest[i] = j
                         found = 1
@@ -391,7 +396,7 @@ class FAString(FastArray):
                     if src[rowpos + j + k] != str2[k]:
                         break
                     k += 1
-                if k==str2len:
+                if k == str2len:
                     # indicate we have a match
                     dest[i] = True
                     break
@@ -407,25 +412,25 @@ class FAString(FastArray):
 
             # loop over all chars in the string
             # check if enough space left
-            if itemsize >= str2len: 
-                k =itemsize
-                while ((k > 0) and (src[rowpos + k -1]==0)):
+            if itemsize >= str2len:
+                k = itemsize
+                while ((k > 0) and (src[rowpos + k - 1] == 0)):
                     k -= 1
 
                 # check if still enough space left
-                if k >= str2len: 
+                if k >= str2len:
 
-                    k2=str2len
+                    k2 = str2len
                     # check if only the end matches
                     while (k2 > 0):
-                        if src[rowpos + k -1] != str2[k2-1]:
+                        if src[rowpos + k - 1] != str2[k2 - 1]:
                             break
                         k -= 1
-                        k2 -=1
-                    if k2==0:
+                        k2 -= 1
+                    if k2 == 0:
                         # indicate we have a match
                         dest[i] = True
-                    
+
     # -----------------------------------------------------
     def _nb_startswith(src, itemsize, dest, str2):
         str2len = len(str2)
@@ -436,14 +441,14 @@ class FAString(FastArray):
             dest[i] = False
             # loop over all chars in the string
             # check if enough space left
-            if itemsize >= str2len: 
-                k =0
+            if itemsize >= str2len:
+                k = 0
                 # check if only the beginning matches
                 while (k < str2len):
                     if src[rowpos + k] != str2[k]:
                         break
                     k += 1
-                if k==str2len:
+                if k == str2len:
                     # indicate we have a match
                     dest[i] = True
 
@@ -538,7 +543,7 @@ class FAString(FastArray):
         return self._apply_func(self.nb_removetrailing, self.nb_removetrailing_par, remove)
 
     # -----------------------------------------------------
-    @cached_property     # only cached for Python 3.7 or higher
+    @cached_property  # only cached for Python 3.7 or higher
     def strlen(self):
         '''
         return the string length of every string (bytes or unicode)
@@ -713,7 +718,104 @@ class FAString(FastArray):
         regex = re.compile(regex)
         vmatch = np.vectorize(lambda x: bool(regex.search(x)))
         bools = vmatch(self.backtostring)
+
         return bools
+
+    def extract(self, regex: str, expand: Optional[bool] = None,
+                fillna: str = '', names=None, apply_unique: bool = True
+                ) -> Union[FastArray, "Dataset"]:
+        '''
+        Extract one or more pattern groups into a Dataset or FastArray.
+        For one capture group the default is to return a FastArray
+        but this can be overridden by passing expand=True or by providing names.
+        Column names can be specified within the regex using (?P<name>) in the search group(s)
+        or by passing the names argument which may be more convenient.
+
+        Parameters
+        ----------
+        regex: str
+            Contains the patterns to search for
+        expand: bool
+            set to True to return a Dataset for a single capture group.
+        fillna: str
+            Used for rows where no regex does not match
+        names: List[str]
+            Optional list of strings provides keys for resultant dataset
+        apply_unique: bool
+            When True we apply the regex to the unique values and then expand using the reverse index.
+            This is optimal for repetitive data and benign for unique or close highly non-repetitive data
+
+        Examples
+        --------
+        >>> osi = rt.FastArray(['SPX UO 12/15/23 C5700', 'SPXW UO 09/17/21 C3650'])
+        >>> osi.str.extract('\w+')
+        FastArray([b'SPX', b'SPXW'], dtype='|S4')
+
+        >>> osi.str.extract('(?P<root>\w+)')
+        #   root
+        -   ----
+        0   SPX
+        1   SPXW
+
+        >>> osi.str.extract('(\w+).* (\d{2}/\d{2}/\d{2})', names=['root', 'expiration'])
+        #   root   expiration
+        -   ----   ----------
+        0   SPX    12/15/23
+        1   SPXW   09/17/21
+
+        >>> osi.str.extract('\w+W', expand=True)
+        #   group_0
+        -   -------
+        0
+        1   SPXW
+        '''
+        kwargs = dict(expand=expand, fillna=fillna, names=names, apply_unique=apply_unique)
+        if apply_unique:
+            kwargs['apply_unique'] = False
+            unique_values, index = unique(self.backtostring, return_inverse=True)
+            result = unique_values.str.extract(regex, **kwargs)
+            return result[index] if isinstance(result, FastArray) else result[index, :]
+
+        if not isinstance(regex, bytes):
+            regex = bytes(regex, 'utf-8')
+        compiled = re.compile(regex)
+
+        ngroups = compiled.groups
+        if ngroups == 0:
+            # convenience where we treat the entire pattern as a capture group
+            return self.extract(f'({regex.decode()})', **kwargs)
+
+        # expand defaults to False if we have one capture group and do not specify names
+        if expand is None:
+            expand = ngroups > 1 or names is not None
+        elif not expand and ngroups > 1:
+            raise ValueError("expand cannot be False with multiple capture groups")
+
+        if names is None:
+            names = [f'group_{i}' for i in range(ngroups)]
+            for name, index in compiled.groupindex.items():
+                names[index - 1] = name
+        elif len(names) != ngroups:
+            raise ValueError(f"Number of names, {len(names)}, does not match number of groups, {ngroups}")
+
+        strings = self.backtostring
+        # we define a list containing an empty array for each group
+        # use Python lists as we do not know how many chars will be in the resultant arrays.
+        # Performance in comparable to unsing pre-allocated numpy arrays with ~600K unique elements
+        out_arrs = [[fillna] * len(strings) for _ in range(ngroups)]
+
+        for i, s in enumerate(strings):
+            result = compiled.search(s)
+            if result is not None:
+                result = result.groups()
+                for s, arr in zip(result, out_arrs):
+                    arr[i] = s
+
+        if expand:
+            out = TypeRegister.Dataset(dict(zip(names, out_arrs)))
+        else:
+            out = FastArray(out_arrs[0])
+        return out
 
     def _nb_substr(src, out, itemsize, start, stop, strlen):
         n_elements = len(out)
@@ -757,7 +859,7 @@ class FAString(FastArray):
         out = zeros((self.n_elements, n_chars), self.dtype)
         out = self._nb_substr(out, self._itemsize, start, stop, strlen)
         n_chars = out.shape[1]
-        if n_chars == 0:    # empty sub strings everywhere
+        if n_chars == 0:  # empty sub strings everywhere
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
         else:
             out = out.ravel().view(f'<{self._intype}{n_chars}')
@@ -773,7 +875,7 @@ class FAString(FastArray):
             if pos >= itemsize or pos < 0:
                 # Parallel reduction on this index.
                 # Otherwise, returning here prevents the function from being parallelized.
-                broken_at = np.minimum(broken_at, i)    # this triggers error below (in `char()`).
+                broken_at = np.minimum(broken_at, i)  # this triggers error below (in `char()`).
 
                 # TODO: Set out[i] to some invalid value?
                 out[i] = 0
@@ -814,7 +916,6 @@ class FAString(FastArray):
                              f"for string of length {self._itemsize}")
         out = out.view(f'{self._intype}1')
         return out
-
 
     # Use the specialized decorators to create both a serial and parallel version of each
     # numba function (so we only need one definition of each), then add it to FAString.
@@ -922,9 +1023,8 @@ class CatString:
         return self.cat.isfiltered()
 
     def _convert_fastring_output(self, out):
-        from .rt_categorical import Categorical
         if out.dtype.kind in 'SU':
-            out = Categorical._from_maybe_non_unique_labels(self.cat._fa, out, base_index=self.cat.base_index)
+            out = TypeRegister.Categorical._from_maybe_non_unique_labels(self.cat._fa, out, base_index=self.cat.base_index)
             return out
         else:
             return where(self._isfiltered, out.inv, out[self.cat.ikey - 1])
@@ -953,7 +1053,17 @@ class CatString:
 
         return property(wrapper)
 
+    def extract(self, regex: str, expand: Optional[bool] = None,
+                fillna: str = '', names=None):
+        out = self.fastring.extract(regex, expand=expand, fillna=fillna, names=names, apply_unique=False)
+        if isinstance(out, TypeRegister.Dataset):
+            return TypeRegister.Dataset({key: self._convert_fastring_output(col) for key, col in out.items()})
+        else:
+            return self._convert_fastring_output(out)
+
+    extract.__doc__ = FAString.__doc__  # might be misleading since we drop the apply_unique argument
+
 
 # keep as last line
-TypeRegister.FAString=FAString
+TypeRegister.FAString = FAString
 TypeRegister.CatString = CatString
