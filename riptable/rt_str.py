@@ -4,7 +4,10 @@ __all__ = [
 ]
 
 from functools import partial
-from typing import List, NamedTuple, Optional, Union
+from typing import List, NamedTuple, Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .rt_dataset import Dataset
+
 import warnings
 import inspect
 
@@ -720,7 +723,7 @@ class FAString(FastArray):
 
     def extract(self, regex: str, expand: Optional[bool] = None,
                 fillna: str = '', names=None, apply_unique: bool = True
-                ) -> Union[FastArray, TypeRegister.Dataset]:
+                ) -> Union[FastArray, "Dataset"]:
         '''
         Extract one or more pattern groups into a Dataset or FastArray.
         For one capture group the default is to return a FastArray
