@@ -30,6 +30,7 @@ from hypothesis.strategies import (
     sampled_from,
     slices,
     text,
+    just,
 )
 
 # riptable custom Hypothesis strategies
@@ -1271,6 +1272,19 @@ class TestRiptableNumpyEquivalency:
 
         inner()
 
+    @given(arrs=sampled_from([[9, 8, 7], [[10, 1],[11, 2],[13, 3]]]), inds=just([False, True, False]))
+    def test_array_bool_indexing(self, arrs, inds):
+        np_array = np.asfortranarray(arrs)
+        rt_array = rt.FA(np_array)
+
+        np_bool_indices = inds
+        rt_bool_indices = rt.FA(np_bool_indices)
+
+        nr = np_array[np_bool_indices]
+        fr = rt_array[rt_bool_indices]
+
+        assert_array_equal_(np.array(fr), nr)
+
     @given(mats=same_structure_ndarrays())
     def test_minimum(self, mats):
         mat1, mat2 = mats
@@ -1351,10 +1365,10 @@ class TestRiptableNumpyEquivalency:
                 assert isinstance(rt_output, FastArray)
 
     @pytest.mark.xfail(
-        reason=(
+        reason=
             "https://jira/browse/SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nanstd will be an available attribute\n"
             "https://jira/browse/SOQTEST-6497 Riptable.nanstd() does not return a FastArray"
-        ),
+        ,
         raises=(AttributeError, AssertionError),
     )
     @pytest.mark.skipif(
@@ -1378,10 +1392,9 @@ class TestRiptableNumpyEquivalency:
             assert isinstance(rt_output, FastArray)
 
     @pytest.mark.xfail(
-        reason=(
-            "https://jira/browse/SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nansum will be an available attribute\n",
+        reason=
+            "https://jira/browse/SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nansum will be an available attribute\n"
             "nansum does not implement the axis argument either",
-        )
     )
     @pytest.mark.skipif(
         is_running_in_teamcity(), reason="Please remove alongside xfail removal."
@@ -1451,10 +1464,10 @@ class TestRiptableNumpyEquivalency:
         assert_allclose(rt_output, np_output)
 
     @pytest.mark.xfail(
-        reason=(
+        reason=
             "https://jira/browse/SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nanvar will be an available attribute\n"
             "https://jira/browse/SOQTEST-6497 Riptable.nanvar() does not return a FastArray"
-        ),
+        ,
         raises=(AttributeError, AssertionError),
     )
     @pytest.mark.skipif(
