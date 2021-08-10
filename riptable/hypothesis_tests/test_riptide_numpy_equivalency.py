@@ -1273,7 +1273,7 @@ class TestRiptableNumpyEquivalency:
         inner()
 
     @given(arrs=sampled_from([[9, 8, 7], [[10, 1],[11, 2],[13, 3]]]), inds=just([False, True, False]))
-    def test_array_bool_indexing(self, arrs, inds):
+    def test_array_boolean_indexing(self, arrs, inds):
         np_array = np.asfortranarray(arrs)
         rt_array = rt.FA(np_array)
 

@@ -825,7 +825,7 @@ class FastArray(np.ndarray):
                 # NOTE: will fail on self.dtype.byteorder as little endian
                 if self.flags.f_contiguous:
                     # dimensions must match
-                    if self.ndim == fld.ndim:
+                    if self.ndim == fld.ndim and self.ndim == 1:
                         return TypeRegister.MathLedger._INDEX_BOOL(self,fld)
 
             # if we have fancy indexing and we support the array type, make sure we do not have stride problem
