@@ -2020,7 +2020,7 @@ def merge_indices(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("Validation complete.", elapsed_nanos=delta)
+        logger.debug("Validation complete.", extra={'elapsed_nanos': delta})
 
     # Construct the Grouping object for each of the join keys.
     start = GetNanoTime()
@@ -2037,7 +2037,7 @@ def merge_indices(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("Grouping creation complete.", elapsed_nanos=delta)
+        logger.debug("Grouping creation complete.", extra={'elapsed_nanos': delta})
 
     # If the caller requested validation to be performed (to make sure the keys are
     # unique on one or both sides) do that now.
@@ -2051,7 +2051,7 @@ def merge_indices(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("Join index creation complete.", elapsed_nanos=delta)
+        logger.debug("Join index creation complete.", extra={'elapsed_nanos': delta})
 
     # If running in debug mode (without specifying -O at the command-line),
     # verify the fancy indices will result in the same output lengths.
@@ -2217,7 +2217,7 @@ def merge2(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("Column validation complete.", elapsed_nanos=delta)
+        logger.debug("Column validation complete.", extra={'elapsed_nanos': delta})
 
     # merge_indices only accepts the new-style (tuple-based) 'on' parameter, so we need to get
     # the parameters into that form.
@@ -2289,7 +2289,10 @@ def merge2(
         # For now, just write the estimated size to the logger.
         # TODO: Check the estimated size against the current free memory size available
         #       and fail (or emit a warning) if it like's like we hit an OOM error and crash.
-        logger.debug("Estimated merged result size.", alloc_size=est_result_alloc_size, total_size=est_result_total_size)
+        logger.debug(
+            "Estimated merged result size.",
+            extra={'alloc_size': est_result_alloc_size, 'total_size': est_result_total_size}
+        )
 
     def readonly_array_wrapper(arr: FastArray) -> FastArray:
         """Create a read-only view of an array."""
@@ -2365,7 +2368,7 @@ def merge2(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("Transformed columns. cols='%s'", "intersection", elapsed_nanos=delta)
+        logger.debug("Transformed columns. cols='%s'", "intersection", extra={'elapsed_nanos': delta})
 
     # Transform the columns from the left Dataset and store to the new, merged Dataset.
     # If we don't have a left fancy index, it means the fancy index (if present) would simply create
@@ -2384,7 +2387,7 @@ def merge2(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("Transformed columns. cols='%s'", "left", elapsed_nanos=delta)
+        logger.debug("Transformed columns. cols='%s'", "left", extra={'elapsed_nanos': delta})
 
     # Transform the columns from the right Dataset and store to the new, merged Dataset.
     start = GetNanoTime()
@@ -2415,7 +2418,7 @@ def merge2(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("Transformed columns. cols='%s'", "right", elapsed_nanos=delta)
+        logger.debug("Transformed columns. cols='%s'", "right", extra={'elapsed_nanos': delta})
 
     # If the caller has asked for an indicator column, create it now.
     if indicator:
@@ -2443,7 +2446,7 @@ def merge2(
 
         if logger.isEnabledFor(logging.DEBUG):
             delta = GetNanoTime() - start
-            logger.debug("merge_indicator created.", elapsed_nanos=delta)
+            logger.debug("merge_indicator created.", extra={'elapsed_nanos': delta})
 
     # Take the dictionary of column names we created, invoke the
     # selected dataset class constructor with it and return the new instance.
@@ -2642,7 +2645,7 @@ def merge(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("validation took", elapsed_nanos=delta)
+        logger.debug("validation took %d ns", delta, extra={'elapsed_nanos': delta})
 
     # Construct the join indices. That is, arrays for use as fancy indices into columns of the
     # left and right datasets to produce new arrays/columns for the merged Dataset.
@@ -2653,7 +2656,7 @@ def merge(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("_construct_index took", elapsed_nanos=delta)
+        logger.debug("_construct_index took %d ns", delta, extra={'elapsed_nanos': delta})
 
     # DEBUG: Print the constructed indices.
     #print(f'idx ({type(idx)}): {idx}')
@@ -2683,7 +2686,7 @@ def merge(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("ismember took", elapsed_nanos=delta)
+        logger.debug("ismember took %d ns", delta, extra={'elapsed_nanos': delta})
 
     # DEBUG: Print the constructed indices.
     #print(f'p_left ({type(p_left)}): {p_left}')
@@ -2716,7 +2719,7 @@ def merge(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("copying took", elapsed_nanos=delta)
+        logger.debug("copying took %d ns", delta, extra={'elapsed_nanos': delta})
 
     start=GetNanoTime()
 
@@ -2749,7 +2752,7 @@ def merge(
 
     if logger.isEnabledFor(logging.DEBUG):
         delta = GetNanoTime() - start
-        logger.debug("indexing took", elapsed_nanos=delta)
+        logger.debug("indexing took %d ns", delta, extra={'elapsed_nanos': delta})
 
     if indicator:
         start=GetNanoTime()
@@ -2764,7 +2767,7 @@ def merge(
 
         if logger.isEnabledFor(logging.DEBUG):
             delta = GetNanoTime() - start
-            logger.debug("merge_indicator created.", elapsed_nanos=delta)
+            logger.debug("merge_indicator created.", extra={'elapsed_nanos': delta})
 
     # Take the dictionary of column names we created, invoke the
     # selected dataset class constructor with it and return the new instance.
@@ -3271,7 +3274,7 @@ class _AsOfMerge:
 
             if logger.isEnabledFor(logging.DEBUG):
                 delta = GetNanoTime() - start
-                logger.debug(f"merge_asof: issorted(%s).", "left_on", elapsed_nanos=delta)
+                logger.debug(f"merge_asof: issorted(%s).", "left_on", extra={'elapsed_nanos': delta})
 
             # If the left 'on' column isn't sorted, raise an exception.
             if not left_on_sorted:
@@ -3283,7 +3286,7 @@ class _AsOfMerge:
 
             if logger.isEnabledFor(logging.DEBUG):
                 delta = GetNanoTime() - start
-                logger.debug(f"merge_asof: issorted(%s).", "right_on", elapsed_nanos=delta)
+                logger.debug(f"merge_asof: issorted(%s).", "right_on", extra={'elapsed_nanos': delta})
 
             # If the right 'on' column isn't sorted, raise an exception.
             if not right_on_sorted:
@@ -3368,7 +3371,7 @@ class _AsOfMerge:
 
         if logger.isEnabledFor(logging.DEBUG):
             delta = GetNanoTime() - start
-            logger.debug("Join index creation complete.", elapsed_nanos=delta)
+            logger.debug("Join index creation complete.", extra={'elapsed_nanos': delta})
 
         # Begin creating the column data for the 'merged' Dataset.
         out: Dict[str, FastArray] = {}
@@ -3413,7 +3416,7 @@ class _AsOfMerge:
 
         if logger.isEnabledFor(logging.DEBUG):
             delta = GetNanoTime() - start
-            logger.debug("Transformed columns. cols='%s'", "intersection", elapsed_nanos=delta)
+            logger.debug("Transformed columns. cols='%s'", "intersection", extra={'elapsed_nanos': delta})
 
         # Transform the columns from the left Dataset and store to the new, merged Dataset.
         # If we don't have a left fancy index, it means the fancy index (if present) would simply create
@@ -3432,7 +3435,7 @@ class _AsOfMerge:
 
         if logger.isEnabledFor(logging.DEBUG):
             delta = GetNanoTime() - start
-            logger.debug("Transformed columns. cols='%s'", "left", elapsed_nanos=delta)
+            logger.debug("Transformed columns. cols='%s'", "left", extra={'elapsed_nanos': delta})
 
         # Transform the columns from the right Dataset and store to the new, merged Dataset.
         start = GetNanoTime()
@@ -3448,7 +3451,7 @@ class _AsOfMerge:
 
         if logger.isEnabledFor(logging.DEBUG):
             delta = GetNanoTime() - start
-            logger.debug("Transformed columns. cols='%s'", "right", elapsed_nanos=delta)
+            logger.debug("Transformed columns. cols='%s'", "right", extra={'elapsed_nanos': delta})
 
         # If the caller has asked for the 'matched_on' column, create it now.
         if matched_on:
@@ -3464,7 +3467,7 @@ class _AsOfMerge:
 
             if logger.isEnabledFor(logging.DEBUG):
                 delta = GetNanoTime() - start
-                logger.debug("matched_on column created.", elapsed_nanos=delta)
+                logger.debug("matched_on column created.", extra={'elapsed_nanos': delta})
 
         #FastArray._RON()  # temporary hack to protect against data corruption
         return datasetclass(out)
@@ -3497,7 +3500,7 @@ class _AsOfMerge:
 
             if logger.isEnabledFor(logging.DEBUG):
                 delta = GetNanoTime() - start
-                logger.debug("merge_prebinned took", elapsed_nanos=delta)
+                logger.debug("merge_prebinned took %d ns", delta, extra={'elapsed_nanos': delta})
 
         else:
             # The list of 'by' column names is normalized earlier on in the 'merge_asof' logic,
@@ -3528,6 +3531,6 @@ class _AsOfMerge:
 
             if logger.isEnabledFor(logging.DEBUG):
                 delta = GetNanoTime() - start
-                logger.debug("aligmmk took", elapsed_nanos=delta)
+                logger.debug("aligmmk took %d ns", delta, extra={'elapsed_nanos': delta})
 
         return None, pright
