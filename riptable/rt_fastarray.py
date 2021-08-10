@@ -824,7 +824,9 @@ class FastArray(np.ndarray):
                 # make sure no striding
                 # NOTE: will fail on self.dtype.byteorder as little endian
                 if self.flags.f_contiguous:
-                    return TypeRegister.MathLedger._INDEX_BOOL(self,fld)
+                    # dimensions must match
+                    if self.ndim == fld.ndim and self.ndim == 1:
+                        return TypeRegister.MathLedger._INDEX_BOOL(self,fld)
 
             # if we have fancy indexing and we support the array type, make sure we do not have stride problem
             if fld.dtype.char in NumpyCharTypes.AllInteger and self.dtype.char in NumpyCharTypes.SupportedAlternate:
@@ -1098,7 +1100,7 @@ class FastArray(np.ndarray):
         """
         low = asanyarray(low)
         high = asanyarray(high)
-        
+
         if include_low:
             ret = self >= low
         else:

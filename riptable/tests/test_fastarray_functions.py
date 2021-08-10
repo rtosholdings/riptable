@@ -332,6 +332,41 @@ def test_ema_decay_requires_matching_reset_len():
     with pytest.raises(ValueError):
         data.ema_decay(times, 1.0, filter=filt, reset=larger_reset)
 
+@pytest.mark.parametrize(
+    "input,bools,expected",
+    [
+        (
+            [[10,1],[11,2],[13,3]],
+            True,
+            [[[10,1],[11,2],[13,3]]],
+        ),
+        (
+            [[10,1],[11,2],[13,3]],
+            [True, False, True],
+            [[10,1],[13,3]],
+        ),
+        (
+            [[10,1],[11,2],[13,3]],
+            [[True,False],[False,True],[True,False]],
+            [10,2,13],
+        )
+    ],
+)
+def test_boolean_indexing(input, bools, expected):
+    # we want contig bool array
+    f = np.array(bools)
+    if not f.flags.f_contiguous:
+        f = np.asfortranarray(bools)
+    assert(f.flags.f_contiguous)
+
+    na = np.asfortranarray(input)
+    assert(na.flags.f_contiguous)
+    assert_array_equal(na[f], expected)
+
+    fa = rt.FA(na)
+    assert(fa.flags.f_contiguous)
+    fr = fa[f]
+    assert_array_equal(super(rt.FA,fr), expected) # use ndarray element indexing for assertion
 
 class test_numpy_functions(unittest.TestCase):
     def assert_equal(self, lv, rv):
