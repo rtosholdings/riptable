@@ -15,7 +15,7 @@ requirements:
     - setuptools_scm
     - riptide_cpp >=1.6.27,<1.7
     - ansi2html >=1.5.2
-    - numba >=0.44
+    - numba >=0.51
     - python-dateutil
   run:
     - python
@@ -24,6 +24,10 @@ requirements:
     - ansi2html >=1.5.2
     - numba >=0.44
     - python-dateutil
+  run_constrained:
+      # Optional dependencies; but if installed, we require certain minimum versions.
+    - pyarrow >=3.0
+
 test:
   source_files:
     - riptable
