@@ -2965,7 +2965,9 @@ def interp(x, xp, fp):
         fp = fp.astype(np.float32)
     return rc.InterpExtrap2d(x, xp, fp, 1)
 
+
 #-------------------------------------------------------
+@_args_to_fast_arrays('x', 'xp', 'fp')
 def interp_extrap(x, xp, fp):
     """
     One-dimensional or two-dimensional linear interpolation without clipping.
@@ -2983,12 +2985,6 @@ def interp_extrap(x, xp, fp):
     * riptable version handles floats or doubles, wheras np is always a double
     * 2d mode is auto-detected based on `xp`/`fp`
     """
-    if not isinstance(xp, np.ndarray):
-        xp=TypeRegister.FastArray(xp)
-
-    if not isinstance(fp, np.ndarray):
-        fp=TypeRegister.FastArray(fp)
-
     return rc.InterpExtrap2d(x, xp, fp, 0)
 
 #-------------------------------------------------------
