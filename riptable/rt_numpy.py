@@ -705,6 +705,7 @@ def _ismember_align_multikey(a, b):
     return a, b
 
 
+@_args_to_fast_arrays('a', 'b')
 def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[int, 'FastArray'], 'FastArray']:
     """
     The ismember function is meant to mimic the ismember function in MATLab. It takes two sets of data
