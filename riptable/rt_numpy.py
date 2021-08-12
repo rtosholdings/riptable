@@ -820,8 +820,11 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
         return b,f
 
     # a and b contain list like, probably a multikey
-    if (isinstance(a[0], (np.ndarray, list, tuple)) and
-        isinstance(b[0], (np.ndarray, list, tuple))):
+    a_is_multi, b_is_multi = _is_array_container(a), _is_array_container(b)
+    if a_is_multi or b_is_multi:
+        if not (a_is_multi and b_is_multi):
+            raise ValueError(
+                "ismember found a multi-key in exactly one argument, must be both or neither")
         is_multikey = True
 
     # different number of key columns
