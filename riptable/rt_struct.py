@@ -6,6 +6,7 @@ import os
 import sys
 import logging
 import json
+import itertools
 from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
 from collections import OrderedDict
 from re import IGNORECASE, compile
@@ -891,7 +892,7 @@ class Struct:
         # this will display the columns sorted + the instance variables + the class dict
         # NOTE: as single underscore is missing such as _nrows -- we could add the from __dict__
         # NOTE: %config IPCompleter.use_jedi=True  seems to help reduce the auto complete for .
-        return sorted(self.keys()) + [*type(self).__dict__.keys()] + [*self.__dict__.keys()]
+        return list(itertools.chain(sorted(self.keys()), super().__dir__()))
 
     # ------------------------------------------------------------
     def __iter__(self):
