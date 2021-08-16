@@ -31,7 +31,7 @@ __all__ = [
 
 import sys
 import builtins
-from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence, Tuple, Union, Callable
+from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence, Tuple, Union, Callable, Mapping
 import numpy as np
 from functools import wraps
 import inspect
@@ -55,9 +55,9 @@ def _is_array_container(arg):
 
 def _cast_to_fa(arr: Union[
     np.ndarray,
-    list[np.ndarray],
-    tuple[np.ndarray],
-    dict[np.ndarray],
+    List[np.ndarray],
+    Tuple[np.ndarray],
+    Mapping[str, np.ndarray],
     "Dataset"
 ]) -> Union["FastArray", List["FastArray"]]:
     """
