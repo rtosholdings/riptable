@@ -261,6 +261,7 @@ dict_col_names = np.array(dict_key_list)
 # --------------------SLICE DATA---------------------------------------------
 # ---------------------------------------------------------------------------
 single_slices = {
+    "::-1": slice(None, None, -1),
     ":2": slice(None, 2, None),
     "-2:": slice(-2, None, None),
     "2:5": slice(2, 5, None),
