@@ -1313,7 +1313,8 @@ class Struct:
         return result
 
     # -------------------------------------------------------
-    def _scalar_summary(scalar_tup):
+    @classmethod
+    def _scalar_summary(cls, scalar_tup):
         '''
         Scalars are stored as arrays in SDS, but a flag is set in the meta tuple.
         They will be labeled as scalar and their dtype will be displayed.
@@ -1589,7 +1590,7 @@ class Struct:
 
         data = {}
 
-        if isinstance(meta, MetaData):            
+        if isinstance(meta, MetaData):
             author = meta.get('author', 'unknown')
             try:
                 from_matlab = author =='matlab'
