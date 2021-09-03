@@ -543,6 +543,12 @@ class DateTimeBase(FastArray):
         return instance
 
     # ------------------------------------------------------------
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        self._timezone = getattr(obj, "_timezone", None)
+
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         return self.view(FastArray)
@@ -1658,7 +1664,7 @@ class Date(DateBase, TimeStampBase):
     #def __floordiv__(self, other): raise NotImplementedError
     #def __mod__(self, other): raise NotImplementedError
     #def __divmod__(self, other): raise NotImplementedError
-    
+
     def __pow__(self, other, modulo=None): raise NotImplementedError
 
     def __lshift__(self, other): raise NotImplementedError
@@ -4322,7 +4328,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     #def __floordiv__(self, other): raise NotImplementedError
     #def __mod__(self, other): raise NotImplementedError
     #def __divmod__(self, other): raise NotImplementedError
-    
+
     def __pow__(self, other, modulo=None): raise NotImplementedError
 
     def __lshift__(self, other): raise NotImplementedError
@@ -4869,7 +4875,7 @@ class TimeSpanBase:
             timestr = DateTimeBase.DEFAULT_FORMATTER(format_str, gmt_time)
 
             days = np.int64(item) // NANOS_PER_DAY
-            
+
             if days > 0:
                 timestr = str(days) + 'd ' + timestr
             if nanosecs < 0:

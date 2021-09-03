@@ -1199,8 +1199,8 @@ class DateTime_Test(unittest.TestCase):
 
     def test_dst_fall_hour(self):
         '''
-        When daylight savings time ends, clocks go back one hour. However, UTC is 
-        does not change. Initializing times in different hours in UTC on the changing hour 
+        When daylight savings time ends, clocks go back one hour. However, UTC is
+        does not change. Initializing times in different hours in UTC on the changing hour
         will yield the same result in a specific timezone.
         '''
 
@@ -1451,8 +1451,8 @@ class DateTime_Test(unittest.TestCase):
         ])
         expected = FastArray([93017, 153132, 112823, 194610, 93029, 104000, 0, 235959])
         actual = timespan.hhmmss
-        self.assertTrue(np.all(expected == actual)) 
-        
+        self.assertTrue(np.all(expected == actual))
+
     def test_round_nano_time(self):
         correct_str = "'20181231 23:59:59.999999999'"
         correct_iso = b'2018-12-31T23:59:59.999999999'
@@ -2591,6 +2591,11 @@ def test_concatenate_preserves_datetime_type_regression(typ, arrays):
     result = concatenate(arrays)
     assert isinstance(result, typ)
 
+def test_view_ctor():
+    dtn = DateTimeNano(['19900401 02:00:00'], from_tz='NYC')
+    assert(dtn._timezone is not None)
+    v = dtn.view('i8')
+    assert(v._timezone is not None)
 
 if __name__ == '__main__':
     tester = unittest.main()
