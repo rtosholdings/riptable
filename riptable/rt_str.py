@@ -835,7 +835,7 @@ class FAString(FastArray):
                 max_chars = max(max_chars, out_pos + 1)
         return out[:, :max_chars]
 
-    def substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None
+    def _substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None
                ) -> FastArray:
         """
         Take a substring of each element using slice args.
@@ -874,6 +874,10 @@ class FAString(FastArray):
         else:
             out = out.ravel().view(f'<{self._intype}{n_chars}')
         return FastArray(out)
+
+    @property
+    def substr(self):
+        return _SubStrAccessor(self)
 
     def substr_char_stop(self, stop: str, inclusive: bool = False) -> FastArray:
         """
@@ -1020,7 +1024,7 @@ def _populate_wrappers(cls):
         'startswith',
         'endswith',
         'regex_match',
-        'substr',
+        '_substr',
         'char',
 
         # Deprecated methods.
@@ -1036,6 +1040,24 @@ def _populate_wrappers(cls):
             raise RuntimeError(f'{name} is not defined on FAString as a function or property')
         setattr(cls, name, wrapper)
     return cls
+
+
+class _SubStrAccessor:
+    """
+    Class for providing slicing on string arrays via FAString.substr
+    """
+    def __init__(self, fastring):
+        self.fastring = fastring
+
+    def __getitem__(self, y):
+        if isinstance(y, slice):
+            start = 0 if y.start is None else y.start
+            return self.fastring._substr(start, y.stop)
+        else:
+            return self.fastring.char(y)
+
+    def __call__(self, start, stop=None):
+        return self.fastring._substr(start, stop)
 
 
 @_populate_wrappers
@@ -1099,6 +1121,10 @@ class CatString:
             return self._convert_fastring_output(out)
 
     extract.__doc__ = FAString.__doc__  # might be misleading since we drop the apply_unique argument
+
+    @property
+    def substr(self):
+        return _SubStrAccessor(self)
 
 
 # keep as last line
