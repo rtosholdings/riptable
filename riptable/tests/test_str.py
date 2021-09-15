@@ -376,9 +376,9 @@ class TestFAString:
 
     @substr_test_cases
     def test_substr(self, start_stop):
-        expected = [s[slice(*start_stop)] for s in SYMBOLS]
+        expected = rt.FastArray([s[slice(*start_stop)] for s in SYMBOLS])
         result = FAString(SYMBOLS).substr(*start_stop)
-        assert (expected == result.tolist())
+        assert_array_equal(expected, result)
 
     @substr_test_cases
     def test_substr_bytes(self, start_stop):
@@ -404,7 +404,7 @@ class TestFAString:
     ])
     def test_substr_array_bounds(self, start, stop, expected):
         result = FAString(SYMBOLS).substr(start, stop)
-        assert (expected == result.tolist())
+        assert_array_equal(rt.FastArray(expected), result)
 
     def test_upper(self):
         result = FAString(SYMBOLS).upper

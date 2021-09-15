@@ -835,7 +835,8 @@ class FAString(FastArray):
                 max_chars = max(max_chars, out_pos + 1)
         return out[:, :max_chars]
 
-    def substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None):
+    def substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None
+               ) -> FastArray:
         """
         Take a substring of each element using slice args.
         """
@@ -872,7 +873,7 @@ class FAString(FastArray):
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
         else:
             out = out.ravel().view(f'<{self._intype}{n_chars}')
-        return out
+        return FastArray(out)
 
     def _nb_char(src, position, itemsize, strlen, out):
         broken_at = len(position)
