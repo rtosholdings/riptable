@@ -406,6 +406,23 @@ class TestFAString:
         result = FAString(SYMBOLS).substr(start, stop)
         assert_array_equal(rt.FastArray(expected), result)
 
+    @substr_test_cases
+    def test_substr_getitem(self, start_stop):
+        expected = rt.FastArray([s[slice(*start_stop)] for s in SYMBOLS])
+        result = FAString(SYMBOLS).substr[slice(*start_stop)]
+        assert_array_equal(expected, result)
+
+    def test_substr_getitem_single(self):
+        expected = rt.FastArray([s[0] for s in SYMBOLS])
+        result = FAString(SYMBOLS).substr[0]
+        assert_array_equal(expected, result)
+
+    def test_substr_getitem_array(self):
+        indexer = [0, 1, 0, 1, 0]
+        expected = rt.FastArray([s[i] for s, i in zip(SYMBOLS, indexer)])
+        result = FAString(SYMBOLS).substr[indexer]
+        assert_array_equal(expected, result)
+
     def test_substr_char_stop(self):
         s = FastArray(['ABC', 'A_B', 'AB_C', 'AB_C_DD'])
         res = s.str.substr_char_stop('_')
