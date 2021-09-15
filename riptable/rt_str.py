@@ -859,7 +859,14 @@ class FAString(FastArray):
         strlen = self.strlen
 
         out = zeros((self.n_elements, self._itemsize), self.dtype)
-        out = self._nb_substr(out, self._itemsize, start, stop, strlen)
+
+        if self.n_elements >= self._APPLY_PARALLEL_THRESHOLD:
+            substr = self.nb_substr_par
+        else:
+            substr = self.nb_substr
+
+        out = substr(out, self._itemsize, start, stop, strlen)
+
         n_chars = out.shape[1]
         if n_chars == 0:  # empty sub strings everywhere
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
