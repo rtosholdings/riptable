@@ -547,6 +547,7 @@ class DateTimeBase(FastArray):
         if obj is None:
             return
         self._timezone = getattr(obj, "_timezone", None)
+        self._display_length = getattr(obj, "_display_length", None)
 
     # ------------------------------------------------------------
     @property
