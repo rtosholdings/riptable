@@ -925,7 +925,7 @@ class FAString(FastArray):
 
         return broken_at if broken_at < len(position) else -1
 
-    def char(self, position: Union[int, List[int], np.ndarray]):
+    def char(self, position: Union[int, List[int], np.ndarray]) -> FastArray:
         """
         Take a single character from each element.
 
@@ -956,7 +956,7 @@ class FAString(FastArray):
             raise ValueError(f"Position {position[broken_at]} out of bounds "
                              f"for string of length {self._itemsize}")
         out = out.view(f'{self._intype}1')
-        return out
+        return FastArray(out)
 
     # Use the specialized decorators to create both a serial and parallel version of each
     # numba function (so we only need one definition of each), then add it to FAString.

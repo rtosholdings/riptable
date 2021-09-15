@@ -70,8 +70,8 @@ class TestFAString:
     @parametrize('position', [0, 1, -1, -2, 3])
     def test_char(self, position):
         result = FAString(SYMBOLS).char(position)
-        expected = [s[position] if position < len(s) else '' for s in SYMBOLS]
-        assert result.tolist() == expected
+        expected = rt.FastArray([s[position] if position < len(s) else '' for s in SYMBOLS])
+        assert_array_equal(result, expected)
 
     @parametrize('position', [0, 1, -1, -2])
     def test_char_cat(self, position):
@@ -84,8 +84,8 @@ class TestFAString:
     def test_char_array_position(self):
         position = [-1, 2, 0, 1, 2]
         result = FAString(SYMBOLS).char(position)
-        expected = [s[pos] for s, pos in zip(SYMBOLS, position)]
-        assert result.tolist() == expected
+        expected = FastArray([s[pos] for s, pos in zip(SYMBOLS, position)])
+        assert_array_equal(result, expected)
 
     @parametrize('position', [
         -3, 6, [0, 0, 0, 0, -5]
