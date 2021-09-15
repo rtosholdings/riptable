@@ -406,6 +406,16 @@ class TestFAString:
         result = FAString(SYMBOLS).substr(start, stop)
         assert_array_equal(rt.FastArray(expected), result)
 
+    def test_substr_char_stop(self):
+        s = FastArray(['ABC', 'A_B', 'AB_C', 'AB_C_DD'])
+        res = s.str.substr_char_stop('_')
+        expected = FastArray([b'ABC', b'A', b'AB', b'AB'], dtype='|S3')
+        assert_array_equal(expected, res)
+
+        res = s.str.substr_char_stop('_', inclusive=True)
+        expected = FastArray([b'ABC', b'A_', b'AB_', b'AB_'], dtype='|S3')
+        assert_array_equal(expected, res)
+
     def test_upper(self):
         result = FAString(SYMBOLS).upper
         assert (result.tolist() == [s.upper() for s in SYMBOLS])

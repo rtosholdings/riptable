@@ -875,6 +875,33 @@ class FAString(FastArray):
             out = out.ravel().view(f'<{self._intype}{n_chars}')
         return FastArray(out)
 
+    def substr_char_stop(self, stop: str, inclusive: bool = False) -> FastArray:
+        """
+        Take a substring of each element using characters as bounds.
+
+        Parameters
+        ----------
+        stop:
+            A string used to determine the start of the sub-string.
+            Excluded from the result by default.
+            We go to the end of the string where stop is not in found in the corresponding element
+        inclusive: bool
+            If True, include the stopping string in the result
+
+        Examples
+        --------
+        >>> s = FastArray(['ABC', 'A_B', 'AB_C', 'AB_C_DD'])
+        >>> s.str.substr_char_stop('_')
+        FastArray([b'ABC', b'A', b'AB', b'AB'], dtype='|S2')
+        >>> s.str.substr_char_stop('_', inclusive=True)
+        FastArray([b'ABC', b'A_', b'AB_', b'AB_'], dtype='|S2')
+        """
+        int_stop = self.index(stop)
+        int_stop[int_stop == -1] = self._itemsize  # return full string if stop not found
+        if inclusive:
+            int_stop += 1
+        return self.substr(int_stop)
+
     def _nb_char(src, position, itemsize, strlen, out):
         broken_at = len(position)
         for i in nb.prange(len(position)):
