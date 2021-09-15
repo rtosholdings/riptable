@@ -822,7 +822,7 @@ class FAString(FastArray):
         max_chars = 0
         for elem in nb.prange(n_elements):
             elem_len = strlen[elem]
-            i, j = start, stop
+            i, j = start[elem], stop[elem]
             if i < 0:
                 i += elem_len
             if j < 0:
@@ -842,6 +842,19 @@ class FAString(FastArray):
         if stop is None:
             # emulate behaviour of slice
             start, stop = 0, start
+
+        def _bound_to_array(value, name):
+            value = TypeRegister.FastArray(value)
+            if len(value) == 1:
+                value = np.full(self.n_elements, value[0])
+            if value.shape != (self.n_elements,):
+                raise ValueError(
+                    f"{name} must be an integer or an array of length equal to the number of elements"
+                    f" in self. Expected {(self.n_elements,)}, got {value.shape}")
+            return value
+
+        start = _bound_to_array(start, 'start')
+        stop = _bound_to_array(stop, 'stop')
 
         strlen = self.strlen
 
