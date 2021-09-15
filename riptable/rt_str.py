@@ -845,18 +845,7 @@ class FAString(FastArray):
 
         strlen = self.strlen
 
-        if start < 0:
-            if stop < 0:
-                n_chars = stop - start
-            else:
-                n_chars = stop  # we can't tell what the max length at this point
-        elif stop < 0:
-            pos_stop = self._itemsize - stop
-            n_chars = pos_stop - start
-        else:
-            n_chars = stop - start
-
-        out = zeros((self.n_elements, n_chars), self.dtype)
+        out = zeros((self.n_elements, self._itemsize), self.dtype)
         out = self._nb_substr(out, self._itemsize, start, stop, strlen)
         n_chars = out.shape[1]
         if n_chars == 0:  # empty sub strings everywhere
