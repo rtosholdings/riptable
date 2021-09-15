@@ -395,6 +395,16 @@ class TestFAString:
         # check categories are unique
         assert len(set(result.category_array)) == len(result.category_array)
 
+    @parametrize("start, stop, expected", [
+        (0, [1, 2, 3, 2, 3], ['A', 'AM', 'FB', 'GO', 'IBM']),
+        ([1] * len(SYMBOLS), [1, 2, 3, 2, 3], ['', 'M', 'B', 'O', 'BM']),
+        ([1, 2, 3, 2, 3], None, ['A', 'AM', 'FB', 'GO', 'IBM']),
+        ([0, 1, 1, 0, 1], [3, 10, 2, -1, -2], ['AAP', 'MZN', 'B', 'GOO', ''])
+    ])
+    def test_substr_array_bounds(self, start, stop, expected):
+        result = FAString(SYMBOLS).substr(start, stop)
+        assert (expected == result.tolist())
+
     def test_upper(self):
         result = FAString(SYMBOLS).upper
         assert (result.tolist() == [s.upper() for s in SYMBOLS])
