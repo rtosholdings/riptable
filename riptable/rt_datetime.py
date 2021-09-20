@@ -5403,10 +5403,6 @@ class DateScalar(np.int32):
         else:
             self._display_length = DisplayLength.Long
 
-    def __array_finalize__(self, obj):
-        if obj is None:
-            return
-
     def get_item_format(self):
         item_format = ItemFormat(
             length=self._display_length,
