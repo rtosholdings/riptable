@@ -546,8 +546,9 @@ class DateTimeBase(FastArray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        for name in ("_display_length","_timezone",):
-            if hasattr(obj, name): setattr(self, name, getattr(obj, name))
+        from_peer = isinstance(obj, DateTimeBase)
+        self._display_length = obj._display_length if from_peer else DisplayLength.Long
+        self._timezone = obj._timezone if from_peer else 'GMT'
 
     # ------------------------------------------------------------
     @property
@@ -810,8 +811,8 @@ class DateBase(FastArray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        for name in ("_display_length",):
-            if hasattr(obj, name): setattr(self, name, getattr(obj, name))
+        from_peer = isinstance(obj, DateTimeBase)
+        self._display_length = obj._display_length if from_peer else DisplayLength.Long
 
     # ------------------------------------------------------------
     def strftime(self, format, dtype='O'):

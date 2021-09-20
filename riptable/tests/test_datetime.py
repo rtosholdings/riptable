@@ -2605,9 +2605,26 @@ def test_concatenate_preserves_datetime_type_regression(typ, arrays):
         #pytest.param(TimeSpanScalar(8.76543), id='TimeSpanScalar'),
     ]
 )
-def test_view_casting(obj):
-    members = dir(obj)
+def test_new_from_template(obj):
     objView = obj.view()
+    members = dir(obj)
+    viewMembers = dir(objView)
+    missing = [m for m in members if m not in viewMembers]
+    assert len(missing) == 0, f"Not found: {missing}"
+
+@pytest.mark.parametrize(
+    "cls,arr",
+    [
+        pytest.param(Date, np.array(['2018-02-01']), id='Date'),
+        pytest.param(DateSpan, np.array([123]), id='DateSpan'),
+        pytest.param(DateTimeNano, np.array([1632164888]), id='DateTimeNano'),
+        pytest.param(TimeSpan, np.array(['12.34']), id='TimeSpan'),
+    ]
+)
+def test_view_casting(cls, arr):
+    obj = cls(arr)
+    objView = obj.view()
+    members = dir(obj)
     viewMembers = dir(objView)
     missing = [m for m in members if m not in viewMembers]
     assert len(missing) == 0, f"Not found: {missing}"
