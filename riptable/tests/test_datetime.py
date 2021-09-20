@@ -2591,11 +2591,26 @@ def test_concatenate_preserves_datetime_type_regression(typ, arrays):
     result = concatenate(arrays)
     assert isinstance(result, typ)
 
-def test_view_ctor():
-    dtn = DateTimeNano(['19900401 02:00:00'], from_tz='NYC')
-    assert(dtn._timezone is not None)
-    v = dtn.view('i8')
-    assert(v._timezone is not None)
+@pytest.mark.parametrize(
+    "obj",
+    [
+        pytest.param(Date(['2018-02-01']), id='Date'),
+        pytest.param(DateSpan([123]), id='DateSpan'),
+        pytest.param(DateTimeNano(['19900401 02:00:00'], from_tz='NYC'), id='DateTimeNano'),
+        pytest.param(TimeSpan(['12.34']), id='TimeSpan'),
+        # the following don't return the same type from self.view()
+        #pytest.param(DateScalar(34567), id='DateScalar'),
+        #pytest.param(DateSpanScalar(12345), id='DateSpanScalar'),
+        #pytest.param(DateTimeNanoScalar(87654321), id='DateTimeNanoScalar'),
+        #pytest.param(TimeSpanScalar(8.76543), id='TimeSpanScalar'),
+    ]
+)
+def test_view_casting(obj):
+    members = dir(obj)
+    objView = obj.view()
+    viewMembers = dir(objView)
+    missing = [m for m in members if m not in viewMembers]
+    assert len(missing) == 0, f"Not found: {missing}"
 
 if __name__ == '__main__':
     tester = unittest.main()

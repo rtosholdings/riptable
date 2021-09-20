@@ -546,8 +546,8 @@ class DateTimeBase(FastArray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self._timezone = getattr(obj, "_timezone", None)
-        self._display_length = getattr(obj, "_display_length", None)
+        for name in ("_display_length","_timezone",):
+            if hasattr(obj, name): setattr(self, name, getattr(obj, name))
 
     # ------------------------------------------------------------
     @property
@@ -805,6 +805,13 @@ class DateBase(FastArray):
     # ------------------------------------------------------------
     def __repr__(self):
         return self.get_classname() + "([" + self._build_string() + "])"
+
+    # ------------------------------------------------------------
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        for name in ("_display_length",):
+            if hasattr(obj, name): setattr(self, name, getattr(obj, name))
 
     # ------------------------------------------------------------
     def strftime(self, format, dtype='O'):
@@ -5382,6 +5389,7 @@ class DateScalar(np.int32):
     '''
 
     __slots__ = '_display_length'
+
     # ------------------------------------------------------------
     def __new__(cls, arr, **kwargs):
         return super().__new__(cls, arr)
@@ -5394,6 +5402,10 @@ class DateScalar(np.int32):
             self._display_length = _from._display_length
         else:
             self._display_length = DisplayLength.Long
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
 
     def get_item_format(self):
         item_format = ItemFormat(
