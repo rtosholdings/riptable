@@ -2596,7 +2596,8 @@ def test_concatenate_preserves_datetime_type_regression(typ, arrays):
     [
         pytest.param(Date(['2018-02-01']), id='Date'),
         pytest.param(DateSpan([123]), id='DateSpan'),
-        pytest.param(DateTimeNano(['19900401 02:00:00'], from_tz='NYC'), id='DateTimeNano'),
+        pytest.param(DateTimeNano(['19900401 02:00:00'], from_tz='NYC'), id='DateTimeNano_NYC'),
+        pytest.param(DateTimeNano(['20210921 02:21:21'], from_tz='GMT'), id='DateTimeNano_GMT'),
         pytest.param(TimeSpan(['12.34']), id='TimeSpan'),
         # the following don't return the same type from self.view()
         #pytest.param(DateScalar(34567), id='DateScalar'),
@@ -2607,6 +2608,7 @@ def test_concatenate_preserves_datetime_type_regression(typ, arrays):
 )
 def test_new_from_template(obj):
     objView = obj.view()
+    assert repr(objView) == repr(obj)
     members = dir(obj)
     viewMembers = dir(objView)
     missing = [m for m in members if m not in viewMembers]
@@ -2624,6 +2626,7 @@ def test_new_from_template(obj):
 def test_view_casting(cls, arr):
     obj = cls(arr)
     objView = obj.view()
+    assert repr(objView) == repr(obj)
     members = dir(obj)
     viewMembers = dir(objView)
     missing = [m for m in members if m not in viewMembers]
