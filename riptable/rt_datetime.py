@@ -548,7 +548,7 @@ class DateTimeBase(FastArray):
             return
         from_peer = isinstance(obj, DateTimeBase)
         self._display_length = obj._display_length if from_peer else DisplayLength.Long
-        self._timezone = obj._timezone if from_peer else 'GMT'
+        self._timezone = obj._timezone if from_peer else TypeRegister.TimeZone(from_tz='UTC', to_tz='UTC')
 
     # ------------------------------------------------------------
     @property
