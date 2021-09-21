@@ -811,7 +811,7 @@ class DateBase(FastArray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        from_peer = isinstance(obj, DateTimeBase)
+        from_peer = isinstance(obj, DateBase)
         self._display_length = obj._display_length if from_peer else DisplayLength.Long
 
     # ------------------------------------------------------------
