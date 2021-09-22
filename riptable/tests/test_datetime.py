@@ -2511,6 +2511,68 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue( (TimeSpan(['12:00:00']) == '12:00:00').all() )
         self.assertTrue((TimeSpan(['12:00:00'])[0] == '12:00:00').all())
 
+    def test_datetimenano_view_unspecified_type(self) -> None:
+        """Test how DateTimeNano.view() behaves when an output type is not explicitly specified."""
+        arr = DateTimeNano(
+            [
+                '20191119 09:30:17.557593707',
+                '20191119 15:31:32.216792000',
+                '20191121 11:28:23.519020994',
+                '20191121 11:28:56.822878000',
+                '20191121 14:01:39.112893000',
+                '20191121 15:46:10.838007105',
+                '20191122 11:53:05.974525000',
+                '20191125 10:40:32.079135847',
+                '20191126 10:00:43.232329062',
+                '20191126 14:04:31.421071000',
+            ],
+            from_tz='NYC',
+            to_tz='NYC',
+        )
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr.view()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+        # DateTimeNano-specific checks
+        self.assertEqual(arr._timezone, arr_view._timezone)
+
+    def test_date_view_unspecified_type(self) -> None:
+        """Test how Date.view() behaves when an output type is not explicitly specified."""
+        arr = Date(['2019-11-04', '2019-11-04', '2019-11-04', '2019-11-11'])
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr.view()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+        # Date-specific checks
+        # (None)
+
+    def test_timespan_view_unspecified_type(self) -> None:
+        """Test how Date.view() behaves when an output type is not explicitly specified."""
+        arr = TimeSpan([
+            '09:30:17.557593707',
+            '15:31:32.216792000',
+            '11:28:23.519020994',
+            '19:46:10.838007105',
+            '09:30:29.999999999',
+            '10:40:00.000000000',
+            '00:00:00.999999999',
+            '23:59:59.999999999',
+        ])
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr.view()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+        # TimeSpan-specific checks
+        # (None)
 
 class TestTimeZone(unittest.TestCase):
     def test_equal_positive(self) -> None:

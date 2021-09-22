@@ -544,6 +544,8 @@ class DateTimeBase(FastArray):
 
     # ------------------------------------------------------------
     def __array_finalize__(self, obj):
+        '''Finalizes self from other, called as part of ndarray.__new__()'''
+        super().__array_finalize__(obj)
         if obj is None:
             return
         from_peer = isinstance(obj, DateTimeBase)
@@ -809,6 +811,8 @@ class DateBase(FastArray):
 
     # ------------------------------------------------------------
     def __array_finalize__(self, obj):
+        '''Finalizes self from other, called as part of ndarray.__new__()'''
+        super().__array_finalize__(obj)
         if obj is None:
             return
         from_peer = isinstance(obj, DateBase)
