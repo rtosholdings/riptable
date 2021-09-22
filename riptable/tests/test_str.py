@@ -70,8 +70,8 @@ class TestFAString:
     @parametrize('position', [0, 1, -1, -2, 3])
     def test_char(self, position):
         result = FAString(SYMBOLS).char(position)
-        expected = [s[position] if position < len(s) else '' for s in SYMBOLS]
-        assert result.tolist() == expected
+        expected = rt.FastArray([s[position] if position < len(s) else '' for s in SYMBOLS])
+        assert_array_equal(result, expected)
 
     @parametrize('position', [0, 1, -1, -2])
     def test_char_cat(self, position):
@@ -84,8 +84,8 @@ class TestFAString:
     def test_char_array_position(self):
         position = [-1, 2, 0, 1, 2]
         result = FAString(SYMBOLS).char(position)
-        expected = [s[pos] for s, pos in zip(SYMBOLS, position)]
-        assert result.tolist() == expected
+        expected = FastArray([s[pos] for s, pos in zip(SYMBOLS, position)])
+        assert_array_equal(result, expected)
 
     @parametrize('position', [
         -3, 6, [0, 0, 0, 0, -5]
@@ -376,9 +376,9 @@ class TestFAString:
 
     @substr_test_cases
     def test_substr(self, start_stop):
-        expected = [s[slice(*start_stop)] for s in SYMBOLS]
+        expected = rt.FastArray([s[slice(*start_stop)] for s in SYMBOLS])
         result = FAString(SYMBOLS).substr(*start_stop)
-        assert (expected == result.tolist())
+        assert_array_equal(expected, result)
 
     @substr_test_cases
     def test_substr_bytes(self, start_stop):
@@ -394,6 +394,44 @@ class TestFAString:
         assert_array_or_cat_equal(expected, result, relaxed_cat_check=True)
         # check categories are unique
         assert len(set(result.category_array)) == len(result.category_array)
+
+    @parametrize("start, stop, expected", [
+        (0, [1, 2, 3, 2, 3], ['A', 'AM', 'FB', 'GO', 'IBM']),
+        ([1, 1, 1, 1, 1], [1, 2, 3, 2, 3], ['', 'M', 'B', 'O', 'BM']),
+        ([1, 2, 3, 2, 3], None, ['A', 'AM', 'FB', 'GO', 'IBM']),
+        ([0, 1, 1, 0, 1], [3, 10, 2, -1, -2], ['AAP', 'MZN', 'B', 'GOO', '']),
+        ([1, 1, 1, 1, 1], [1, 1, 1, 1, 1] , ['', '', '', '', '']),
+    ])
+    def test_substr_array_bounds(self, start, stop, expected):
+        result = FAString(SYMBOLS).substr(start, stop)
+        assert_array_equal(rt.FastArray(expected), result)
+
+    @substr_test_cases
+    def test_substr_getitem(self, start_stop):
+        expected = rt.FastArray([s[slice(*start_stop)] for s in SYMBOLS])
+        result = FAString(SYMBOLS).substr[slice(*start_stop)]
+        assert_array_equal(expected, result)
+
+    def test_substr_getitem_single(self):
+        expected = rt.FastArray([s[0] for s in SYMBOLS])
+        result = FAString(SYMBOLS).substr[0]
+        assert_array_equal(expected, result)
+
+    def test_substr_getitem_array(self):
+        indexer = [0, 1, 0, 1, 0]
+        expected = rt.FastArray([s[i] for s, i in zip(SYMBOLS, indexer)])
+        result = FAString(SYMBOLS).substr[indexer]
+        assert_array_equal(expected, result)
+
+    def test_substr_char_stop(self):
+        s = FastArray(['ABC', 'A_B', 'AB_C', 'AB_C_DD'])
+        res = s.str.substr_char_stop('_')
+        expected = FastArray([b'ABC', b'A', b'AB', b'AB'], dtype='|S3')
+        assert_array_equal(expected, res)
+
+        res = s.str.substr_char_stop('_', inclusive=True)
+        expected = FastArray([b'ABC', b'A_', b'AB_', b'AB_'], dtype='|S3')
+        assert_array_equal(expected, res)
 
     def test_upper(self):
         result = FAString(SYMBOLS).upper
