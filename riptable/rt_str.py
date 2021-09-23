@@ -822,7 +822,7 @@ class FAString(FastArray):
         max_chars = 0
         for elem in nb.prange(n_elements):
             elem_len = strlen[elem]
-            i, j = start, stop
+            i, j = start[elem], stop[elem]
             if i < 0:
                 i += elem_len
             if j < 0:
@@ -835,7 +835,8 @@ class FAString(FastArray):
                 max_chars = max(max_chars, out_pos + 1)
         return out[:, :max_chars]
 
-    def substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None):
+    def _substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None
+               ) -> FastArray:
         """
         Take a substring of each element using slice args.
         """
@@ -843,27 +844,67 @@ class FAString(FastArray):
             # emulate behaviour of slice
             start, stop = 0, start
 
+        def _bound_to_array(value, name):
+            value = TypeRegister.FastArray(value)
+            if len(value) == 1:
+                value = np.full(self.n_elements, value[0])
+            if value.shape != (self.n_elements,):
+                raise ValueError(
+                    f"{name} must be an integer or an array of length equal to the number of elements"
+                    f" in self. Expected {(self.n_elements,)}, got {value.shape}")
+            return value
+
+        start = _bound_to_array(start, 'start')
+        stop = _bound_to_array(stop, 'stop')
+
         strlen = self.strlen
 
-        if start < 0:
-            if stop < 0:
-                n_chars = stop - start
-            else:
-                n_chars = stop  # we can't tell what the max length at this point
-        elif stop < 0:
-            pos_stop = self._itemsize - stop
-            n_chars = pos_stop - start
-        else:
-            n_chars = stop - start
+        out = zeros((self.n_elements, self._itemsize), self.dtype)
 
-        out = zeros((self.n_elements, n_chars), self.dtype)
-        out = self._nb_substr(out, self._itemsize, start, stop, strlen)
+        if self.n_elements >= self._APPLY_PARALLEL_THRESHOLD:
+            substr = self.nb_substr_par
+        else:
+            substr = self.nb_substr
+
+        out = substr(out, self._itemsize, start, stop, strlen)
+
         n_chars = out.shape[1]
         if n_chars == 0:  # empty sub strings everywhere
             out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
         else:
             out = out.ravel().view(f'<{self._intype}{n_chars}')
-        return out
+        return FastArray(out)
+
+    @property
+    def substr(self):
+        return _SubStrAccessor(self)
+
+    def substr_char_stop(self, stop: str, inclusive: bool = False) -> FastArray:
+        """
+        Take a substring of each element using characters as bounds.
+
+        Parameters
+        ----------
+        stop:
+            A string used to determine the start of the sub-string.
+            Excluded from the result by default.
+            We go to the end of the string where stop is not in found in the corresponding element
+        inclusive: bool
+            If True, include the stopping string in the result
+
+        Examples
+        --------
+        >>> s = FastArray(['ABC', 'A_B', 'AB_C', 'AB_C_DD'])
+        >>> s.str.substr_char_stop('_')
+        FastArray([b'ABC', b'A', b'AB', b'AB'], dtype='|S2')
+        >>> s.str.substr_char_stop('_', inclusive=True)
+        FastArray([b'ABC', b'A_', b'AB_', b'AB_'], dtype='|S2')
+        """
+        int_stop = self.index(stop)
+        int_stop[int_stop == -1] = self._itemsize  # return full string if stop not found
+        if inclusive:
+            int_stop += 1
+        return self.substr(int_stop)
 
     def _nb_char(src, position, itemsize, strlen, out):
         broken_at = len(position)
@@ -884,7 +925,7 @@ class FAString(FastArray):
 
         return broken_at if broken_at < len(position) else -1
 
-    def char(self, position: Union[int, List[int], np.ndarray]):
+    def char(self, position: Union[int, List[int], np.ndarray]) -> FastArray:
         """
         Take a single character from each element.
 
@@ -915,7 +956,7 @@ class FAString(FastArray):
             raise ValueError(f"Position {position[broken_at]} out of bounds "
                              f"for string of length {self._itemsize}")
         out = out.view(f'{self._intype}1')
-        return out
+        return FastArray(out)
 
     # Use the specialized decorators to create both a serial and parallel version of each
     # numba function (so we only need one definition of each), then add it to FAString.
@@ -983,7 +1024,7 @@ def _populate_wrappers(cls):
         'startswith',
         'endswith',
         'regex_match',
-        'substr',
+        '_substr',
         'char',
 
         # Deprecated methods.
@@ -999,6 +1040,24 @@ def _populate_wrappers(cls):
             raise RuntimeError(f'{name} is not defined on FAString as a function or property')
         setattr(cls, name, wrapper)
     return cls
+
+
+class _SubStrAccessor:
+    """
+    Class for providing slicing on string arrays via FAString.substr
+    """
+    def __init__(self, fastring):
+        self.fastring = fastring
+
+    def __getitem__(self, y):
+        if isinstance(y, slice):
+            start = 0 if y.start is None else y.start
+            return self.fastring._substr(start, y.stop)
+        else:
+            return self.fastring.char(y)
+
+    def __call__(self, start, stop=None):
+        return self.fastring._substr(start, stop)
 
 
 @_populate_wrappers
@@ -1062,6 +1121,10 @@ class CatString:
             return self._convert_fastring_output(out)
 
     extract.__doc__ = FAString.__doc__  # might be misleading since we drop the apply_unique argument
+
+    @property
+    def substr(self):
+        return _SubStrAccessor(self)
 
 
 # keep as last line
