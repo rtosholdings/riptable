@@ -1382,7 +1382,7 @@ class Dataset(Struct):
     def imatrix(self) -> Optional[np.ndarray]:
         """
         Returns the 2d array created from `imatrix_make`.
-        
+
         Returns
         -------
         imatrix : np.ndarray, optional
@@ -2674,7 +2674,10 @@ class Dataset(Struct):
                         # NaN in it so convert to float64.
                         new_col = np.asarray(col, dtype='f8')
                     else:
-                        new_col = np.asarray(col, dtype='S')
+                        try:
+                            new_col = np.asarray(col, dtype='S')
+                        except UnicodeEncodeError:
+                            new_col = np.asarray(col, dtype='U')
                 else:
                     new_col = np.asarray(col, dtype='S')
                 data[key] = new_col

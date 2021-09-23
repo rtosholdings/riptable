@@ -1942,6 +1942,11 @@ class TestDataset(unittest.TestCase):
         ds = Dataset.from_pandas(df)
         assert_array_almost_equal(ds['a'], np.array([1.0, 2.0, np.nan]))
 
+    def test_from_pandas_obj_unicode(self):
+        df = pd.DataFrame({'a': np.array(['Okay', 'Namé'], dtype='O')})
+        ds = Dataset.from_pandas(df)
+        assert_array_equal(ds['a'], np.array(['Okay', 'Namé']))
+
     def test_to_pandas_timespan(self):
         dt_list = [11096000000000, 86401000000000]
         ds = Dataset({'a': TimeSpan(dt_list)})
