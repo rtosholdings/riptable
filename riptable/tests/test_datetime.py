@@ -1199,8 +1199,8 @@ class DateTime_Test(unittest.TestCase):
 
     def test_dst_fall_hour(self):
         '''
-        When daylight savings time ends, clocks go back one hour. However, UTC is 
-        does not change. Initializing times in different hours in UTC on the changing hour 
+        When daylight savings time ends, clocks go back one hour. However, UTC is
+        does not change. Initializing times in different hours in UTC on the changing hour
         will yield the same result in a specific timezone.
         '''
 
@@ -1451,8 +1451,8 @@ class DateTime_Test(unittest.TestCase):
         ])
         expected = FastArray([93017, 153132, 112823, 194610, 93029, 104000, 0, 235959])
         actual = timespan.hhmmss
-        self.assertTrue(np.all(expected == actual)) 
-        
+        self.assertTrue(np.all(expected == actual))
+
     def test_round_nano_time(self):
         correct_str = "'20181231 23:59:59.999999999'"
         correct_iso = b'2018-12-31T23:59:59.999999999'
@@ -2511,6 +2511,68 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue( (TimeSpan(['12:00:00']) == '12:00:00').all() )
         self.assertTrue((TimeSpan(['12:00:00'])[0] == '12:00:00').all())
 
+    def test_datetimenano_view_unspecified_type(self) -> None:
+        """Test how DateTimeNano.view() behaves when an output type is not explicitly specified."""
+        arr = DateTimeNano(
+            [
+                '20191119 09:30:17.557593707',
+                '20191119 15:31:32.216792000',
+                '20191121 11:28:23.519020994',
+                '20191121 11:28:56.822878000',
+                '20191121 14:01:39.112893000',
+                '20191121 15:46:10.838007105',
+                '20191122 11:53:05.974525000',
+                '20191125 10:40:32.079135847',
+                '20191126 10:00:43.232329062',
+                '20191126 14:04:31.421071000',
+            ],
+            from_tz='NYC',
+            to_tz='NYC',
+        )
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr.view()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+        # DateTimeNano-specific checks
+        self.assertEqual(arr._timezone, arr_view._timezone)
+
+    def test_date_view_unspecified_type(self) -> None:
+        """Test how Date.view() behaves when an output type is not explicitly specified."""
+        arr = Date(['2019-11-04', '2019-11-04', '2019-11-04', '2019-11-11'])
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr.view()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+        # Date-specific checks
+        # (None)
+
+    def test_timespan_view_unspecified_type(self) -> None:
+        """Test how Date.view() behaves when an output type is not explicitly specified."""
+        arr = TimeSpan([
+            '09:30:17.557593707',
+            '15:31:32.216792000',
+            '11:28:23.519020994',
+            '19:46:10.838007105',
+            '09:30:29.999999999',
+            '10:40:00.000000000',
+            '00:00:00.999999999',
+            '23:59:59.999999999',
+        ])
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr.view()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+        # TimeSpan-specific checks
+        # (None)
 
 class TestTimeZone(unittest.TestCase):
     def test_equal_positive(self) -> None:
@@ -2591,6 +2653,46 @@ def test_concatenate_preserves_datetime_type_regression(typ, arrays):
     result = concatenate(arrays)
     assert isinstance(result, typ)
 
+@pytest.mark.parametrize(
+    "obj",
+    [
+        pytest.param(Date(['2018-02-01']), id='Date'),
+        pytest.param(DateSpan([123]), id='DateSpan'),
+        pytest.param(DateTimeNano(['19900401 02:00:00'], from_tz='NYC'), id='DateTimeNano_NYC'),
+        pytest.param(DateTimeNano(['20210921 02:21:21'], from_tz='GMT'), id='DateTimeNano_GMT'),
+        pytest.param(TimeSpan(['12.34']), id='TimeSpan'),
+        # the following don't return the same type from self.view()
+        #pytest.param(DateScalar(34567), id='DateScalar'),
+        #pytest.param(DateSpanScalar(12345), id='DateSpanScalar'),
+        #pytest.param(DateTimeNanoScalar(87654321), id='DateTimeNanoScalar'),
+        #pytest.param(TimeSpanScalar(8.76543), id='TimeSpanScalar'),
+    ]
+)
+def test_new_from_template(obj):
+    objView = obj.view()
+    assert repr(objView) == repr(obj)
+    members = dir(obj)
+    viewMembers = dir(objView)
+    missing = [m for m in members if m not in viewMembers]
+    assert len(missing) == 0, f"Not found: {missing}"
+
+@pytest.mark.parametrize(
+    "cls,arr",
+    [
+        pytest.param(Date, np.array(['2018-02-01']), id='Date'),
+        pytest.param(DateSpan, np.array([123]), id='DateSpan'),
+        pytest.param(DateTimeNano, np.array([1632164888]), id='DateTimeNano'),
+        pytest.param(TimeSpan, np.array(['12.34']), id='TimeSpan'),
+    ]
+)
+def test_view_casting(cls, arr):
+    obj = cls(arr)
+    objView = obj.view()
+    assert repr(objView) == repr(obj)
+    members = dir(obj)
+    viewMembers = dir(objView)
+    missing = [m for m in members if m not in viewMembers]
+    assert len(missing) == 0, f"Not found: {missing}"
 
 if __name__ == '__main__':
     tester = unittest.main()

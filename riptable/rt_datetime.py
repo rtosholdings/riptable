@@ -543,6 +543,16 @@ class DateTimeBase(FastArray):
         return instance
 
     # ------------------------------------------------------------
+    def __array_finalize__(self, obj):
+        '''Finalizes self from other, called as part of ndarray.__new__()'''
+        super().__array_finalize__(obj)
+        if obj is None:
+            return
+        from_peer = isinstance(obj, DateTimeBase)
+        self._display_length = obj._display_length if from_peer else DisplayLength.Long
+        self._timezone = obj._timezone if from_peer else TypeRegister.TimeZone(from_tz='UTC', to_tz='UTC')
+
+    # ------------------------------------------------------------
     @property
     def _fa(self):
         return self.view(FastArray)
@@ -798,6 +808,15 @@ class DateBase(FastArray):
     # ------------------------------------------------------------
     def __repr__(self):
         return self.get_classname() + "([" + self._build_string() + "])"
+
+    # ------------------------------------------------------------
+    def __array_finalize__(self, obj):
+        '''Finalizes self from other, called as part of ndarray.__new__()'''
+        super().__array_finalize__(obj)
+        if obj is None:
+            return
+        from_peer = isinstance(obj, DateBase)
+        self._display_length = obj._display_length if from_peer else DisplayLength.Long
 
     # ------------------------------------------------------------
     def strftime(self, format, dtype='O'):
@@ -1658,7 +1677,7 @@ class Date(DateBase, TimeStampBase):
     #def __floordiv__(self, other): raise NotImplementedError
     #def __mod__(self, other): raise NotImplementedError
     #def __divmod__(self, other): raise NotImplementedError
-    
+
     def __pow__(self, other, modulo=None): raise NotImplementedError
 
     def __lshift__(self, other): raise NotImplementedError
@@ -4322,7 +4341,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     #def __floordiv__(self, other): raise NotImplementedError
     #def __mod__(self, other): raise NotImplementedError
     #def __divmod__(self, other): raise NotImplementedError
-    
+
     def __pow__(self, other, modulo=None): raise NotImplementedError
 
     def __lshift__(self, other): raise NotImplementedError
@@ -4869,7 +4888,7 @@ class TimeSpanBase:
             timestr = DateTimeBase.DEFAULT_FORMATTER(format_str, gmt_time)
 
             days = np.int64(item) // NANOS_PER_DAY
-            
+
             if days > 0:
                 timestr = str(days) + 'd ' + timestr
             if nanosecs < 0:
@@ -5375,6 +5394,7 @@ class DateScalar(np.int32):
     '''
 
     __slots__ = '_display_length'
+
     # ------------------------------------------------------------
     def __new__(cls, arr, **kwargs):
         return super().__new__(cls, arr)

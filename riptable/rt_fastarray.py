@@ -495,6 +495,12 @@ class FastArray(np.ndarray):
 
         return instance.view(cls)
 
+    def __array_finalize__(self, obj):
+        '''Finalizes self from other, called as part of ndarray.__new__()'''
+        if obj is None:
+            return
+        from_peer = isinstance(obj, FastArray)
+        if from_peer and hasattr(obj, '_name'): self._name = obj._name
 
     #--------------------------------------------------------------------------
     def __reduce__(self):
