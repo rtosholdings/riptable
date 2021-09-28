@@ -2548,11 +2548,10 @@ class Dataset(Struct):
                 categories = _to_unicode_if_string(col.category_array) if unicode else col.category_array
                 data[key]: pd.Categorical = pd.Categorical.from_codes(codes, categories=categories)
             elif isinstance(col, TypeRegister.DateTimeNano):
-                ccol = col.copy()
-                arr = ccol._timezone.fix_dst(ccol._fa)
-                arr = arr.astype('datetime64[ns]')
+                utc_datetime = pd.DatetimeIndex(col, tz='UTC')
                 tz = _RIPTABLE_TO_PANDAS_TZ[col._timezone._to_tz]
-                data[key] = pd.to_datetime(arr).tz_localize(tz)
+                tz_datetime = utc_datetime.tz_convert(tz)
+                data[key] = tz_datetime
             elif isinstance(col, TypeRegister.TimeSpan):
                 data[key] = pd.to_timedelta(col)
             # TODO: riptable.DateSpan doesn't have a counterpart in pandas, what do we want to do?
