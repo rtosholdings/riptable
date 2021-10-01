@@ -13,7 +13,7 @@ from riptable import Struct
 from riptable import Dataset
 from riptable import Categorical
 from riptable import NumpyCharTypes
-from riptable import TimeSpan, utcnow, Date
+from riptable import DateTimeNano, TimeSpan, utcnow, Date
 from riptable.rt_numpy import arange, isnan, tile, logical
 from riptable.rt_utils import describe
 from riptable.rt_enum import (
@@ -2018,6 +2018,14 @@ class TestDataset(unittest.TestCase):
         df = pd.DataFrame({'a': [b'a', b'b']}, index=[1, 2])
         ds = Dataset.from_pandas(df)
         assert_array_equal(ds['a'], np.array([b'a', b'b']))
+
+    def test_to_pandas_dst_nonexistent(self):
+        ds = Dataset({'a': DateTimeNano(['19900401 02:00:00'], from_tz='NYC')})
+        df = ds.to_pandas()
+        fmt_string = '%Y%m%d %H:%M:%S.%f'
+        expected_arr = ds['a'].strftime(fmt_string)
+        arr = df['a'].dt.strftime(fmt_string)
+        assert_array_equal(arr, expected_arr)
 
     def test_as_pandas_df_warn(self):
         ds = Dataset({'a': [1, 2, 3]})
