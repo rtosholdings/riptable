@@ -24,7 +24,7 @@ from .rt_enum import (
     CategoryMode, CategoryStringMode, CategoricalOrigin, CategoricalConstructor, SDSFlag, GB_FUNCTIONS)
 from .rt_numpy import (
     mask_or, mask_and, mask_ori, mask_andi, sort, unique32, ismember, unique, argsort, zeros,
-    bool_to_fancy, full, empty, sum, putmask, nan_to_zero, issorted, crc64, hstack, isnan, ones, arange)
+    bool_to_fancy, full, empty, sum, putmask, nan_to_zero, issorted, crc64, hstack, isnan, ones, arange, where)
 from .rt_hstack import hstack_any
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .Utils.rt_metadata import MetaData
@@ -37,8 +37,19 @@ from .rt_str import CatString
 from .rt_fastarraynumba import fill_forward, fill_backward
 
 if TYPE_CHECKING:
-    import pandas as pd
     from .rt_dataset import Dataset
+
+    # pandas is an optional dependency.
+    try:
+        import pandas as pd
+    except ImportError:
+        pass
+
+    # pyarrow is an optional dependency.
+    try:
+        import pyarrow as pa
+    except ImportError:
+        pass
 
 
 # ------------------------------------------------------------
@@ -4165,6 +4176,464 @@ class Categorical(GroupByOps, FastArray):
             if self.base_index == 0:
                 return Categorical(self._fa +1, self.categories())
             return self
+
+    @staticmethod
+    def _from_arrow(arr: Union['pa.Array', 'pa.ChunkedArray'], zero_copy_only: bool = True, writable: bool = False) -> 'Categorical':
+        """
+        Create a `Categorical` instance from a dictionary-encoded `pyarrow.Array`.
+
+        For certain special cases, namely `CategoryMode.IntEnum`, `CategoryMode.Dictionary`, and
+        `CategoryMode.MultiKey`, this method accepts an instance of `pyarrow.Table`, since `Categorical`
+        instances with these `CategoryMode`s don't have an encoding in pyarrow that'd directly
+        preserve their structure. (For example, the direct mapping between the case labels and
+        values for a `CategoryMode.IntEnum` or `CategoryMode.Dictionary`-mode `Categorical`.)
+
+        Parameters
+        ----------
+        arr : pyarrow.Array or pyarrow.ChunkedArray
+            Must be a dictionary-encoded pyarrow array or a ``Struct``-type array (e.g. ``pyarrow.StructArray``).
+        zero_copy_only : bool, optional, defaults to True
+        writable : bool, optional, defaults to False
+
+        Returns
+        -------
+        Categorical
+        """
+        import pyarrow as pa
+        import pyarrow.types as pat
+
+        # Only accept pyarrow arrays.
+        if not isinstance(arr, (pa.Array, pa.ChunkedArray)):
+            raise TypeError(f"This method cannot create a Categorical array from an instance of '{type(arr)}'.")
+
+        # Categoricals can only be created from dictionary-type pyarrow arrays.
+        if not pat.is_dictionary(arr.type):
+            raise ValueError("Categoricals can only be created from dictionary-type pyarrow arrays.")
+
+        # Categoricals can't be -- at least currently -- created with zero array copies;
+        # all cases need to allocate at least one array, for various reasons.
+        if zero_copy_only:
+            raise ValueError("Categoricals cannot be created from pyarrow arrays in zero-copy mode.")
+
+        # TEMP: ChunkedArrays aren't supported yet.
+        if isinstance(arr, pa.ChunkedArray):
+            raise NotImplementedError("pa.ChunkedArray not yet supported.")
+
+        # Convert indices to riptable.
+        # pyarrow dictionary-encoded arrays are always "base_index 0" (in the riptable lexicon);
+        # Categorical doesn't convert to base 1 automatically, so we need to add one (1) to the index array
+        # because it's unlikely we want a base_index==0 Categorical (since that doesn't allow for proper null handling).
+        # Adding one here means we then need to check for whether the output type also needs to be widened so we
+        # don't overflow / set category values indicating a category is null/NA/invalid when it's not.
+        indices = FastArray.from_arrow(arr.indices, zero_copy_only=False, writable=writable, auto_widen=True)
+        category_count = len(arr.dictionary)
+        input_indices_dtype = np.dtype(indices.dtype)
+
+        # Get mask of _valid_ indices, so it can be passed to the Categorical constructor below.
+        # TODO: Test whether .isnotnan() gives the correct result; if so, use it here.
+        invalid_mask = indices.isnan() if arr.null_count > 0 else None
+        valid_mask = np.logical_not(invalid_mask) if invalid_mask is not None else None
+
+        if np.issubdtype(input_indices_dtype, np.unsignedinteger):
+            # If the indices for the input pyarrow array are an unsigned integer type, rt.Categorical only accepts signed int types.
+            # When the number of categories (used as a proxy for max(indices) - 1) is small enough,
+            # we can just view the unsigned data as signed data so no conversion/copying is needed;
+            # otherwise, we need to a widening conversion + view as signed.
+            same_size_signed_int_dtype = np.dtype(f"i{np.dtype(input_indices_dtype).itemsize}")
+            if category_count - 1 >= np.iinfo(same_size_signed_int_dtype).max:
+                # Need to widen, because we're using using all (or more) positive values than the
+                # same-sized integer type supports.
+                next_largest_signed_int_dtype = np.dtype(f"i{2 * np.dtype(input_indices_dtype).itemsize}")
+                indices = indices.astype(next_largest_signed_int_dtype)
+
+                # In this case, we've always made a copy for the widening conversion,
+                # so we can increment (for a base_index = 1 categorical) in-place.
+                indices += 1
+
+                # TODO: If the `writable` parameter is False, should we mark `indices` as non-writable here?
+
+            else:
+                # Don't need to widen, we can just view the unsigned array indices as signed.
+                # If the view is writeable (because pyarrow created a copy when converting),
+                # we increment in place; otherwise, we increment by adding one (1) to create a new array.
+                indices = indices.view(same_size_signed_int_dtype)
+                if indices.flags['WRITEABLE']:
+                    indices += 1
+                else:
+                    indices = indices + 1
+                    # TODO: If the `writable` parameter is False, should we mark `indices` as non-writable here?
+
+        else:
+            # We have a signed-integer type for the indices array.
+            # If we're using all of the positive values, we need to perform a widening conversion
+            # before we can increment the values (so we can create a base_index == 1 Categorical).
+            if category_count - 1 == np.iinfo(input_indices_dtype).max:
+                # Need to widen, because we using all of the positive values supported by this
+                # signed integer type, and when we increment it'll overflow.
+                # (And overflow by 1 will result in the integer invalid for this dtype, which'll cause issues
+                # when we try to use it in the Categorical.)
+                next_largest_signed_int_dtype = np.dtype(f"i{2 * np.dtype(input_indices_dtype).itemsize}")
+                indices = indices.astype(next_largest_signed_int_dtype)
+
+                # In this case, we've always made a copy for the widening conversion,
+                # so we can increment (for a base_index = 1 categorical) in-place.
+                indices += 1
+
+                # TODO: If the `writable` parameter is False, should we mark `indices` as non-writable here?
+
+            else:
+                # No widening needed.
+                # Increment in-place if possible, otherwise, add one (1) to create a new array.
+                if indices.flags['WRITEABLE']:
+                    indices += 1
+                else:
+                    indices = indices + 1
+                    # TODO: If the `writable` parameter is False, should we mark `indices` as non-writable here?
+
+        # Fix up indices array if there were nulls, since the integer addition operation doesn't respect invalids.
+        if invalid_mask is not None:
+            indices[invalid_mask] = 0
+
+        # Check the DataType of the dictionary array and handle accordingly.
+        if pat.is_struct(arr.dictionary.type):
+            # Check the field names -- determine what type of Categorical to create.
+            struct_schema = pa.schema(arr.dictionary.type)
+
+            # Convert array fields into riptable arrays.
+            cat_dict = {
+                field_name: FastArray.from_arrow(field_arr, zero_copy_only=zero_copy_only, writable=writable, auto_widen=True).set_name(field_name)
+                for (field_name, field_arr)
+                in zip(struct_schema.names, arr.dictionary.flatten())
+            }
+
+            if struct_schema.names == ['name', 'val']:
+                # This is a CategoryMode.Dictionary or CategoryMode.IntEnum Categorical.
+                codes = cat_dict['val']
+                names = cat_dict['name']
+
+                # TODO: Need to check the original `names` array (from pyarrow) to see if any names are marked null.
+                #       Those elements represent "unnamed" codes, so we don't add them (or the corresponding code)
+                #       to the name <=> code mapping in the Categorical.
+
+                # Unique-ify the codes/names *together* (so basically, create a multi-key Categorical).
+                # This allows us to verify that the names <=> codes relation is bijective.
+                codes_cat = Categorical([names, codes])
+
+                # Verify the names and codes arrays from the unique (name, code) categories in the grouping are all unique.
+                codes_cat_gbkeys = codes_cat.grouping.gbkeys
+                if not issorted(ismember(codes_cat_gbkeys['val'], codes_cat_gbkeys['val'])[1]):
+                    raise RuntimeError("Non-unique codes found for a dictionary/IntEnum-mode Categorical.")
+                elif not issorted(ismember(codes_cat_gbkeys['name'], codes_cat_gbkeys['name'])[1]):
+                    raise RuntimeError("Non-unique names found for a dictionary/IntEnum-mode Categorical.")
+
+                # Make the code => name dictionary, needed for the Categorical.
+                codes_to_names = {
+                    int(c): bytes_to_str(n) for (n, c) in
+                    zip(codes_cat_gbkeys['name'], codes_cat_gbkeys['val'])
+                }
+
+                # If the input array contains nulls, get a valid-mask from it
+                # to be used as a filter when creating the Categorical.
+                valid_mask = FastArray.from_arrow(arr.is_valid(), zero_copy_only=False, writable=False) if arr.null_count > 0 else None
+
+                # Map the 0-based indices from pyarrow to the codes.
+                # PERF: This needs to happen before we adjust the indices above, since they've already been modified to add 1 for the base_index here.
+                # TEMP: Just do the conversion again to get things working so we can finish implementing tests,
+                #       circle back to improve this later.
+                orig_indices = FastArray.from_arrow(arr.indices, zero_copy_only=False, writable=writable, auto_widen=True)
+                codes = codes[orig_indices]
+
+                # Create the dictionary-mode Categorical.
+                # TODO: It's unclear what we need to do differently to support IntEnum-mode here.
+                return Categorical(codes, codes_to_names, filter=valid_mask)
+
+            else:
+                # This is a multi-key categorical.
+
+                # TODO: Issue a warning if arr.type.ordered, since riptable doesn't support ordered multi-key Categoricals?
+                #       The current behavior of Categorical is to just ignore the ordered flag when creating a multi-key Categorical,
+                #       so it may be good to warn users here that the flag will be lost when converting.
+
+                # If the input array contains nulls, get a valid-mask from it
+                # to be used as a filter when creating the Categorical.
+                valid_mask = FastArray.from_arrow(arr.is_valid(), zero_copy_only=False, writable=False) if arr.null_count > 0 else None
+
+                return Categorical(indices, list(cat_dict.values()), ordered=False, filter=valid_mask)
+
+        else:
+            # Convert dictionary (category labels) array to riptable.
+            categories = FastArray.from_arrow(arr.dictionary, zero_copy_only=zero_copy_only, writable=writable, auto_widen=True)
+
+            return Categorical(indices, categories=categories, ordered=arr.type.ordered, base_index=1, filter=valid_mask, from_matlab=True)
+
+    def to_arrow(self, type: Optional['pa.DataType'] = None, *, preserve_fixed_bytes: bool = False, empty_strings_to_null: bool = True) -> Union['pa.Array', 'pa.ChunkedArray']:
+        """
+        Convert this `Categorical` to a `pyarrow.Array`.
+
+        Parameters
+        ----------
+        type : pyarrow.DataType, optional, defaults to None
+            Unused.
+        preserve_fixed_bytes : bool, optional, defaults to False
+            Unused.
+        empty_strings_to_null : bool, optional, defaults To True
+            Unused.
+
+        Returns
+        -------
+        pyarrow.Array or pyarrow.ChunkedArray
+
+        Notes
+        -----
+        TODO: Consider whether we should store all Categoricals as Struct-type pyarrow arrays, since that'd
+              allow us to preserve the key names, even for single-key Categoricals.
+        """
+        import pyarrow as pa
+        import pyarrow.compute as pc
+
+        cat_mode = self.category_mode
+        if cat_mode == CategoryMode.StringArray or cat_mode == CategoryMode.NumericArray:
+            # Get the mask of invalids/filtered for this Categorical.
+            invalids_mask = self.isfiltered()
+
+            # If all values are valid, don't bother creating an all-False INvalid-mask, it's just wasting memory.
+            if not invalids_mask.any():
+                invalids_mask = None
+
+            # For self.base_index == 0, we can use iKey directly;
+            # for self.base_index == 1, we need to create a new 0-based iKey to pass to pyarrow.
+            indices = self.grouping.ikey
+            if self.base_index != 0:
+                # It's important we DON'T do this in-place, as we don't want to modify the ikey array,
+                # as that'll break this Categorical instance.
+                indices = self.grouping.ikey - self.base_index
+                if invalids_mask is not None:
+                    # Now, in-place update the `indices` array by setting out-of-bounds indices (e.g. -1)
+                    # for the invalids to 0. These will be masked out anyway, so it doesn't much matter which
+                    # value they're set to.
+                    # TODO: Revisit whether pyarrow cares about out-of-bounds indices for masked-out elements.
+                    indices[invalids_mask] = 0
+
+            # As of pyarrow 5.0.0, there are still some sharp edges on the DictionaryArray.from_arrays()
+            # method, and it does not seem to work unless both the indices + mask arrays are converted to
+            # pyarrow, then combined into a single masked array, then we pass that as the `indices` argument.
+            # It would be nice if .from_arrays() accepted the numpy/riptable arrays directly, so this conversion
+            # could be more efficient w.r.t both CPU and memory.
+            if invalids_mask is None:
+                pa_indices = pa.array(indices)
+            else:
+                # N.B. The natural thing to write here should be one of the following:
+                #       * pa_indices = pa.array(indices, mask=invalids_mask)
+                #       * pa_indices = pa.array(pa.array(indices), mask=invalids_mask)
+                #      Neither approach works though, both hit issues in pyarrow. So for now we take the
+                #      slower-but-working approach where we create a nullable mask array (in pyarrow),
+                #      then call the pyarrow.Array.filter() function with it to produce the result we need.
+                pa_valid_or_null = pc.if_else(pa.array(invalids_mask), pa.scalar(None), pa.scalar(True))
+                pa_indices = pa.array(indices).filter(pa_valid_or_null, null_selection_behavior='emit_null')
+
+            assert len(pa_indices) == len(self)
+
+            return pa.DictionaryArray.from_arrays(
+                pa_indices, self.category_array,
+                ordered=self.grouping.isordered
+                # DON'T set safe=False here. It is possible to create Categoricals in riptable
+                # in ways where we end up with category indices (in the .grouping.ikey) that don't
+                # reference a known label. That's a rare case which is supported in riptable but
+                # not in pyarrow; so leaving safe=True (the default) allows pyarrow to catch that case.
+            )
+
+        elif cat_mode == CategoryMode.Dictionary or cat_mode == CategoryMode.IntEnum:
+            # Create a pa.StructArray containing **all** of the name <=> code mappings, even those that
+            # aren't used in this particular Categorical.
+            # Also, it is possible for a Dictionary- or IntEnum-mode Categorical to contain values that
+            # _aren't_ part of the mappings; for this conversion to be lossless, we need to find those
+            # and include them in the StructArray too. These codes are assigned null names, so we
+            # know not to make them part of the name <=> code mappings when converting back.
+            all_names = self.category_array
+            all_codes = self.category_codes
+
+            names_codes_fields = [
+                pa.field('name', pa.string(), nullable=True),
+                pa.field('val', pa.from_numpy_dtype(np.dtype(all_codes.dtype)), nullable=False)
+            ]
+
+            # Check whether there's a code representing the filtered category (which we want to convert to nulls).
+            # If we detect this, remove it from the all_names/all_codes arrays because we don't
+            # want to encode it as a valid mapping.
+            # Create a mask of nulls/invalids we can pass to the DictionaryArray creation below.
+            invalids_mask = None
+            have_filtered_category, filtered_category_idx = ismember(FastArray([all_codes.inv]), all_codes)
+            if have_filtered_category[0]:
+                valid_category_mask = arange(len(all_codes)) != filtered_category_idx[0]
+                all_names = all_names[valid_category_mask]
+                all_codes = all_codes[valid_category_mask]
+                invalids_mask = self._fa == all_codes.inv
+
+            # Create the 0-based "dictionary-encoded" indices.
+            # N.B. We use ._fa here because self.ikey accounts for codes that appear in self._fa but aren't
+            #      in the name <=> code mapping, but it doesn't seem like there's a straightforward way to differentiate
+            #      (in the .ikey) which integer values represent valid codes and which represent invalid codes.
+            # TODO: We can find which of the codes in the ikey are named (or unnamed) like the following; then we can
+            #       do a bit of masking / fetching and we can skip doing any large-scale ismember() call or unique(),
+            #       which should make this conversion much faster.
+            #all_codes_isnamed, _ = ismember(self._fa[self.grouping.ifirstkey], all_codes)
+
+            is_named_code, code_indices = ismember(self._fa, all_codes)
+
+            # Check whether there are any codes used in the backing array which
+            # don't have names assigned to them.
+            if not is_named_code.all():
+                # Get the unique codes which aren't found in the name <=> code mapping.
+                is_unnamed_code = ~is_named_code
+                unnamed_codes = unique(self._fa[is_unnamed_code])
+
+                # Find the 0-based indices of the unnamed codes in the ikey within the unnamed_codes array.
+                _, supplemental_indices = ismember(self._fa[is_unnamed_code], unnamed_codes)
+
+                # Combine the unnamed codes with the named codes,
+                # and likewise extend the names with empty values (that we'll set to null later).
+                named_code_count = len(all_codes)
+                all_codes = hstack([all_codes, unnamed_codes])
+                all_names_orig = all_names
+                all_names = full(all_codes.shape, b'', dtype=all_names.dtype)
+                all_names[:len(all_names_orig)] = all_names_orig
+
+                # When combining the codes / computing the indices of unnamed codes, we must account for
+                # the possibility that we need to expand to a larger dtype for the indices.
+                indices_min_dtype: np.dtype = np.min_scalar_type(len(all_codes))
+                if np.dtype(code_indices.dtype).itemsize != indices_min_dtype.itemsize:
+                    # Need to resize because we either have too many codes now to be indexed by an array
+                    # of this dtype, or we're using an array whose dtype is larger than necessary.
+                    code_indices = code_indices.astype(indices_min_dtype)
+                else:
+                    # Create a view of the original indices array in case we're switching from signed to unsigned.
+                    code_indices = code_indices.view(indices_min_dtype)
+
+                # Fix up the indices array to account for the unnamed codes.
+                # Can't safely add the offset to `supplemental_indices` first here,
+                # since that could potentially overflow; so we do two separate operations.
+                code_indices[is_unnamed_code] = named_code_count
+                code_indices[is_unnamed_code] += supplemental_indices
+
+            # Compact the indices array if possible.
+            # As of riptable 1.1.0, the indices array returned by `ismember()` doesn't return an array
+            # of the smallest-possible dtype. The dtype of the indices array is used directly by
+            # pyarrow for the dictionary-encoded index and we want the representation to be as compact
+            # and efficient as possible.
+            indices_min_dtype: np.dtype = np.min_scalar_type(len(all_codes))
+            if np.dtype(code_indices.dtype).itemsize != indices_min_dtype.itemsize:
+                # We can use a smaller dtype, so do that.
+                code_indices = code_indices.astype(indices_min_dtype)
+            else:
+                # Prefer to use unsigned indices when possible.
+                code_indices = code_indices.view(indices_min_dtype)
+
+            # Create the StructArray representing the name <=> code mappings.
+            pa_name_val_arr = pa.StructArray.from_arrays([all_names, all_codes], fields=names_codes_fields)
+
+            # As of pyarrow 5.0.0, there are still some sharp edges on the DictionaryArray.from_arrays()
+            # method, and it does not seem to work unless both the indices + mask arrays are converted to
+            # pyarrow, then combined into a single masked array, then we pass that as the `indices` argument.
+            # It would be nice if .from_arrays() accepted the numpy/riptable arrays directly, so this conversion
+            # could be more efficient w.r.t both CPU and memory.
+            if invalids_mask is None:
+                pa_indices = pa.array(code_indices)
+            else:
+                # N.B. The natural thing to write here should be one of the following:
+                #       * pa_indices = pa.array(indices, mask=invalids_mask)
+                #       * pa_indices = pa.array(pa.array(indices), mask=invalids_mask)
+                #      Neither approach works though, both hit issues in pyarrow. So for now we take the
+                #      slower-but-working approach where we create a nullable mask array (in pyarrow),
+                #      then call the pyarrow.Array.filter() function with it to produce the result we need.
+                pa_valid_or_null = pc.if_else(pa.array(invalids_mask), pa.scalar(None), pa.scalar(True))
+                pa_indices = pa.array(code_indices).filter(pa_valid_or_null, null_selection_behavior='emit_null')
+
+            assert len(pa_indices) == len(self)
+
+            # Create the dictionary-encoded array (using the StructArray for the values) and return it.
+            return pa.DictionaryArray.from_arrays(pa_indices, pa_name_val_arr, ordered=self.ordered)
+
+        elif cat_mode == CategoryMode.MultiKey:
+            import builtins
+
+            # MultiKey Categoricals are converted to pyarrow as a dictionary-encoded array whose values
+            # are defined by a StructArray (whose fields are the categories from this Categorical).
+            cat_categories = self.category_dict
+
+            def create_struct_cat_field_and_arr(category_name: str, arr: np.array) -> Tuple[pa.Field, pa.Array]:
+                # N.B. The semantics of how we decide which fields use nullable=True here must match
+                #      the logic used by riptable.Grouping.
+                #       We must follow the same logic when converting the category array to a pa.Array.
+                if builtins.type(arr) == FastArray:
+                    arr_dtype = np.dtype(arr.dtype)
+                    if arr_dtype.char == '?':
+                        return pa.field(category_name, pa.from_numpy_dtype(arr_dtype), nullable=False), pa.array(arr)
+                    elif arr_dtype.char in 'SU':
+                        return pa.field(category_name, pa.string(), nullable=True), pa.array(arr)
+                    else:
+                        # TODO: For integer FastArray, need to check whether riptable.Grouping respects invalids or not,
+                        #       and set the nullable field accordingly here (and specify any necessary options to get the
+                        #       same behavior when converting the array).
+                        raise NotImplementedError
+                else:
+                    # All derived FastArray types support the notion of 'invalid'/null values.
+                    pa_arr = pa.array(arr)
+                    return pa.field(category_name, pa_arr.type, nullable=True), pa_arr
+
+            # Create the fields of the Struct from the categories,
+            # and create the pyarrow arrays from the category arrays.
+            category_fields, pa_field_arrs = zip(*([create_struct_cat_field_and_arr(k, v) for k, v in cat_categories.items()]))
+
+            # Get the mask of invalids/filtered for this Categorical.
+            invalids_mask = self.isfiltered()
+
+            # If all values are valid, don't bother creating an all-False INvalid-mask, it's just wasting memory.
+            if not invalids_mask.any():
+                invalids_mask = None
+
+            # For self.base_index == 0, we can use iKey directly;
+            # for self.base_index == 1, we need to create a new 0-based iKey to pass to pyarrow.
+            indices = self.grouping.ikey
+            if self.base_index != 0:
+                # It's important we DON'T do this in-place, as we don't want to modify the ikey array,
+                # as that'll break this Categorical instance.
+                indices = self.grouping.ikey - self.base_index
+                if invalids_mask is not None:
+                    # Now, in-place update the `indices` array by setting out-of-bounds indices (e.g. -1)
+                    # for the invalids to 0. These will be masked out anyway, so it doesn't much matter which
+                    # value they're set to.
+                    # TODO: Revisit whether pyarrow cares about out-of-bounds indices for masked-out elements.
+                    indices[invalids_mask] = 0
+
+            # As of pyarrow 5.0.0, there are still some sharp edges on the DictionaryArray.from_arrays()
+            # method, and it does not seem to work unless both the indices + mask arrays are converted to
+            # pyarrow, then combined into a single masked array, then we pass that as the `indices` argument.
+            # It would be nice if .from_arrays() accepted the numpy/riptable arrays directly, so this conversion
+            # could be more efficient w.r.t both CPU and memory.
+            if invalids_mask is None:
+                pa_indices = pa.array(indices)
+            else:
+                # N.B. The natural thing to write here should be one of the following:
+                #       * pa_indices = pa.array(indices, mask=invalids_mask)
+                #       * pa_indices = pa.array(pa.array(indices), mask=invalids_mask)
+                #      Neither approach works though, both hit issues in pyarrow. So for now we take the
+                #      slower-but-working approach where we create a nullable mask array (in pyarrow),
+                #      then call the pyarrow.Array.filter() function with it to produce the result we need.
+                pa_valid_or_null = pc.if_else(pa.array(invalids_mask), pa.scalar(None), pa.scalar(True))
+                pa_indices = pa.array(indices).filter(pa_valid_or_null, null_selection_behavior='emit_null')
+
+            assert len(pa_indices) == len(self)
+
+            # Create a StructArray from the categories, then create a DictionaryArray whose
+            # values are defined by the StructArray.
+            pa_categories_arr = pa.StructArray.from_arrays(pa_field_arrs, fields=category_fields)
+            return pa.DictionaryArray.from_arrays(pa_indices, pa_categories_arr, ordered=self.ordered)
+
+        else:
+            raise RuntimeError(f"Categorical has an unrecognized value for `category_mode`: {cat_mode}")
+
+    def __arrow_array__(self, type: Optional['pa.DataType'] = None) -> Union['pa.Array', 'pa.ChunkedArray']:
+        return self.to_arrow(type=type)
 
     # -----------------------------------------------------
     @cached_property

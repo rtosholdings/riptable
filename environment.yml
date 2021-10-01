@@ -14,3 +14,4 @@ dependencies:
   - flake8
   - pytest
   - coverage
+  - pyarrow>=4.0.0
