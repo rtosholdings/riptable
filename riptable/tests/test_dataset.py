@@ -13,7 +13,7 @@ from riptable import Struct
 from riptable import Dataset
 from riptable import Categorical
 from riptable import NumpyCharTypes
-from riptable import TimeSpan, utcnow, Date
+from riptable import DateTimeNano, TimeSpan, utcnow, Date
 from riptable.rt_numpy import arange, isnan, tile, logical
 from riptable.rt_utils import describe
 from riptable.rt_enum import (
@@ -1942,6 +1942,11 @@ class TestDataset(unittest.TestCase):
         ds = Dataset.from_pandas(df)
         assert_array_almost_equal(ds['a'], np.array([1.0, 2.0, np.nan]))
 
+    def test_from_pandas_obj_unicode(self):
+        df = pd.DataFrame({'a': np.array(['Okay', 'Namé'], dtype='O')})
+        ds = Dataset.from_pandas(df)
+        assert_array_equal(ds['a'], np.array(['Okay', 'Namé']))
+
     def test_to_pandas_timespan(self):
         dt_list = [11096000000000, 86401000000000]
         ds = Dataset({'a': TimeSpan(dt_list)})
@@ -2018,6 +2023,14 @@ class TestDataset(unittest.TestCase):
         df = pd.DataFrame({'a': [b'a', b'b']}, index=[1, 2])
         ds = Dataset.from_pandas(df)
         assert_array_equal(ds['a'], np.array([b'a', b'b']))
+
+    def test_to_pandas_dst_nonexistent(self):
+        ds = Dataset({'a': DateTimeNano(['19900401 02:00:00'], from_tz='NYC')})
+        df = ds.to_pandas()
+        fmt_string = '%Y%m%d %H:%M:%S.%f'
+        expected_arr = ds['a'].strftime(fmt_string)
+        arr = df['a'].dt.strftime(fmt_string)
+        assert_array_equal(arr, expected_arr)
 
     def test_as_pandas_df_warn(self):
         ds = Dataset({'a': [1, 2, 3]})
