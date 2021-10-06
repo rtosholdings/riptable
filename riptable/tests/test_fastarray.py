@@ -1489,7 +1489,18 @@ class FastArray_Test(unittest.TestCase):
         assert 0 == np.sum(rt.FA([], dtype=np.int32), dtype=np.int64)
         assert 0 == np.nansum(rt.FA([], dtype=np.uint8), dtype=np.int32)
         assert 0 == np.nansum(rt.FA([], dtype=np.float64), dtype=np.float64)
-        
+
+    def test_view_unspecified_type(self) -> None:
+        """Test how FastArray.view() behaves when an output type is not explicitly specified."""
+        arr = FastArray([6, 8, 10, 10, 0, 5, 2], dtype=np.uint32)
+        arr.set_name(f"my_test_{type(arr).__name__}")
+        arr_view = arr.view()
+        self.assertEqual(type(arr), type(arr_view))
+        self.assertEqual(arr.shape, arr_view.shape)
+        self.assertFalse(arr_view.flags.owndata)
+        self.assertEqual(arr.get_name(), arr_view.get_name())
+        self.assertTrue((arr == arr_view).all())
+
 # TODO: Extend the tests in the TestFastArrayNanmax / TestFastArrayNanmin classes below to cover the following cases:
 #   * non-array inputs (e.g. a list or set or scalar)
 #   * other FastArray subclass, e.g. Date
@@ -1648,6 +1659,23 @@ def test_array_function_empty_like(np_callable, fast_array):
         actual = np_callable(fast_array)
     assert type(actual) == type(fast_array), 'type mismatch'
     assert actual.shape == fast_array.shape, 'shape mismatch'
+
+
+@pytest.mark.xfail(reason='Known bug as of riptable 1.1.0.')
+@pytest.mark.parametrize('as_unicode', [False, True])
+def test_ctor_from_str_obj_array_with_None(as_unicode: bool) -> None:
+    # Create a numpy object array containing some None values.
+    input = np.array(['abc', None, 'ghi', 'jkl', None, 'abc', 'ghi'], dtype=object)
+    none_mask = input == None
+
+    # Create the FastArray from the input.
+    result = FastArray(input, dtype=str, unicode=as_unicode)
+    assert input.shape == result.shape
+
+    # The expected output; specifically, make sure the None values in the input
+    # are converted to the riptable 'invalid' for the output array type.
+    none_results = result[none_mask]
+    assert_array_equal(none_results, rt.full(none_results.shape, result.inv, dtype=none_results.dtype))
 
 
 if __name__ == "__main__":

@@ -350,7 +350,13 @@ class TimeZone:
         'NYC'    : 'America/New_York',
         'DUBLIN' : 'Europe/Dublin',
         'GMT'    : 'GMT',
-        'UTC'    : 'GMT'
+        'UTC'    : 'UTC'
+    }
+    long_to_short_timezone_names = {
+        'America/New_York': 'NYC',
+        'Europe/Dublin': 'DUBLIN',
+        'UTC': 'UTC',
+        'GMT': 'GMT'
     }
     tz_error_msg = f"If constructing from strings specify a timezone in from_tz keyword. Valid options: {valid_timezones}. Example: dtn = DateTimeNano(['2018-12-13 10:30:00'], from_tz='NYC')"
 
