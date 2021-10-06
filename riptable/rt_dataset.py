@@ -2685,7 +2685,10 @@ class Dataset(Struct):
                         # NaN in it so convert to float64.
                         new_col = np.asarray(col, dtype='f8')
                     else:
-                        new_col = np.asarray(col, dtype='S')
+                        try:
+                            new_col = np.asarray(col, dtype='S')
+                        except UnicodeEncodeError:
+                            new_col = np.asarray(col, dtype='U')
                 else:
                     new_col = np.asarray(col, dtype='S')
                 data[key] = new_col
