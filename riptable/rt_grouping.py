@@ -1153,6 +1153,7 @@ class Grouping:
         if self.isenum or self._catinstance is not None:
             # must be base 0 cat or enum
             newinstance = self.catinstance[fld]
+            oldname = self.catinstance.get_name()
         else:
             # base 1 cat
             # base 1 groupby
@@ -1170,10 +1171,10 @@ class Grouping:
                 newinstance = TypeRegister.MathLedger._MBGET(self._iKey,fld, 0)
             else:
                 newinstance= self._iKey[fld]
+            oldname = self._iKey.get_name()
 
             # NOTE: if we hit here, the categorical/grouping is possibly dirty because it has been sliced or reduced
 
-        oldname= self.get_name()
         if oldname is not None:
             newinstance.set_name(oldname)
 
