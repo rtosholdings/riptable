@@ -962,6 +962,15 @@ class TestCategorical:
         assert (cm[0] == [1, 1, 3, 2, 2]).all()
         assert (cm[1] == [2, 2, 4, 4, 3]).all()
 
+        # Multikey with nested Categorical
+        c1 = Categorical([Categorical(['a']), FastArray([1])])
+        c2 = Categorical([Categorical(['b']), FastArray([2])])
+        cm = Categorical.align([c1, c2])
+        assert cm[0][0] == ('a', 1)
+        assert cm[1][0] == ('b', 2)
+        assert cm[0].category_dict == cm[1].category_dict
+
+
     def test_categorical_merge_dict(self):
         from riptable.rt_categorical import categorical_merge_dict
 
@@ -1702,6 +1711,14 @@ class TestCategorical:
         cats.set_name('test')
         c = Categorical(codes, cats)
         assert c.get_name(), 'test'
+
+    def test_subarray_name(self):
+        c = Categorical(['a', 'b'])
+        c1 = c[[0]]
+        assert c1.get_name() == c.get_name()
+        # Make sure there is no "quantum effect" that printing the array changes it's name.
+        _ = str(c1)
+        assert c1.get_name() == c.get_name()
 
     def test_construct_from_categorical(self):
         c = Categorical(['a', 'a', 'b', 'c', 'a'])
