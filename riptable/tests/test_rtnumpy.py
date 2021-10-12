@@ -232,6 +232,46 @@ class TestRTNumpy:
         assert type(result) == array_type
         assert len(result) == total_len
 
+class TestHStackAny:
+    """Tests for the rt.hstack_any (a.k.a. rt.stack_rows) function."""
+
+    _fa1 = rt.FastArray([100, 200])
+    _fa2 = rt.FastArray([111, 222])
+    _dtn1 = rt.DateTimeNano('2021-10-12 01:02:03', from_tz='UTC')
+    _dtn2 = rt.DateTimeNano('1980-03-04 13:14:15', from_tz='UTC')
+    _ts1 = _dtn1 - _dtn2
+    _ts2 = _dtn2 - _dtn1
+    _ds1 = rt.Dataset({'a': 11})
+    _ds2 = rt.Dataset({'b': 22})
+    _pds1 = rt.PDataset(_ds1)
+    _pds2 = rt.PDataset(_ds2)
+
+    @pytest.mark.parametrize(
+        "inputs,expected",
+        [
+            pytest.param([_fa1, _fa2], rt.FastArray, id='FastArray,FastArray'),
+            pytest.param([_dtn1, _dtn2], rt.DateTimeNano, id='DateTimeNano,DateTimeNano'),
+            pytest.param([_dtn1, _dtn2], rt.DateTimeNano, id='DateTimeNano,DateTimeNano'),
+            pytest.param([_ts1, _ts2], rt.TimeSpan, id='TimeSpan,TimeSpan'),
+            pytest.param([_ds1, _ds2], rt.Dataset, id='Dataset,Dataset'),
+            pytest.param([_pds1, _pds2], None, id='PDataset,PDataset'), # notyet
+
+            pytest.param([_dtn1, _ts2], None, id='DateTimeNano,TimeSpan'), # neither is base
+            pytest.param([_fa1, _dtn2], rt.FastArray, id='FastArray,DateTimeNano'),
+            pytest.param([_ts1, _fa2], rt.FastArray, id='TimeSpan,FastArray'),
+
+            pytest.param([_ds1, _pds2], rt.Dataset, id='Dataset,PDataset'),
+            pytest.param([_pds1, _ds2], rt.Dataset, id='PDataset,Dataset'),
+            pytest.param([_fa1, _ds2], None, id='FastArray,Dataset'),
+        ],
+    )
+    def test_hstack_any(self, inputs, expected):
+        if expected is None:
+            with pytest.raises(Exception):
+                rt.hstack_any(inputs)
+        else:
+            result = rt.hstack_any(inputs)
+            assert type(result) == expected
 
 class TestMaximum:
     """Tests for the rt.maximum function."""

@@ -227,9 +227,14 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
             t1 = tempset.pop()
             t2 = tempset.pop()
 
+            # If one is base class of the other, use that.
             # happens with Dataset and PDataset
-            if issubclass(t1, t2) or issubclass(t2, t1):
-                error =False
+            if issubclass(t1, t2):
+                sameclass = {t2}
+                error = False
+            elif issubclass(t2, t1):
+                sameclass = {t1}
+                error = False
         if error:
             raise TypeError(f"itemlist must contain objects with the same class: {sameclass!r}")
 
