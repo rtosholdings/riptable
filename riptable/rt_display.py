@@ -201,37 +201,35 @@ class DisplayTable(object):
     def __init__(self, attribs: Optional[dict] = None):
         if attribs is None:
             attribs = dict()
-
-        self._display_mode = DisplayDetect.Mode
-
         self._console_x = self.options.CONSOLE_X
         self._console_y = self.options.CONSOLE_Y
         if DisplayTable.FORCE_REPR is False:
             self._console_x, self._console_y = get_terminal_size()
             if self._console_x is None:
                 if DisplayTable.DebugMode: print("could not detect console size. using defaults.")
-                # check for html
-                if self._display_mode == DisplayDetectModes.HTML or self._display_mode == DisplayDetectModes.Jupyter:
-                    self._console_x = self.options.CONSOLE_X_HTML
-                else:
-                    DisplayTable.FORCE_REPR = True
-                    self._console_x = self.options.CONSOLE_X
-                    self._console_y = self.options.CONSOLE_Y
+                DisplayTable.FORCE_REPR = True
+                self._console_x = self.options.CONSOLE_X
+                self._console_y = self.options.CONSOLE_Y
 
         # certain machines will not fail to detect the console width, but set it to zero
         # default to the minimum console x bound
         if self._console_x < self.options._BOUNDS['CONSOLE_X'][0]:
             self._console_x = self.options._BOUNDS['CONSOLE_X'][0]
 
+        self._display_mode = DisplayDetect.Mode
+        # check for html
+        if self._display_mode == DisplayDetectModes.HTML or self._display_mode == DisplayDetectModes.Jupyter:
+            self._console_x = self.options.CONSOLE_X_HTML
+
         # dict for any display attributes passed by the initializer
         self._attribs = attribs
-
+    
     #---------------------------------------------------------------------------
     def build_result_table(
         self, header_tups, main_data, nrows:int,
-       footer_tups=None, keys:dict=None, sortkeys=None,
-       from_str=False, sorted_row_idx=None, transpose_on=False,
-       row_numbers=None, right_cols=None,
+       footer_tups=None, keys:dict=None, sortkeys=None, 
+       from_str=False, sorted_row_idx=None, transpose_on=False, 
+       row_numbers=None, right_cols=None, 
        badrows=None,
        badcols=None,
        styles=None,
@@ -241,7 +239,7 @@ class DisplayTable(object):
         Step 1: save all parameters into self namespace, as build_result_table is broken down into several functions.
         Step 2: if set_view has been called, only display the specified columns. if sort_values has been called, move those columns to the front.
         Step 3: build a row mask. if the table is too large to display, pull the first and last rows for display. if a sorted index is present, apply it.
-        Step 4: measure the table.
+        Step 4: measure the table. 
         groupby key columns will always be included. fit as many columns as possible into the console. if the display is for html, defaults have been set to a hard-coded console width. other console width is detected upon each display. if there are too many columns to display, a column break will be set.
         Step 5: build the table.
         the result table is broken down into three parts: headers, left side, and main table.
@@ -257,11 +255,11 @@ class DisplayTable(object):
         **TODO: reduce the measuring and building to one pass over the data. currently rendering time is not an issue. ~15ms
         """
         return self.build_result_table_new(
-        header_tups,
-        main_data,
-        nrows,
+        header_tups, 
+        main_data, 
+        nrows, 
 
-        keys=keys,
+        keys=keys, 
         sortkeys=sortkeys,
         from_str=from_str,
         sorted_row_idx=sorted_row_idx,
@@ -323,11 +321,11 @@ class DisplayTable(object):
 
     #---------------------------------------------------------------------------
     def build_result_table_new(self,
-        header_tups,
-        main_data,
-        nrows:int,
+        header_tups, 
+        main_data, 
+        nrows:int, 
 
-        keys:dict=None,
+        keys:dict=None, 
         sortkeys=None,
         from_str=False,
         sorted_row_idx=None,
@@ -444,7 +442,7 @@ class DisplayTable(object):
         # head and tail functions will be taken into consideration here
         # transposed tables will change this number significantly
         totalrows = 0
-
+    
         # transposed
         if self._transpose_on:
             if DisplayTable.DebugMode: print("*table transposed")
@@ -502,7 +500,7 @@ class DisplayTable(object):
 
             self._left_table_data.append(header_column)
             left_header_names.append("Fields:")
-
+            
         # untransposed
         else:
             # groupby keys take priority
@@ -632,7 +630,7 @@ class DisplayTable(object):
             # use the head + tail to calculate how many relevant rows
             ldata = head + tail
 
-            # build a new badrows with the correct line
+            # build a new badrows with the correct line 
             newbadrows={}
 
             for k,v in badrows.items():
@@ -728,7 +726,7 @@ class DisplayTable(object):
                     self._left_table_columns[i].align_column(DisplayJustification.Right,
                                                              slice(-num_footer_rows, None, None))
 
-
+        
         # -----------------------FIX / TRANSLATE TABLE HEADERS---------------------------------
         # -------------------------------------------------------------------------------------
         if self._num_header_lines > 1 and self._transpose_on is False and self._col_break is not None:
@@ -759,7 +757,7 @@ class DisplayTable(object):
                     for i, cell in enumerate(set[-1]):
                         color = DisplayColumnColors.Multiset_col_a + (cell.color_group % 2)
                         self._column_sets[set_index][i].paint_column(color)
-
+        
         # -------------SUB FUNCTION WITH CALLBACK FOR CELL STYLING----------------------------
         # ------------------------------------------------------------------------------------
         def style_cells(listcols, stylefunc, rows=True, callback=None, location=None):
@@ -811,14 +809,14 @@ class DisplayTable(object):
             final_column_sets = [self._main_table_columns]
         else:
             final_column_sets = self._column_sets
-
+        
         # call style function to build final strings from stored styles
         main_table_strings = []
         as_rows = not self._transpose_on
         for col_set in final_column_sets:
             col_set = style_cells(col_set, stylefunc, as_rows,  callback=callback, location='main')
             main_table_strings.append(col_set)
-
+                
         # single table
         if self._column_sets is None:
             main_table_strings = main_table_strings[0]
@@ -913,7 +911,7 @@ class DisplayTable(object):
         Note: this routine is very similar to build_final_headers_html.
         Keeping them separate for readability.
         '''
-
+        
         final_headers = []
         span = len(self._left_table_columns)
         pad_cell = ColHeader("",1,0)
@@ -946,7 +944,7 @@ class DisplayTable(object):
                 styled_line.append(new_cell)
             final_headers.append(styled_line)
 
-
+        
         # use DisplayColumns to style bottom row
         # bug in alignment if sent through the same loop as other headers
         bottom_headers = []
@@ -979,7 +977,7 @@ class DisplayTable(object):
                 else:
                     new_cell.string = DisplayColumn.align_console_string(new_cell.string, width, align=DisplayJustification.Right)
                 transposed_headers.append(new_cell.display(plain=plain))
-
+            
             for c in reversed(self._left_table_columns):
                 if self._from_str:
                     transposed_headers.insert(0, c.build_header(plain=True))
@@ -1099,7 +1097,7 @@ class DisplayTable(object):
 
                 new_right_head.insert(0,last_tup)
                 break
-
+        
         self._header_tups[0] = new_left_head + new_right_head
 
         # final row (no span changes)
@@ -1159,7 +1157,7 @@ class DisplayTable(object):
             elif not isinstance(footer, str):
                 footer = func(footer, display_format)
                 #print('footer was not none')
-
+            
         # transposed data will have the same alignment
         if self._transpose_on:
             #align = DisplayJustification.Right
@@ -1169,7 +1167,7 @@ class DisplayTable(object):
         mask = self._r_mask
         if masked is True:
             mask = arange(len(column))
-
+            
         # mask is now an array of numbers
         # when looping over a column
 
@@ -1178,7 +1176,7 @@ class DisplayTable(object):
         if self._row_break is not None:
             # get the head portion of the column
             cell_list = [DisplayCell(func(item, display_format), item, html=self._html_on) for item in column[mask[:self._row_break]]]
-
+            
             # put in the break
             cell_list += [DisplayCell("...", "...", html=self._html_on)]
 
@@ -1190,7 +1188,7 @@ class DisplayTable(object):
         # TJD NOTE this is a natural location to color code the inner grid
         #cell_list[1].string="<td bgcolor=#00FFF>" + cell_list[1].string # + "</td>"
         #cell_list[1].color = DisplayColumnColors.GrayItalic
-
+        
         # consider adding the break character here (one full, one for splits)
         new_column = DisplayColumn(cell_list,                   # build a display cell for every value in the masked column
                                         row_break = self._row_break, # a break character will be added for final table if necessary. hang on to index for now.
@@ -1203,7 +1201,7 @@ class DisplayTable(object):
         return new_column, footer
 
     # -------------------------------------------------------------------------------------
-    def add_required_columns(self, header_names, table_data, footers, masked=False, gbkeys=None,
+    def add_required_columns(self, header_names, table_data, footers, masked=False, gbkeys=None, 
                              transpose=False, color=None, style=None):
         '''
         header_names  : list of string header names (not tuples)
@@ -1215,7 +1213,7 @@ class DisplayTable(object):
         table_columns = []
         widths = []
         footerval = None
-
+        
         # TODO: support multikey here
         #if footers is not None:
         #    footers = footers[0]
@@ -1227,7 +1225,7 @@ class DisplayTable(object):
                 #footerval = footers[i][0]
             new_column, _ = self.build_column(header, column, masked=masked, style=style, footer=footerval)
             new_column._r_mask = self._r_mask
-
+            
             # possibly paint entire column here
             if color is not None:
                 new_column.paint_column(color)
@@ -1249,7 +1247,7 @@ class DisplayTable(object):
         '''
         The display will attempt to fit as many columns as possible into the console.
         HTML display has been assigned a default value for self._console_x (see DisplayTable.__init__)
-
+        
         If the user changes their self.options.COL_ALL to True, all columns will be displayed on the same line.
         *note: this will break console display for large tables and should only be used in jupyter lab now.
 
@@ -1286,7 +1284,7 @@ class DisplayTable(object):
         has_footers = False
         if footers is not None:
             has_footers = True
-
+        
         #self._console_x -= 80
         while ((total_width <= console_width) or force_all_columns is True) and (colbegin <= colend):
             # pull from the front
@@ -1342,8 +1340,8 @@ class DisplayTable(object):
             if DisplayTable.DebugMode: print("console_x",console_width)
             if DisplayTable.DebugMode: print("colbegin",colbegin)
             if DisplayTable.DebugMode: print("colend",colend)
-
-
+        
+        
         # add the column break
         if self._col_break is not None:
             break_col = build_break_column(len(self._r_mask))
@@ -1389,7 +1387,7 @@ class DisplayTable(object):
         column_widths = [[]]
         top_headers = [[]]
         bottom_headers = [[]]
-
+        
         # keep each group together. for now this will only work for two line multi-column
         bottom_index = 0
         for header_tup in headers[0]:
@@ -1434,7 +1432,7 @@ class DisplayTable(object):
     # -------------------------------------------------------------------------------------
     def build_transposed_columns(self, columns):
         '''
-        Transposed column data needs to be constructed differently. Widths will be
+        Transposed column data needs to be constructed differently. Widths will be 
         calculated as a maximum items in multiple arrays.
         At the end of the table's construction, it will remain as a list of rows.
         '''
@@ -1473,7 +1471,7 @@ class DisplayTable(object):
                 max_t_cols += 1
 
         self._main_first_widths = t_widths[:max_t_cols]
-
+        
         # trim columns
         for i, col in enumerate(t_columns):
             t_columns[i]._data = col._data[:max_t_cols]
@@ -1588,7 +1586,7 @@ class DisplayHtmlTable:
         self.main_columns = main_columns
         self.right_columns = right_columns
         self.footers = footers
-
+        
     def build_table(self):
         def join_row_section(rowstrings, idx=None):
             joined = ""
@@ -1608,11 +1606,11 @@ class DisplayHtmlTable:
         # turn into fstring after editing
 
         #html_string_list.append("<html><head><style>")
-
+        
         ## TODO: add support for axis labels
         ##html_string_list.append( css_prefix+" thead{border-bottom:none !important;}")
         ##html_string_list.append( css_prefix+" thead td:not(:first-child){font-weight:bold;border-bottom:var(--jp-border-width) solid var(--jp-border-color1);}")
-
+        
         ## stops line break for cells in table body (headers will still break)
         #html_string_list.append( css_prefix+" tbody td{white-space: nowrap;}")
 
@@ -1621,14 +1619,14 @@ class DisplayHtmlTable:
         #html_string_list.append( css_prefix+" .lg{background-color: #66da9940;}")                                                         # green
         #html_string_list.append( css_prefix+" .lp{font-weight:bold;background-color: #ac66da40;}")                                        # purple
         #html_string_list.append( css_prefix+" .msc{font-weight:normal;background-color:#00000011;}")                                      # light shade
-
+        
         ## text alignment
         #html_string_list.append( css_prefix+" .al{text-align:left;}")   # left
         #html_string_list.append( css_prefix+" .ar{text-align:right;}")  # right
         #html_string_list.append( css_prefix+" .ac{text-align:center;}") # center
 
         ## text style
-        #html_string_list.append( css_prefix+" .bld{font-weight:bold;}")            # bold
+        #html_string_list.append( css_prefix+" .bld{font-weight:bold;}")            # bold 
         #html_string_list.append( css_prefix+" .it{font-style:italic;}")            # italic
         #html_string_list.append( css_prefix+" .ul{text-decoration:underline;}")    # underline
         #html_string_list.append( css_prefix+" .st{text-decoration:line-through;}") # strikethrough
@@ -1705,7 +1703,7 @@ class DisplayConsoleTable:
 
     def build_end(self, is_header=True):
         end_str = []
-
+        
         if is_header is True: end_cells = self.headers
         else: end_cells = self.footers
 
@@ -1720,10 +1718,10 @@ class DisplayConsoleTable:
         else: end_str.insert(0,border_row)
 
         return end_str
-
+            
     def build_data(self):
         data_str = []
-
+        
         datalist = []
         colgroups = [self.left_columns, self.main_columns, self.right_columns]
         for colgroup in colgroups:
@@ -1771,7 +1769,7 @@ class DisplayColumn:
 
     #---------------------------------------------------------------------------
     def __init__(self, data, row_break=None, color=None, header="", align=DisplayJustification.Right, html=False, itemformat=None, footer=None):
-
+        
         # column data
         self._header = header
         self._data = data
@@ -1823,7 +1821,7 @@ class DisplayColumn:
     @property
     def display_width(self):
         '''
-        When columns are being fit during display, need to account for padding between them, otherwise
+        When columns are being fit during display, need to account for padding between them, otherwise 
         overflow will occur and table will break.
         '''
         return self._max_width + TypeRegister.DisplayOptions.X_PADDING
@@ -1884,7 +1882,7 @@ class DisplayColumn:
             else:
                 color = self._color
         styled_end = DisplayCell(end, color=color, html=self._html)
-
+        
         # for transposed tables
         if self._max_t_widths is not None:
             width = max(self._max_t_widths)
@@ -2196,16 +2194,16 @@ class DisplayCell:
             DisplayColumnColors.Pink            : "<td class='lp", # purple
             DisplayColumnColors.Red             : "<td><font color=#F00000", # red fg
             DisplayColumnColors.GrayItalic      : "<td class='msc it", # gray italic
-            DisplayColumnColors.DarkBlue        : "<td class='c",  #
-            DisplayColumnColors.BGColor         : "<td bgcolor=#",  #
-            DisplayColumnColors.FGColor         : "<td><font color=#",  #
-            #DisplayColumnColors.RedBG           : "<td bgcolor=#F00000", #
+            DisplayColumnColors.DarkBlue        : "<td class='c",  # 
+            DisplayColumnColors.BGColor         : "<td bgcolor=#",  # 
+            DisplayColumnColors.FGColor         : "<td><font color=#",  # 
+            #DisplayColumnColors.RedBG           : "<td bgcolor=#F00000", # 
         },
         "console_styles" : {
             DisplayColumnColors.Default         : "",           # no color
             DisplayColumnColors.Rownum          : "\x1b[1;36m", # blue (light cyan)
             DisplayColumnColors.Sort            : "\x1b[1;32m", # green
-            DisplayColumnColors.Groupby         : "\x1b[1;33m", # yellow
+            DisplayColumnColors.Groupby         : "\x1b[1;33m", # yellow  
             DisplayColumnColors.Multiset_head_a : "\x1b[1;36m", # blue
             DisplayColumnColors.Multiset_head_b : "\x1b[1;32m", # green
             DisplayColumnColors.Multiset_col_a  : '\x1b[0m',    # gray
@@ -2215,8 +2213,8 @@ class DisplayCell:
             DisplayColumnColors.Red             : '\x1b[1;41m', # red
             DisplayColumnColors.GrayItalic      : '\x1b[0;41m', # red bg instead of gray
             DisplayColumnColors.DarkBlue        : '\x1b[1;34m', # dkblue
-            DisplayColumnColors.BGColor         : "",  #
-            DisplayColumnColors.FGColor         : "",  #
+            DisplayColumnColors.BGColor         : "",  # 
+            DisplayColumnColors.FGColor         : "",  # 
         },
         "html_end" : "</td>",
         "console_end" : "\x1b[0m"
@@ -2231,11 +2229,11 @@ class DisplayCell:
             DisplayColumnColors.Groupby : "<td class='lg", # green
             DisplayColumnColors.Red     : "<td><font color=#600000", # red fg
             DisplayColumnColors.GrayItalic     : "<td class='msc it", # gray italic
-            DisplayColumnColors.DarkBlue: "<td class='c",  #
+            DisplayColumnColors.DarkBlue: "<td class='c",  # 
             DisplayColumnColors.GrayItalic      : "<td class='msc it", # gray italic
-            DisplayColumnColors.DarkBlue        : "<td class='c",  #
-            DisplayColumnColors.BGColor         : "<td bgcolor=#",  #
-            DisplayColumnColors.FGColor         : "<td><font color=#",  #
+            DisplayColumnColors.DarkBlue        : "<td class='c",  # 
+            DisplayColumnColors.BGColor         : "<td bgcolor=#",  # 
+            DisplayColumnColors.FGColor         : "<td><font color=#",  # 
         },
         "console_styles" : {
             DisplayColumnColors.Default         : "",           # no color
@@ -2251,8 +2249,8 @@ class DisplayCell:
             DisplayColumnColors.Red             : '\x1b[0;31m', # red
             DisplayColumnColors.GrayItalic      : '\x1b[0;41m', # red bg instead of gray
             DisplayColumnColors.DarkBlue        : '\x1b[0;34m', # dkblue
-            DisplayColumnColors.BGColor         : "",  #
-            DisplayColumnColors.FGColor         : "",  #
+            DisplayColumnColors.BGColor         : "",  # 
+            DisplayColumnColors.FGColor         : "",  # 
         },
         "html_end" : "</td>",
         "console_end" : "\x1b[0m"
@@ -2268,8 +2266,8 @@ class DisplayCell:
             DisplayColumnColors.Red     : "<td",
             DisplayColumnColors.GrayItalic      : "<td",
             DisplayColumnColors.DarkBlue: "<td",
-            DisplayColumnColors.BGColor : "<td",  #
-            DisplayColumnColors.FGColor : "<td",  #
+            DisplayColumnColors.BGColor : "<td",  # 
+            DisplayColumnColors.FGColor : "<td",  # 
         },
         "console_styles" : {
             DisplayColumnColors.Default         : "",
@@ -2280,15 +2278,15 @@ class DisplayCell:
             DisplayColumnColors.Multiset_head_b : "",
             DisplayColumnColors.Multiset_col_a  : "",
             DisplayColumnColors.Multiset_col_b  : "",
-            DisplayColumnColors.Red             : "",
-            DisplayColumnColors.DarkBlue        : "",
-            DisplayColumnColors.BGColor         : "",  #
-            DisplayColumnColors.FGColor         : "",  #
+            DisplayColumnColors.Red             : "", 
+            DisplayColumnColors.DarkBlue        : "", 
+            DisplayColumnColors.BGColor         : "",  # 
+            DisplayColumnColors.FGColor         : "",  # 
         },
         "html_end" : "</td>",
         "console_end" : ""
     }
-
+    
     color_mode_dict = {
         DisplayColorMode.NoColors : no_styles,
         DisplayColorMode.Light    : lightbg_styles,
