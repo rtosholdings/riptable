@@ -201,29 +201,32 @@ class DisplayTable(object):
     def __init__(self, attribs: Optional[dict] = None):
         if attribs is None:
             attribs = dict()
+
+        self._display_mode = DisplayDetect.Mode
+
         self._console_x = self.options.CONSOLE_X
         self._console_y = self.options.CONSOLE_Y
         if DisplayTable.FORCE_REPR is False:
             self._console_x, self._console_y = get_terminal_size()
             if self._console_x is None:
                 if DisplayTable.DebugMode: print("could not detect console size. using defaults.")
-                DisplayTable.FORCE_REPR = True
-                self._console_x = self.options.CONSOLE_X
-                self._console_y = self.options.CONSOLE_Y
+                # check for html or html-aware
+                if self._display_mode == DisplayDetectModes.HTML or self._display_mode == DisplayDetectModes.Jupyter:
+                    self._console_x = self.options.CONSOLE_X_HTML
+                    self._console_y = self.options.CONSOLE_Y
+                else:
+                    DisplayTable.FORCE_REPR = True
+                    self._console_x = self.options.CONSOLE_X
+                    self._console_y = self.options.CONSOLE_Y
 
         # certain machines will not fail to detect the console width, but set it to zero
         # default to the minimum console x bound
         if self._console_x < self.options._BOUNDS['CONSOLE_X'][0]:
             self._console_x = self.options._BOUNDS['CONSOLE_X'][0]
 
-        self._display_mode = DisplayDetect.Mode
-        # check for html
-        if self._display_mode == DisplayDetectModes.HTML or self._display_mode == DisplayDetectModes.Jupyter:
-            self._console_x = self.options.CONSOLE_X_HTML
-
         # dict for any display attributes passed by the initializer
         self._attribs = attribs
-    
+
     #---------------------------------------------------------------------------
     def build_result_table(
         self, header_tups, main_data, nrows:int,
