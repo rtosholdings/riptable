@@ -126,11 +126,8 @@ def quantile(x, q, interpolation_method: str='fraction'):
         q = np.asarray(q, np.float64)
         # print("***",q)
         length = q.shape[0]
-        i = 0
+        result = np.array([_get_score(q[i]) for i in range(length)])
 
-        result = np.empty(length, dtype=np.object_)
-        for i in range(length):
-            result[i] = _get_score(q[i])
         return result, lsort, counts
 
 

@@ -160,6 +160,11 @@ class Cut_Test(unittest.TestCase):
                 labels=['a', 'b', 'c', 'd', 'e', 'f'],
             )
 
+    def test_qcut_drop_dups(self):
+        c = qcut([1,1,1,1,1,1,1,2,2,2,11,12,13], 4, duplicates = 'drop')
+        self.assertIsInstance(c, Categorical)
+        self.assertTrue(sum(c._np - FA([2,2,2,2,2,2,2,2,2,2,3,3,3])) == 0)
+        self.assertTrue((c.category_array == [b'Clipped', b'1.0->2.0', b'2.0->13.0']).all())
 
 if __name__ == "__main__":
     tester = unittest.main()
