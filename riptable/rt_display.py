@@ -210,9 +210,10 @@ class DisplayTable(object):
             self._console_x, self._console_y = get_terminal_size()
             if self._console_x is None:
                 if DisplayTable.DebugMode: print("could not detect console size. using defaults.")
-                # check for html
+                # check for html or html-aware
                 if self._display_mode == DisplayDetectModes.HTML or self._display_mode == DisplayDetectModes.Jupyter:
                     self._console_x = self.options.CONSOLE_X_HTML
+                    self._console_y = self.options.CONSOLE_Y
                 else:
                     DisplayTable.FORCE_REPR = True
                     self._console_x = self.options.CONSOLE_X
