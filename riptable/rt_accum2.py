@@ -171,9 +171,9 @@ class Accum2(GroupByOps, FastArray):
         self.grouping = None
         del self._cat_cols
         del self._cat_rows
-        if self._dataset: del self._dataset
-        if self._gb_keychain: del self._gb_keychain
-        if self._ylabel: del self._ylabel
+        if self._dataset is not None: del self._dataset
+        if self._gb_keychain is not None: del self._gb_keychain
+        if self._ylabel is not None: del self._ylabel
 
     # ------------------------------------------------------------
     @property
