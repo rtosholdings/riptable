@@ -1322,7 +1322,7 @@ class Categorical(GroupByOps, FastArray):
 
     A python dictionary of integers to strings
 
-    >>> d = { 'StronglyAgree': 44, 'Agree': 133, 'Disagree': 75, 'StronglyDisagree': 1, 'NeitherAgreeNorDisagree': 144 }
+    >>> d = { 44: 'StronglyAgree', 133: 'Agree', 75: 'Disagree', 1: 'StronglyDisagree', 144: 'NeitherAgreeNorDisagree' }
     >>> codes = [1, 44, 44, 133, 75]
     >>> c = rt.Categorical(codes, d)
     >>> print(c)
