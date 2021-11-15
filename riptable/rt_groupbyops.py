@@ -1092,12 +1092,12 @@ class GroupByOps(object):
         return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_NANSUM, *args, func_param=(window), **kwargs)
 
     #---------------------------------------------------------------
-    def rolling_mean(self, *args, window=3, **kwargs):
+    def rolling_mean(self, *args, window, **kwargs):
         """rolling mean for each group
 
         Parameters
         ----------
-        window: optional, window size, defaults to 3
+        window: required, window size
 
         Returns
         -------
