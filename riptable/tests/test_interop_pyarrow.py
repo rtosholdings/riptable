@@ -178,7 +178,7 @@ class TestPyarrowConvertCategorical:
         if have_nulls:
             # pyarrow uses an INvalid mask (where True means null/NA).
             invalid_mask = indices % 7 == 3
-            pa_indices = pa.array(indices, mask=pa.array(invalid_mask))
+            pa_indices = pa.array(indices, mask=invalid_mask)
             pa_arr = pa.DictionaryArray.from_arrays(pa_indices, cat_labels, ordered=ordered)
         else:
             pa_arr = pa.DictionaryArray.from_arrays(indices, cat_labels, ordered=ordered)
