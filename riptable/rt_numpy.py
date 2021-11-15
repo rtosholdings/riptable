@@ -31,8 +31,9 @@ __all__ = [
 
 import sys
 import builtins
-from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence, Tuple, Union, Callable, Mapping
 import numpy as np
+from functools import wraps
 import inspect
 import warnings
 
@@ -45,6 +46,60 @@ if TYPE_CHECKING:
     from .rt_categorical import Categorical
     from .rt_fastarray import FastArray
     from .rt_struct import Struct
+    from .rt_dataset import Dataset
+
+
+def _is_array_container(arg):
+    return isinstance(arg, (tuple, list)) and not np.isscalar(arg[0])
+
+
+def _cast_to_fa(arr: Union[
+    np.ndarray,
+    List[np.ndarray],
+    Tuple[np.ndarray],
+    Mapping[str, np.ndarray],
+    "Dataset"
+]) -> Union["FastArray", List["FastArray"]]:
+    """
+    Helper for casting array inputs either as single arrays or collections
+     of arrays such as list, tuples or even Datasets.
+     2-D arrays are treated as lists of 'columns'.
+    """
+    if _is_array_container(arr):
+        arr = type(arr)(map(TypeRegister.FastArray, arr))
+    elif hasattr(arr, 'items'):
+        arr = [TypeRegister.FastArray(v) for k, v in arr.items()]
+    elif not np.isscalar(arr):
+        arr = TypeRegister.FastArray(arr)
+        if arr.ndim == 2:
+            arr = [arr[:, i] for i in range(arr.shape[1])]
+    return arr
+
+
+def _args_to_fast_arrays(*arg_names) -> Callable:
+    """
+    A decorator factory which allows use to cast specified inputs to FastArrays or collections
+    thereof.
+
+    Parameters
+    __________
+    arg_names: tuple[str]
+        Specifies the arguments to which we apply _cast_to_fa
+    """
+    def decorator(func):
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            signature = inspect.signature(func)
+            bound_args = signature.bind(*args, **kwargs)
+            for arg in arg_names:
+                bound_args.arguments[arg] = _cast_to_fa(bound_args.arguments[arg])
+            return func(*bound_args.args, **bound_args.kwargs)
+
+        return wrapper
+
+    return decorator
+
 
 #--------------------------------------------------------------
 def get_dtype(val):
@@ -650,6 +705,7 @@ def _ismember_align_multikey(a, b):
     return a, b
 
 
+@_args_to_fast_arrays('a', 'b')
 def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[int, 'FastArray'], 'FastArray']:
     """
     The ismember function is meant to mimic the ismember function in MATLab. It takes two sets of data
@@ -764,8 +820,11 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
         return b,f
 
     # a and b contain list like, probably a multikey
-    if (isinstance(a[0], (np.ndarray, list, tuple)) and
-        isinstance(b[0], (np.ndarray, list, tuple))):
+    a_is_multi, b_is_multi = _is_array_container(a), _is_array_container(b)
+    if a_is_multi or b_is_multi:
+        if not (a_is_multi and b_is_multi):
+            raise ValueError(
+                "ismember found a multi-key in exactly one argument, must be both or neither")
         is_multikey = True
 
     # different number of key columns
@@ -2906,7 +2965,9 @@ def interp(x, xp, fp):
         fp = fp.astype(np.float32)
     return rc.InterpExtrap2d(x, xp, fp, 1)
 
+
 #-------------------------------------------------------
+@_args_to_fast_arrays('x', 'xp', 'fp')
 def interp_extrap(x, xp, fp):
     """
     One-dimensional or two-dimensional linear interpolation without clipping.
@@ -2924,12 +2985,6 @@ def interp_extrap(x, xp, fp):
     * riptable version handles floats or doubles, wheras np is always a double
     * 2d mode is auto-detected based on `xp`/`fp`
     """
-    if not isinstance(xp, np.ndarray):
-        xp=TypeRegister.FastArray(xp)
-
-    if not isinstance(fp, np.ndarray):
-        fp=TypeRegister.FastArray(fp)
-
     return rc.InterpExtrap2d(x, xp, fp, 0)
 
 #-------------------------------------------------------

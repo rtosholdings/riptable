@@ -211,6 +211,31 @@ def test_ismember_categorical():
     # self.assertEqual("newcat", TypeRegister.Categorical._test_cat_ismember)
 
 
+def test_ismember_dataset():
+    ds = Dataset(dict(
+        cat=Categorical([1, 2, 3] * 3, ['a', 'b', 'c']),
+        ints=np.arange(9)
+    ))
+    indexer = [2, 4, 6]
+    bools, key = ismember(ds[indexer, :], ds)
+    assert bools.all()
+    assert_array_equal(key, indexer)
+
+    bools, key = ismember(ds[:3, :], ds[2:, :])
+    assert key.tolist() == [key.inv, key.inv, 0]
+
+
+def test_ismember_2d_array():
+    arr = np.arange(10).reshape(5, 2)
+    indexer = [2, 4]
+    bools, key = ismember(arr[indexer, :], arr)
+    assert bools.all()
+    assert_array_equal(key, indexer)
+
+    bools, key = ismember(arr[:3, :], arr[2:, :])
+    assert key.tolist() == [key.inv, key.inv, 0]
+
+
 class Ismember_Test(unittest.TestCase):
     # TODO: Convert this test to a module-level, pytest-style test.
     def test_ismember_categorical_numeric(self):
