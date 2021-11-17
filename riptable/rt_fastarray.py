@@ -3382,7 +3382,8 @@ class FastArray(np.ndarray):
                 # Convert this array to a pyarrow variable-length string array.
                 if type is None:
                     type = pa.string()
-                return pa.array(self._np, mask=invalids_mask, type=type)
+                # Convert to binaryarray then to stringarray to preserve length (riptable#249)
+                return pa.array(self._np, mask=invalids_mask).cast(type)
 
         elif np.issubdtype(self.dtype, str):
             # If the caller wants to convert empty strings to nulls, get a mask of invalids.
