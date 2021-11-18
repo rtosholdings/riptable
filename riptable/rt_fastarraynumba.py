@@ -1,21 +1,25 @@
-__all__ = ['fill_forward', 'fill_backward']
+__all__ = [
+    'fill_forward', 'fill_backward'
+]
 
 #---------------------------------------------------------------------
 # This file is for numba routines that work on numpy arrays
 # It is different from CPP routines in the riptide_cpp module
 # Others are encouraged to add
 #
+from typing import Optional, Union
+import warnings
+
 import numpy as np
 import numba as nb
-import warnings
-from typing import Optional, Union
 
+from .config import get_global_settings
 from .rt_enum import INVALID_DICT
 from .rt_fastarray import FastArray
 from .rt_numpy import empty_like
 
 #-----------------------------------------------------
-@nb.jit(cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_forward_float(arr, fill_val, limit):
     lastgood = fill_val
     if limit <= 0:
@@ -38,7 +42,7 @@ def fill_forward_float(arr, fill_val, limit):
                 lastgood = arr[idx]
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_forward_int(arr, inv, fill_val, limit):
     lastgood = fill_val
     if limit <= 0:
@@ -62,7 +66,7 @@ def fill_forward_int(arr, inv, fill_val, limit):
 
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_backward_float(arr, fill_val, limit):
     lastgood = fill_val
     if limit <= 0:
@@ -85,7 +89,7 @@ def fill_backward_float(arr, fill_val, limit):
                 lastgood = arr[idx]
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_backward_int(arr, inv, fill_val, limit):
     lastgood = fill_val
     if limit <= 0:
@@ -250,7 +254,7 @@ def fill_backward(arr: np.ndarray, fill_val=None, inplace:bool=False, limit:int=
     return arr
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummin_int(arr: np.ndarray, ret: np.ndarray, inv, skipna):
     if skipna:
         for j in range(len(arr)):
@@ -273,7 +277,7 @@ def nb_cummin_int(arr: np.ndarray, ret: np.ndarray, inv, skipna):
             ret[i]=running_min
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummin_float(arr: np.ndarray, ret: np.ndarray, skipna):
     if skipna:
         for j in range(len(arr)):
@@ -297,7 +301,7 @@ def nb_cummin_float(arr: np.ndarray, ret: np.ndarray, skipna):
 
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummax_int(arr: np.ndarray, ret: np.ndarray, inv, skipna):
     if skipna:
         for j in range(len(arr)):
@@ -320,7 +324,7 @@ def nb_cummax_int(arr: np.ndarray, ret: np.ndarray, inv, skipna):
             ret[i]=running_max
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummax_float(arr: np.ndarray, ret: np.ndarray, skipna):
     if skipna:
         for j in range(len(arr)):
@@ -421,7 +425,7 @@ def cummin(arr: np.ndarray, skipna=True):
 
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_ema_decay_with_filter_and_reset(arr, dest, time, decayRate,  filter, resetmask):
     lastEma = 0
     lastTime = 0
@@ -441,7 +445,7 @@ def nb_ema_decay_with_filter_and_reset(arr, dest, time, decayRate,  filter, rese
         dest[i] = lastEma
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_ema_decay_with_filter(arr, dest, time, decayRate, filter):
     lastEma = 0
     lastTime = 0
@@ -457,7 +461,7 @@ def nb_ema_decay_with_filter(arr, dest, time, decayRate, filter):
         dest[i] = lastEma
 
 #-----------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_ema_decay(arr, dest, time, decayRate):
     lastEma = 0.0
     lastTime = 0

@@ -193,7 +193,7 @@ class FAString(FastArray):
 
         default signature must match
 
-        @nb.jit(nopython=True, cache=True)
+        @nb.njit(cache=get_global_settings().enable_numba_cache, nogil=True)
         def nb_upper(src, itemsize, dest):
 
         src: is uint array
@@ -208,9 +208,9 @@ class FAString(FastArray):
         Example:
         -------
         import numba as nb
-        @nb.jit(nopython=True, cache=True)
+        @nb.njit(cache=get_global_settings().enable_numba_cache, nogil=True)
         def nb_upper(src, itemsize, dest):
-            for i in range(len(src) / itemsize):
+            for i in nb.prange(len(src) / itemsize):
                 rowpos = i * itemsize
                 for j in range(itemsize):
                     c=src[rowpos+j]
@@ -463,7 +463,7 @@ class FAString(FastArray):
         --------
         >>> FAString(['this','that','test']).upper
         FastArray(['THIS','THAT','TEST'], dtype='<U4')
-        
+
         '''
         return self._apply_func(self.nb_upper, self.nb_upper_par)
 
@@ -564,7 +564,7 @@ class FAString(FastArray):
         Parameters
         ----------
         str2 - a string with one or more characters to search for
-        
+
         Examples
         --------
         >>> FAString(['this  ','that ','test']).index_any_of('ia')
@@ -594,7 +594,7 @@ class FAString(FastArray):
         Parameters
         ----------
         str2 - a string with one or more characters to search for
-        
+
         Examples
         --------
         >>> FAString(['this  ','that ','test']).index('at')
@@ -625,7 +625,7 @@ class FAString(FastArray):
         Parameters
         ----------
         str2 - a string with one or more characters to search for
-        
+
         Examples
         --------
         >>> FAString(['this  ','that ','test']).contains('at')
@@ -655,7 +655,7 @@ class FAString(FastArray):
         Parameters
         ----------
         str2 - a string with one or more characters to search for
-        
+
         Examples
         --------
         >>> FAString(['this  ','that ','test']).startswith('thi')
@@ -681,7 +681,7 @@ class FAString(FastArray):
         Parameters
         ----------
         str2 - a string with one or more characters to search for
-        
+
         Examples
         --------
         >>> FAString(['abab','ababa','abababb']).endswith('ab')
