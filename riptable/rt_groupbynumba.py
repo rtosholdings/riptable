@@ -2,7 +2,8 @@ __all__ = ['GroupbyNumba' ]
 
 import numpy as np
 import numba as nb
-from .rt_fastarray import FastArray
+
+from .config import get_global_settings
 from .rt_numpy import empty_like, empty
 from .rt_enum import TypeRegister, GB_FUNC_NUMBA, GB_PACKUNPACK, GB_FUNCTIONS, INVALID_DICT
 from .rt_groupbyops import GroupByOps
@@ -16,7 +17,7 @@ from .rt_groupbyops import GroupByOps
 #
 # See Table at end
 #-------------------------------------------------------------------------------------------------
-@nb.jit(nopython=True, cache=True)
+@nb.njit(cache=get_global_settings().enable_numba_cache, nogil=True)
 def build_core_list(cores, unique_rows, binLow, binHigh):
         dividend = unique_rows // cores
         remainder = unique_rows % cores
@@ -47,12 +48,12 @@ class GroupbyNumba(GroupByOps):
 
     #-------------------------------------------------------------------------------------------------
     def _nb_groupbycalculateall(
-        values, 
-        ikey, 
-        unique_rows, 
-        funcList, 
-        binLowList, 
-        binHighList, 
+        values,
+        ikey,
+        unique_rows,
+        funcList,
+        binLowList,
+        binHighList,
         func_param):
         results= []
 
@@ -63,7 +64,7 @@ class GroupbyNumba(GroupByOps):
         binHigh = np.empty(corecount, dtype=np.int32)
 
         build_core_list(corecount, unique_rows, binLow, binHigh)
-        
+
         for funcnum, inputdata in zip(funcList, values):
             nbrev = NUMBA_REVERSE_TABLE[funcnum]
 
@@ -78,7 +79,7 @@ class GroupbyNumba(GroupByOps):
             else:
                 dtype = dtypefunc(inputdata.dtype)
 
-            # allocate for numba 
+            # allocate for numba
             ret = empty( unique_rows, dtype=dtype)
 
             nbfunc(ikey, unique_rows, binLow, binHigh, inputdata, ret, *func_param)
@@ -92,8 +93,8 @@ class GroupbyNumba(GroupByOps):
         values,     # list of arrays (the data to be calculated)
         ikey,       # bin numbers (integer array)
         iGroup,     # used to go over
-        iFirstGroup, 
-        nCountGroup, 
+        iFirstGroup,
+        nCountGroup,
         unique_rows, # often the same as len(iFirstGroup)
         funcList,    # support aggregation
         binLowList,  # start bin to work on for prange
@@ -117,7 +118,7 @@ class GroupbyNumba(GroupByOps):
             else:
                 dtype = dtypefunc(inputdata.dtype)
 
-            # allocate for numba 
+            # allocate for numba
             ret = empty( len(inputdata), dtype=dtype)
 
             #print("sending data", inputdata)
@@ -125,9 +126,9 @@ class GroupbyNumba(GroupByOps):
             nbfunc(iGroup, iFirstGroup, nCountGroup, binLowList[0], binHighList[0], inputdata, ret, *func_param)
             results.append(ret)
         return results
-    
+
     #-------------------------------------------------------------------------------------------------
-    @nb.jit(parallel=True, nopython=True, cache=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbasum(ikey, unique_rows, binLow, binHigh, data, ret):
         datacount = len(ikey)
 
@@ -150,7 +151,7 @@ class GroupbyNumba(GroupByOps):
                     ret[grpIdx] += data[index]
 
     #-------------------------------------------------------------------------------------------------
-    @nb.jit(parallel=True, cache=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbamin(ikey, unique_rows, binLow, binHigh, data, ret):
         inv = INVALID_DICT[ret.dtype.num]
         datacount = len(ikey)
@@ -177,7 +178,7 @@ class GroupbyNumba(GroupByOps):
 
 
     #-------------------------------------------------------------------------------------------------
-    @nb.jit(parallel=True, nopython=True, cache=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbaEMA(iGroup, iFirstGroup, nCountGroup, binLow, binHigh, data, ret, time, decayRate):
         for grpIdx in nb.prange(binLow, binHigh):
             start = iFirstGroup[grpIdx]
@@ -198,19 +199,19 @@ class GroupbyNumba(GroupByOps):
                 ret[rowIdx]=lastEma
 
     #-------------------------------------------------------------------------------------------------#
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbaEMA2(iGroup, iFirstGroup, nCountGroup, data, ret, time, decayRate):
         '''
         For each group defined by the grouping arguments, sets 'ret' to a true EMA of the 'data'
         argument using the time argument as the time and the 'decayRate' as the decay rate.
-    
+
         Arguments:
         iGroup, iFirstGroup, nCountGroup:  from a groupby object's 'get_groupings' method
         data:  the original data to be opperated on
         ret:  a blank array the same size as 'data' which will return the processed data
         time: a list of times associated to the rows of data
         decayRate: the decay rate (e based)
-    
+
         TODO:  Error checking.
         '''
         for grpIdx in nb.prange(1, iFirstGroup.shape[0]):
@@ -218,7 +219,7 @@ class GroupbyNumba(GroupByOps):
             nInGrp = nCountGroup[grpIdx]
             endIdx = startIdx + nInGrp
             rowIdx = iGroup[startIdx : endIdx]
-        
+
             if nInGrp > 0:
                 rows = data[ rowIdx ]
                 times = time[ rowIdx ]
@@ -235,19 +236,19 @@ class GroupbyNumba(GroupByOps):
                         pTime = t
                         pEMA = totalValues / totalWeight
                     rows[idx] = pEMA
-                
+
                 ret[rowIdx] = rows
         return
 
 
     ### Trim (an example which returns a dataset the same size as the original) ###
     #-------------------------------------------------------------------------------------------------#
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbaTrim(iGroup, iFirstGroup, nCountGroup, data, ret,   x, y):
         '''
         For each group defined by the grouping arguments, sets 'ret' to be a copy of the 'data'
         with elements below the 'x'th percentile or above the 'y'th percentile of the group set to nan.
-    
+
         Arguments:
         iGroup, iFirstGroup, nCountGroup:  from a groupby object's 'get_groupings' method
         data:  the original data to be opperated on
@@ -271,21 +272,21 @@ class GroupbyNumba(GroupByOps):
         '''
         For each column, for each group, determine the x'th and y'th percentile of the data
         and set data below the x'th percentile or above the y'th percentile to nan.
-    
+
         Arguments:
         grp:  a groupby object
         x:  lower percentile
         y:  uppper percentile
-    
+
         Return:  a dataset with the values outside the given percentiles set to np.nan
-    
+
         TODO:  Test column types to make sure that the numba code will work nicely
         '''
         g = grp.get_groupings()
         iGroup = g['iGroup']
         iFirstGroup = g['iFirstGroup']
         nCountGroup = g['nCountGroup']
-    
+
         #retData = rt.Dataset(tmp.grp.gbkeys)
         retData = grp._dataset[ list(grp.gbkeys.keys()) ]
         for colName in grp._dataset:
@@ -298,7 +299,7 @@ class GroupbyNumba(GroupByOps):
 
     # FillForward
     #-------------------------------------------------------------------------------------------------#
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbaFillForward(iGroup, iFirstGroup, nCountGroup, data, ret):
         '''
         propogate forward non-NaN values within a group, overwriting NaN values.
@@ -309,7 +310,7 @@ class GroupbyNumba(GroupByOps):
             endIdx = startIdx + nCountGroup[grpIdx]
             rowIdx = iGroup[startIdx : endIdx]
             rows = data[rowIdx]
-        
+
             fill = np.nan
             for idx in range(rows.shape[0]):
                 if np.isnan(rows[idx]):
@@ -319,7 +320,7 @@ class GroupbyNumba(GroupByOps):
             ret[rowIdx] = rows
         return
 
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbaFillBackward(iGroup, iFirstGroup, nCountGroup, data, ret):
         '''
         propogate backward non-NaN values within a group, overwriting NaN values.
@@ -330,7 +331,7 @@ class GroupbyNumba(GroupByOps):
             endIdx = startIdx + nCountGroup[grpIdx]
             rowIdx = iGroup[startIdx : endIdx]
             rows = data[ rowIdx ]
-        
+
             fill = np.nan
             for idx in range(rows.shape[0]):
                 if np.isnan(rows[-idx-1]):
@@ -349,7 +350,7 @@ class GroupbyNumba(GroupByOps):
         iGroup = g['iGroup']
         iFirstGroup = g['iFirstGroup']
         nCountGroup = g['nCountGroup']
-    
+
         #retData = rt.Dataset(tmp.grp.gbkeys)
         retData = grp._dataset[ list(grp.gbkeys.keys()) ]
         for colName in grp._dataset:
@@ -368,7 +369,7 @@ class GroupbyNumba(GroupByOps):
         iGroup = g['iGroup']
         iFirstGroup = g['iFirstGroup']
         nCountGroup = g['nCountGroup']
-    
+
         #retData = rt.Dataset(tmp.grp.gbkeys)
         retData = grp._dataset[ list(grp.gbkeys.keys()) ]
         for colName in grp._dataset:
@@ -387,7 +388,7 @@ class GroupbyNumba(GroupByOps):
         iGroup = g['iGroup']
         iFirstGroup = g['iFirstGroup']
         nCountGroup = g['nCountGroup']
-    
+
         #retData = rt.Dataset(tmp.grp.gbkeys)
         retData = grp._dataset[ list(grp.gbkeys.keys()) ]
         for colName in grp._dataset:

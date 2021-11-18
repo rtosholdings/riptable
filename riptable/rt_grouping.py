@@ -20,6 +20,7 @@ import numpy as np
 import numba as nb
 import riptide_cpp as rc
 
+from .config import get_global_settings
 from .rt_numpy import (
     arange,
     combine_accum1_filter, combine_accum2_filter, combine_filter, combine2keys,
@@ -2640,7 +2641,7 @@ class Grouping:
                         pass
                         # TJD future speed ups will use a numba loop such as below
                         #import numba as nb
-                        #@nb.jit(parallel=True, nopython=True)
+                        #@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
                         #def _numba_nonreduce2_1(userfunc, ifirst, ncount, in1, in2, kwarg1):
                         #    for i in nb.prange(1, ifirst.shape[0]):
                         #        first=ifirst[i]
@@ -2648,7 +2649,7 @@ class Grouping:
                         #        # call the user func with one or more input arrays, one or more output arrays, any additional args, kwargs
                         #        userfunc(in1[first:last], in2[first:last], kwarg1)
 
-                        #@nb.jit(parallel=True, nopython=True)
+                        #@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
                         #def _numba_nonreduce2_2(userfunc, ifirst, ncount, in1, in2, kwarg1, kwarg2):
                         #    for i in nb.prange(1, ifirst.shape[0]):
                         #        first=ifirst[i]
@@ -2656,7 +2657,7 @@ class Grouping:
                         #        # call the user func with one or more input arrays, one or more output arrays, any additional args, kwargs
                         #        userfunc(in1[first:last], in2[first:last], kwarg1, kwarg2)
 
-                        #@nb.jit(parallel=True, nopython=True)
+                        #@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
                         #def _numba_nonreduce3_1(userfunc, ifirst, ncount, in1, in2, in3, kwarg1):
                         #    for i in nb.prange(1, ifirst.shape[0]):
                         #        first=ifirst[i]
@@ -2664,7 +2665,7 @@ class Grouping:
                         #        # call the user func with one or more input arrays, one or more output arrays, any additional args, kwargs
                         #        userfunc(in1[first:last], in2[first:last], in3[first:last], kwarg1)
 
-                        #@nb.jit(parallel=True, nopython=True)
+                        #@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
                         #def _numba_nonreduce3_2(userfunc, ifirst, ncount, in1, in2, in3, kwarg1, kwarg2):
                         #    for i in nb.prange(1, ifirst.shape[0]):
                         #        first=ifirst[i]
