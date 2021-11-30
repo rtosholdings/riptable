@@ -5256,7 +5256,7 @@ class Dataset(Struct):
             mdata[col] = np.tile(id_data._np,K)
 
         mdata[var_name] = FastArray(list(tempdict.keys())).repeat(N)
-        mdata[value_name] = hstack(tempdict.values())
+        mdata[value_name] = hstack(list(tempdict.values()))
         if trim:
             goodmask = ~mdata[value_name].isnanorzero()
             mdata=mdata[goodmask,:]
