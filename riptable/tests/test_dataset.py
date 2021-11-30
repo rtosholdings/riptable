@@ -1032,6 +1032,18 @@ class TestDataset(unittest.TestCase):
         )
         self.assertTrue((tm2 == tm2t).all(axis=None))
 
+    def test_melt_datetimenano(self):
+        ds = Dataset({'A': ['a', 'b', 'c'],
+            't':rt.DateTimeNano(['20200925 10:00','20200926 10:00','20200927 10:00'], from_tz='NYC')})
+        ds['t1'] = ds['t'] + 1e9 * 60
+        ds['t2'] = ds['t'] + 1e9 * 60 * 2
+        tm0 = Dataset({'A': ['a', 'b', 'c', 'a', 'b', 'c', 'a','b', 'c'],
+            'variable': ['t', 't', 't', 't1', 't1', 't1', 't2', 't2', 't2'],
+            'value': rt.DateTimeNano(['20200925 10:00','20200926 10:00','20200927 10:00','20200925 10:01','20200926 10:01','20200927 10:01','20200925 10:02','20200926 10:02','20200927 10:02'], from_tz='NYC')})
+        tm0t = ds.melt(id_vars=['A'])
+        result = (tm0 == tm0t)
+        self.assertTrue(result.all(axis=None))
+
     def test_pivot(self):
         pass
 
