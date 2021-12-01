@@ -27,9 +27,11 @@ from typing import List
 import numpy as np
 from numpy.random import default_rng
 import numba as nb
+
 from .benchmark import _timestamp_funcs
 from .rand_data import rand_array, rand_fancyindex
 from .runner import create_comparison_dataset, create_trial_dataset
+from ..config import get_global_settings
 from ..rt_enum import TypeRegister, NumpyCharTypes
 from ..rt_dataset import Dataset
 from ..rt_numpy import empty
@@ -113,7 +115,10 @@ def _mbget_numeric(aValues, aIndex) -> np.ndarray:
     return result
 
 
-@nb.njit(cache=True, parallel=True, nogil=True)
+numba_parallel = nb.njit(cache=get_global_settings().enable_numba_cache, parallel=True, nogil=True)
+
+
+@numba_parallel
 def _mbget_numeric_signed_impl(aValues, aIndex, result, default_val):
     num_elmnts = len(aValues)
     for i in nb.prange(aIndex.shape[0]):
@@ -125,7 +130,7 @@ def _mbget_numeric_signed_impl(aValues, aIndex, result, default_val):
         result[i] = aValues[index] if -num_elmnts <= index < num_elmnts else default_val
 
 
-@nb.njit(cache=True, parallel=True, nogil=True)
+@numba_parallel
 def _mbget_numeric_unsigned_impl(aValues, aIndex, result, default_val):
     num_elmnts = len(aValues)
     for i in nb.prange(aIndex.shape[0]):
@@ -153,7 +158,7 @@ def _mbget_string(aValues, aIndex) -> np.ndarray:
     return result
 
 
-@nb.njit(cache=True, parallel=True, nogil=True)
+@numba_parallel
 def _mbget_string_signed_impl(aValues, aIndex, result, itemsize):  # byte array
     numstrings = aValues.shape[0] // itemsize
     for i in nb.prange(aIndex.shape[0]):
@@ -168,7 +173,7 @@ def _mbget_string_signed_impl(aValues, aIndex, result, itemsize):  # byte array
                 result[itemsize * i + j] = 0
 
 
-@nb.njit(cache=True, parallel=True, nogil=True)
+@numba_parallel
 def _mbget_string_unsigned_impl(aValues, aIndex, result, itemsize):  # byte array
     numstrings = aValues.shape[0] // itemsize
     for i in nb.prange(aIndex.shape[0]):
@@ -194,7 +199,7 @@ def astype_numba(arr, dst_dtype):
 # numba seems to emit poor quality code for this simple loop, and the performance is
 # massively worse when parallel=True is specified. (Tested with numba 0.48, 0.50.1)
 # Manually splitting the loop so the input data is chunked does not improve the performance either.
-@nb.njit(cache=True, parallel=False, nogil=True)
+@numba_parallel
 def _astype_numba(arr, result):
     for i in nb.prange(len(arr)):
         # conversion occurs implicitly, and numba only supports conversion
