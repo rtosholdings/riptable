@@ -21,8 +21,9 @@ class TestPyarrowConvertFastArray:
         pytest.param(rt.FA([-120, rt.int8.inv, -1, 0, 1, 101, 127], dtype=np.int8), id='int8'),
         pytest.param(rt.FA([0.01, -0.0, np.nan, 1e10, -1e10, np.inf, np.pi], dtype=np.float32), id='float32'),
         # bool
-        # ascii string
-        # unicode string
+        pytest.param(rt.FA([b'ABC', b'abcde'], dtype='S'), id='ascii'),
+        #FAILS# pytest.param(rt.FA(['ABC', 'abcde'], unicode=True), id='unicode'),
+        pytest.param(rt.FA(['A\u1F600C', 'abcde'], unicode=True), id='unicode 2'),
     ])
     def test_roundtrip_rt_pa_rt(self, rt_farr: rt.FastArray) -> None:
         """Test round-tripping from rt.FastArray to pyarrow.Array and back."""
@@ -30,6 +31,21 @@ class TestPyarrowConvertFastArray:
         result_farr = rt.FastArray.from_arrow(result_pa_arr, zero_copy_only=False)
         assert_array_equal(rt_farr, result_farr)
 
+    @pytest.mark.parametrize(('rt_farr',), [
+        pytest.param(rt.FA([b'ABC', b'abcde'], dtype='S'), id='ascii'),
+        pytest.param(rt.FA(['ABC', 'abcde'], unicode=True), id='unicode'),
+        pytest.param(rt.FA(['A\u1F600C', 'abcde'], unicode=True), id='unicode 2'),
+    ])
+    def test_rt_pa_str(self, rt_farr: rt.FastArray) -> None:
+        """Test round-tripping from rt.FastArray to pyarrow.Array and back."""
+        result_pa_arr = rt_farr.to_arrow()
+        result_list = result_pa_arr.to_pylist()
+        assert len(rt_farr) == len(result_list)
+        for i in range(len(rt_farr)):
+            str_farr = rt_farr[i]
+            str_result = result_list[i]
+            assert len(str_farr) == len(str_result)
+            #TODO: add contents check; frustratingly difficult to do this generically
 
 class TestPyarrowConvertDate:
     @pytest.mark.parametrize(('rt_date_arr',), [
