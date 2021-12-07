@@ -4939,7 +4939,7 @@ class Categorical(GroupByOps, FastArray):
         Called when a Categorical is deleted.
         """
         # python has trouble deleting objects with circular references
-        del self._categories_wrap
+        if hasattr(self, '_categories_wrap'): del self._categories_wrap
         self._grouping = None
 
     # ------------------------------------------------------------
