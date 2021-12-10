@@ -2216,27 +2216,74 @@ def round(*args,**kwargs):
         return np.round(*args, **kwargs)
     return builtins.round(a)
 
+def _np_keyword_wrapper(filter = None, dtype = None, **kwargs):
+
+    if dtype is not None:
+        kwargs['dtype'] = dtype
+    if filter is not None:
+        kwargs['filter'] = filter
+
+    return kwargs
+
 #-------------------------------------------------------
-def sum(*args,**kwargs):
-    """
-    This will check for numpy array first and call np.sum
-    otherwise use builtin
-    for instance c={1,2,3} and sum(c) should work also
-    """
+def sum(*args,filter = None, dtype = None,**kwargs):
+    '''
+    Computes the sum of the first argument. For example
+    >>> a = rt.FastArray( [1,2,3])
+    >>> rt.sum(a)
+    6
+
+    If possible, rt.sum(x, *args) calls x.sum(*args). If possible, look there for
+    documentation. In particular, rt.sum(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the mean. For example,
+    >>> a = rt.FastArray( [1,3,5,7])
+    >>> b = rt.FastArray( [False, True, False, True,True] )
+    >>> rt.sum(a, filter = b)
+    10
+    If the filter is uniformly False, this will return 0.
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.sum(dtype = my_type) is equivalent to my_type( x.sum() ).
+    '''
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
-    if isinstance(args[0], np.ndarray):
+    if hasattr(args[0], 'sum'):
         return args[0].sum(*args[1:], **kwargs)
     return builtins.sum(*args,**kwargs)
 
 #-------------------------------------------------------
-def nansum(*args, **kwargs):
-    """
-    This will check for numpy array first and call np.sum
-    otherwise use builtin
-    for isntance c={1,2,3} and sum(c) should work also
-    """
+def nansum(*args, filter = None, dtype = None,  **kwargs):
+    '''
+    Computes the sum of the first argument ignoring NaNs. For example
+    >>> a = rt.FastArray( [1,2,3,rt.nan])
+    >>> rt.nansum(a)
+    6.0
+
+    If possible, rt.nansum(x, *args) calls x.nansum(*args). If possible, look there for
+    documentation. In particular, rt.nansum(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the mean. For example,
+    >>> a = rt.FastArray( [1,3,5,7,rt.nan])
+    >>> b = rt.FastArray( [False, True, False, True,True] )
+    >>> rt.nansum(a, filter = b)
+    10.0
+    If the filter is uniformly False, this will return 0.
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.nansum(dtype = my_type) is equivalent to my_type( x.nansum() ).
+    '''
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
-    if isinstance(args[0], np.ndarray):
+    if hasattr(args[0], 'nansum'):
         return args[0].nansum(*args[1:], **kwargs)
     return np.nansum(*args, **kwargs)
 
@@ -2406,15 +2453,64 @@ def nanmax(*args, **kwargs):
 
 
 #-------------------------------------------------------
-def mean(*args, **kwargs):
+def mean(*args, filter = None, dtype = None, **kwargs):
+    '''
+    Computes the arithmetic mean of the first argument. For example
+    >>> a = rt.FastArray( [1,2,3,4])
+    >>> rt.mean(a)
+    2.5
+
+    If possible, rt.mean(x, *args) calls x.mean(*args). If possible, look there for
+    documentation. In particular, rt.mean(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the mean. For example,
+    >>> a = rt.FastArray( [1,3,5,7])
+    >>> b = rt.FastArray( [False, True, False, True] )
+    >>> rt.mean(a, filter = b)
+    5
+    If the filter is uniformly False, this will return 0.
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.mean(dtype = my_type) is equivalent to my_type( x.mean() ).
+    '''
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].mean(**kwargs)
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
+    if hasattr(args[0],'mean'): return args[0].mean(**kwargs)
     return np.mean(*args, **kwargs)
 
 #-------------------------------------------------------
-def nanmean(*args, **kwargs):
+def nanmean(*args, filter = None, dtype = None, **kwargs):
+    '''
+    Computes the arithmetic mean of the first argument, ignoring NaNs.
+    For example
+    >>> a = rt.FastArray( [1,2,3,rt.nan])
+    >>> rt.mean(a)
+    2
+
+    If possible, rt.nanmean(x, *args) calls x.nanmean(*args). If possible, look there for
+    documentation. In particular, rt.nanmean(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the nanmean. For example,
+    >>> a = rt.FastArray( [1,3,5,rt.nan])
+    >>> b = rt.FastArray( [False, True, False, True] )
+    >>> rt.mean(a, filter = b)
+    3
+    If the filter is uniformly False, this will return 0.
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.nanmean(dtype = my_type) is equivalent to my_type( x.nanmean() ).
+    '''
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanmean(**kwargs)
+    if hasattr(args[0],'nanmean'): return args[0].nanmean(**kwargs)
     return np.nanmean(*args, **kwargs)
 
 #-------------------------------------------------------
@@ -2430,27 +2526,140 @@ def nanmedian(*args, **kwargs):
     return np.nanmedian(*args, **kwargs)
 
 #-------------------------------------------------------
-def var(*args, **kwargs):
+def var(*args, filter = None, dtype = None, **kwargs):
+    '''
+    Computes the variance of the first argument. Uses the convention that ddof = 1 unlike
+    numpy, meaning the variance of [x_1, ... , x_n] is defined by
+    var = 1/(n-1) * sum( x_i - mean )**2.
+    (Note the n-1 instead of n).
+
+    For example
+    >>> a = rt.FastArray( [1,2,3])
+    >>> rt.var(a)
+    1.0
+
+    If possible, rt.var(x, *args) calls x.var(*args). If possible, look there for
+    documentation. In particular, rt.var(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the variance calculation. For example,
+    >>> a = rt.FastArray( [1,3,5,7])
+    >>> b = rt.FastArray( [False, True, False, True] )
+    >>> rt.var(a, filter = b)
+    8.0
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.var(dtype = my_type) is equivalent to my_type( x.var() ).
+    '''
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].var(**kwargs)
+    if hasattr(args[0],'var'): return args[0].var(**kwargs)
     return builtins.var(*args, **kwargs)
 
 #-------------------------------------------------------
-def nanvar(*args, **kwargs):
+def nanvar(*args, filter = None, dtype = None, **kwargs):
+    '''
+    Computes the variance of the first argument ignoring NaNs. Uses the convention that
+    ddof = 1 unlike numpy, meaning the variance of [x_1, ... , x_n] is defined by
+    var = 1/(n-1) * sum( x_i - mean )**2.
+    (Note the n-1 instead of n).
+
+    For example
+    >>> a = rt.FastArray( [1,2,3, rt.nan])
+    >>> rt.var(a)
+    1.0
+
+    If possible, rt.nanvar(x, *args) calls x.nanvar(*args). If possible, look there for
+    documentation. In particular, rt.nanvar(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the variance calculation. For example,
+    >>> a = rt.FastArray( [1,3,5,7, rt.nan])
+    >>> b = rt.FastArray( [False, True, False, True, True] )
+    >>> rt.nanvar(a, filter = b)
+    8.0
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.nanvar(dtype = my_type) is equivalent to my_type( x.nanvar() ).
+    '''
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanvar(**kwargs)
+    if hasattr(args[0],'nanvar'): return args[0].nanvar(**kwargs)
     return np.nanvar(*args, **kwargs)
 
 #-------------------------------------------------------
-def std(*args, **kwargs):
+def std(*args, filter = None, dtype = None, **kwargs):
+    '''
+    Computes the standard deviation of the first argument. Uses the convention that
+    ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n] is defined by
+    std**2 = 1/(n-1) * sum( x_i - mean )**2.
+    (Note the n-1 instead of n).
+
+    For example
+    >>> a = rt.FastArray( [1,2,3])
+    >>> rt.std(a)
+    1.0
+
+    If possible, rt.std(x, *args) calls x.std(*args). If possible, look there for
+    documentation. In particular, rt.std(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the variance calculation. For example,
+    >>> a = rt.FastArray( [1,3,5,7])
+    >>> b = rt.FastArray( [False, True, False, True] )
+    >>> rt.std(a, filter = b)
+    2.8284271247461903
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.std(dtype = my_type) is equivalent to my_type( x.std() ).
+    '''
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].std(**kwargs)
+    if hasattr(args[0],'std'): return args[0].std(**kwargs)
     return builtins.var(*args, **kwargs)
 
 #-------------------------------------------------------
-def nanstd(*args, **kwargs):
+def nanstd(*args, filter = None, dtype = None, **kwargs):
+    '''
+    Computes the standard deviation of the first argument ignoring NaNs. Uses
+    the convention that ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n]
+    is defined by
+    std**2 = 1/(n-1) * sum( x_i - mean )**2.
+    (Note the n-1 instead of n).
+
+    For example
+    >>> a = rt.FastArray( [1,2,3,rt.nan])
+    >>> rt.nanstd(a)
+    1.0
+
+    If possible, rt.nanstd(x, *args) calls x.nanstd(*args). If possible, look there for
+    documentation. In particular, rt.nanstd(x) may NOT accept a filter argument, depending
+    on the type of x. If x is a FastArray, then mean accepts the following keywords.
+
+    filter : array of bool, optional
+    Specifies which elements to include in the variance calculation. For example,
+    >>> a = rt.FastArray( [1,3,5,7,rt.nan])
+    >>> b = rt.FastArray( [False, True, False, True, True] )
+    >>> rt.nanstd(a, filter = b)
+    2.8284271247461903
+
+
+    dtype : optional
+    What datatype should the result be returned as. For a FastArray x,
+    x.nanstd(dtype = my_type) is equivalent to my_type( x.nanstd() ).
+    '''
+    kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
-    if isinstance(args[0],np.ndarray): return args[0].nanstd(**kwargs)
+    if hasattr(args[0],'nanstd'): return args[0].nanstd(**kwargs)
     return np.nanstd(*args, **kwargs)
 
 #-------------------------------------------------------
@@ -3316,8 +3525,7 @@ def _FixupDocStrings():
             npdoc = npdict[funcs[0]].__doc__
             if npdoc is not None:
                 if funcs[1].__doc__ is None:
-                    funcs[1].__doc__ = ''
-                funcs[1].__doc__ += npdoc
+                    funcs[1].__doc__ = npdoc
 
             # old, only uses numpy docstring
             #funcs[1].__doc__ = npdict[funcs[0]].__doc__
