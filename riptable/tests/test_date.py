@@ -62,30 +62,30 @@ class Date_Test(unittest.TestCase):
             self.assertEqual(d.month[0], 1)
 
     def test_constructor_string(self):
-        yeardays = [46, 365, 158]
-        months = [2, 12, 6]
-        years = [2016, 2017, 2018]
-        d = Date(['2016-02-15', '2017-12-31', '2018-06-07'])
+        yeardays = [46, 365, 158, 331]
+        months = [2, 12, 6, 11]
+        years = [2016, 2017, 2018, 2099]
+        d = Date(['2016-02-15', '2017-12-31', '2018-06-07', '2099-11-27'])
         self.assertTrue(isinstance(d, Date))
         self.assertTrue(bool(np.all(yeardays == d.day_of_year)))
         self.assertTrue(bool(np.all(months == d.month)))
         self.assertTrue(bool(np.all(years == d.year)))
 
     def test_constructor_format(self):
-        yeardays = [46, 365, 158]
-        months = [2, 12, 6]
-        years = [2016, 2017, 2018]
-        d = Date(['02_15_2016', '12_31_2017', '06_07_2018'], format='%m_%d_%Y')
+        yeardays = [46, 365, 158, 331]
+        months = [2, 12, 6, 11]
+        years = [2016, 2017, 2018, 2099]
+        d = Date(['02_15_2016', '12_31_2017', '06_07_2018', '11_27_2099'], format='%m_%d_%Y')
         self.assertTrue(isinstance(d, Date))
         self.assertTrue(bool(np.all(yeardays == d.day_of_year)))
         self.assertTrue(bool(np.all(months == d.month)))
         self.assertTrue(bool(np.all(years == d.year)))
 
     def test_constructor_categorical(self):
-        yeardays = [46, 365, 158]
-        months = [2, 12, 6]
-        years = [2016, 2017, 2018]
-        c = Categorical(['2016-02-15', '2017-12-31', '2018-06-07'])
+        yeardays = [46, 365, 158, 331]
+        months = [2, 12, 6, 11]
+        years = [2016, 2017, 2018, 2099]
+        c = Categorical(['2016-02-15', '2017-12-31', '2018-06-07', '2099-11-27'])
         d = Date(c)
         self.assertTrue(isinstance(d, Date))
         self.assertTrue(bool(np.all(yeardays == d.day_of_year)))
@@ -395,9 +395,9 @@ class Date_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_leapyear(self):
-        d = Date.range('1992-06-01', '2031-06-01', step=365)
+        d = Date.range('1992-06-01', '2095-06-01', step=365)
         result = d.is_leapyear
-        correct = tile([True, False, False, False], 10)
+        correct = tile([True, False, False, False], 26)
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_day_of_month(self):
@@ -494,13 +494,13 @@ class Date_Test(unittest.TestCase):
         pass
 
     def test_start_of_week(self):
-        d = Date(['20200507', '20200508'])
-        d2 = Date(['20200504', '20200504'])
+        d = Date(['20200507', '20200508', '20991231'])
+        d2 = Date(['20200504', '20200504', '20991228'])
         self.assertTrue((d.start_of_week==d2).all())
 
     def test_start_of_month(self):
-        d = Date(['20200507', '20200508'])
-        d2 = Date(['20200501', '20200501'])
+        d = Date(['20200507', '20200508', '20991231'])
+        d2 = Date(['20200501', '20200501', '20991201'])
         self.assertTrue((d.start_of_month==d2).all())
 
 
