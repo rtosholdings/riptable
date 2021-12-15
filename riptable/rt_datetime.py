@@ -119,82 +119,69 @@ UTC_1970_DAY_SPLITS = FastArray([
     DAYS_AT_2000 + (38 * DAYS_PER_YEAR) + (10),
     DAYS_AT_2000 + (39 * DAYS_PER_YEAR) + (10),
     DAYS_AT_2000 + (40 * DAYS_PER_YEAR) + (10),  # 2040
+    DAYS_AT_2000 + (41 * DAYS_PER_YEAR) + (11),
+    DAYS_AT_2000 + (42 * DAYS_PER_YEAR) + (11),
+    DAYS_AT_2000 + (43 * DAYS_PER_YEAR) + (11),
+    DAYS_AT_2000 + (44 * DAYS_PER_YEAR) + (11),
+    DAYS_AT_2000 + (45 * DAYS_PER_YEAR) + (12),
+    DAYS_AT_2000 + (46 * DAYS_PER_YEAR) + (12),
+    DAYS_AT_2000 + (47 * DAYS_PER_YEAR) + (12),
+    DAYS_AT_2000 + (48 * DAYS_PER_YEAR) + (12),
+    DAYS_AT_2000 + (49 * DAYS_PER_YEAR) + (13),
+    DAYS_AT_2000 + (50 * DAYS_PER_YEAR) + (13),  # 2050
+    DAYS_AT_2000 + (51 * DAYS_PER_YEAR) + (13),
+    DAYS_AT_2000 + (52 * DAYS_PER_YEAR) + (13),
+    DAYS_AT_2000 + (53 * DAYS_PER_YEAR) + (14),
+    DAYS_AT_2000 + (54 * DAYS_PER_YEAR) + (14),
+    DAYS_AT_2000 + (55 * DAYS_PER_YEAR) + (14),
+    DAYS_AT_2000 + (56 * DAYS_PER_YEAR) + (14),
+    DAYS_AT_2000 + (57 * DAYS_PER_YEAR) + (15),
+    DAYS_AT_2000 + (58 * DAYS_PER_YEAR) + (15),
+    DAYS_AT_2000 + (59 * DAYS_PER_YEAR) + (15),
+    DAYS_AT_2000 + (60 * DAYS_PER_YEAR) + (15),  # 2060
+    DAYS_AT_2000 + (61 * DAYS_PER_YEAR) + (16),
+    DAYS_AT_2000 + (62 * DAYS_PER_YEAR) + (16),
+    DAYS_AT_2000 + (63 * DAYS_PER_YEAR) + (16),
+    DAYS_AT_2000 + (64 * DAYS_PER_YEAR) + (16),
+    DAYS_AT_2000 + (65 * DAYS_PER_YEAR) + (17),
+    DAYS_AT_2000 + (66 * DAYS_PER_YEAR) + (17),
+    DAYS_AT_2000 + (67 * DAYS_PER_YEAR) + (17),
+    DAYS_AT_2000 + (68 * DAYS_PER_YEAR) + (17),
+    DAYS_AT_2000 + (69 * DAYS_PER_YEAR) + (18),
+    DAYS_AT_2000 + (70 * DAYS_PER_YEAR) + (18),  # 2070
+    DAYS_AT_2000 + (71 * DAYS_PER_YEAR) + (18),
+    DAYS_AT_2000 + (72 * DAYS_PER_YEAR) + (18),
+    DAYS_AT_2000 + (73 * DAYS_PER_YEAR) + (19),
+    DAYS_AT_2000 + (74 * DAYS_PER_YEAR) + (19),
+    DAYS_AT_2000 + (75 * DAYS_PER_YEAR) + (19),
+    DAYS_AT_2000 + (76 * DAYS_PER_YEAR) + (19),
+    DAYS_AT_2000 + (77 * DAYS_PER_YEAR) + (20),
+    DAYS_AT_2000 + (78 * DAYS_PER_YEAR) + (20),
+    DAYS_AT_2000 + (79 * DAYS_PER_YEAR) + (20),
+    DAYS_AT_2000 + (80 * DAYS_PER_YEAR) + (20),  # 2080
+    DAYS_AT_2000 + (81 * DAYS_PER_YEAR) + (21),
+    DAYS_AT_2000 + (82 * DAYS_PER_YEAR) + (21),
+    DAYS_AT_2000 + (83 * DAYS_PER_YEAR) + (21),
+    DAYS_AT_2000 + (84 * DAYS_PER_YEAR) + (21),
+    DAYS_AT_2000 + (85 * DAYS_PER_YEAR) + (22),
+    DAYS_AT_2000 + (86 * DAYS_PER_YEAR) + (22),
+    DAYS_AT_2000 + (87 * DAYS_PER_YEAR) + (22),
+    DAYS_AT_2000 + (88 * DAYS_PER_YEAR) + (22),
+    DAYS_AT_2000 + (89 * DAYS_PER_YEAR) + (23),
+    DAYS_AT_2000 + (90 * DAYS_PER_YEAR) + (23),  # 2090
+    DAYS_AT_2000 + (91 * DAYS_PER_YEAR) + (23),
+    DAYS_AT_2000 + (92 * DAYS_PER_YEAR) + (23),
+    DAYS_AT_2000 + (93 * DAYS_PER_YEAR) + (24),
+    DAYS_AT_2000 + (94 * DAYS_PER_YEAR) + (24),
+    DAYS_AT_2000 + (95 * DAYS_PER_YEAR) + (24),
+    DAYS_AT_2000 + (96 * DAYS_PER_YEAR) + (24),
+    DAYS_AT_2000 + (97 * DAYS_PER_YEAR) + (25),
+    DAYS_AT_2000 + (98 * DAYS_PER_YEAR) + (25),
+    DAYS_AT_2000 + (99 * DAYS_PER_YEAR) + (25),
 ])
 
-# UTC @ midnight, years 1970 - 2040
-UTC_1970_SPLITS = FastArray([
-    0,  # 1970
-    NANOS_PER_YEAR,
-    2 * NANOS_PER_YEAR,
-    (3 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
-    (4 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
-    (5 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
-    (6 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
-    (7 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
-    (8 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
-    (9 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
-    (10 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),  # 1980
-    (11 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
-    (12 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
-    (13 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
-    (14 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
-    (15 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    (16 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    (17 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    (18 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    (19 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
-    (20 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),  # 1990
-    (21 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
-    (22 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
-    (23 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    (24 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    (25 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    (26 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    (27 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
-    (28 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
-    (29 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
-    NANOS_AT_2000,  # 2000
-    NANOS_AT_2000 + NANOS_PER_LEAPYEAR,
-    NANOS_AT_2000 + (2 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
-    NANOS_AT_2000 + (3 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
-    NANOS_AT_2000 + (4 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 1),
-    NANOS_AT_2000 + (5 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
-    NANOS_AT_2000 + (6 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
-    NANOS_AT_2000 + (7 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
-    NANOS_AT_2000 + (8 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 2),
-    NANOS_AT_2000 + (9 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
-    NANOS_AT_2000 + (10 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),  # 2010
-    NANOS_AT_2000 + (11 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
-    NANOS_AT_2000 + (12 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 3),
-    NANOS_AT_2000 + (13 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    NANOS_AT_2000 + (14 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    NANOS_AT_2000 + (15 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    NANOS_AT_2000 + (16 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 4),
-    NANOS_AT_2000 + (17 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
-    NANOS_AT_2000 + (18 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
-    NANOS_AT_2000 + (19 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),
-    NANOS_AT_2000 + (20 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 5),  # 2020
-    NANOS_AT_2000 + (21 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    NANOS_AT_2000 + (22 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    NANOS_AT_2000 + (23 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    NANOS_AT_2000 + (24 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 6),
-    NANOS_AT_2000 + (25 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
-    NANOS_AT_2000 + (26 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
-    NANOS_AT_2000 + (27 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
-    NANOS_AT_2000 + (28 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 7),
-    NANOS_AT_2000 + (29 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),
-    NANOS_AT_2000 + (30 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),  # 2030
-    NANOS_AT_2000 + (31 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),
-    NANOS_AT_2000 + (32 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 8),
-    NANOS_AT_2000 + (33 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
-    NANOS_AT_2000 + (34 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
-    NANOS_AT_2000 + (35 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
-    NANOS_AT_2000 + (36 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 9),
-    NANOS_AT_2000 + (37 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),
-    NANOS_AT_2000 + (38 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),
-    NANOS_AT_2000 + (39 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),
-    NANOS_AT_2000 + (40 * NANOS_PER_YEAR) + (NANOS_PER_DAY * 10),  # 2040
-])
+# UTC @ midnight, years 1970 - 2099
+UTC_1970_SPLITS = UTC_1970_DAY_SPLITS * NANOS_PER_DAY
 
 MATLAB_EPOCH_DATENUM = 719529
 EPOCH_DAY_OF_WEEK = DayOfWeek.Thursday
@@ -1306,7 +1293,7 @@ class Date(DateBase, TimeStampBase):
     # ------------------------------------------------------------
     @property
     def _year_splits(self):
-        """Midnght on Jan. 1st from 1970 - 1940 in utc nanoseconds."""
+        """Midnght on Jan. 1st from 1970 - 2099 in utc nanoseconds."""
         return UTC_1970_DAY_SPLITS
 
     # ------------------------------------------------------------
@@ -1326,7 +1313,7 @@ class Date(DateBase, TimeStampBase):
     def year(self):
         '''
         Returns integer array of year value
-        Currently limited to 1970 - 2040, add to UTC_1970_DAY_SPLITS table to expand range.
+        Currently limited to 1970 - 2099, add to UTC_1970_DAY_SPLITS table to expand range.
 
         >>> d = Date(['2016-02-01', '2017-02-01', '2018-02-01'])
         >>> d.year
@@ -2487,7 +2474,7 @@ class DateTimeCommon:
     # ------------------------------------------------------------
     @property
     def _year_splits(self):
-        """Midnght on Jan. 1st from 1970 - 1940 in utc nanoseconds."""
+        """Midnght on Jan. 1st from 1970 - 2099 in utc nanoseconds."""
         return UTC_1970_SPLITS
 
     # ------------------------------------------------------------

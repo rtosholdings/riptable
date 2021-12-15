@@ -287,6 +287,10 @@ class DateTime_Test(unittest.TestCase):
                 '2018-11-02 09:30:00.228458',
                 '2018-11-02 09:30:00.228977',
                 '2018-11-02 09:30:00.229061',
+                '2040-12-30T16:30:00',
+                '2041-12-30T16:30:00',
+                '2050-12-30T16:30:00',
+                '2099-12-31T23:59:59',
             ],
             from_tz='NYC',
             to_tz='NYC',
@@ -298,6 +302,10 @@ class DateTime_Test(unittest.TestCase):
                 1541165400228458000,
                 1541165400228977000,
                 1541165400229061000,
+                2240515800000000000,
+                2272051800000000000,
+                2556048600000000000,
+                4102462799000000000,
             ],
             dtype=np.int64,
         )
@@ -350,6 +358,7 @@ class DateTime_Test(unittest.TestCase):
                 1541217600000000000,
                 1541304000000000000,
                 1541394000000000000,
+                4102444799000000000,
             ],
             from_tz='NYC',
             to_tz='NYC',
@@ -362,6 +371,7 @@ class DateTime_Test(unittest.TestCase):
                 '2018-11-03T04:00:00.000000000',
                 '2018-11-04T04:00:00.000000000',
                 '2018-11-05T05:00:00.000000000',
+                '2099-12-31T23:59:59.000000000',
             ]
         )
         self.assertTrue(bool(np.all(result == correct)))
@@ -369,15 +379,15 @@ class DateTime_Test(unittest.TestCase):
 
     def test_year(self):
         dtn = DateTimeNano(
-            [1546297200000000000, 1546304400000000000], from_tz='NYC', to_tz='NYC'
+            [1546297200000000000, 1546304400000000000, 4102462799000000000], from_tz='NYC', to_tz='NYC'
         )
-        correct = FastArray([2018, 2019])
+        correct = FastArray([2018, 2019, 2099])
         result = dtn.year()
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
 
         dtn = DateTimeNano(
-            [1546315200000000000, 1546322400000000000], from_tz='GMT', to_tz='NYC'
+            [1546315200000000000, 1546322400000000000, 4102444799000000000], from_tz='GMT', to_tz='NYC'
         )
         result = dtn.year()
         self.assertTrue(isinstance(result, FastArray))
@@ -385,26 +395,26 @@ class DateTime_Test(unittest.TestCase):
 
     def test_month(self):
         dtn = DateTimeNano(
-            [1546297200000000000, 1546304400000000000], from_tz='NYC', to_tz='NYC'
+            [1546297200000000000, 1546304400000000000, 4102462799000000000], from_tz='NYC', to_tz='NYC'
         )
-        correct = FastArray([12, 1])
+        correct = FastArray([12, 1, 12])
         result = dtn.month()
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
 
         dtn = DateTimeNano(
-            [1546315200000000000, 1546322400000000000], from_tz='GMT', to_tz='NYC'
+            [1546315200000000000, 1546322400000000000, 4102444799000000000], from_tz='GMT', to_tz='NYC'
         )
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_day(self):
         dtn = DateTimeNano(
-            ['2018-12-28 06:00:00', '2018-12-28 12:00:00', '2018-12-28 18:00:00'],
+            ['2018-12-28 06:00:00', '2018-12-28 12:00:00', '2018-12-28 18:00:00', '2099-12-28 18:00:00'],
             from_tz='NYC',
             to_tz='NYC',
         )
-        correct = FastArray([0.25, 0.5, 0.75])
+        correct = FastArray([0.25, 0.5, 0.75, 0.75])
         result = dtn.day
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
@@ -683,15 +693,16 @@ class DateTime_Test(unittest.TestCase):
                 '2018-11-02 21:30:00.228403',
                 '2018-11-02 22:30:00.228458',
                 '2018-11-02 23:30:00.228977',
+                '2099-12-31 23:59:59.123456',
             ],
             from_tz='NYC',
             to_tz='NYC',
         )
-
+        correct = [1541131200000000000]*24 + [4102376400000000000]
         d = dtn.date()
         self.assertTrue(isinstance(d, DateTimeNano))
         d = d._fa
-        self.assertTrue(bool(np.all(d == 1541131200000000000)))
+        self.assertTrue(bool(np.all(d == correct)))
 
     def test_days_since_epoch(self):
         dtn = DateTimeNano(
@@ -932,19 +943,19 @@ class DateTime_Test(unittest.TestCase):
 
     def test_day_of_week(self):
         dtn2 = DateTimeNano(
-            ['1970-01-02 00:00:00', '1970-01-02 00:00:00', '1970-01-03 00:00:01'],
+            ['1970-01-02 00:00:00', '1970-01-02 00:00:00', '1970-01-03 00:00:01', '2099-12-27 00:00:02'],
             from_tz='NYC',
             to_tz='NYC',
         )
         dayofweek = dtn2.day_of_week
         self.assertTrue(dayofweek.dtype == np.int64)
-        self.assertTrue(bool(np.all(dayofweek == [4, 4, 5])))
+        self.assertTrue(bool(np.all(dayofweek == [4, 4, 5, 6])))
 
         isweekday = dtn2.is_weekday
-        self.assertTrue(bool(np.all(isweekday == [True, True, False])))
+        self.assertTrue(bool(np.all(isweekday == [True, True, False, False])))
 
         isweekend = dtn2.is_weekend
-        self.assertTrue(bool(np.all(isweekend == [False, False, True])))
+        self.assertTrue(bool(np.all(isweekend == [False, False, True, True])))
 
         dtn = DateTimeNano(['1970-01-01 12:00:00'], from_tz='GMT', to_tz='GMT')
         dayofweek = dtn.day_of_week
@@ -952,9 +963,9 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(dayofweek[0], 3)
 
     def test_day_of_month(self):
-        correct = FastArray([9, 29, 1, 31])
+        correct = FastArray([9, 29, 1, 31, 21])
         dtn = DateTimeNano(
-            ['2018-01-09', '2000-02-29', '2000-03-01', '2019-12-31'], from_tz='NYC'
+            ['2018-01-09', '2000-02-29', '2000-03-01', '2019-12-31', '2099-12-21'], from_tz='NYC'
         )
         dom = dtn.day_of_month
         self.assertTrue(bool(np.all(dom == correct)))
