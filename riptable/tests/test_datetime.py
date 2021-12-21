@@ -2501,6 +2501,20 @@ class DateTime_Test(unittest.TestCase):
         ret = Date(utcnow(4))[0].strftime('%D')
         # make sure a string was returned
         self.assertTrue(isinstance(ret, str))
+        ret = Date('2038-01-19')[0].strftime('%Y%m%d')
+        self.assertEquals('20380119', ret)
+        ret = Date('2038-01-20')[0].strftime('%Y%m%d')
+        self.assertEquals('20380120', ret)
+        ret = Date('2099-12-31')[0].strftime('%Y%m%d')
+        self.assertEquals('20991231', ret)
+
+    def test_datescalars_strftime(self):
+        ret = Date('2038-01-19').strftime('%Y%m%d')
+        self.assertTrue(('20380119' == ret).all())
+        ret = Date('2038-01-20').strftime('%Y%m%d')
+        self.assertTrue(('20380120' == ret).all())
+        ret = Date('2099-12-31').strftime('%Y%m%d')
+        self.assertTrue(('20991231' == ret).all())
 
     def test_timespandivision(self):
         x = TimeSpan('00:30:00')[0] / TimeSpan('01:00:00')[0]

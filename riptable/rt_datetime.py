@@ -818,7 +818,7 @@ class DateBase(FastArray):
     # ------------------------------------------------------------
     def strftime(self, format, dtype='O'):
         '''
-        Converts DateTimeNano to an array of object strings or a scalar string.
+        Converts Date, etc. to an array of object strings or a scalar string.
         This routine has not been sped up yet.
 
         Other Parameters
@@ -837,7 +837,7 @@ class DateBase(FastArray):
 
         '''
         if isinstance(self, np.ndarray):
-            return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa* SECONDS_PER_DAY], dtype=dtype)
+            return np.asarray([dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa.astype(np.int64) * SECONDS_PER_DAY], dtype=dtype)
         else:
             return dt.strftime(dt.utcfromtimestamp(self * SECONDS_PER_DAY), format)
 
@@ -4908,7 +4908,7 @@ class TimeSpanBase:
     # ------------------------------------------------------------
     def strftime(self, format, dtype='U'):
         '''
-        Converts DateTimeNano to an array of object strings or a scalar string.
+        Converts TimeSpan to an array of object strings or a scalar string.
         This routine has not been sped up yet.
 
         Other Parameters
@@ -5777,7 +5777,7 @@ class DateScalar(np.int32):
         http://strftime.org  for format strings
         datetime.datetime.strftime
         '''
-        return dt.strftime(dt.utcfromtimestamp(self * SECONDS_PER_DAY), format)
+        return dt.strftime(dt.utcfromtimestamp(self.astype(np.int64) * SECONDS_PER_DAY), format)
 
     # ------------------------------------------------------------
     @property
