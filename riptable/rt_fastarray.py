@@ -807,13 +807,17 @@ class FastArray(np.ndarray):
 
             # check for boolean array since we do not handle fancy index yet
             if isinstance(fld, np.ndarray) and fld.dtype.num ==0:
-                if self._is_not_supported(newvalue):
-                    # make it contiguous
+                is_unsupported = self._is_not_supported(newvalue)
+                if is_unsupported:
+                    # make it contiguous, in case that's the problem?
                     newvalue = newvalue.copy()
+                    # re-test support, just to be sure.
+                    is_unsupported = self._is_not_supported(newvalue)
 
-                # call our setitem, it will return False if it fails
-                if rc.SetItem(self, fld, newvalue):
-                    return
+                # if supported, call our setitem, it will return False if it fails
+                if not is_unsupported:
+                    if rc.SetItem(self, fld, newvalue):
+                        return
             try:
                 np.ndarray.__setitem__(self, fld, newvalue)
             except Exception:
