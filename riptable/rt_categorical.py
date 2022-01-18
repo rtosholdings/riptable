@@ -11,6 +11,7 @@ __all__ = [
 from enum import IntEnum, EnumMeta
 from typing import Any, Collection, Dict, List, Mapping, Optional, Tuple, Union, TYPE_CHECKING
 import warnings
+import sys
 
 import numpy as np
 
@@ -3927,9 +3928,7 @@ class Categorical(GroupByOps, FastArray):
         result = super(Categorical, clean_c).apply(userfunc, *args, dataset=dataset, label_keys=clean_c.gb_keychain, **kwargs)
         # result is the same size as original, attach categorical (the key column) to result
         if result.shape[0] == len(clean_c):
-            name = self.get_header_names([self], default='gb_key_')[0]
-            result[name] = self
-            result.label_set_names(name)
+            self._attach_self_as_key_column(result)
         return result
 
     # ------------------------------------------------------------
@@ -3942,10 +3941,19 @@ class Categorical(GroupByOps, FastArray):
         result = super(Categorical, clean_c).apply_nonreduce(userfunc, *args, dataset=dataset, label_keys=clean_c.gb_keychain, **kwargs)
         # result is the same size as original, attach categorical (the key column) to result
         if result.shape[0] == len(clean_c):
-            name = self.get_header_names([self], default='gb_key_')[0]
-            result[name] = self
-            result.label_set_names(name)
+            self._attach_self_as_key_column(result)
         return result
+
+    def _attach_self_as_key_column(self, result):
+        name_pattern = 'gb_key_'
+        names = self.get_header_names([self])
+        name = None
+        for i in range(sys.maxsize): # find a unique name
+            name = name_pattern + str(i)
+            if not name in names:
+                break
+        result[name] = self
+        result.label_set_names(name)
 
     # ------------------------------------------------------------
     @property
