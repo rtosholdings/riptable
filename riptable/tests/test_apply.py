@@ -592,6 +592,22 @@ class transform_apply_test(unittest.TestCase):
         )
         self.assertTrue(result['d'][1] == 'A')
 
+    def test_apply_dups(self):
+        ds = Dataset({
+            'a' : FA(['B', 'B']),
+            'b' : FA(['Bb', 'Bb']),
+            'i': FA([1, 1])})
+        c = Cat([ds.a, ds.b])
+        result = c.apply(np.sum, ds.i)
+        self.assertEqual(result._ncols, 3)
+
+        ds = Dataset({
+            'a' : FA(['B', 'D']),
+            'b' : FA(['Bb', 'Bb']),
+            'i': FA([1, 1])})
+        c = Cat([ds.a, ds.b])
+        result = c.apply(np.sum, ds.i)
+        self.assertEqual(result._ncols, 4)
 
 if __name__ == "__main__":
     tester = unittest.main()
