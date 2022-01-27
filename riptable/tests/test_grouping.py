@@ -485,6 +485,11 @@ class Grouping_Test(unittest.TestCase):
         goodresult = FA([0.0, 1.0, 2.0, 1.0, 2.0, 5.0, 6.0, 5.0, 8.0, 9.0])
         self.assertTrue(np.all(finalcalc == goodresult))
 
+        # try with filtered
+        c = Cat([1, 0, 1, 0], ['a'])
+        r = c.apply_nonreduce(np.cumsum, FA([10, 1, 20, 2]))
+        assert_array_equal(r[0], FA([10, 1, 30, 3]))
+
     def test_ema(self):
         arrsize = 100
         numrows = 20

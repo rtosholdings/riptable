@@ -2066,7 +2066,8 @@ class Grouping:
 
             # uniques didn't change, fix the new ikey to match old ordering
             if self._unique_count == unique_count_new:
-                if filter is None:
+                # fast path if not filtering and not already filtered
+                if filter is None and ikey_new.min() > 0:
                     ikey_fix = self.ikey[ifirstkey][ikey_new-1]
                 else:
                     # TJD this path needs to be tested
