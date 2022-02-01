@@ -32,7 +32,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest hypothesis nose bottleneck pandas
-        python -m pip install riptide_cpp>=1.7.5 ansi2html ipython ipykernel numba python-dateutil
+        python -m pip install riptide_cpp>=1.7.5 ansi2html ipython ipykernel numpy=1.20 numba python-dateutil
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
