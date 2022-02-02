@@ -22,7 +22,7 @@ requirements:
     - {{ pin_compatible('riptide_cpp', min_pin='x.x.x', max_pin='x.x') }}
     - pandas >=0.24,<2.0
     - ansi2html >=1.5.2
-    - numpy >=1.20,<1.21
+    - numpy >=1.20,<1.22
     - numba >=0.51
     - python-dateutil
 
