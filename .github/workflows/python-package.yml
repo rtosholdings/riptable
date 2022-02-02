@@ -20,7 +20,7 @@ jobs:
         # when fixed, add back macos-latest.  note: mac user can still download and use riptable
         os: [ubuntu-latest, windows-latest]
         # 3.6 fails for another reason
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
