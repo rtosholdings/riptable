@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, fix-package-builds ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -16,77 +16,84 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        # 3.6 fails for another reason
         python-version: [3.8, 3.9, '3.10']
-
+        numpy-version: [1.21]
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install riptide_cpp>=1.7.5 ansi2html ipython ipykernel numpy==1.21 numba python-dateutil
-        python -m pip install flake8 pytest hypothesis nose bottleneck pandas
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
-      run: |
-        pytest riptable/tests
-    - name: Tooling integration tests
-      run: |
-        ipython -m pytest riptable/test_tooling_integration
-    # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate    
-    #- name: Property based hypothesis tests
-    #  run: |
-    #    pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install riptide_cpp>=1.7.5 ansi2html ipython ipykernel numpy==${{ matrix.numpy-version }} numba python-dateutil
+          python -m pip install flake8 pytest hypothesis nose bottleneck pandas
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Test with pytest
+        run: |
+          pytest riptable/tests
+      - name: Tooling integration tests
+        run: |
+          ipython -m pytest riptable/test_tooling_integration
+      # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate
+      #- name: Property based hypothesis tests
+      #  run: |
+      #    pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
+      - name: Package sources
+        run: |
+          python setup.py sdist
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifacts
+          path: dist/
+          if-no-files-found: error
 
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     # since riptable is all python source code, only a source build is required from one os
+    needs: build
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-      with:
-        # Set fetch-depth to 0 so all history is retrieved; this is needed so we get the git tags
-        # which we use for setting the package version (via setuptools-scm).
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install setuptools wheel twine
-    - name: Build and publish
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        python setup.py sdist
-        twine upload dist/* --verbose
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install setuptools wheel twine
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifacts
+          path: dist/
+      - name: Publish artifacts to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          set -ex
+          echo xtwine upload dist/* --verbose
 
   conda_build:
     runs-on: ${{ matrix.os }}
-    env:
-      ANACONDA_USER: rtosholdings
-      ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
     strategy:
       matrix:
         os: ['ubuntu-latest', 'windows-latest']
+        python-version: [3.8, 3.9, '3.10']
+    env:
+      python_version: 3.9
+      ANACONDA_USER: rtosholdings
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
-        env:
-         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
         with:
           fetch-depth: 0
       - name: Setup Miniconda
@@ -94,34 +101,58 @@ jobs:
         env:
          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
         with:
-          activate-environment: ""
+          activate-environment: "conda_build"
+          python_version: ${{ env.python_version }}
           auto-update-conda: true
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
+      - name: Create env
+        shell: bash -l {0}
+        run: |
+          conda install conda-build setuptools_scm -q -y
       - name: Build Package
         shell: bash -l {0}
         run: |
           set -ex
-          conda create -n conda_build python=3.9 conda-build anaconda-client setuptools_scm -y
-          conda activate conda_build
           export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
           mkdir conda_pkgs_output
-          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output
-          echo "${{ github.event_name }}"
-          echo "${{ github.ref }}"
+          echo "python: " ${{ matrix.zips.python }} > ./conda_zips.yaml
+          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output --variant-config-files ./conda_zips.yaml
       - name: Publish artifacts
         uses: actions/upload-artifact@v2
-        env:
-         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true' 
         with:
           name: packages
           path: conda_pkgs_output/*/riptable-*.tar.bz2
           if-no-files-found: "error"
+
+  conda_deploy:
+    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    needs: conda_build
+    runs-on: ubuntu-latest
+    env:
+      ANACONDA_USER: rtosholdings
+      ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
+    steps:
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        env:
+         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+        with:
+          activate-environment: "conda_deploy"
+          auto-update-conda: true
+          channels: conda-forge
+          channel-priority: flexible
+          show-channel-urls: true
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: conda-build-artifacts
+          path: conda_pkgs_output/
       - name: Upload to Anaconda
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
         shell: bash -l {0}
         run: |
           set -ex
           conda activate conda_build
-          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
+          echo xanaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
