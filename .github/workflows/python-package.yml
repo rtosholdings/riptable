@@ -58,7 +58,7 @@ jobs:
   deploy:
     #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     # since riptable is all python source code, only a source build is required from one os
-    needs: build
+    needs: [build, conda_build]
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python
@@ -128,7 +128,7 @@ jobs:
 
   conda_deploy:
     #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
-    needs: conda_build
+    needs: [build, conda_build]
     runs-on: ubuntu-latest
     env:
       ANACONDA_USER: rtosholdings
