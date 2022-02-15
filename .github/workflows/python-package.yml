@@ -125,13 +125,14 @@ jobs:
       - name: Publish artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: packages
+          name: conda-build-artifacts
           path: conda_pkgs_output/*/riptable-*.tar.bz2
           if-no-files-found: "error"
 
   conda_deploy:
     #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
-    needs: [build, conda_build]
+    #needs: [build, conda_build]
+    needs: [conda_build]
     runs-on: ubuntu-latest
     env:
       ANACONDA_USER: rtosholdings
