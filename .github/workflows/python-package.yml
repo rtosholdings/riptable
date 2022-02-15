@@ -105,7 +105,7 @@ jobs:
          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
         with:
           activate-environment: "conda_build"
-          python_version: ${{ env.python_version }}
+          python-version: ${{ env.python_version }}
           auto-update-conda: true
           channels: conda-forge
           channel-priority: flexible
