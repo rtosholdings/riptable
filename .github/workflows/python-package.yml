@@ -148,6 +148,7 @@ jobs:
           channel-priority: flexible
           show-channel-urls: true
       - name: Install dependencies
+        shell: bash -l {0}
         run: |
           conda install anaconda-client -q -y
       - name: Download build artifacts
