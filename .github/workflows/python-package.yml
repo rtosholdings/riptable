@@ -27,6 +27,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
+          set -ex
           python -m pip install --upgrade pip
           python -m pip install riptide_cpp>=1.7.5 ansi2html ipython ipykernel numpy==${{ matrix.numpy-version }} numba python-dateutil
           python -m pip install flake8 pytest hypothesis nose bottleneck pandas
@@ -38,6 +39,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
+          set -ex
           pytest riptable/tests
       - name: Tooling integration tests
         run: |
@@ -112,6 +114,7 @@ jobs:
       - name: Install dependencies
         shell: bash -l {0}
         run: |
+          set -ex
           conda install conda-build setuptools_scm -q -y
       - name: Build Package
         shell: bash -l {0}
@@ -150,6 +153,7 @@ jobs:
       - name: Install dependencies
         shell: bash -l {0}
         run: |
+          set -ex
           conda install anaconda-client -q -y
       - name: Download build artifacts
         uses: actions/download-artifact@v2
