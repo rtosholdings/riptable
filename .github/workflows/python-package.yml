@@ -5,18 +5,20 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, fix-package-builds ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
 
 jobs:
   build:
+    if: ${{ false }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: [3.8, 3.9, '3.10']
+        #python-version: [3.8, 3.9, '3.10']
+        python-version: [3.9]
         numpy-version: [1.21]
     steps:
       - uses: actions/checkout@v2
@@ -56,7 +58,7 @@ jobs:
           if-no-files-found: error
 
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     # since riptable is all python source code, only a source build is required from one os
     needs: [build, conda_build]
     runs-on: ubuntu-latest
@@ -80,14 +82,15 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
           set -ex
-          twine upload dist/* --verbose
+          echo xtwine upload dist/* --verbose
 
   conda_build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: ['ubuntu-latest', 'windows-latest']
-        python-version: [3.8, 3.9, '3.10']
+        #python-version: [3.8, 3.9, '3.10']
+        python-version: [3.9]
     env:
       python_version: 3.9
       ANACONDA_USER: rtosholdings
@@ -117,8 +120,8 @@ jobs:
           set -ex
           export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
           mkdir conda_pkgs_output
-          echo "python: " ${{ matrix.zips.python }} > ./conda_zips.yaml
-          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output --variant-config-files ./conda_zips.yaml
+          echo "python: " ${{ matrix.python-version }} > ./conda_variant.yaml
+          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output --variant-config-files ./conda_variant.yaml
       - name: Publish artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -127,7 +130,7 @@ jobs:
           if-no-files-found: "error"
 
   conda_deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     needs: [build, conda_build]
     runs-on: ubuntu-latest
     env:
@@ -155,4 +158,4 @@ jobs:
         run: |
           set -ex
           conda activate conda_build
-          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
+          echo xanaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
