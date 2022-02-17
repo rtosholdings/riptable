@@ -14,7 +14,7 @@ from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDU
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .Utils.common import cached_property
 from .rt_mlutils import normalize_minmax, normalize_zscore
-from .rt_numpy import ismember, ones, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray, crc32c
+from .rt_numpy import ismember, ones, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray, crc32c, hstack
 from .rt_sds import save_sds
 from .rt_utils import  sample, describe
 from .rt_grouping import Grouping
@@ -3182,9 +3182,17 @@ class FastArray(np.ndarray):
         if not isinstance(arr, (pa.Array, pa.ChunkedArray)):
             raise TypeError("The array is not an instance of `pyarrow.Array` or `pyarrow.ChunkedArray`.")
 
-        # TEMP: ChunkedArray not currently supported.
+        # ChunkedArrays need special handling.
         if isinstance(arr, pa.ChunkedArray):
-            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
+            # A single-chunk ChunkedArray can be handled by just extracting that chunk
+            # and recursively processing it.
+            if arr.num_chunks == 1:
+                return FastArray._from_arrow(arr.chunk(0), zero_copy_only=zero_copy_only, writable=writable, auto_widen=auto_widen)
+            else:
+                # TODO: Benchmark this vs. using ChunkedArray.combine_chunks() then converting.
+                # TODO: Look at `zero_copy_only` and `writable` -- the converted arrays could be destroyed while hstacking
+                #       since we know they'll have just been created; this could reduce peak memory utilization.
+                return hstack([FastArray._from_arrow(arr_chunk, zero_copy_only=zero_copy_only, writable=writable, auto_widen=auto_widen) for arr_chunk in arr.iterchunks()])
 
         # Handle based on the type of the input array.
         if pat.is_integer(arr.type):

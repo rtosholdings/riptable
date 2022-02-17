@@ -4223,9 +4223,17 @@ class Categorical(GroupByOps, FastArray):
         if zero_copy_only:
             raise ValueError("Categoricals cannot be created from pyarrow arrays in zero-copy mode.")
 
-        # TEMP: ChunkedArrays aren't supported yet.
+        # ChunkedArrays need special handling.
         if isinstance(arr, pa.ChunkedArray):
-            raise NotImplementedError("pa.ChunkedArray not yet supported.")
+            # A single-chunk ChunkedArray can be handled by just extracting that chunk
+            # and recursively processing it.
+            if arr.num_chunks == 1:
+                return Categorical._from_arrow(arr.chunk(0), zero_copy_only=zero_copy_only, writable=writable)
+            else:
+                # TODO: Benchmark this vs. using ChunkedArray.combine_chunks() then converting.
+                # TODO: Look at `zero_copy_only` and `writable` -- the converted arrays could be destroyed while hstacking
+                #       since we know they'll have just been created; this could reduce peak memory utilization.
+                return hstack([Categorical._from_arrow(arr_chunk, zero_copy_only=zero_copy_only, writable=writable) for arr_chunk in arr.iterchunks()])
 
         # Convert indices to riptable.
         # pyarrow dictionary-encoded arrays are always "base_index 0" (in the riptable lexicon);
