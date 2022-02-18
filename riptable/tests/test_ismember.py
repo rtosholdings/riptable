@@ -524,5 +524,19 @@ def test_ismember_categorical_with_invalid():
     assert_array_equal(idx, expected_idx)
 
 
+@pytest.mark.parametrize('a, b, isin, indexer', [
+    (FA([0, 1, 2]), FA([]),
+     FastArray([False] * 3),
+     tile(INVALID_DICT[np.dtype('int32').num], 3).astype('int32')),
+
+    (FA([]), FA([0, 1, 2]), FA([], dtype=bool), FA([], dtype='int32')),
+])
+def test_ismember_type_for_empties(a, b, isin, indexer):
+    result = ismember(a, b)
+    assert_array_equal(isin, result[0])
+    assert_array_equal(indexer, result[1])
+    assert result[1].isna().all()
+
+
 if __name__ == "__main__":
     tester = unittest.main()
