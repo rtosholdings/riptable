@@ -782,7 +782,9 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
     is_multikey = False
 
     if len_a == 0 or len_b == 0:
-        return zeros(len(a), dtype=bool), full(len_a, INVALID_DICT[np.dtype(np.int32).num])
+        indexer_type = np.dtype(np.int32)
+        indexer = full(len_a, INVALID_DICT[indexer_type.num], dtype=indexer_type)
+        return zeros(len(a), dtype=bool), indexer
 
     if isinstance(a, TypeRegister.Categorical) or isinstance(b, TypeRegister.Categorical):
         if isinstance(a, TypeRegister.Categorical):
