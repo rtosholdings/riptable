@@ -16,8 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        #python-version: [3.8, 3.9, '3.10']
-        python-version: [3.9]
+        python-version: [3.8, 3.9, '3.10']
         numpy-version: [1.21]
     steps:
       - uses: actions/checkout@v2
@@ -61,7 +60,7 @@ jobs:
           if-no-files-found: error
 
   deploy:
-    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     # since riptable is all python source code, only a source build is required from one os
     needs: [build, conda_build]
     runs-on: ubuntu-latest
@@ -85,15 +84,14 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
           set -ex
-          echo xtwine upload dist/* --verbose
+          twine upload dist/* --verbose
 
   conda_build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: ['ubuntu-latest', 'windows-latest']
-        #python-version: [3.8, 3.9, '3.10']
-        python-version: [3.9]
+        python-version: [3.8, 3.9, '3.10']
     env:
       python_version: 3.9
       ANACONDA_USER: rtosholdings
@@ -134,9 +132,8 @@ jobs:
           if-no-files-found: "error"
 
   conda_deploy:
-    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
-    #needs: [build, conda_build]
-    needs: [conda_build]
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    needs: [build, conda_build]
     runs-on: ubuntu-latest
     env:
       ANACONDA_USER: rtosholdings
@@ -168,4 +165,4 @@ jobs:
         run: |
           set -ex
           conda activate conda_build
-          echo xanaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
+          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
