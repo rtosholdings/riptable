@@ -16,8 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-2019]
-        #python-version: [3.8, 3.9, '3.10']
-        python-version: [3.8, 3.9]
+        python-version: [3.8, 3.9, '3.10']
         numpy-version: [1.21]
     steps:
       - uses: actions/checkout@v2
@@ -92,8 +91,7 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-latest', 'windows-2019']
-        #python-version: [3.8, 3.9, '3.10']
-        python-version: [3.8, 3.9]
+        python-version: [3.8, 3.9, '3.10']
     env:
       python_version: 3.9
       ANACONDA_USER: rtosholdings
