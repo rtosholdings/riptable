@@ -19,7 +19,12 @@ jobs:
         python-version: [3.8, 3.9, '3.10']
         numpy-version: [1.21]
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          # Set fetch-depth to 0 so all history is retrieved; this is needed so we get the git tags
+          # which we use for setting the package version (via setuptools-scm).
+          fetch-depth: 0
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -31,6 +36,7 @@ jobs:
           pip install --upgrade riptide_cpp
       - name: Install other dependencies
         run: |
+          pip install setuptools
           pip install ansi2html ipython ipykernel python-dateutil
           pip install flake8 pytest hypothesis nose bottleneck pandas
       - name: Lint with flake8
@@ -152,7 +158,6 @@ jobs:
       - name: Install dependencies
         shell: bash -l {0}
         run: |
-          set -ex
           conda install anaconda-client -q -y
       - name: Download build artifacts
         uses: actions/download-artifact@v2
@@ -160,9 +165,7 @@ jobs:
           name: conda-build-artifacts
           path: conda_pkgs_output/
       - name: Upload to Anaconda
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
         shell: bash -l {0}
         run: |
           set -ex
-          conda activate conda_build
           anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
