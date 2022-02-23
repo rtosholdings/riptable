@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, fix-deploy ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -60,7 +60,7 @@ jobs:
           if-no-files-found: error
 
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     # since riptable is all python source code, only a source build is required from one os
     needs: [build, conda_build]
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
           set -ex
-          twine upload dist/* --verbose
+          echo xtwine upload dist/* --verbose
 
   conda_build:
     runs-on: ${{ matrix.os }}
@@ -132,7 +132,7 @@ jobs:
           if-no-files-found: "error"
 
   conda_deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     needs: [build, conda_build]
     runs-on: ubuntu-latest
     env:
@@ -152,7 +152,6 @@ jobs:
       - name: Install dependencies
         shell: bash -l {0}
         run: |
-          set -ex
           conda install anaconda-client -q -y
       - name: Download build artifacts
         uses: actions/download-artifact@v2
@@ -160,9 +159,7 @@ jobs:
           name: conda-build-artifacts
           path: conda_pkgs_output/
       - name: Upload to Anaconda
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
         shell: bash -l {0}
         run: |
           set -ex
-          conda activate conda_build
-          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
+          echo xanaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
