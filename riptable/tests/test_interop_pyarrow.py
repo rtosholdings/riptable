@@ -112,7 +112,7 @@ class TestPyarrowConvertCategorical:
                 'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
             },
             ordered=False
-        ), id="CategoryMode.Dictionary;ordered=False"),
+        ), id="CategoryMode.Dictionary;ordered=False;Unicode"),
         pytest.param(rt.Categorical(
             # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
             [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
@@ -121,7 +121,25 @@ class TestPyarrowConvertCategorical:
                 'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
             },
             ordered=True
-        ), id="CategoryMode.Dictionary;ordered=True"),
+        ), id="CategoryMode.Dictionary;ordered=True;Unicode"),
+        pytest.param(rt.Categorical(
+            # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+            [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
+            {
+                b'IRL': 372, b'USA': 840, b'AUS': 36, b'HKG': 344, b'JPN': 392,
+                b'MEX': 484, b'KHM': 116, b'THA': 764, b'JAM': 388, b'ARM': 51
+            },
+            ordered=False
+        ), id="CategoryMode.Dictionary;ordered=False;ASCII"),
+        pytest.param(rt.Categorical(
+            # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+            [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
+            {
+                b'IRL': 372, b'USA': 840, b'AUS': 36, b'HKG': 344, b'JPN': 392,
+                b'MEX': 484, b'KHM': 116, b'THA': 764, b'JAM': 388, b'ARM': 51
+            },
+            ordered=True
+        ), id="CategoryMode.Dictionary;ordered=True;ASCII"),
         pytest.param(rt.Categorical(
             [
                 rt.FastArray(['Cyan', 'Magenta', 'Yellow', 'Black', 'Magenta', 'Cyan', 'Black', 'Yellow']).set_name('InkColor'),
@@ -215,7 +233,18 @@ class TestPyarrowConvertCategorical:
 class TestPyarrowConvertDataset:
     @pytest.mark.parametrize(('rt_dset',), [
         pytest.param(rt.Dataset({}), id='empty'),
-        # TODO: Add test cases
+        pytest.param(rt.Dataset({
+            'ink_capacity': rt.FA([15, 10, 15, 25, 10, 15, 25, 15]),
+            'purchase_date': rt.Date(['2019-06-19', '2019-06-19', '2020-01-15', '2020-05-22', '2020-02-10', '2020-02-10', '2020-03-17', '2020-03-17']),
+            'country_code': rt.Categorical(
+                # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+                [36, 36, 344, 840, 840, 124, 36, 484],
+                {
+                    'IRL': 372, 'USA': 840, 'AUS': 36, 'HKG': 344, 'JPN': 392,
+                    'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
+                }, ordered=True)
+            })
+        )
     ])
     def test_roundtrip_rt_pa_rt(self, rt_dset: rt.Dataset) -> None:
         """Test round-tripping from rt.Dataset to pyarrow.Table and back."""

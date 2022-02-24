@@ -1890,9 +1890,17 @@ class Date(DateBase, TimeStampBase):
         if not pat.is_date(arr.type):
             raise ValueError(f"rt.Date arrays can only be created from pyarrow arrays of type 'date32' and 'date64', not '{arr.type}'.")
 
-        # TEMP: ChunkedArray not currently supported.
+        # ChunkedArrays need special handling.
         if isinstance(arr, pa.ChunkedArray):
-            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
+            # A single-chunk ChunkedArray can be handled by just extracting that chunk
+            # and recursively processing it.
+            if arr.num_chunks == 1:
+                return Date._from_arrow(arr.chunk(0), zero_copy_only=zero_copy_only, writable=writable)
+            else:
+                # TODO: Benchmark this vs. using ChunkedArray.combine_chunks() then converting.
+                # TODO: Look at `zero_copy_only` and `writable` -- the converted arrays could be destroyed while hstacking
+                #       since we know they'll have just been created; this could reduce peak memory utilization.
+                return hstack([Date._from_arrow(arr_chunk, zero_copy_only=zero_copy_only, writable=writable) for arr_chunk in arr.iterchunks()])
 
         # If this is a date64 array (milliseconds since the UNIX epoch), we need to convert to a date32 array first;
         # pa.date32() uses the same underlying representation (integer days since the UNIX epoch) as rt.Date.
@@ -4785,14 +4793,22 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         elif not pat.is_timestamp(arr.type):
             raise ValueError(f"rt.DateTimeNano arrays can only be created from pyarrow arrays of type 'timestamp', not '{arr.type}'.")
 
-        # TEMP: ChunkedArray not currently supported.
-        if isinstance(arr, pa.ChunkedArray):
-            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
-
         # If zero_copy_only is set but the timestamp unit isn't 'ns', we won't be able to perform
         # a zero-copy conversion so raise an exception.
         if zero_copy_only and arr.type.unit != 'ns':
             raise ValueError(f"Unable to perform a zero-copy conversion for an timestamp-typed array with the unit '{arr.type.unit}'.")
+
+        # ChunkedArrays need special handling.
+        if isinstance(arr, pa.ChunkedArray):
+            # A single-chunk ChunkedArray can be handled by just extracting that chunk
+            # and recursively processing it.
+            if arr.num_chunks == 1:
+                return DateTimeNano._from_arrow(arr.chunk(0), zero_copy_only=zero_copy_only, writable=writable)
+            else:
+                # TODO: Benchmark this vs. using ChunkedArray.combine_chunks() then converting.
+                # TODO: Look at `zero_copy_only` and `writable` -- the converted arrays could be destroyed while hstacking
+                #       since we know they'll have just been created; this could reduce peak memory utilization.
+                return hstack([DateTimeNano._from_arrow(arr_chunk, zero_copy_only=zero_copy_only, writable=writable) for arr_chunk in arr.iterchunks()])
 
         # TEMP: If the input array uses a unit other than 'ns', we need to scale it to nanoseconds since that's what's
         #       used as the representation for DateTimeNano.
@@ -5627,10 +5643,6 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         elif not pat.is_duration(arr.type):
             raise ValueError(f"rt.TimeSpan arrays can only be created from pyarrow arrays of type 'duration', not '{arr.type}'.")
 
-        # TEMP: ChunkedArray not currently supported.
-        if isinstance(arr, pa.ChunkedArray):
-            raise TypeError("Conversion from pa.ChunkedArray not currently implemented. You must convert the pa.ChunkedArray to a pa.Array before calling this method.")
-
         # If the input array's type specifies a unit other than 'ns',
         # we need to convert it to nanoseconds, because rt.TimeSpan always uses nanoseconds as the unit.
         if arr.type.unit != 'ns':
@@ -5639,6 +5651,18 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
             else:
                 pa_ns_duration_ty = pa.duration('ns')
                 arr = arr.cast(pa_ns_duration_ty)
+
+        # ChunkedArrays need special handling.
+        if isinstance(arr, pa.ChunkedArray):
+            # A single-chunk ChunkedArray can be handled by just extracting that chunk
+            # and recursively processing it.
+            if arr.num_chunks == 1:
+                return TimeSpan._from_arrow(arr.chunk(0), zero_copy_only=zero_copy_only, writable=writable)
+            else:
+                # TODO: Benchmark this vs. using ChunkedArray.combine_chunks() then converting.
+                # TODO: Look at `zero_copy_only` and `writable` -- the converted arrays could be destroyed while hstacking
+                #       since we know they'll have just been created; this could reduce peak memory utilization.
+                return hstack([TimeSpan._from_arrow(arr_chunk, zero_copy_only=zero_copy_only, writable=writable) for arr_chunk in arr.iterchunks()])
 
         # Detect whether the values in the array are in the range [0, 2 ^ 53], in which case we *can* perform a zero-copy conversion
         # of the data (assuming writable=False), since the integer and float representation will be the same.
