@@ -1,4 +1,5 @@
 import unittest
+from numpy import dtype
 import pytest
 
 from numpy.testing import assert_array_equal
@@ -536,6 +537,31 @@ def test_ismember_type_for_empties(a, b, isin, indexer):
     assert_array_equal(isin, result[0])
     assert_array_equal(indexer, result[1])
     assert result[1].isna().all()
+
+@pytest.mark.parametrize('dt1, dt2, expected_failure', [
+    ('int32', 'float32', True),
+    ('uint8', 'int8', True),
+    ('uint64', 'int64', True),
+    ('uint8', 'float32', False),
+    ('int32', 'int64', False),
+    ('int32', 'float64', False),
+    ('uint64', 'str', True),
+])
+def test_ismember_lossless_check(dt1, dt2, expected_failure):
+    def default_value(dt):
+        return 0 if np.issubdtype(dt, np.number) else ''
+    fa1 = FA([default_value(dt1)], dtype=dt1)
+    fa2 = FA([default_value(dt2)], dtype=dt2)
+
+    actual_failure = False
+    try: ismember(fa1, fa2)
+    except TypeError: actual_failure = True
+    assert actual_failure == expected_failure
+
+    actual_failure = False
+    try: ismember(fa2, fa1)
+    except TypeError: actual_failure = True
+    assert actual_failure == expected_failure
 
 
 if __name__ == "__main__":

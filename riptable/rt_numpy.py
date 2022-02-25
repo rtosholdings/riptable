@@ -36,6 +36,7 @@ import numpy as np
 from functools import wraps
 import inspect
 import warnings
+import math as py_math
 
 import riptide_cpp as rc
 from riptide_cpp import LedgerFunction
@@ -277,6 +278,32 @@ def get_common_dtype(x, y) -> np.dtype:
                 common = np.dtype('S'+maxsize)
 
     return common
+
+def _find_lossless_common_type(dt1 : np.dtype, dt2 : np.dtype) -> Union[np.dtype, None]:
+    """
+    Finds the lossless common type, or None if not found.
+    """
+    if not np.issubdtype(dt1, np.number) or not np.issubdtype(dt2, np.number):
+        return np.find_common_type([dt1, dt2], [])
+
+    def _get_info(dt):
+        if np.issubdtype(dt, np.integer):
+            info = np.iinfo(dt)
+            return { 'min': info.min, 'max': info.max, 'prec': py_math.log10(info.max) }
+        info = np.finfo(dt)
+        return { 'min': info.min, 'max': info.max, 'prec': info.precision }
+
+    info1 = _get_info(dt1)
+    info2 = _get_info(dt2)
+
+    def can_represent(itest, itarget):
+        return itest['min'] >= itarget['min'] and itest['max'] <= itarget['max'] and itest['prec'] <= itarget['prec']
+
+    if can_represent(info1, info2):
+        return dt2
+    if can_represent(info2, info1):
+        return dt1
+    return None
 
 
 def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = 'C') -> 'FastArray':
@@ -889,7 +916,9 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
 
             #warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
             #raise TypeError('numeric arrays in ismember need to be the same dtype')
-            common_type = np.find_common_type([a.dtype,b.dtype],[])
+            common_type = _find_lossless_common_type(a.dtype, b.dtype)
+            if not common_type:
+                raise TypeError(f"Cannot find lossless common type of {a.dtype} and {b.dtype}")
             if a.dtype != common_type:
                 a = a.astype(common_type)
             if b.dtype != common_type:
