@@ -283,8 +283,10 @@ def _find_lossless_common_type(dt1 : np.dtype, dt2 : np.dtype) -> Union[np.dtype
     """
     Finds the lossless common type, or None if not found.
     """
+    dtc = np.find_common_type([dt1, dt2], [])
+
     if not np.issubdtype(dt1, np.number) or not np.issubdtype(dt2, np.number):
-        return np.find_common_type([dt1, dt2], [])
+        return dtc
 
     def _get_info(dt):
         if np.issubdtype(dt, np.integer):
@@ -293,17 +295,14 @@ def _find_lossless_common_type(dt1 : np.dtype, dt2 : np.dtype) -> Union[np.dtype
         info = np.finfo(dt)
         return { 'min': info.min, 'max': info.max, 'prec': info.precision }
 
+    infoc = _get_info(dtc)
     info1 = _get_info(dt1)
     info2 = _get_info(dt2)
 
     def can_represent(itest, itarget):
         return itest['min'] >= itarget['min'] and itest['max'] <= itarget['max'] and itest['prec'] <= itarget['prec']
 
-    if can_represent(info1, info2):
-        return dt2
-    if can_represent(info2, info1):
-        return dt1
-    return None
+    return dtc if can_represent(info1, infoc) and can_represent(info2, infoc) else None
 
 
 def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = 'C') -> 'FastArray':

@@ -539,10 +539,11 @@ def test_ismember_type_for_empties(a, b, isin, indexer):
     assert result[1].isna().all()
 
 @pytest.mark.parametrize('dt1, dt2, expected_failure', [
-    ('int32', 'float32', True),
-    ('uint8', 'int8', True),
+    ('int32', 'float32', False),
+    ('uint8', 'int8', False),
     ('uint64', 'int64', True),
     ('uint8', 'float32', False),
+    ('int16', 'int64', False),
     ('int32', 'int64', False),
     ('int32', 'float64', False),
     ('uint64', 'str', True),
