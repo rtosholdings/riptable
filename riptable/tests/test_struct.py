@@ -15,6 +15,27 @@ from riptable.rt_numpy import arange
 from riptable.rt_display import DisplayString
 
 
+class DerivedStructWithTotalSizesOverride(Dataset):
+    """
+    For testing purposes, a derived Struct (via Dataset) implementing
+    an override of the `Struct.total_sizes` property to check that the
+    base implementation in `Struct` correctly uses overrides when an
+    instance of such a type is nested in the Struct.
+    """
+    def items(self):
+        # To verify the .total_sizes override is being respected,
+        # don't allow the .items() of this class to be used.
+        # If Struct.total_sizes() tries to use it, the test will fail.
+        raise NotImplementedError
+
+    @property
+    def total_sizes(self):
+        # Bogus implementation, but returning constants helps ensure
+        # consistent behavior when used in tests.
+        return 1049, 12739
+
+
+
 class Struct_Test(unittest.TestCase):
     def test_col_ctor_01(self):
         dict1 = {_k: [_i] for _i, _k in enumerate('bac')}
@@ -807,6 +828,22 @@ class Struct_Test(unittest.TestCase):
         self.assertIsInstance(s.tree(), DisplayString)
         s['foo'] = Dataset({'bar': arange(5)})
         self.assertIsInstance(s.tree(), DisplayString)
+
+    def test_total_sizes_with_derived_struct_type(self) -> None:
+        # Create a Struct with an embedded instance of the derived Struct/Dataset class
+        # (plus some other stuff, which is irrelevant but provided for completeness).
+        my_struct = Struct()
+        my_struct.some_arr = FastArray([1, 1, 2, 3, 5, 8])
+        my_struct.ds = Dataset({'c': Categorical(['aa', 'bb', 'cc', 'dd'])})
+        my_struct.derived_ds = DerivedStructWithTotalSizesOverride({'zyx': FastArray([0.1, 0.2, 0.3])})
+
+        # Get the value of the .total_sizes property of the Struct.
+        # This checks that we don't get an exception or infinite recursion,
+        # and that the property returns values as expected.
+        physical, logical = my_struct.total_sizes
+        self.assertGreater(physical, 1_000)
+        self.assertGreater(logical, 10_000)
+
 
 
 if __name__ == "__main__":

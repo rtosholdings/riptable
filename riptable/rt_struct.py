@@ -4335,90 +4335,106 @@ class Struct:
         # Iterate until we've processed all the Struct instances (which includes any instances of derived classes)
         while len(pending_objects) > 0:
             current_obj = pending_objects.pop()
-            for name, obj in current_obj.items():
-                if obj is None: pass
-                elif isinstance(obj, TypeRegister.Categorical):
-                    # Categorical needs to include the storage for categories.
-                    size = obj._total_size
-                    total_logical_size += size
-                    while obj.base is not None:
-                        obj = obj.base
-                    col_idwrapper = IdWrapper(obj)
-                    if col_idwrapper not in seen_objects:
-                        seen_objects.add(col_idwrapper)
-                        total_physical_size += size
-                elif isinstance(obj, TypeRegister.FastArray):
-                    # For FastArray, we can have different FastArray instances which wrap the same underlying memory;
-                    # since that's really what we're after here -- to see where we have aliased arrays -- we check
-                    # that underlying array object for uniqueness rather than the FastArray itself.
-                    array_data = obj._np
 
-                    # Handle array views by searching until we find the "root" base array.
-                    # An ndarray is a view if it returns a non-None instance from it's .base property.
-                    while array_data.base is not None:
-                        array_data = array_data.base
+            # If `current_obj` is a derived Struct type, don't try to traverse it directly;
+            # instead, recursively call it's `.total_sizes()` method to get it's size.
+            # Until/unless we provide a way to pass in the `seen_objects` set, this provides
+            # **less** accurate results. On the other hand, this approach respects OO inheritance
+            # so if some derived class overrides this method, we'll use the derived class'
+            # implementation as one expected.
+            # isinstance(current_obj, Struct) should always be true here. However, we only want
+            # to call .total_sizes on `current_obj` when it's a _derived_ Struct type **AND**
+            # that type or some other class in it's inheritance hierarchy overrides .total_sizes.
+            # Otherwise, a Struct containing an Dataset will lead to infinite recursion.
+            if type(current_obj) != Struct and type(current_obj).total_sizes != Struct.total_sizes:
+                obj_physical_size, obj_logical_size = current_obj.total_sizes
+                total_physical_size += obj_physical_size
+                total_logical_size += obj_logical_size
+            else:
+                for name, obj in current_obj.items():
+                    if obj is None: pass
+                    elif isinstance(obj, TypeRegister.Categorical):
+                        # Categorical needs to include the storage for categories.
+                        size = obj._total_size
+                        total_logical_size += size
+                        while obj.base is not None:
+                            obj = obj.base
+                        col_idwrapper = IdWrapper(obj)
+                        if col_idwrapper not in seen_objects:
+                            seen_objects.add(col_idwrapper)
+                            total_physical_size += size
+                    elif isinstance(obj, TypeRegister.FastArray):
+                        # For FastArray, we can have different FastArray instances which wrap the same underlying memory;
+                        # since that's really what we're after here -- to see where we have aliased arrays -- we check
+                        # that underlying array object for uniqueness rather than the FastArray itself.
+                        array_data = obj._np
 
-                    # Create an IdWrapper around the column data.
-                    col_idwrapper = IdWrapper(array_data)
+                        # Handle array views by searching until we find the "root" base array.
+                        # An ndarray is a view if it returns a non-None instance from it's .base property.
+                        while array_data.base is not None:
+                            array_data = array_data.base
 
-                    # Always add this object's size to the total logical size of the Struct data
-                    # (without regard to whether this is a duplicate/aliased object).
-                    total_logical_size += array_data.nbytes       # assumes data is an np.ndarray or a subclass of it
+                        # Create an IdWrapper around the column data.
+                        col_idwrapper = IdWrapper(array_data)
 
-                    # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
-                    # add it to the "seen objects" set and add it's size to the total physical size.
-                    if col_idwrapper not in seen_objects:
-                        seen_objects.add(col_idwrapper)
-                        total_physical_size += array_data.nbytes
+                        # Always add this object's size to the total logical size of the Struct data
+                        # (without regard to whether this is a duplicate/aliased object).
+                        total_logical_size += array_data.nbytes       # assumes data is an np.ndarray or a subclass of it
 
-                elif isinstance(obj, np.ndarray):
-                    # Handle array views by searching until we find the "root" base array.
-                    # An ndarray is a view if it returns a non-None instance from it's .base property.
-                    while obj.base is not None:
-                        obj = obj.base
+                        # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
+                        # add it to the "seen objects" set and add it's size to the total physical size.
+                        if col_idwrapper not in seen_objects:
+                            seen_objects.add(col_idwrapper)
+                            total_physical_size += array_data.nbytes
 
-                    # Create an IdWrapper around the column data.
-                    col_idwrapper = IdWrapper(obj)
+                    elif isinstance(obj, np.ndarray):
+                        # Handle array views by searching until we find the "root" base array.
+                        # An ndarray is a view if it returns a non-None instance from it's .base property.
+                        while obj.base is not None:
+                            obj = obj.base
 
-                    # Always add this object's size to the total logical size of the Struct data
-                    # (without regard to whether this is a duplicate/aliased object).
-                    total_logical_size += obj.nbytes       # assumes data is an np.ndarray or a subclass of it
+                        # Create an IdWrapper around the column data.
+                        col_idwrapper = IdWrapper(obj)
 
-                    # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
-                    # add it to the "seen objects" set and add it's size to the total physical size.
-                    if col_idwrapper not in seen_objects:
-                        seen_objects.add(col_idwrapper)
-                        total_physical_size += obj.nbytes
+                        # Always add this object's size to the total logical size of the Struct data
+                        # (without regard to whether this is a duplicate/aliased object).
+                        total_logical_size += obj.nbytes       # assumes data is an np.ndarray or a subclass of it
 
-                # If the current item is a Struct, recurse downwards.
-                # This _must_ be the last case before the fallthrough so that any classes
-                # derived from Struct are handled in some more-specific way before taking
-                # the general case for Struct.
-                elif isinstance(obj, Struct):
-                    # Create an IdWrapper around the column data.
-                    col_idwrapper = IdWrapper(obj)
+                        # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
+                        # add it to the "seen objects" set and add it's size to the total physical size.
+                        if col_idwrapper not in seen_objects:
+                            seen_objects.add(col_idwrapper)
+                            total_physical_size += obj.nbytes
 
-                    # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
-                    # add it to the "seen objects" set and add to the list of pending Struct instances to process.
-                    if col_idwrapper not in seen_objects:
-                        seen_objects.add(col_idwrapper)
-                        pending_objects.append(obj)
+                    # If the current item is a Struct, recurse downwards.
+                    # This _must_ be the last case before the fallthrough so that any classes
+                    # derived from Struct are handled in some more-specific way before taking
+                    # the general case for Struct.
+                    elif isinstance(obj, Struct):
+                        # Create an IdWrapper around the column data.
+                        col_idwrapper = IdWrapper(obj)
 
-                # Handle some scalar types
-                elif isinstance(obj, numbers.Integral):
-                    # TODO: Do we need to handle integer sizes other than 32-bit here?
-                    #       We may need to if `obj` is a numpy array scalar.
-                    total_physical_size += 4
-                    total_logical_size += 4
+                        # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
+                        # add it to the "seen objects" set and add to the list of pending Struct instances to process.
+                        if col_idwrapper not in seen_objects:
+                            seen_objects.add(col_idwrapper)
+                            pending_objects.append(obj)
 
-                # Process list and sets by just concatenating their items to the list of pending items.
-                # TODO: Need to implement this -- we'll need to restructure our work loop a bit to accommodate them.
-                # elif isinstance(obj, (list, set)):
-                #     pending_objects.extend(obj)
+                    # Handle some scalar types
+                    elif isinstance(obj, numbers.Integral):
+                        # TODO: Do we need to handle integer sizes other than 32-bit here?
+                        #       We may need to if `obj` is a numpy array scalar.
+                        total_physical_size += 4
+                        total_logical_size += 4
 
-                else:
-                    # Log the object type so we know what's not being handled.
-                    logger.debug(f'set_memory_stats: Unhandled object \'{name}\' of type \'{type(obj)}\'.')
+                    # Process list and sets by just concatenating their items to the list of pending items.
+                    # TODO: Need to implement this -- we'll need to restructure our work loop a bit to accommodate them.
+                    # elif isinstance(obj, (list, set)):
+                    #     pending_objects.extend(obj)
+
+                    else:
+                        # Log the object type so we know what's not being handled.
+                        logger.debug(f'set_memory_stats: Unhandled object \'{name}\' of type \'{type(obj)}\'.')
 
         return (total_physical_size, total_logical_size)
 
