@@ -1253,19 +1253,7 @@ class FastArray(np.ndarray):
                 REDUCE_FUNCTIONS.REDUCE_NANMAX,
                 REDUCE_FUNCTIONS.REDUCE_MEAN,
                 REDUCE_FUNCTIONS.REDUCE_NANMEAN ]:
-            if  self.dtype not in [
-                    int,
-                    float,
-                    np.float32,
-                    np.float64,
-                    np.int8,
-                    np.int16,
-                    np.int32,
-                    np.int64,
-                    np.uint8,
-                    np.uint16,
-                    np.uint32,
-                    np.uint64 ]:
+            if  not np.issubdtype(self.dtype, np.number):
                 raise TypeError(f'Unsupported operation on non-numeric type {self.dtype}')
         
         result = TypeRegister.MathLedger._REDUCE(self, reduceFunc)
