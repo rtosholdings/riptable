@@ -1,4 +1,5 @@
 import unittest
+from numpy import dtype
 import pytest
 
 from numpy.testing import assert_array_equal
@@ -537,6 +538,58 @@ def test_ismember_type_for_empties(a, b, isin, indexer):
     assert_array_equal(indexer, result[1])
     assert result[1].isna().all()
 
+@pytest.mark.parametrize('dt1, dt2, expected_failure', [
+    ('int8', 'float32', False),
+    ('int8', 'int8', False),
+    ('int16', 'int64', False),
+    ('int32', 'float32', False),
+    ('int32', 'float64', False),
+    ('int32', 'int64', False),
+    ('int64', 'float32', False),
+    ('int64', 'float64', False),
+    ('uint8', 'float32', False),
+    ('uint8', 'int8', False),
+    ('uint64', 'float32', False),
+    ('uint64', 'float64', False),
+    ('uint64', 'int64', False),
+    ('uint64', 'str', True),
+])
+def test_ismember_lossless_check(dt1, dt2, expected_failure):
+    def default_value(dt):
+        return 0 if np.issubdtype(dt, np.number) else ''
+
+    fa1 = FA([default_value(dt1)], dtype=dt1)
+    fa2 = FA([default_value(dt2)], dtype=dt2)
+
+    actual_failure = False
+    try: ismember(fa1, fa2)
+    except TypeError: actual_failure = True
+    assert actual_failure == expected_failure
+
+    actual_failure = False
+    try: ismember(fa2, fa1)
+    except TypeError: actual_failure = True
+    assert actual_failure == expected_failure
+
+def test_is_member_casting_uints():
+    # RIP-254:  As floats n and n+1 are the same. We check that we don't identify n and n+1 in ismember
+    n = 2 ** 53
+    a = FastArray([n + 2, n + 1, n, n - 1], dtype='uint64')
+    b = FastArray([n])
+    res = ismember(a, b)[0]
+    assert_array_equal(res, [False, False, True, False])
+    res = ismember(b, a)[1]
+    assert (res == 2).all()
+
+def test_is_member_casting_big_uints():
+    # RIP-254
+    n = 2**63
+    a = FastArray([n, n-1], dtype='uint64')
+    b = FastArray([n-1], dtype='int64')
+    res = ismember(a, b)[0]
+    assert_array_equal(res, [False, True])
+    res = ismember(b, a)[1]
+    assert (res == 1).all()
 
 if __name__ == "__main__":
     tester = unittest.main()
