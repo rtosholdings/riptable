@@ -278,6 +278,72 @@ def get_common_dtype(x, y) -> np.dtype:
 
     return common
 
+def _find_lossless_common_type(dt1 : np.dtype, dt2 : np.dtype) -> Union[np.dtype, None]:
+    """
+    Finds the lossless common type, or None if not found.
+    """
+    dtc = np.find_common_type([dt1, dt2], [])
+
+    if not np.issubdtype(dt1, np.number) or not np.issubdtype(dt2, np.number):
+        return dtc
+
+    def _get_info(dt : np.dtype) -> dict:
+        if np.issubdtype(dt, np.integer):
+            info = np.iinfo(dt)
+            return { 'min': info.min, 'max': info.max, 'prec': info.bits - (1 if info.min < 0 else 0) }
+        info = np.finfo(dt)
+        return { 'min': info.min, 'max': info.max, 'prec': info.nmant }
+
+    infoc = _get_info(dtc)
+    info1 = _get_info(dt1)
+    info2 = _get_info(dt2)
+
+    def can_represent(itest, itarget):
+        return itest['min'] >= itarget['min'] and itest['max'] <= itarget['max'] and itest['prec'] <= itarget['prec']
+
+    return dtc if can_represent(info1, infoc) and can_represent(info2, infoc) else None
+
+def _find_lossless_common_array_type(arr1 : np.array, arr2 : np.array) -> Union[np.dtype, None]:
+    """
+    Finds the lossless common type for the array values, or None if not found.
+    """
+    dt1 = arr1.dtype
+    dt2 = arr2.dtype
+
+    dtc = _find_lossless_common_type(dt1, dt2)
+    if dtc is not None:
+        return dtc
+
+    # Check values to see if all of them can fit in the type of the other.
+    # Only consider coercion from inexact to exact types (simplifies tests).
+
+    def _get_info(dt : np.dtype) -> dict:
+        if np.issubdtype(dt, np.integer):
+            info = np.iinfo(dt)
+            return { 'min': info.min, 'max': info.max, 'exact': True }
+        info = np.finfo(dt)
+        return { 'min': info.min, 'max': info.max, 'exact': False }
+
+    def _can_coerce(arr : np.array, array_info : dict, target_info : dict) -> bool:
+        if not target_info['exact']:
+            return False
+        np_arr = arr.view(np.ndarray) # use np.ndarray since rt.FA is unreliable at these limits
+        if array_info['min'] < 0 and (np_arr < target_info['min']).all():
+            return False
+        if (np_arr > target_info['max']).all():
+            return False
+        return True
+
+    info1 = _get_info(dt1)
+    info2 = _get_info(dt2)
+
+    if _can_coerce(arr2, info2, info1):
+        return dt1
+
+    if _can_coerce(arr1, info1, info2):
+        return dt2
+
+    return None
 
 def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = 'C') -> 'FastArray':
     #return LedgerFunction(np.empty, shape, dtype=dtype, order=order)
@@ -876,7 +942,7 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
     else:
         # make sure both are supported numeric types
         if a_char not in allowed_types:
-            raise TypeError(f"{b.dtype} not in allowed types for ismember")
+            raise TypeError(f"{a.dtype} not in allowed types for ismember")
         if b_char not in allowed_types:
             raise TypeError(f"{b.dtype} not in allowed types for ismember")
 
@@ -889,7 +955,9 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
 
             #warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
             #raise TypeError('numeric arrays in ismember need to be the same dtype')
-            common_type = np.find_common_type([a.dtype,b.dtype],[])
+            common_type = _find_lossless_common_array_type(a, b)
+            if not common_type:
+                raise TypeError(f"Cannot find lossless common type of {a.dtype} and {b.dtype}")
             if a.dtype != common_type:
                 a = a.astype(common_type)
             if b.dtype != common_type:
