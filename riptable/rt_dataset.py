@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 __all__ = ['Dataset', ]
 
 from collections import abc, Counter, namedtuple
@@ -3255,6 +3255,9 @@ class Dataset(Struct):
         # this has too many repeat conditionals
         # test sort keys
         bylist = by
+
+        if not isinstance(ascending, bool):
+            raise TypeError("ascending parameter must be a single boolean");
 
         if not isinstance(by, list):
             bylist = [bylist]
