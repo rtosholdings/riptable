@@ -1246,16 +1246,6 @@ class FastArray(np.ndarray):
             result = npFunc(self._np, *args, **kwargs)
             return result
 
-        if reduceFunc in [
-                REDUCE_FUNCTIONS.REDUCE_MIN,
-                REDUCE_FUNCTIONS.REDUCE_NANMIN,
-                REDUCE_FUNCTIONS.REDUCE_MAX,
-                REDUCE_FUNCTIONS.REDUCE_NANMAX,
-                REDUCE_FUNCTIONS.REDUCE_MEAN,
-                REDUCE_FUNCTIONS.REDUCE_NANMEAN ]:
-            if  not np.issubdtype(self.dtype, np.number):
-                raise TypeError(f'Unsupported operation on non-numeric type {self.dtype}')
-        
         result = TypeRegister.MathLedger._REDUCE(self, reduceFunc)
 
         # It's possible there was no result returned from the reduction function;
