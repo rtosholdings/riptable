@@ -148,7 +148,9 @@ class Accum2(GroupByOps, FastArray):
         instance._gb_keychain = None
         instance._ylabel = ylabel
         # filter already applied but groupbyops looks for it by default
-        instance._filter =None
+        instance._filter = None
+        # _myfilter remembers the filter, since _filter is always set to None to work with groupbyops
+        instance._myfilter= filter
 
         return instance
 
@@ -896,6 +898,12 @@ class Accum2(GroupByOps, FastArray):
 
         #insert showfilter from Accum2 init if not overridden
         kwargs['showfilter'] = kwargs.get('showfilter', self._showfilter)
+
+        if self._myfilter is not None:
+            if kwargs.get('filter', None) is not None:
+                kwargs['filter'] = self._myfilter & kwargs['filter']
+            else:
+                kwargs['filter'] = self._myfilter
 
         if len(origdict) > 0:
             test_col = list(origdict.values())[0]
