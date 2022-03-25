@@ -2213,6 +2213,20 @@ def test_operator_methods(op_name):
     assert (result == expected).all(axis=None)
 
 
+def test_pow_methods():
+    ds = TestDataset.get_arith_dataset()
+    result = ds.pow(2)
+    expected = ds ** 2
+    assert (result == expected).all(axis=None)
+
+
+def test_mod_methods():
+    ds = TestDataset.get_arith_dataset()
+    result = ds.mod(2)
+    expected = ds % 2
+    assert (result == expected).all(axis=None)
+
+
 @pytest.mark.parametrize('categorical', get_all_categorical_data())
 def test_dataset_to_dataframe_roundtripping(categorical):
     k = 'categorical'
