@@ -584,11 +584,14 @@ def test_is_member_casting_uints():
 def test_is_member_casting_big_uints():
     # RIP-254
     n = 2**63
-    a = FastArray([n, n-1], dtype='uint64')
-    b = FastArray([n-1], dtype='int64')
+    a = FastArray([n-1], dtype='int64')
+    b = FastArray([3, n-1], dtype='uint64')
     res = ismember(a, b)[0]
-    assert_array_equal(res, [False, True])
+#    assert_array_equal(res, [False, True])
+    assert_array_equal(res, [True])
     res = ismember(b, a)[1]
+    assert_array_equal(res, FastArray([ -128, 0 ], dtype='int8'))
+    res = ismember(a, b)[1]
     assert (res == 1).all()
 
 if __name__ == "__main__":
