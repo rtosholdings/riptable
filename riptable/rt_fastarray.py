@@ -14,7 +14,7 @@ from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDU
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .Utils.common import cached_property
 from .rt_mlutils import normalize_minmax, normalize_zscore
-from .rt_numpy import ismember, ones, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray, crc32c, hstack
+from .rt_numpy import ismember, ones, zeros, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray, crc32c, hstack
 from .rt_sds import save_sds
 from .rt_utils import  sample, describe
 from .rt_grouping import Grouping
@@ -58,6 +58,125 @@ NUMPY_CONVERSION_TABLE: Mapping[Callable, REDUCE_FUNCTIONS] = {
     # np.any: REDUCE_FUNCTIONS.REDUCE_ANY,
     # np.all: REDUCE_FUNCTIONS.REDUCE_ALL,
     }
+
+import math
+import numba as nb
+
+@nb.generated_jit()
+def _isnan(x):
+    if x == nb.int8:
+        return lambda x: x == nb.int8(-128)
+    elif x == nb.int16:
+        return lambda x: x == nb.int16(-32768)
+    elif x == nb.int32:
+        return lambda x: x == nb.int32(0x80000000)
+    elif x == nb.int64:
+        return lambda x: x == nb.int64(0x8000000000000000)
+    elif x == nb.uint8:
+        return lambda x: x == nb.uint8(0xff)
+    elif x == nb.uint16:
+        return lambda x: x == nb.uint16(0xffff)
+    elif x == nb.uint32:
+        return lambda x: x == nb.uint32(0xffffffff)
+    elif x == nb.uint64:
+        return lambda x: x == nb.uint64(0xffffffffffffffff)
+    else:
+        return lambda x: math.isnan(x)
+
+@nb.njit(parallel=True)
+def _fnansumhelper(x, filter):
+    ret = 0
+    length = 0
+    for i in nb.prange(len(x)):
+        if filter[i] and not _isnan(x[i]):
+            ret += x[i]
+            length += 1
+    return (ret, length)
+
+def _fnansum(x, filter):
+    return _fnansumhelper(x, filter)[0]
+
+def _fnanmean(x, filter):
+    (tot, n) = _fnansumhelper(x, filter)
+    return tot / n
+
+@nb.njit(parallel=True)
+def _fnanvar(x, filter):
+
+    abc = 0.0
+    length = 0
+
+    for i in nb.prange(len(x)):
+        if filter[i] and not _isnan(x[i]):
+            abc += x[i]
+            length += 1
+
+    mean = abc / length
+
+    ret = 0.0
+
+    for i in nb.prange(len(x)):
+        if filter[i] and not _isnan(x[i]):
+            ret += (x[i] - mean)**2
+    if length > 1:
+        return ret / (length - 1)
+    if length == 1:
+        return np.NaN
+    if length == 0:
+        raise ValueError( 'Tried to take the variance of an empty array.' )
+
+def _fnanstd(x, filter):
+    return math.sqrt( _fnanvar(x, filter) )
+
+
+
+@nb.njit(parallel=True)
+def _fsumhelper(x, filter):
+    ret = 0
+    length = 0
+    for i in nb.prange(len(x)):
+        if filter[i]:
+            ret += x[i]
+            length += 1
+    return (ret, length)
+
+def _fsum(x, filter):
+    return _fsumhelper(x, filter)[0]
+
+def _fmean(x, filter):
+    (tot, n) = _fsumhelper(x, filter)
+    return tot / n
+
+@nb.njit(parallel=True)
+def _fvar(x, filter):
+
+    abc = 0.0
+    length = 0
+
+    for i in nb.prange(len(x)):
+        if filter[i]:
+            abc += x[i]
+            length += 1
+
+    mean = abc / length
+
+    ret = 0.0
+
+    for i in nb.prange(len(x)):
+        if filter[i]:
+            ret += (x[i] - mean)**2
+    if length > 1:
+        return ret / (length - 1)
+    if length == 1:
+        return np.NaN
+    if length == 0:
+        raise ValueError( 'Tried to take the variance of an empty array.' )
+
+
+def _fstd(x, filter):
+    return math.sqrt( _fvar(x, filter) )
+
+
 
 #--------------------------------------------------------------
 def FA_FROM_UINT8(uint8arr):
@@ -1660,15 +1779,434 @@ class FastArray(np.ndarray):
     #############################################
     # Reduce section
     #############################################
-    def nansum(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSUM, np.nansum,  *args, **kwargs)
-    def mean(self, *args, **kwargs):           return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_MEAN,   np.mean,    *args, **kwargs)
-    def nanmean(self, *args, **kwargs):        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMEAN,np.nanmean, *args, **kwargs)
+
+    def _fa_filter_wrapper(self, myFunc, filter = None, dtype = None):
+
+        if filter is True:
+            filter = ones(len(self), dtype=bool)
+        if filter is False:
+            filter = zeros(len(self), dtype=bool)
+        if len(filter) != len(self):
+            raise ValueError('Filter and input not the same length.')
+
+        if not self.iscomputable():
+            return np.NaN
+
+        if dtype is not None:
+            return dtype( myFunc(self, filter) )
+
+        return myFunc( self, filter )
+
+
+    def _fa_keyword_wrapper(self, filter = None, dtype = None, axis = None, keepdims = None, ddof = None, **kwargs):
+
+        if any(kwargs):
+            logging.warning('Unexpected FastArray operation keyword(s): ' +  ', '.join([ key for key, value in kwargs.items()]) )
+
+        if dtype is not None:
+            kwargs['dtype'] = dtype
+        if axis:
+            kwargs['axis'] = axis
+        if keepdims:
+            kwargs['keepdims'] = keepdims
+        if ddof is not None:
+            kwargs['ddof'] = ddof
+        if filter is not None:
+            kwargs['filter'] = filter
+
+        if (filter is not None) and ( (axis is not None) or (keepdims is not None) or (ddof is not None)):
+            logging.warning( 'Since Filter keyword is present, FastArray operations ignore axis, keepdims and ddof' )
+
+        return(kwargs)
+
+    def nansum(self, *args, filter = None, dtype = None, axis = None, keepdims = None, **kwargs):
+        '''
+        Computes the sum of the first argument ignoring NaNs. For example
+        >>> a = rt.FastArray( [1,2,3,rt.nan])
+        >>> a.nansum()
+        6.0
+
+        Parameters:
+        filter : array of bool, optional
+        Specifies which elements to include in the mean. For example,
+        >>> a = rt.FastArray( [1,3,5,7,rt.nan])
+        >>> b = rt.FastArray( [False, True, False, True,True] )
+        >>> a.nansum(filter = b)
+        10.0
+        If the filter is uniformly False, this will return 0.
+
+        dtype : optional
+        What datatype should the result be returned as. For a FastArray x,
+        x.nansum(dtype = my_type) is equivalent to my_type( x.nansum() ).
+
+
+        Numpy Parameters:
+        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
+        with these parameters. The filter parameter will take precedence and if nansum is passed a filter and
+        one of these parameters, it will ignore these parameters.
+
+        axis : {int, tuple of int, None}, optional
+            Axis or axes along which the sum is computed. The default is to compute the
+            sum of the flattened array.
+
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+
+
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+        '''
+
+        kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=None, **kwargs)
+
+        if filter is not None:
+            return self._fa_filter_wrapper(_fnansum, filter=filter, dtype=dtype)
+
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSUM, np.nansum,  *args, **kwargs)
+
+    def mean(self, *args, filter = None, dtype = None, axis = None, keepdims = None,  **kwargs):
+        '''
+        Computes the arithmetic mean of the first argument. For example
+        >>> a = rt.FastArray( [1,2,3,4])
+        >>> a.mean()
+        2.5
+
+        Parameters:
+        filter : array of bool, optional
+        Specifies which elements to include in the mean. For example,
+        >>> a = rt.FastArray( [1,3,5,7])
+        >>> b = rt.FastArray( [False, True, False, True] )
+        >>> a.mean(filter = b)
+        5
+        If the filter is uniformly False, this will return 0.
+
+        dtype : optional
+        What datatype should the result be returned as. For a FastArray x,
+        x.mean(dtype = my_type) is equivalent to my_type( x.mean() ).
+
+
+        Numpy Parameters:
+        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
+        with these parameters. The filter parameter will take precedence and if mean is passed a filter and
+        one of these parameters, it will ignore these parameters.
+
+        axis : None or int or tuple of ints, optional
+            Axis or axes along which the means are computed. The default is to
+            compute the mean of the flattened array.
+
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+
+
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+        '''
+
+        kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=None, **kwargs)
+
+        if filter is not None:
+            return self._fa_filter_wrapper(_fmean, filter=filter, dtype=dtype)
+
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_MEAN,   np.mean,    *args, **kwargs)
+
+    def nanmean(self, *args, filter = None, dtype = None, axis = None, keepdims = None, **kwargs):
+        '''
+        Computes the arithmetic mean of the first argument, ignoring NaNs.
+        For example
+        >>> a = rt.FastArray( [1,2,3,rt.nan])
+        >>> a.mean()
+        2
+
+        Parameters:
+        filter : array of bool, optional
+        Specifies which elements to include in the nanmean. For example,
+        >>> a = rt.FastArray( [1,3,5,rt.nan])
+        >>> b = rt.FastArray( [False, True, False, True] )
+        >>> a.mean(filter = b)
+        3
+        If the filter is uniformly False, this will return 0.
+
+
+        dtype : optional
+        What datatype should the result be returned as. For a FastArray x,
+        x.nanmean(dtype = my_type) is equivalent to my_type( x.nanmean() ).
+
+
+        Numpy Parameters:
+        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
+        with these parameters. The filter parameter will take precedence and if nanmean is passed a filter and
+        one of these parameters, it will ignore these parameters.
+
+        axis : {int, tuple of int, None}, optional
+            Axis or axes along which the means are computed. The default is to compute
+            the mean of the flattened array.
+
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+
+
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+        '''
+
+        kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=None, **kwargs)
+
+        if filter is not None:
+            return self._fa_filter_wrapper(_fnanmean, filter=filter, dtype=dtype)
+
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMEAN,np.nanmean, *args, **kwargs)
     #---------------------------------------------------------------------------
     # these function take a ddof kwarg
-    def var(self, *args, **kwargs):            return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_VAR,    np.var,     *args, **kwargs)
-    def nanvar(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANVAR, np.nanvar,  *args, **kwargs)
-    def std(self, *args, **kwargs):            return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_STD,    np.std,     *args, **kwargs)
-    def nanstd(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSTD, np.nanstd,  *args, **kwargs)
+    def var(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+        '''
+        Computes the variance of the first argument. Uses the convention that ddof = 1 unlike
+        numpy, meaning the variance of [x_1, ... , x_n] is defined by
+        var = 1/(n-1) * sum( x_i - mean )**2.
+        (Note the n-1 instead of n).
+
+        For example
+        >>> a = rt.FastArray( [1,2,3])
+        >>> a.var()
+        1.0
+
+
+        Parameters:
+        filter : array of bool, optional
+        Specifies which elements to include in the variance calculation. For example,
+        >>> a = rt.FastArray( [1,3,5,7])
+        >>> b = rt.FastArray( [False, True, False, True] )
+        >>> a.var(filter = b)
+        8.0
+
+
+        dtype : optional
+        What datatype should the result be returned as. For a FastArray x,
+        x.var(dtype = my_type) is equivalent to my_type( x.var() ).
+
+
+        Numpy Parameters:
+        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
+        with these parameters. The filter parameter will take precedence and if var is passed a filter and
+        one of these parameters, it will ignore these parameters.
+
+        axis : None or int or tuple of ints, optional
+            Axis or axes along which the variance is computed.  The default is to
+            compute the variance of the flattened array.
+
+
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+
+
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+
+        ddof : int, optional
+            "Delta Degrees of Freedom": the divisor used in the calculation is
+            ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero
+            if you use the numpy implementation.
+
+        '''
+
+        kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
+
+        if filter is not None:
+            return self._fa_filter_wrapper(_fvar, filter=filter, dtype = dtype)
+
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_VAR, np.var, *args, **kwargs)
+    def nanvar(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+        '''
+        Computes the variance of the first argument ignoring NaNs. Uses the convention that
+        ddof = 1 unlike numpy, meaning the variance of [x_1, ... , x_n] is defined by
+        var = 1/(n-1) * sum( x_i - mean )**2.
+        (Note the n-1 instead of n).
+
+        For example
+        >>> a = rt.FastArray( [1,2,3, rt.nan])
+        >>> a.var()
+        1.0
+
+
+        Parameters:
+        filter : array of bool, optional
+        Specifies which elements to include in the variance calculation. For example,
+        >>> a = rt.FastArray( [1,3,5,7, rt.nan])
+        >>> b = rt.FastArray( [False, True, False, True, True] )
+        >>> a.nanvar(filter = b)
+        8.0
+
+
+        dtype : optional
+        What datatype should the result be returned as. For a FastArray x,
+        x.nanvar(dtype = my_type) is equivalent to my_type( x.nanvar() ).
+
+
+        Numpy Parameters:
+        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
+        with these parameters. The filter parameter will take precedence and if nanvar is passed a filter and
+        one of these parameters, it will ignore these parameters.
+
+        axis : {int, tuple of int, None}, optional
+            Axis or axes along which the variance is computed.  The default is to compute
+            the variance of the flattened array.
+
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+
+
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+
+        ddof : int, optional
+            "Delta Degrees of Freedom": the divisor used in the calculation is
+            ``N - ddof``, where ``N`` represents the number of non-NaN
+            elements. By default `ddof` is zero if you use the numpy implementation.
+
+        '''
+
+        kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
+
+        if filter is not None:
+            return self._fa_filter_wrapper(_fnanvar, filter=filter, dtype = dtype)
+
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANVAR, np.nanvar,  *args, **kwargs)
+    def std(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+        '''
+        Computes the standard deviation of the first argument. Uses the convention that
+        ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n] is defined by
+        std**2 = 1/(n-1) * sum( x_i - mean )**2.
+        (Note the n-1 instead of n).
+
+        For example
+        >>> a = rt.FastArray( [1,2,3])
+        >>> a.std()
+        1.0
+
+        Parameters:
+        filter : array of bool, optional
+        Specifies which elements to include in the variance calculation. For example,
+        >>> a = rt.FastArray( [1,3,5,7])
+        >>> b = rt.FastArray( [False, True, False, True] )
+        >>> a.std(filter = b)
+        2.8284271247461903
+
+
+        dtype : optional
+        What datatype should the result be returned as. For a FastArray x,
+        x.std(dtype = my_type) is equivalent to my_type( x.std() ).
+
+
+        Numpy Parameters:
+        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
+        with these parameters. The filter parameter will take precedence and if nanvar is passed a filter and
+        one of these parameters, it will ignore these parameters.
+
+        axis : None or int or tuple of ints, optional
+            Axis or axes along which the standard deviation is computed. The
+            default is to compute the standard deviation of the flattened array.
+
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+
+
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+
+        ddof : int, optional
+            "Delta Degrees of Freedom": the divisor used in the calculation is
+            ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero for the
+            numpy implementation.
+        '''
+
+        kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
+
+        if filter is not None:
+            return self._fa_filter_wrapper(_fstd, filter=filter, dtype = dtype)
+
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_STD,    np.std,     *args, **kwargs)
+    def nanstd(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+        '''
+        Computes the standard deviation of the first argument ignoring NaNs. Uses
+        the convention that ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n]
+        is defined by
+        std**2 = 1/(n-1) * sum( x_i - mean )**2.
+        (Note the n-1 instead of n).
+
+        For example
+        >>> a = rt.FastArray( [1,2,3,rt.nan])
+        >>> a.nanstd()
+        1.0
+
+        Parameters:
+        filter : array of bool, optional
+        Specifies which elements to include in the variance calculation. For example,
+        >>> a = rt.FastArray( [1,3,5,7,rt.nan])
+        >>> b = rt.FastArray( [False, True, False, True, True] )
+        >>> nanstd.a(filter = b)
+        2.8284271247461903
+
+
+        dtype : optional
+        What datatype should the result be returned as. For a FastArray x,
+        x.nanstd(dtype = my_type) is equivalent to my_type( x.nanstd() ).
+
+
+        Numpy Parameters:
+        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
+        with these parameters. The filter parameter will take precedence and if nanvar is passed a filter and
+        one of these parameters, it will ignore these parameters.
+
+        axis : {int, tuple of int, None}, optional
+            Axis or axes along which the sum is computed. The default is to compute the
+            sum of the flattened array.
+
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+
+
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+
+        ddof : int, optional
+            "Delta Degrees of Freedom": the divisor used in the calculation is
+            ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero for the
+            numpy implementation.
+        '''
+        kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
+
+        if filter is not None:
+            return self._fa_filter_wrapper(_fnanstd, filter=filter, dtype=dtype)
+
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSTD, np.nanstd,  *args, **kwargs)
+    
     #---------------------------------------------------------------------------
     def nanmin(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMIN, np.nanmin,  *args, **kwargs)
     def nanmax(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMAX, np.nanmax,  *args, **kwargs)
@@ -3535,7 +4073,7 @@ def _FixupDocStrings():
 
         # now for each function that has an bn flavor, copy over the doc strings
         for funcs in all_myfunctions:
-            if funcs[0] in bndict:
+            if (funcs[0] in bndict) and (funcs[1].__doc__ is None):
                 funcs[1].__doc__ = bndict[funcs[0]].__doc__
     except Exception:
         pass
@@ -3550,7 +4088,7 @@ def _FixupDocStrings():
 
     # now for each function that has an np flavor, copy over the doc strings
     for funcs in all_myfunctions:
-        if funcs[0] in npdict:
+        if (funcs[0] in npdict) and (funcs[1].__doc__ is None):
             funcs[1].__doc__ = npdict[funcs[0]].__doc__
 
     # now do just plain np
@@ -3565,7 +4103,7 @@ def _FixupDocStrings():
 
     # now for each function that has an np flavor, copy over the doc strings
     for funcs in all_myfunctions:
-        if funcs[0] in npdict:
+        if (funcs[0] in npdict) and (funcs[1].__doc__ is None):
             funcs[1].__doc__ = npdict[funcs[0]].__doc__
 
 

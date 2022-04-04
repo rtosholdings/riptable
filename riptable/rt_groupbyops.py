@@ -2,6 +2,7 @@ __all__ = ['GroupByOps']
 #import abc
 from typing import TYPE_CHECKING, Optional
 import warnings
+import logging
 
 import numpy as np
 import riptide_cpp as rc
@@ -934,6 +935,34 @@ class GroupByOps(object):
                 newdict[colname]= result
         return g._finalize_dataset(newdict,label_keys, None, addkeys=True, **kwargs)
 
+    def _gb_keyword_wrapper(self, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+
+        if any(kwargs):
+            logging.warning('Unexpected GroupBy operation keyword(s): ' +  ', '.join([ key for key, value in kwargs.items()]) )
+
+        if col_idx is not None:
+            kwargs['col_idx'] = col_idx
+        if filter is not None:
+            kwargs['filter'] = filter
+        if transform:
+            kwargs['transform'] = transform
+        if showfilter:
+            kwargs['showfilter'] = showfilter
+        if dataset is not None:
+            kwargs['dataset'] = dataset
+        if return_all:
+            kwargs['return_all'] = return_all
+        if not computable:
+            kwargs['computable'] = computable
+        if accum2:
+            kwargs['accum2'] = accum2
+        if func_param != 0:
+            kwargs['func_param'] = func_param
+
+        return(kwargs)
+
+
     #---------------------------------------------------------------
     def count(self):
         """Compute count of group"""
@@ -943,86 +972,607 @@ class GroupByOps(object):
         #return self.grouping.count(gbkeys, isortrows)
 
     #---------------------------------------------------------------
-    def sum(self, *args, **kwargs):
-        """Compute sum of group"""
+    def sum(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute sum of group
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work Accum2 not supported.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_SUM, *args, **kwargs)
+        #return self._calculate_all(GB_FUNCTIONS.GB_SUM, *args, filter = filter, transform = transform, showfilter = showfilter,
+        #                           dataset = dataset, return_all = return_all, computable = computable, accum2 = accum2, func_param = func_param, **kwargs)
 
     #---------------------------------------------------------------
-    def mean(self, *args, **kwargs):
+    def mean(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute mean of groups
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_MEAN, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def mode(self, *args, **kwargs):
+    def mode(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute mode of groups (auto handles nan)
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_MODE, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def trimbr(self, *args, **kwargs):
+    def trimbr(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute trimmed mean br of groups (auto handles nan)
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_TRIMBR, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def nanmean(self, *args, **kwargs):
-        """Compute mean of group, excluding missing values"""
+    def nanmean(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute mean of group, excluding missing values
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_NANMEAN, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def nanmedian(self, *args, **kwargs):
-        """Compute median of group, excluding missing values"""
+    def nanmedian(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute median of group, excluding missing values
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_MEDIAN, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def nanmin(self, *args, **kwargs):
-        """Compute min of group, excluding missing values"""
+    def nanmin(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute min of group, excluding missing values
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_NANMIN, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def nanmax(self, *args, **kwargs):
-        """Compute max of group, excluding missing values"""
+    def nanmax(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute max of group, excluding missing values
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_NANMAX, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def nansum(self, *args, **kwargs):
-        """Compute sum of group, excluding missing values"""
+    def nansum(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute sum of group, excluding missing values
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_NANSUM, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def min(self, *args, **kwargs):
-        """Compute min of group"""
+    def min(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute min of group
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_MIN, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def max(self, *args, **kwargs):
-        """Compute max of group"""
+    def max(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        Compute max of group
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_MAX, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def first(self, *args, **kwargs):
-        """First value in the group"""
+    def first(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
+        """
+        First value in the group
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
+        """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_FIRST, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def last(self, *args, **kwargs):
+    def last(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """Last value in the group"""
+
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
+
         return self._calculate_all(GB_FUNCTIONS.GB_LAST, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def median(self, *args, **kwargs):
+    def median(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute median of groups
         For multiple groupings, the result will be a MultiSet
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_MEDIAN, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def std(self, *args, **kwargs):
+    def std(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute standard deviation of groups
         For multiple groupings, the result will be a MultiSet
@@ -1031,19 +1581,92 @@ class GroupByOps(object):
         ----------
         ddof : integer, default 1
             degrees of freedom
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_STD, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def nanstd(self, *args, **kwargs):
+    def nanstd(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute standard deviation of groups, excluding missing values
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
 
         return self._calculate_all(GB_FUNCTIONS.GB_NANSTD, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def var(self, *args, **kwargs):
+    def var(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute variance of groups
         For multiple groupings, the result will be a MultiSet
@@ -1052,15 +1675,87 @@ class GroupByOps(object):
         ----------
         ddof : integer, default 1
             degrees of freedom
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_VAR, *args, **kwargs)
 
     #---------------------------------------------------------------
-    def nanvar(self, *args, **kwargs):
+    def nanvar(self, *args, filter = None, transform = False, showfilter = False, col_idx = None,
+            dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute variance of groups, excluding missing values
         For multiple groupings, the result will be a MultiSet
+
+        Parameters
+        ----------
+        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        filter : array of bool, optional
+        Elements to include in the GroupBy Operation.
+        transform : bool
+        If transform = True, the output will have the same shape as *args.
+        If transform = False, the output will typically have the same shape
+        as the categorical.
+        showfilter : bool
+        If showfilter is True, there will be an extra row in the output
+        representing the GroupBy Operation applied to all those elements that
+        were filered out.
+        col_idx : str, list of str, optional
+        If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+        If a dataset is specified, the GroupBy Operation will also be applied to
+        the dataset. If there is an *arg and dataset is specified then
+        the result will be appended to the dataset.
+        return_all : bool
+        If return_all is True, will return all columns, even those where
+        the GroupBy Operation does not make sense. If return_all is False, it
+        will not return columns it cannot apply the GroupBy to. Does not work 
+        with Accum2.
+        computable : bool
+        If computable is True, will not try to apply the GroupBy Operation to
+        non-computable datatypes.
+        accum2 : bool
+        Not recommended for use. If accum2 is True, the result is returned
+        as a dictionary.
+        func_param :
+        Not recommended for use.
         """
+
+        kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+                         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, func_param=func_param, **kwargs)
+
         return self._calculate_all(GB_FUNCTIONS.GB_NANVAR, *args, **kwargs)
 
     #---------------------------------------------------------------
@@ -1092,12 +1787,12 @@ class GroupByOps(object):
         return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_NANSUM, *args, func_param=(window), **kwargs)
 
     #---------------------------------------------------------------
-    def rolling_mean(self, *args, window, **kwargs):
+    def rolling_mean(self, *args, window=3, **kwargs):
         """rolling mean for each group
 
         Parameters
         ----------
-        window: required, window size
+        window: optional, window size, defaults to 3
 
         Returns
         -------
@@ -1740,6 +2435,7 @@ class GroupByOps(object):
         #self._reset_group_selection()
         #mask = self._cumcount_array(ascending=False) < n
         #return self._selected_obj[mask]
+
 
 
 #------------------------------------------------------------
