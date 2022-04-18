@@ -1678,33 +1678,5 @@ def test_ctor_from_str_obj_array_with_None(as_unicode: bool) -> None:
     assert_array_equal(none_results, rt.full(none_results.shape, result.inv, dtype=none_results.dtype))
 
 
-@pytest.mark.parametrize('op_name', [
-    'eq',
-    'ne',
-    'ge',
-    'le',
-    'gt',
-    'lt',
-    'add',
-    'sub',
-    'mul',
-    'pow',
-    'floordiv',
-    'mod',
-])
-def test_operator_methods(op_name):
-    arr = rt.arange(5)
-    result = getattr(arr, op_name)(2)
-    expected = getattr(operator, op_name)(arr, 2)
-    assert_array_equal(result, expected)
-
-
-def test_div_method():
-    arr = rt.arange(5)
-    result = arr.div(2)
-    expected = arr / 2
-    assert_array_equal(result, expected)
-
-
 if __name__ == "__main__":
     tester = unittest.main()
