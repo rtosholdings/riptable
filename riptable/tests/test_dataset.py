@@ -2,9 +2,7 @@ import pytest
 import unittest
 import re
 import keyword
-import operator
 import pandas as pd
-
 
 from collections import namedtuple
 import numpy as np
@@ -2193,38 +2191,6 @@ class TestDataset(unittest.TestCase):
             assert col.dtype == expected_dtype
             assert_array_equal(col, scalar_value)
 
-
-@pytest.mark.parametrize('op_name', [
-    'eq',
-    'ne',
-    'ge',
-    'le',
-    'gt',
-    'lt',
-    'add',
-    'sub',
-    'mul',
-    'floordiv',
-])
-def test_operator_methods(op_name):
-    ds = TestDataset.get_arith_dataset()
-    result = getattr(ds, op_name)(ds)
-    expected = getattr(operator, op_name)(ds, ds)
-    assert (result == expected).all(axis=None)
-
-
-def test_pow_methods():
-    ds = TestDataset.get_arith_dataset()
-    result = ds.pow(2)
-    expected = ds ** 2
-    assert (result == expected).all(axis=None)
-
-
-def test_mod_methods():
-    ds = TestDataset.get_arith_dataset()
-    result = ds.mod(2)
-    expected = ds % 2
-    assert (result == expected).all(axis=None)
 
 
 @pytest.mark.parametrize('categorical', get_all_categorical_data())
