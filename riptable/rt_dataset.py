@@ -1136,6 +1136,13 @@ class Dataset(Struct):
     def __lt__(self, lhs):
         return self._dataset_compare_check('__lt__', lhs)
 
+    eq = __eq__
+    ne = __ne__
+    ge = __ge__
+    le = __le__
+    gt = __gt__
+    lt = __lt__
+
     # ------------------------------------------------------------
     def __len__(self):
         # Debated October 2019
@@ -2262,6 +2269,14 @@ class Dataset(Struct):
 
         """
         return abs(self)
+
+    add = __add__
+    sub = __sub__
+    mul = __mul__
+    div = __truediv__
+    floordiv = __floordiv__
+    pow = __pow__
+    mod = __mod__
 
     @property
     def dtypes(self) -> Mapping[str, np.dtype]:

@@ -1434,6 +1434,21 @@ class FastArray(np.ndarray):
     def __le__(self, other):  return self._compare_check(super().__le__,other)
     def __lt__(self, other):  return self._compare_check(super().__lt__,other)
 
+    eq = __eq__
+    ne = __ne__
+    ge = __ge__
+    le = __le__
+    gt = __gt__
+    lt = __lt__
+
+    add = np.ndarray.__add__
+    sub = np.ndarray.__sub__
+    mul = np.ndarray.__mul__
+    div = np.ndarray.__truediv__
+    floordiv = np.ndarray.__floordiv__
+    pow = np.ndarray.__pow__
+    mod = np.ndarray.__mod__
+
     #---------------------------------------------------------------------------
     def str_append(self, other):
         if self.dtype.num == other.dtype.num:
