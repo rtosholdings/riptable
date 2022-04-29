@@ -409,8 +409,8 @@ class FAString(FastArray):
 
     def _nb_find(src, itemsize, dest, str2):
         """
-        Searches src for occurences of str2 and build a Boolean mask the same size
-        as src indicating the starting point of all such occurences.
+        Searches src for occurrences of str2 and build a Boolean array
+        with a row per string indicating indicating the starting points of all such occurrences.
         """
         str2len = len(str2)
         # loop over all rows
@@ -420,7 +420,7 @@ class FAString(FastArray):
             str_pos = 0
             while str_pos <= itemsize - str2len:
                 if _str_equal(src[rowpos + str_pos:], str2):
-                    dest[i + str_pos] = True
+                    dest[i, str_pos] = True
                     str_pos += str2len
                 else:
                     str_pos += 1
@@ -428,6 +428,7 @@ class FAString(FastArray):
         return dest
 
     # -----------------------------------------------------
+
     def _nb_endswith(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -657,6 +658,32 @@ class FAString(FastArray):
             str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=bool)
+
+    def _find(self, str2):
+        """
+        Searches src for occurences of str2 and build a Boolean mask the same size
+        as src indicating the starting point of all such occurences.
+
+        Parameters
+        ----------
+        str2 - a string with one or more characters to search for
+
+        Examples
+        --------
+        >>> FAString(['this','that','test']).find('t')
+        FastArray([
+            [True, False, False, False],
+            [True, False, False, True],
+            [True, False, False, True]
+        ])
+        """
+        if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(len(self), dtype=bool)
+
+            str2 = self._validate_input(str2)
+
+        return self.nb_find(self._itemsize, str2=str2, dest=zeros((self.n_elements, self._itemsize), dtype=bool))
 
     def strstrb(self, str2):
         _warn_deprecated_naming('strstrb', 'contains')

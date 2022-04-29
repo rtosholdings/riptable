@@ -304,6 +304,13 @@ class TestFAString:
     #
     # TODO: reverse_inplace tests
     #
+    def test_find(self):
+        res = FAString(['this', 'that', 'test'])._find('t')
+        expected = FastArray([[True, False, False, False],
+                              [True, False, False, True],
+                              [True, False, False, True]])
+        assert_array_equal(res, expected)
+
 
     def test_startswith(self):
         arrsize = 200
