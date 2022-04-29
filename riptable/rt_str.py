@@ -75,6 +75,16 @@ def _warn_deprecated_naming(old_func, new_func):
 # Also note: On Windows as of Aug 2019, prange is much slower without tbb installed
 #
 # subclass from FastArray
+
+
+@nb.njit
+def _str_equal(str1, str2):
+    for char1, char2 in zip(str1, str2):
+        if char1 != char2:
+            return False
+    return True
+
+
 class FAString(FastArray):
     """
     String accessor class for `FastArray`.
@@ -371,13 +381,7 @@ class FAString(FastArray):
             dest[i] = -1
             # loop over all substrings of sufficient length
             for j in range(itemsize - str2len + 1):
-                # check if enough space left
-                k = 0
-                while k < str2len:
-                    if src[rowpos + j + k] != str2[k]:
-                        break
-                    k += 1
-                if k == str2len:
+                if _str_equal(src[rowpos + j:], str2):
                     # store location of match
                     dest[i] = j
                     break
@@ -391,13 +395,7 @@ class FAString(FastArray):
             dest[i] = False
             # loop over all substrings of sufficient length
             for j in range(itemsize - str2len + 1):
-                k = 0
-                while (k < str2len):
-                    if src[rowpos + j + k] != str2[k]:
-                        break
-                    k += 1
-                if k == str2len:
-                    # indicate we have a match
+                if _str_equal(src[rowpos + j:], str2):
                     dest[i] = True
                     break
 
