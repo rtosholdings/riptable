@@ -399,6 +399,26 @@ class FAString(FastArray):
                     dest[i] = True
                     break
 
+    def _nb_find(src, itemsize, dest, str2):
+        """
+        Searches src for occurences of str2 and build a Boolean mask the same size
+        as src indicating the starting point of all such occurences.
+        """
+        str2len = len(str2)
+        # loop over all rows
+        for i in nb.prange(np.int64(len(src) // itemsize)):
+            rowpos = i * itemsize
+            # loop over all substrings of sufficient length
+            str_pos = 0
+            while str_pos <= itemsize - str2len:
+                if _str_equal(src[rowpos + str_pos:], str2):
+                    dest[i + str_pos] = True
+                    str_pos += str2len
+                else:
+                    str_pos += 1
+
+        return dest
+
     # -----------------------------------------------------
     def _nb_endswith(src, itemsize, dest, str2):
         str2len = len(str2)
@@ -989,6 +1009,8 @@ class FAString(FastArray):
 
     nb_contains = _njit_serial(_nb_contains)
     nb_contains_par = _njit_par(_nb_contains)
+
+    nb_find = _njit_serial(_nb_find)
 
     nb_endswith = _njit_serial(_nb_endswith)
     nb_endswith_par = _njit_par(_nb_endswith)
