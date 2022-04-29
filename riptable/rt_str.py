@@ -5,6 +5,7 @@ __all__ = [
 
 from functools import partial
 from typing import List, NamedTuple, Optional, Union, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .rt_dataset import Dataset
 
@@ -164,6 +165,13 @@ class FAString(FastArray):
             arr = arr.astype(self._intype)
 
         return arr
+
+    def _validate_input(self, str2):
+        str2 = self.possibly_convert_tostr(str2)
+        if len(str2) != 1:
+            raise TypeError(f"A single string must be passed for str2 not {str2!r}")
+        str2 = FAString(str2)
+        return str2
 
     # -----------------------------------------------------
     def _apply_func(self, func, funcp, *args, dtype=None, input=None):
@@ -591,11 +599,7 @@ class FAString(FastArray):
         if not isinstance(str2, FAString):
             if str2 == '':
                 return zeros(self.n_elements, dtype=np.int32)
-
-            str2 = self.possibly_convert_tostr(str2)
-            if len(str2) != 1:
-                return TypeError(f"A single string must be passed for str2 not {str2!r}")
-            str2 = FAString(str2)
+            str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_index_any_of, self.nb_index_any_of_par, str2, dtype=np.int32)
 
@@ -622,10 +626,7 @@ class FAString(FastArray):
             if str2 == '':
                 return zeros(self.n_elements, dtype=np.int32)
 
-            str2 = self.possibly_convert_tostr(str2)
-            if len(str2) != 1:
-                return TypeError(f"A single string must be passed for str2 not {str2!r}")
-            str2 = FAString(str2)
+            str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_index, self.nb_index_par, str2, dtype=np.int32)
 
@@ -653,10 +654,7 @@ class FAString(FastArray):
             if str2 == '':
                 return ones(self.n_elements, dtype=bool)
 
-            str2 = self.possibly_convert_tostr(str2)
-            if len(str2) != 1:
-                return TypeError(f"A single string must be passed for str2 not {str2!r}")
-            str2 = FAString(str2)
+            str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=bool)
 
