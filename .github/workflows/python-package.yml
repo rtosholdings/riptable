@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ master,improve-test-run-scripts ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -16,8 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-2019]
-        #python-version: [3.8, 3.9, '3.10']
-        python-version: [3.9]
+        python-version: [3.8, 3.9, '3.10']
         numpy-version: [1.21]
     steps:
       - name: Checkout repo
@@ -95,9 +94,6 @@ jobs:
           twine upload dist/* --verbose
 
   conda_build:
-    #+DEL
-    if: ${{ false }}
-    #-DEL
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
