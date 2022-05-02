@@ -47,10 +47,11 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
-          pytest riptable/tests
+          python -m riptable.tests.run
       - name: Tooling integration tests
         run: |
-          ipython -m pytest riptable/test_tooling_integration
+          echo "DISABLED until tooling tests can be updated"
+          #ipython -m riptable.test_tooling_integration.run
       # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate
       #- name: Property based hypothesis tests
       #  run: |

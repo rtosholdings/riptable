@@ -16,10 +16,10 @@ def run_all(extra_args=None):
     """
     if extra_args is None:
         extra_args = []
-    pytest.main(extra_args + ['-k', 'test_', os.path.dirname(__file__)])
+    return pytest.main(extra_args + ['-k', 'test_', os.path.dirname(__file__)])
 
 
 # Usage: "python -m riptable.tests.run"
 # You can add more arguments to the pytest, like "python -m riptable.tests.run --verbosity=2"
 if __name__ == "__main__":
-    run_all(sys.argv[1:])
+    sys.exit(run_all(sys.argv[1:]))

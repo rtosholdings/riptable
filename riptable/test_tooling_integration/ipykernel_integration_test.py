@@ -86,7 +86,7 @@ def get_matches(code_text: str, complete_text: str) -> List[str]:
         assert reply['status'] == 'ok'
         wait_for_idle(kc)
         kc.complete(complete_text)
-        reply = kc.get_shell_msg(block=True, timeout=TIMEOUT)
+        reply = kc.get_shell_msg(timeout=TIMEOUT)
         matches = reply['content']['matches']
     return matches
 
