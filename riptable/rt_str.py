@@ -1142,6 +1142,8 @@ def _populate_wrappers(cls):
         'regex_match',
         '_substr',
         'char',
+        'replace',
+        '_find',
 
         # Deprecated methods.
         'strstr',
