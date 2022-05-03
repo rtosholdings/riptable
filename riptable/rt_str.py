@@ -141,6 +141,13 @@ class FAString(FastArray):
         '''
         return self.view(self._intype + str(self._itemsize))
 
+    def as_fastarray(self):
+        '''
+        convert back to FastArray or np.ndarray 'S' or 'U' string
+        'S12'  or 'U40'
+        '''
+        return FastArray(self._np).view(self._intype + str(self._itemsize))
+
     @property
     def n_elements(self):
         """
