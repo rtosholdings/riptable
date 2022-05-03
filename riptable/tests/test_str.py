@@ -304,6 +304,7 @@ class TestFAString:
     #
     # TODO: reverse_inplace tests
     #
+
     def test_find(self):
         res = FAString(['this', 'that', 'test'])._find('t')
         expected = FastArray([[True, False, False, False],
@@ -311,6 +312,41 @@ class TestFAString:
                               [True, False, False, True]])
         assert_array_equal(res, expected)
 
+    @pytest.mark.parametrize('arr_type_factory', [
+        pytest.param(rt.FastArray, id='FastArray'),
+        pytest.param(rt.Categorical, id='Categorical')
+    ])
+    @pytest.mark.parametrize('unicode', [pytest.param(False, id='ascii'), pytest.param(True, id='unicode')])
+    @pytest.mark.parametrize('parallel', [pytest.param(False, id='serial'), pytest.param(True, id='parallel')])
+    @pytest.mark.parametrize('old, new', [
+        ('A', 'B'),
+        ('A', 'BB'),
+        ('A', ''),
+        ('OO', 'O'),
+        ('FB', 'TWITTER'),
+        ('AAPL', ''),
+        ('XYZ', 'LMNOP')
+    ], ids=['one-for-one', 'one-for-two', 'one-for-none',
+            'two-for-one-pair', 'all-replaced',
+            'all-replaced-with-empty', 'no-op'])
+    def test_replace(self, arr_type_factory, unicode, parallel, old, new):
+        dtype_str = '<U' if unicode else '|S'
+        ndarray = np.array(SYMBOLS, dtype=dtype_str)
+        arr = arr_type_factory(ndarray)
+        arr, tile_count = (arr, None) if not parallel else _make_parallelizable_array(arr)
+        result = arr.str.replace(old, new)
+
+        expected_strings = [x.replace(old, new) for x in SYMBOLS]
+        expected_ndarray = np.array(expected_strings, dtype=dtype_str)
+        expected = arr_type_factory(expected_ndarray)
+        if tile_count is not None:
+            expected = _tile_array(expected, tile_count)
+        # breakpoint()
+        assert_array_or_cat_equal(
+            result, expected,
+            exact_dtype_match=False,
+            relaxed_cat_check=True,
+        )
 
     def test_startswith(self):
         arrsize = 200
