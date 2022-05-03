@@ -696,6 +696,68 @@ class FAString(FastArray):
         _warn_deprecated_naming('strstrb', 'contains')
         return self.contains(str2)
 
+    def _nb_replace(src, itemsize, dest, dest_itemsize, old, new, locations):
+        old_len = len(old)
+        new_len = len(new)
+
+        new_is_empty = len(new) == 1 and new[0] == 0
+
+        for row in nb.prange(np.int64(len(src) // itemsize)):
+            rowpos = row * itemsize
+            src_pos = 0
+            dest_pos = row * dest_itemsize
+
+            while src_pos < itemsize:
+                if locations[row, src_pos]:
+                    if new_is_empty:
+                        src_pos += old_len
+                    else:
+                        dest[dest_pos: dest_pos + new_len] = new
+                        src_pos += old_len
+                        dest_pos += new_len
+                else:
+                    dest[dest_pos] = src[rowpos + src_pos]
+                    src_pos += 1
+                    dest_pos += 1
+        return dest
+
+    def replace(self, old: str, new: str) -> FastArray:
+        """
+        Replace all occurrences of `old` with `new`
+        """
+        if not isinstance(old, FAString):
+            if old == '':
+                raise ValueError("cannot replace the empty string")
+            old = self._validate_input(old)
+
+        new = self._validate_input(new)
+
+        locations = self._find(old)
+        if not locations.any():
+            return self.as_fastarray()
+
+        char_diff = len(new) - len(old)
+        if char_diff > 0:
+            max_n_replacements = locations.sum(axis=1).max()
+            dest_itemsize = self._itemsize + char_diff * max_n_replacements
+        elif char_diff < 0:
+            min_n_replacements = locations.sum(axis=1).min()
+            dest_itemsize = self._itemsize - char_diff * min_n_replacements
+        else:
+            dest_itemsize = self._itemsize
+
+        dest = zeros(self.n_elements * dest_itemsize, dtype=self.dtype)
+        replace = self.nb_replace_par if len(self) >= self._APPLY_PARALLEL_THRESHOLD else self.nb_replace
+        replaced = replace(
+            itemsize=self._itemsize,
+            dest=dest,
+            dest_itemsize=dest_itemsize,
+            old=old,
+            new=new,
+            locations=locations,
+        )
+        return replaced.view(self._intype + str(dest_itemsize))
+
     # -----------------------------------------------------
     def startswith(self, str2):
         '''
@@ -1043,6 +1105,8 @@ class FAString(FastArray):
     nb_contains_par = _njit_par(_nb_contains)
 
     nb_find = _njit_serial(_nb_find)
+    nb_replace = _njit_serial(_nb_replace)
+    nb_replace_par = _njit_serial(_nb_replace)
 
     nb_endswith = _njit_serial(_nb_endswith)
     nb_endswith_par = _njit_par(_nb_endswith)
