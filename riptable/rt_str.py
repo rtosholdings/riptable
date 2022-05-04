@@ -109,6 +109,12 @@ def _handle_apply_unique(func):
     return wrapper
 
 
+def _maybe_encode(x):
+    if not isinstance(x, bytes):
+        x = x.encode()
+    return x
+
+
 class FAString(FastArray):
     """
     String accessor class for `FastArray`.
@@ -849,8 +855,8 @@ class FAString(FastArray):
         >>> FAString(['abab','ababa','abababb']).regex_match('ab$')
         FastArray([True, False, False])
         '''
-        if not isinstance(regex, bytes):
-            regex = bytes(regex, 'utf-8')
+        if self._intype == 'S':
+            regex = _maybe_encode(regex)
         regex = re.compile(regex)
         vmatch = np.vectorize(lambda x: bool(regex.search(x)))
         bools = vmatch(self.backtostring)
@@ -908,8 +914,8 @@ class FAString(FastArray):
         '''
         kwargs = dict(expand=expand, fillna=fillna, names=names, apply_unique=apply_unique)
 
-        if not isinstance(regex, bytes):
-            regex = bytes(regex, 'utf-8')
+        if self._intype == 'S':
+            regex = _maybe_encode(regex)
         compiled = re.compile(regex)
 
         ngroups = compiled.groups
