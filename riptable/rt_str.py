@@ -3,7 +3,8 @@ __all__ = [
     'CatString',
 ]
 
-from functools import partial
+from functools import partial, wraps
+from inspect import signature
 from typing import List, NamedTuple, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -42,7 +43,6 @@ class FAStrDispatchPair(NamedTuple):
         func_serial = _njit_serial(py_func)
         func_par = _njit_par(py_func)
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
-
 
 
 def _warn_deprecated_naming(old_func, new_func):
@@ -84,6 +84,29 @@ def _str_equal(str1, str2):
         if char1 != char2:
             return False
     return True
+
+
+def _handle_apply_unique(func):
+    sign = signature(func)
+
+    if 'apply_unique' not in sign.parameters:
+        raise ValueError(f"apply_unique not found in the signature of {func}")
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        bound_args = sign.bind_partial(*args, **kwargs)
+        bound_args.apply_defaults()
+
+        if bound_args.kwargs['apply_unique']:
+            new_kwargs = bound_args.kwargs.copy()
+            new_kwargs['apply_unique'] = False
+            unique_values, index = unique(self.backtostring, return_inverse=True)
+            result = func(unique_values.str, *bound_args.args, **new_kwargs)
+            return result[index] if isinstance(result, FastArray) else result[index, :]
+        else:
+            return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class FAString(FastArray):
@@ -810,7 +833,8 @@ class FAString(FastArray):
 
         return self._apply_func(self.nb_endswith, self.nb_endswith_par, str2, dtype=bool)
 
-    def regex_match(self, regex):
+    @_handle_apply_unique
+    def regex_match(self, regex: Union["str", bytes], apply_unique: bool = True) -> FastArray:
         '''
         Return a Boolean array where the value is set True if the string contains str2.
         str2 may be a normal string or a regular expression.
@@ -833,6 +857,7 @@ class FAString(FastArray):
 
         return bools
 
+    @_handle_apply_unique
     def extract(self, regex: str, expand: Optional[bool] = None,
                 fillna: str = '', names=None, apply_unique: bool = True
                 ) -> Union[FastArray, "Dataset"]:
@@ -882,11 +907,6 @@ class FAString(FastArray):
         1   SPXW
         '''
         kwargs = dict(expand=expand, fillna=fillna, names=names, apply_unique=apply_unique)
-        if apply_unique:
-            kwargs['apply_unique'] = False
-            unique_values, index = unique(self.backtostring, return_inverse=True)
-            result = unique_values.str.extract(regex, **kwargs)
-            return result[index] if isinstance(result, FastArray) else result[index, :]
 
         if not isinstance(regex, bytes):
             regex = bytes(regex, 'utf-8')
