@@ -864,6 +864,29 @@ class FAString(FastArray):
         return bools
 
     @_handle_apply_unique
+    def regex_replace(self, regex: Union["str", bytes], repl: Union["str", bytes],
+                      apply_unique: bool = True) -> FastArray:
+        '''
+        Return a Boolean array where the value is set True if the string contains str2.
+        str2 may be a normal string or a regular expression.
+        Applies re.search on each element with str2 as the pattern.
+
+        Parameters
+        ----------
+        regex - Perform element-wise regex matching to this regex
+
+        Examples
+        --------
+        >>> FAString(['abab','ababa','abababb']).regex_match('ab$')
+        FastArray([True, False, False])
+        '''
+        if self._intype == 'S':
+            regex, repl = map(_maybe_encode, (regex, repl))
+        regex = re.compile(regex)
+        vmatch = np.vectorize(lambda x: regex.sub(repl, x))
+        return vmatch(self.backtostring)
+
+    @_handle_apply_unique
     def extract(self, regex: str, expand: Optional[bool] = None,
                 fillna: str = '', names=None, apply_unique: bool = True
                 ) -> Union[FastArray, "Dataset"]:
@@ -1166,6 +1189,7 @@ def _populate_wrappers(cls):
         'startswith',
         'endswith',
         'regex_match',
+        'regex_replace',
         '_substr',
         'char',
         'replace',

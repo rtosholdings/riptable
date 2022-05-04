@@ -1,5 +1,6 @@
 import math
 from typing import Tuple
+import re
 
 import pytest
 
@@ -238,15 +239,36 @@ class TestFAString:
         ('B$', [False, False, True, False, False]),
     ])
 
+    @parametrize('apply_unique', [True, False])
     @regex_match_test_cases
-    def test_regex_match(self, regex, expected):
-        fa = FA(SYMBOLS)
-        assert_array_equal(fa.str.regex_match(regex), expected)
+    def test_regex_match(self, regex, expected, apply_unique):
+        fa = FA(SYMBOLS * 2)
+        assert_array_equal(fa.str.regex_match(regex, apply_unique=apply_unique), expected * 2)
 
     @regex_match_test_cases
     def test_regex_match_cat(self, regex, expected):
         cat = Cat(SYMBOLS * 2)  # introduce duplicity to test ikey properly
         assert_array_equal(cat.str.regex_match(regex), expected * 2)
+
+    regex_replace_test_cases = parametrize('regex, repl', [
+        ('.', 'A'),
+        ('\w+', 'A'),
+        ('\d+', '0'),
+        ('[A|B|C]', 'C'),
+        ('B$', ''),
+    ])
+
+    @pytest.mark.parametrize('arr_type_factory', [
+        pytest.param(rt.FastArray, id='FastArray'),
+        pytest.param(rt.Categorical, id='Categorical')
+    ])
+    @parametrize('apply_unique', [True, False])
+    @regex_replace_test_cases
+    def test_regex_replace(self, regex, repl, apply_unique, arr_type_factory):
+        fa = arr_type_factory(SYMBOLS * 2)
+        result = fa.str.regex_replace(regex, repl, apply_unique=apply_unique)
+        expected = arr_type_factory([re.sub(regex, repl, s) for s in SYMBOLS * 2])
+        assert_array_or_cat_equal(result, expected)
 
     def test_removetrailing_empty(self) -> None:
         arr = rt.FA([], dtype='S11')  # empty array
