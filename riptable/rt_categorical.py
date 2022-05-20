@@ -3170,8 +3170,8 @@ class Categorical(GroupByOps, FastArray):
         if isinstance(x, (list, np.ndarray)):
             if len(x) > 1:
                 return ismember(self, x)[0]
-            elif np.isscalar(x[0]):
-                return self == x[0]
+            elif np.isscalar(x):
+                return self == x
         return self == x
 
     # -------------------------------------------------------
