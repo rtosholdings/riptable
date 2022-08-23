@@ -1880,9 +1880,9 @@ def merge_indices(
     **kwargs
 ) -> JoinIndices:
     """
-    Perform a join/merge of two `Dataset`s, returning the left/right indices created by the join engine.
+    Perform a join/merge of two `Dataset` objects, returning the left/right indices created by the join engine.
 
-    The returned indices can be used to index into the left and right `Dataset`s to construct a merged/joined `Dataset`.
+    The returned indices can be used to index into the left and right `Dataset` objects to construct a merged/joined `Dataset`.
 
     Parameters
     ----------
@@ -2486,7 +2486,7 @@ def merge(
     how : {'left','right', 'inner', 'outer'}
         - left: use only keys from the left. **The output rows will be in one-to-one correspondence with the left rows!** If multiple matches on the right occur, the last is taken.
         - right: use only keys from the right. **The output rows will be in one-to-one correspondence
-            with the left rows!** If multiple matches on the left occur, the last is taken.
+          with the left rows!** If multiple matches on the left occur, the last is taken.
         - inner: use intersection of keys from both Datasets, similar to SQL inner join
         - outer: use union of keys from both Datasets, similar to SQL outer join
     suffixes: tuple of (str, str), default ('_x', '_y')

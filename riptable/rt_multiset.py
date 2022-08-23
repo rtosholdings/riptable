@@ -23,13 +23,14 @@ class Multiset(Struct):
 
     The columns within contained datasets may be displayed in an interleaved way.
     Example: Assume Jan and Feb are two datasets with 3 columns each:
-        Jan
-            Run1,Run2,Run3
-        Feb
-            Run1,Run2,Run3
+    
+    * Jan: Run1, Run2, Run3
+    * Feb: Run1, Run2, Run3
 
     A Multiset containing these datasets would display with a multi-line header:        
-        Run1        Run2        Run3
+    
+    Run1        Run2        Run3
+    
     Jan   Feb    Jan  Feb    Jan  Feb
     
     One can access the Run1 column in the Jan dataset with the syntax:
@@ -270,9 +271,10 @@ class Multiset(Struct):
         Returns a shallow or deep copy of the multiset
         Defaults to a deepy copy.
 
-        kwargs:
-        ------
-        deep: defaults to True.  set to False for a shallow copy.
+        Parameters
+        ----------
+        deep: bool, default True
+            Set to False for a shallow copy.
         '''
         return self._copy(deep)
 
@@ -742,7 +744,7 @@ class Multiset(Struct):
     def cascade(self,  funcname, *args, **kwargs):
         '''
         Depth first calling of functions, often into a Dataset.
-        For each Dataset in the Multiset, the function will be called with the *args and kwargs.
+        For each Dataset in the Multiset, the function will be called with the `args` and `kwargs`.
         The return result is expected to be a Dataset which will then be added back into a new Multiset
         and returned to the called.
         

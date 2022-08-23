@@ -256,3 +256,20 @@ class TestPyarrowConvertDataset:
             # relaxed_cat_check=True, because we're not trying to test specific details of Categorical conversion
             # here, we're more interested in the dataset-level stuff.
             assert_array_or_cat_equal(rt_dset[col_name], result_rt_dset[col_name], relaxed_cat_check=True)
+
+class TestPyarrowConvertFixedSizeBinary:
+    @pytest.mark.parametrize(('pa_arr', 'zero_copy', 'writable'), [
+        (pa.array([b"123", b"456"], type=pa.binary(3)), True, False),
+        (pa.array([b"123", b"456"], type=pa.binary(3)), False, False),
+        (pa.array([b"123", b"456"], type=pa.binary(3)), True, True),
+        (pa.array([b"123", b"456"], type=pa.binary(3)), False, False),
+        (pa.array([b"123", b"456"], mask=[True, False], type=pa.binary(3)), False, False),
+        (pa.array([b"123", b"456"], mask=[True, False], type=pa.binary(3)), False, True),
+        ])
+    def test_roundtrip_pa_fa_pa(self, pa_arr: pa.Array, zero_copy: bool, writable: bool):
+        result_fa_array = rt.FastArray.from_arrow(pa_arr, zero_copy_only=zero_copy, writable=writable)
+        result_pa_array = result_fa_array.to_arrow(type=pa.binary(3), preserve_fixed_bytes=True)
+
+        assert pa_arr == result_pa_array
+
+

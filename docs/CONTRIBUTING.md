@@ -9,7 +9,7 @@ from the environment file:
 conda env create -f environment.yml
 ```
 
-**Note**: some users have had trouble completing the installation of the
+**Note**: Some users have had trouble completing the installation of the
 `riptide_cpp` requirement on Mac machines due to a dependence on
 [`zstd`](https://github.com/facebook/zstd). A temporary work around is to use
 Homebrew to install `zstd` ahead of time

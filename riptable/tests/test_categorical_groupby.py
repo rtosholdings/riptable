@@ -986,3 +986,15 @@ class TestCategoricalGroupby:
         x = Cat(np.arange(10) % 3)
         y = x.count(transform=True)[0]
         assert_array_equal(y, FA([4, 3, 3, 4, 3, 3, 4, 3, 3, 4]))
+
+    def test_count_filter_transform(self):
+        x = rt.Cat(rt.arange(100)%10)
+        f = rt.arange(100)%4!=0
+        assert_array_equal(x.count(filter=f,transform=True).Count,x.nansum(f,transform=True).col_0)
+
+        x = rt.Cat(str_fa)
+        f = rt.arange(len(x)) % 3 != 0
+        assert_array_equal(x.count(filter=f,transform=True).Count,x.nansum(f,transform=True).col_0)
+        soln = rt.FA([5, 6, 6, 3, 5, 2, 3, 5, 4, 2, 3, 6, 5, 4, 6, 3, 2, 4, 2, 5, 3,
+           2, 6, 5, 5, 3, 6, 5, 4, 5])
+        assert_array_equal(x.count(filter=f,transform=True).Count,soln)

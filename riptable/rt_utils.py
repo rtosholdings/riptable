@@ -416,22 +416,25 @@ def normalize_keys(key1, key2, verbose =False):
 def alignmk(key1, key2, time1, time2, direction:str='backward', allow_exact_matches:bool=True, verbose:bool=False):
     """
     Core routine for merge_asof.
-    Takes a key1 on the left and a key2 on the right (multikey is allowed).
-    When going forward, it will check if time1 <= time2
-        if so
-            it will hash on key1 and return the last row number for key2 or INVALID
-            it will increment the index into time1
-        else
-            it will return the last row number from key2
-            it will increment the index into time2
+    
+    ::
+    
+        Takes a key1 on the left and a key2 on the right (multikey is allowed).
+        When going forward, it will check if time1 <= time2
+            if so
+                it will hash on key1 and return the last row number for key2 or INVALID
+                it will increment the index into time1
+            else
+                it will return the last row number from key2
+                it will increment the index into time2
 
-    When going backward, it will start on the last time, it will check if time1 >= time2
-        if so
-            it will hash on key1 and return the last row number for key2 or INVALID
-            it will decrement the index into time1
-        else
-            it will return the last row number from key2
-            it will decrement the index into time2
+        When going backward, it will start on the last time, it will check if time1 >= time2
+            if so
+                it will hash on key1 and return the last row number for key2 or INVALID
+                it will decrement the index into time1
+            else
+                it will return the last row number from key2
+                it will decrement the index into time2
 
     Parameters
     ----------

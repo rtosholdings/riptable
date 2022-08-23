@@ -276,6 +276,182 @@ class TestCategoricalFilterInvalid:
         with pytest.raises(ValueError):
             _ = c.sum(arange(5))
 
+class TestCategoricalSetValid:
+    def test_copy_new_filter_single(self):
+        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        orig = FastArray([1, 1, 2, 3, 1])
+        assert arr_eq(c._fa, orig)
+
+        f = FastArray([False, True, True, True, True])
+        d = c.set_valid(f)
+        new = FastArray([0, 1, 2, 3, 1])
+        assert arr_eq(d._fa, new)
+
+    def test_copy_new_filter_single2(self):
+        c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
+        orig = FastArray([1, 2, 3, 4, 5])
+        assert arr_eq(c._fa, orig)
+
+        f = FastArray([False, True, True, True, True])
+        d = c.set_valid(f)
+        new = FastArray([0, 1, 2, 3, 4])
+        assert arr_eq(d._fa, new)
+
+    def test_copy_filter_errors(self):
+        c = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0)
+        f = FastArray([False, True, True, True, True])
+        with pytest.warns(UserWarning):
+            d = c.set_valid(f)
+
+    def test_single_key_filter(self):
+        f = FA([True, True, False, True, False])
+        pre_c = Categorical(['a', 'a', 'b', 'c', 'a'], filter=f)
+        assert pre_c.unique_count == 2
+
+        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        assert c.unique_count == 3
+        d = c.set_valid(filter=f)
+        assert pre_c.unique_count == d.unique_count
+        assert arr_eq(pre_c._fa, d._fa)
+
+    def test_multikey_filter(self):
+        f = FA([True, True, False, True, False])
+        pre_c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)], filter=f)
+        assert pre_c.unique_count == 3
+
+        c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
+        assert c.unique_count == 5
+        d = c.set_valid(filter=f)
+        assert pre_c.unique_count == d.unique_count
+        assert arr_eq(pre_c._fa, d._fa)
+
+    def test_categorical_empty(self):
+        c = Categorical(zeros(10, dtype=np.int8), ['a', 'b', 'c'])
+        assert c.unique_count == 3
+
+        d = c.set_valid()
+        assert d.unique_count == 0
+        assert len(d.category_array) == 0
+
+    def test_categorical_full(self):
+        f = full(5, True)
+        c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
+        d = c.set_valid(filter=f)
+        assert arr_eq(c._fa, d._fa)
+
+    def test_filter_deep_copy(self):
+        f = FA([True, True, False, True, False])
+        c = Categorical([FA(['a', 'a', 'b', 'c', 'a']), arange(5)])
+        assert c.unique_count == 5
+        d = c.set_valid(filter=f)
+        assert d.unique_count == 3
+        assert c.unique_count == 5
+
+    def test_filter_base_zero(self):
+        f = FA([True, True, False, True, False])
+        c = Categorical(['a', 'a', 'b', 'c', 'a'], filter=f)
+        c_zero = Categorical(['a', 'a', 'b', 'c', 'a'], base_index=0)
+        with pytest.warns(UserWarning):
+            d = c_zero.set_valid(filter=f)
+        assert arr_eq(c._fa, d._fa)
+        assert c.unique_count == d.unique_count
+
+    def test_pre_vs_post(self):
+        # unique item removed
+        arr = np.random.choice(['a', 'b', 'c'], 50)
+        filter = arr != 'b'
+        c = Categorical(arr)
+        c_pre = Categorical(arr, filter=filter)
+        c_post = c.set_valid(filter=filter)
+        c_copy = Categorical(c, filter=filter)
+
+        assert arr_eq(c_pre.category_array, c_post.category_array)
+        assert arr_eq(c_pre._fa, c_post._fa)
+
+        assert arr_eq(c_pre.category_array, c_copy.category_array)
+        assert arr_eq(c_pre._fa, c_copy._fa)
+
+        # same uniques
+        arr = np.random.choice(['a', 'b', 'c'], 50)
+        filter = ones(50, dtype=bool)
+        filter[:5] = False
+        c = Categorical(arr)
+        c_pre = Categorical(arr, filter=filter)
+        c_post = c.set_valid(filter=filter)
+        c_copy = Categorical(c, filter=filter)
+
+        assert arr_eq(c_pre.category_array, c_post.category_array)
+        assert arr_eq(c_pre._fa, c_post._fa)
+
+        assert arr_eq(c_pre.category_array, c_copy.category_array)
+        assert arr_eq(c_pre._fa, c_copy._fa)
+
+    def test_expand_array_empty(self):
+        arr = np.random.choice(['a', 'b', 'c'], 50)
+        c = Categorical(arr)
+        c2 = c.set_valid(filter=full(50, False))
+        assert c2.unique_count == 0
+        assert len(c2.category_array) == 0
+        expanded = c2.expand_array
+        assert arr_eq(expanded, c2.filtered_name)
+
+    def test_expand_dict_empty(self):
+        c = Categorical([arange(5), np.array(['a', 'b', 'c', 'd', 'e'])])
+        c2 = c.set_valid(filter=full(5, False))
+        assert c2.unique_count == 0
+
+        d = list(c2.expand_dict.values())
+        assert arr_all(d[0].isnan())
+        assert arr_eq(d[1], c2.filtered_name)
+
+    def test_enum_filter(self):
+        codes = np.random.choice([10, 20, 30, 40], 50)
+        d = {10: 'aaa', 20: 'bbb', 30: 'ccc'}
+        c = Categorical(codes, d)
+        data = arange(50)
+
+        # filter to go to groupby
+        reg = c.sum(data)
+        app = c.apply(sum, data)
+        assert reg.equals(app)
+
+        # keep enum as enum
+        as_arr = c.set_valid(None)
+
+        for i in range(len(as_arr)):
+            assert c[i] == as_arr[i]
+
+        # post filter enum
+        codes = FA([10, 10, 20, 30, 10])
+        d = {10: 'aaa', 20: 'bbb', 30: 'ccc'}
+        f = FA([True, True, False, True, True])
+        c = Categorical(codes, d)
+
+        c2 = c.as_singlekey().set_valid(f)
+        assert c2.unique_count == 2
+        c2.filtered_set_name('FLT')
+        assert c2.unique_count == 2
+        assert c2[2] == 'FLT'
+
+        c = Cat([10, 20, 30] * 3, {10: 'A', 20: 'B', 30: 'C'})
+        count = c.set_valid(c == 'A').count()['Count']
+        assert np.all(count == [3, 6])
+
+
+    def test_slice_empty_gb(self):
+        c = Categorical(['a', 'a', 'b', 'c', 'a'])
+        c = c[:0]
+        with pytest.raises(ValueError):
+            _ = c.sum(arange(5))
+
+        codes = FA([10, 10, 20, 30, 10])
+        d = {10: 'aaa', 20: 'bbb', 30: 'ccc'}
+        c = Categorical(codes, d)
+        c = c[:0]
+        with pytest.raises(ValueError):
+            _ = c.sum(arange(5))
+
+
 
 # INVAID vs. FILTERED checklist:
 # c = Cat(values)

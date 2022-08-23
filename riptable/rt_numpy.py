@@ -1174,7 +1174,7 @@ def cat2keys(
     fuse: bool = False
 ) -> 'Categorical':
     """
-    Create a `Categorical` from two keys or two `Categorical`s with all possible unique combinations.
+    Create a `Categorical` from two keys or two `Categorical` objects with all possible unique combinations.
 
     Notes
     -----
@@ -1211,6 +1211,7 @@ def cat2keys(
     of the values of the category dictionary.
 
     Creating a MultiKey Categorical from two lists of equal length.
+    
     >>> rt.cat2keys(list('abc'), list('xyz'))
     Categorical([(a, x), (b, y), (c, z)]) Length: 3
       FastArray([1, 5, 9], dtype=int64) Base Index: 1
@@ -2009,6 +2010,17 @@ def transpose(*args,**kwargs): return LedgerFunction(np.transpose,*args,**kwargs
 
 #-------------------------------------------------------
 def where(condition, x=None, y=None):
+
+    if isinstance(x,TypeRegister.Categorical) and isinstance(y,TypeRegister.Categorical):
+        z = TypeRegister.Categorical.hstack([x,y])
+        my_fa = where(condition, x = z._fa[:len(x)], y = z._fa[len(x):] )
+        return( TypeRegister.Categorical(my_fa, z._categories) )
+
+    if isinstance(x,TypeRegister.Categorical):
+        x = x.expand_array
+    if isinstance(y,TypeRegister.Categorical):
+        y = y.expand_array
+
     # handle the single-argument case
     missing = (x is None, y is None).count(True)
     if missing == 1:
@@ -2228,27 +2240,52 @@ def _np_keyword_wrapper(filter = None, dtype = None, **kwargs):
 #-------------------------------------------------------
 def sum(*args,filter = None, dtype = None,**kwargs):
     '''
-    Computes the sum of the first argument. For example
-    >>> a = rt.FastArray( [1,2,3])
+    Compute the sum of the values in the first argument. 
+
+    When possible, ``rt.sum(x, *args)`` calls ``x.sum(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the
+    keyword arguments listed below. For example, `Dataset.sum()` does not accept
+    the `filter` or `dtype` keyword arguments.
+    
+    For ``FastArray.sum``, see `numpy.sum` for documentation but note the following:
+    
+    * The `dtype` keyword argument may not work as expected:
+    
+        * Riptable data types (for example, `rt.float64`) are ignored. 
+        * NumPy integer data types (for example, `numpy.int32`) are also ignored. 
+        * NumPy floating point data types are applied as `numpy.float64`.
+    
+    * If you include another NumPy parameter (for example, ``axis=0``), the NumPy
+      implementation of ``sum`` will be used and the ``dtype`` will be used to 
+      compute the sum.
+        
+    Parameters
+    ----------
+    filter : array of bool, default None
+        Specifies which elements to include in the sum calculation.          
+    dtype : rt.dtype or numpy.dtype, optional
+        The data type of the result. By default, for integer input the result `dtype` is 
+        ``int64`` and for floating point input the result `dtype` is ``float64``. See 
+        the notes above about using this keyword argument with `FastArray` objects 
+        as input.
+        
+    See Also
+    --------
+    numpy.sum
+    nansum : Sums the values, ignoring NaNs.
+    FastArray.sum : Sums the values of a `FastArray`.
+    Dataset.sum : Sums the values of numerical `Dataset` columns.
+    GroupByOps.sum : Sums the values of each group. Used by `Categorical` objects.
+             
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 3, 5, 7])
     >>> rt.sum(a)
-    6
-
-    If possible, rt.sum(x, *args) calls x.sum(*args). If possible, look there for
-    documentation. In particular, rt.sum(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the mean. For example,
-    >>> a = rt.FastArray( [1,3,5,7])
-    >>> b = rt.FastArray( [False, True, False, True,True] )
-    >>> rt.sum(a, filter = b)
-    10
-    If the filter is uniformly False, this will return 0.
-
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.sum(dtype = my_type) is equivalent to my_type( x.sum() ).
+    16
+    
+    >>> a = rt.FastArray([1.0, 3.0, 5.0, 7.0])
+    >>> rt.sum(a)
+    16.0
     '''
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
@@ -2259,27 +2296,58 @@ def sum(*args,filter = None, dtype = None,**kwargs):
 #-------------------------------------------------------
 def nansum(*args, filter = None, dtype = None,  **kwargs):
     '''
-    Computes the sum of the first argument ignoring NaNs. For example
-    >>> a = rt.FastArray( [1,2,3,rt.nan])
+    Compute the sum of the values in the first argument, ignoring NaNs. 
+    
+    If all values in the first argument are NaNs, ``0.0`` is returned.
+
+    When possible, ``rt.nansum(x, *args)`` calls ``x.nansum(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the keyword
+    arguments listed below.
+    
+    For example, `FastArray.nansum` accepts the `filter` and `dtype` keyword arguments,
+    but `Dataset.nansum` does not.
+    
+    Parameters
+    ----------    
+    filter : array of bool, default None
+        Specifies which elements to include in the sum calculation. If the filter is 
+        uniformly ``False``, `rt.nansum` returns `0.0`.
+    dtype : rt.dtype or numpy.dtype, default float64
+        The data type of the result. For a `FastArray` ``x``, 
+        ``x.nansum(dtype = my_type)`` is equivalent to ``my_type(x.nansum())``.
+    
+    See Also
+    --------
+    sum : Sums the values of the input.
+    FastArray.nansum : Sums the values of a `FastArray`, ignoring NaNs.
+    Dataset.nansum : Sums the values of numerical `Dataset` columns, ignoring NaNs.
+    GroupByOps.nansum : Sums the values of each group, ignoring NaNs. Used for 
+                        Categoricals.
+        
+    Notes
+    -----
+    The `dtype` keyword for `rt.nansum` specifies the data type of the result. This 
+    differs from `numpy.nansum`, where it specifies the data type used to compute 
+    the sum.
+    
+    Examples
+    --------
+    >>> a = rt.FastArray( [1, 3, 5, 7, rt.nan])
     >>> rt.nansum(a)
-    6.0
-
-    If possible, rt.nansum(x, *args) calls x.nansum(*args). If possible, look there for
-    documentation. In particular, rt.nansum(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the mean. For example,
-    >>> a = rt.FastArray( [1,3,5,7,rt.nan])
-    >>> b = rt.FastArray( [False, True, False, True,True] )
+    16.0
+    
+    With a `dtype` specified: 
+    
+    >>> a = rt.FastArray([1.0, 3.0, 5.0, 7.0, rt.nan])
+    >>> rt.nansum(a, dtype = rt.int32)
+    16
+    
+    With a filter:
+    
+    >>> a = rt.FastArray([1, 3, 5, 7, rt.nan])
+    >>> b = rt.FastArray([False, True, False, True, True])
     >>> rt.nansum(a, filter = b)
     10.0
-    If the filter is uniformly False, this will return 0.
-
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.nansum(dtype = my_type) is equivalent to my_type( x.nansum() ).
     '''
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
@@ -2455,27 +2523,55 @@ def nanmax(*args, **kwargs):
 #-------------------------------------------------------
 def mean(*args, filter = None, dtype = None, **kwargs):
     '''
-    Computes the arithmetic mean of the first argument. For example
-    >>> a = rt.FastArray( [1,2,3,4])
+    Compute the arithmetic mean of the values in the first argument. 
+
+    When possible, ``rt.mean(x, *args)`` calls ``x.mean(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the keyword
+    arguments listed below.
+    
+    For example, `FastArray.mean` accepts the `filter` and `dtype` keyword arguments,
+    but `Dataset.mean` does not.    
+    
+    Parameters
+    ----------    
+    filter : array of bool, default None
+        Specifies which elements to include in the mean calculation. If the filter is 
+        uniformly ``False``, `rt.mean` returns a `ZeroDivisionError`.
+    dtype : rt.dtype or numpy.dtype, default float64
+        The data type of the result. For a `FastArray` ``x``, 
+        ``x.mean(dtype = my_type)`` is equivalent to ``my_type(x.mean())``.
+    
+    See Also
+    --------
+    nanmean : Computes the mean, ignoring NaNs.
+    Dataset.mean : Computes the mean of numerical `Dataset` columns.
+    FastArray.mean : Computes the mean of `FastArray` values.
+    GroupByOps.mean : Computes the mean of each group. Used by `Categorical` objects.
+        
+    Notes
+    -----
+    The `dtype` keyword for `rt.mean` specifies the data type of the result. This 
+    differs from `numpy.mean`, where it specifies the data type used to compute
+    the mean.  
+    
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 3, 5, 7])
     >>> rt.mean(a)
-    2.5
-
-    If possible, rt.mean(x, *args) calls x.mean(*args). If possible, look there for
-    documentation. In particular, rt.mean(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the mean. For example,
-    >>> a = rt.FastArray( [1,3,5,7])
-    >>> b = rt.FastArray( [False, True, False, True] )
+    4.0
+    
+    With a `dtype` specified: 
+    
+    >>> a = rt.FastArray([1, 3, 5, 7])
+    >>> rt.mean(a, dtype = rt.int32)
+    4
+        
+    With a filter:
+    
+    >>> a = rt.FastArray([1, 3, 5, 7])
+    >>> b = rt.FastArray([False, True, False, True])
     >>> rt.mean(a, filter = b)
-    5
-    If the filter is uniformly False, this will return 0.
-
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.mean(dtype = my_type) is equivalent to my_type( x.mean() ).
+    5.0  
     '''
     args = _convert_cat_args(args)
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
@@ -2485,28 +2581,58 @@ def mean(*args, filter = None, dtype = None, **kwargs):
 #-------------------------------------------------------
 def nanmean(*args, filter = None, dtype = None, **kwargs):
     '''
-    Computes the arithmetic mean of the first argument, ignoring NaNs.
-    For example
-    >>> a = rt.FastArray( [1,2,3,rt.nan])
-    >>> rt.mean(a)
-    2
-
-    If possible, rt.nanmean(x, *args) calls x.nanmean(*args). If possible, look there for
-    documentation. In particular, rt.nanmean(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the nanmean. For example,
-    >>> a = rt.FastArray( [1,3,5,rt.nan])
-    >>> b = rt.FastArray( [False, True, False, True] )
-    >>> rt.mean(a, filter = b)
+    Compute the arithmetic mean of the values in the first argument, ignoring NaNs.
+    
+    If all values in the first argument are NaNs, ``0.0`` is returned.
+    
+    When possible, ``rt.nanmean(x, *args)`` calls ``x.nanmean(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the keyword
+    arguments listed below.
+    
+    For example, `FastArray.nanmean` accepts the `filter` and `dtype` keyword arguments,
+    but `Dataset.nanmean` does not.
+    
+    Parameters
+    ----------    
+    filter : array of bool, default None
+        Specifies which elements to include in the mean calculation. If the filter is 
+        uniformly ``False``, `rt.nanmean` returns a `ZeroDivisionError`.
+    dtype : rt.dtype or numpy.dtype, default float64
+        The data type of the result. For a `FastArray` ``x``, 
+        ``x.nanmean(dtype = my_type)`` is equivalent to ``my_type(x.nanmean())``.
+    
+    See Also
+    --------
+    mean : Computes the mean.
+    Dataset.nanmean : Computes the mean of numerical `Dataset` columns, ignoring NaNs.
+    FastArray.nanmean : Computes the mean of `FastArray` values, ignoring NaNs.
+    GroupByOps.nanmean : Computes the mean of each group, ignoring NaNs. Used for 
+                         Categoricals.
+    
+    Notes
+    -----
+    The `dtype` keyword for `rt.nanmean` specifies the data type of the result. This 
+    differs from `numpy.nanmean`, where it specifies the data type used to compute 
+    the mean.
+    
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 3, 5, rt.nan])
+    >>> rt.nanmean(a)
+    3.0
+    
+    With a `dtype` specified:
+    
+    >>> a = rt.FastArray([1, 3, 5, rt.nan])
+    >>> rt.nanmean(a, dtype = rt.int32)
     3
-    If the filter is uniformly False, this will return 0.
 
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.nanmean(dtype = my_type) is equivalent to my_type( x.nanmean() ).
+    With a filter:
+    
+    >>> a = rt.FastArray([1, 3, 5, rt.nan])
+    >>> b = rt.FastArray([False, True, True, True])
+    >>> rt.nanmean(a, filter = b)
+    4.0   
     '''
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
@@ -2528,31 +2654,60 @@ def nanmedian(*args, **kwargs):
 #-------------------------------------------------------
 def var(*args, filter = None, dtype = None, **kwargs):
     '''
-    Computes the variance of the first argument. Uses the convention that ddof = 1 unlike
-    numpy, meaning the variance of [x_1, ... , x_n] is defined by
-    var = 1/(n-1) * sum( x_i - mean )**2.
-    (Note the n-1 instead of n).
+    Compute the variance of the values in the first argument.
+    
+    Riptable uses the convention that ``ddof = 1``, meaning the variance of 
+    ``[x_1, ..., x_n]`` is defined by ``var = 1/(n - 1) * sum(x_i - mean )**2`` (note 
+    the ``n - 1`` instead of ``n``). This differs from NumPy, which uses ``ddof = 0`` by
+    default.
+    
+    When possible, ``rt.var(x, *args)`` calls ``x.var(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the keyword
+    arguments listed below.
+    
+    For example, `FastArray.var` accepts the `filter` and `dtype` keyword arguments,
+    but `Dataset.var` does not.
+    
+    Parameters
+    ----------
+    filter : array of bool, default None
+        Specifies which elements to include in the variance calculation. If the filter 
+        is uniformly ``False``, `rt.var` returns a `ZeroDivisionError`.
 
-    For example
-    >>> a = rt.FastArray( [1,2,3])
+    dtype : rt.dtype or numpy.dtype, default float64
+        The data type of the result. For a `FastArray` ``x``, 
+        ``x.var(dtype = my_type)`` is equivalent to ``my_type(x.var())``.
+    
+    See Also
+    --------
+    nanvar : Computes the variance, ignoring NaNs.
+    FastArray.var : Computes the variance of `FastArray` values.
+    Dataset.var : Computes the variance of numerical `Dataset` columns.
+    GroupByOps.var : Computes the variance of each group. Used by `Categorical` objects.
+    
+    Notes
+    -----
+    The `dtype` keyword for `rt.var` specifies the data type of the result. This differs 
+    from `numpy.var`, where it specifies the data type used to compute the variance.
+           
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3])
     >>> rt.var(a)
     1.0
-
-    If possible, rt.var(x, *args) calls x.var(*args). If possible, look there for
-    documentation. In particular, rt.var(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the variance calculation. For example,
-    >>> a = rt.FastArray( [1,3,5,7])
-    >>> b = rt.FastArray( [False, True, False, True] )
+    
+    With a `dtype` specified:
+    
+    >>> a = rt.FastArray([1, 2, 3])
+    >>> rt.var(a, dtype = rt.int32)
+    1
+    
+    With a filter:
+    
+    >>> a = rt.FastArray([1, 2, 3])
+    >>> b = rt.FastArray([False, True, True])
     >>> rt.var(a, filter = b)
-    8.0
-
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.var(dtype = my_type) is equivalent to my_type( x.var() ).
+    0.5
     '''
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
@@ -2562,31 +2717,64 @@ def var(*args, filter = None, dtype = None, **kwargs):
 #-------------------------------------------------------
 def nanvar(*args, filter = None, dtype = None, **kwargs):
     '''
-    Computes the variance of the first argument ignoring NaNs. Uses the convention that
-    ddof = 1 unlike numpy, meaning the variance of [x_1, ... , x_n] is defined by
-    var = 1/(n-1) * sum( x_i - mean )**2.
-    (Note the n-1 instead of n).
+    Compute the variance of the values in the first argument, ignoring NaNs.
+    
+    If all values in the first argument are NaNs, ``NaN`` is returned.
+    
+    Riptable uses the convention that ``ddof = 1``, meaning the variance of 
+    ``[x_1, ..., x_n]`` is defined by ``var = 1/(n - 1) * sum(x_i - mean )**2`` (note 
+    the ``n - 1`` instead of ``n``). This differs from NumPy, which uses ``ddof = 0`` by
+    default.
+    
+    When possible, ``rt.nanvar(x, *args)`` calls ``x.nanvar(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the keyword
+    arguments listed below.
+    
+    For example, `FastArray.nanvar` accepts the `filter` and `dtype` keyword arguments,
+    but `Dataset.nanvar` does not.
+    
+    Parameters
+    ----------
+    filter : array of bool, default None
+        Specifies which elements to include in the variance calculation. If the filter 
+        is uniformly ``False``, `rt.nanvar` returns a `ZeroDivisionError`. 
 
-    For example
-    >>> a = rt.FastArray( [1,2,3, rt.nan])
-    >>> rt.var(a)
+    dtype : rt.dtype or numpy.dtype, default float64
+        The data type of the result. For a `FastArray` ``x``, 
+        ``x.nanvar(dtype = my_type)`` is equivalent to ``my_type(x.nanvar())``.
+       
+    See Also
+    --------
+    var : Computes the variance.
+    FastArray.nanvar : Computes the variance of `FastArray` values, ignoring NaNs.
+    Dataset.nanvar : Computes the variance of numerical `Dataset` columns, ignoring NaNs.
+    GroupByOps.nanvar : Computes the variance of each group, ignoring NaNs. Used for 
+                    Categoricals.
+    
+    Notes
+    -----
+    The `dtype` keyword for `rt.nanvar` specifies the data type of the 
+    result. This differs from `numpy.nanvar`, where it specifies the data type used to 
+    compute the variance.
+     
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3, rt.nan])
+    >>> rt.nanvar(a)
     1.0
-
-    If possible, rt.nanvar(x, *args) calls x.nanvar(*args). If possible, look there for
-    documentation. In particular, rt.nanvar(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the variance calculation. For example,
-    >>> a = rt.FastArray( [1,3,5,7, rt.nan])
-    >>> b = rt.FastArray( [False, True, False, True, True] )
+    
+    With a `dtype` specified:
+    
+    >>> a = rt.FastArray([1, 2, 3, rt.nan])
+    >>> rt.nanvar(a, dtype = rt.int32)
+    1
+    
+    With a filter:
+    
+    >>> a = rt.FastArray([1, 2, 3, rt.nan])
+    >>> b = rt.FastArray([False, True, True, True])
     >>> rt.nanvar(a, filter = b)
-    8.0
-
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.nanvar(dtype = my_type) is equivalent to my_type( x.nanvar() ).
+    0.5
     '''
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
@@ -2596,31 +2784,62 @@ def nanvar(*args, filter = None, dtype = None, **kwargs):
 #-------------------------------------------------------
 def std(*args, filter = None, dtype = None, **kwargs):
     '''
-    Computes the standard deviation of the first argument. Uses the convention that
-    ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n] is defined by
-    std**2 = 1/(n-1) * sum( x_i - mean )**2.
-    (Note the n-1 instead of n).
+    Compute the standard deviation of the values in the first argument.
+    
+    Riptable uses the convention that ``ddof = 1``, meaning the standard deviation of 
+    ``[x_1, ..., x_n]`` is defined by ``std = 1/(n - 1) * sum(x_i - mean )**2`` (note 
+    the ``n - 1`` instead of ``n``). This differs from NumPy, which uses ``ddof = 0`` by
+    default.
+    
+    When possible, ``rt.std(x, *args)`` calls ``x.std(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the keyword
+    arguments listed below.
+    
+    For example, `FastArray.std` accepts the `filter` and `dtype` keyword arguments,
+    but `Dataset.std` does not.
+    
+    Parameters
+    ----------
+    filter : array of bool, default None
+        Specifies which elements to include in the standard deviation calculation. If 
+        the filter is uniformly ``False``, `rt.std` returns a `ZeroDivisionError`.
 
-    For example
-    >>> a = rt.FastArray( [1,2,3])
+    dtype : rt.dtype or numpy.dtype, default float64
+        The data type of the result. For a `FastArray` ``x``, 
+        ``x.std(dtype = my_type)`` is equivalent to ``my_type(x.std())``.
+       
+    See Also
+    --------
+    nanstd : Computes the standard deviation, ignoring NaNs.
+    FastArray.std : Computes the standard deviation of `FastArray` values.
+    Dataset.std : Computes the standard deviation of numerical `Dataset` columns.
+    GroupByOps.std : Computes the standard deviation of each group. Used for 
+                     Categoricals.
+    
+    Notes
+    -----
+    The `dtype` keyword for `rt.std` specifies the data type of the result. This differs 
+    from `numpy.std`, where it specifies the data type used to compute the standard 
+    deviation.
+    
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3])
     >>> rt.std(a)
     1.0
-
-    If possible, rt.std(x, *args) calls x.std(*args). If possible, look there for
-    documentation. In particular, rt.std(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the variance calculation. For example,
-    >>> a = rt.FastArray( [1,3,5,7])
-    >>> b = rt.FastArray( [False, True, False, True] )
+    
+    With a `dtype` specified:
+    
+    >>> a = rt.FastArray([1, 2, 3])
+    >>> rt.std(a, dtype = rt.int32)
+    1    
+    
+    With a filter:
+    
+    >>> a = rt.FastArray([1, 2, 3])
+    >>> b = rt.FA([False, True, True])
     >>> rt.std(a, filter = b)
-    2.8284271247461903
-
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.std(dtype = my_type) is equivalent to my_type( x.std() ).
+    0.7071067811865476
     '''
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
@@ -2630,32 +2849,66 @@ def std(*args, filter = None, dtype = None, **kwargs):
 #-------------------------------------------------------
 def nanstd(*args, filter = None, dtype = None, **kwargs):
     '''
-    Computes the standard deviation of the first argument ignoring NaNs. Uses
-    the convention that ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n]
-    is defined by
-    std**2 = 1/(n-1) * sum( x_i - mean )**2.
-    (Note the n-1 instead of n).
+    Compute the standard deviation of the values in the first argument, ignoring NaNs.
+    
+    If all values in the first argument are NaNs, ``NaN`` is returned.
+    
+    Riptable uses the convention that ``ddof = 1``, meaning the standard deviation of 
+    ``[x_1, ..., x_n]`` is defined by ``std = 1/(n - 1) * sum(x_i - mean )**2`` (note 
+    the ``n - 1`` instead of ``n``). This differs from NumPy, which uses ``ddof = 0`` by
+    default.
+    
+    When possible, ``rt.nanstd(x, *args)`` calls ``x.nanstd(*args)``; look there for
+    documentation. In particular, note whether the called function accepts the keyword
+    arguments listed below.
+    
+    For example, `FastArray.nanstd` accepts the `filter` and `dtype` keyword arguments,
+    but `Dataset.nanstd` does not.
+    
+    Parameters
+    ----------
+    filter : array of bool, default None
+        Specifies which elements to include in the standard deviation calculation. If 
+        the filter is uniformly ``False``, `rt.nanstd` returns a `ZeroDivisionError`.
 
-    For example
-    >>> a = rt.FastArray( [1,2,3,rt.nan])
+    dtype : rt.dtype or numpy.dtype, default float64
+        The data type of the result. For a `FastArray` ``x``, 
+        ``x.nanstd(dtype = my_type)`` is equivalent to ``my_type(x.nanstd())``.
+       
+    See Also
+    --------
+    std : Computes the standard deviation.
+    FastArray.nanstd : Computes the standard deviation of `FastArray` values, ignoring 
+                       NaNs.
+    Dataset.nanstd : Computes the standard deviation of numerical `Dataset` columns, 
+                     ignoring NaNs.
+    GroupByOps.std : Computes the standard deviation of each group, ignoring NaNs. Used 
+                     for Categoricals.
+    
+    Notes
+    -----
+    The `dtype` keyword for `rt.nanstd` specifies the data type of the result. This 
+    differs from `numpy.nanstd`, where it specifies the data type used to compute 
+    the standard deviation.
+       
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3, rt.nan])
     >>> rt.nanstd(a)
     1.0
-
-    If possible, rt.nanstd(x, *args) calls x.nanstd(*args). If possible, look there for
-    documentation. In particular, rt.nanstd(x) may NOT accept a filter argument, depending
-    on the type of x. If x is a FastArray, then mean accepts the following keywords.
-
-    filter : array of bool, optional
-    Specifies which elements to include in the variance calculation. For example,
-    >>> a = rt.FastArray( [1,3,5,7,rt.nan])
-    >>> b = rt.FastArray( [False, True, False, True, True] )
+    
+    With a `dtype` specified:
+    
+    >>> a = rt.FastArray([1, 2, 3, rt.nan])
+    >>> rt.nanstd(a, dtype = rt.int32)
+    1  
+    
+    With filter:
+    
+    >>> a = rt.FastArray([1, 2, 3, rt.nan])
+    >>> b = rt.FastArray([False, True, True, True])
     >>> rt.nanstd(a, filter = b)
-    2.8284271247461903
-
-
-    dtype : optional
-    What datatype should the result be returned as. For a FastArray x,
-    x.nanstd(dtype = my_type) is equivalent to my_type( x.nanstd() ).
+    0.7071067811865476
     '''
     kwargs = _np_keyword_wrapper(filter=filter, dtype=dtype, **kwargs)
     args = _convert_cat_args(args)
@@ -2738,8 +2991,8 @@ def putmask(a, mask, values):
     """
     This is roughly the equivalent of arr[mask] = arr2[mask].
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> arr = rt.FastArray([10, 10, 10, 10])
     >>> arr2 = rt.FastArray([1, 2, 3, 4])
     >>> mask = rt.FastArray([False, True, True, False])
@@ -2876,12 +3129,17 @@ def logical(a):
 #-------------------------------------------------------
 class bool_(np.bool_):
     """
-    riptable equivalent of np.bool_
-    has invalid concept
-    rt.interp?
+    The Riptable equivalent of `numpy.bool_`, with the concept of an invalid added.
+    
     See Also
     --------
-    np.bool_
+    numpy.bool_
+    float32, float64, int8, uint8, int16, uint16, int32, uint32, int64, uint64, bytes_, str_
+    
+    Examples
+    --------
+    >>> rt.bool_.inv
+    False
     """
     # Allow np.bool.inv  to work
     inv = INVALID_DICT[0]
@@ -2898,12 +3156,17 @@ class bool_(np.bool_):
 #-------------------------------------------------------
 class int8(np.int8):
     """
-    riptable equivalent of np.int8
-    has invalid concept
-
+    The Riptable equivalent of `numpy.int8`, with the concept of an invalid added.
+   
     See Also
     --------
-    np.int8
+    numpy.int8
+    float32, float64, uint8, int16, uint16, int32, uint32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.int8.inv
+    -128
     """
 
     # Allow np.int8.inv  to work
@@ -2921,12 +3184,17 @@ class int8(np.int8):
 #-------------------------------------------------------
 class uint8(np.uint8):
     """
-    riptable equivalent of np.uint8
-    has invalid concept
-
+    The Riptable equivalent of `numpy.uint8`, with the concept of an invalid added.
+    
     See Also
     --------
-    np.uint8
+    numpy.uint8
+    float32, float64, int8, int16, uint16, int32, uint32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.uint8.inv
+    255
     """
 
     # Allow np.uint8.inv  to work
@@ -2944,12 +3212,17 @@ class uint8(np.uint8):
 #-------------------------------------------------------
 class int16(np.int16):
     """
-    riptable equivalent of np.int16
-    has invalid concept
+    The Riptable equivalent of `numpy.int16`, with the concept of an invalid added.
 
     See Also
     --------
-    np.int16
+    numpy.int16
+    float32, float64, int8, uint8, uint16, int32, uint32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.int16.inv
+    -32768
     """
 
     # Allow np.int16.inv  to work
@@ -2965,12 +3238,17 @@ class int16(np.int16):
 #-------------------------------------------------------
 class uint16(np.uint16):
     """
-    riptable equivalent of np.uint16
-    has invalid concept
+    The Riptable equivalent of `numpy.uint16`, with the concept of an invalid added.
 
     See Also
     --------
-    np.uint16
+    numpy.uint16
+    float32, float64, int8, uint8, int16, int32, uint32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.uint16.inv
+    65535
     """
 
     # Allow np.uint16.inv  to work
@@ -2986,12 +3264,17 @@ class uint16(np.uint16):
 #-------------------------------------------------------
 class int32(np.int32):
     """
-    riptable equivalent of np.int32
-    has invalid concept
-
+    The Riptable equivalent of `numpy.int32`, with the concept of an invalid added.
+ 
     See Also
     --------
-    np.int32
+    numpy.int32
+    float32, float64, int8, uint8, int16, uint16, uint32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.int32.inv
+    -2147483648
     """
 
     # Allow np.int32.inv  to work
@@ -3007,12 +3290,17 @@ class int32(np.int32):
 #-------------------------------------------------------
 class uint32(np.uint32):
     """
-    riptable equivalent of np.uint32
-    has invalid concept
+    The Riptable equivalent of `numpy.uint32`, with the concept of an invalid added.
 
     See Also
     --------
-    np.uint32
+    numpy.uint32
+    float32, float64, int8, uint8, int16, uint16, int32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.uint32.inv
+    4294967295
     """
 
     # Allow np.uint32.inv  to work
@@ -3028,12 +3316,17 @@ class uint32(np.uint32):
 #-------------------------------------------------------
 class int64(np.int64):
     """
-    riptable equivalent of np.int64
-    has invalid concept
+    The Riptable equivalent of `numpy.int64`, with the concept of an invalid added.
 
     See Also
     --------
-    np.int64
+    numpy.int64
+    float32, float64, int8, uint8, int16, uint16, int32, uint32, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.int64.inv
+    -9223372036854775808
     """
 
     # Allow np.int64.inv  to work
@@ -3049,12 +3342,17 @@ class int64(np.int64):
 #-------------------------------------------------------
 class uint64(np.uint64):
     """
-    riptable equivalent of np.uint64
-    has invalid concept
+    The Riptable equivalent of `numpy.uint64`, with the concept of an invalid added.
 
     See Also
     --------
-    np.uint64
+    numpy.uint64
+    float32, float64, int8, uint8, int16, uint16, int32, uint32, int64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.uint64.inv
+    18446744073709551615
     """
 
     # Allow np.uint64.inv  to work
@@ -3078,12 +3376,17 @@ class uint0(uint64):
 #-------------------------------------------------------
 class bytes_(np.bytes_):
     """
-    riptable equivalent of np.bytes_
-    has invalid concept
+    The Riptable equivalent of `numpy.bytes_`, with the concept of an invalid added.
 
     See Also
     --------
     np.bytes_
+    float32, float64, int8, uint8, int16, uint16, int32, uint32, int64, uint64, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.bytes_.inv
+    b''
     """
 
     # Allow np.bytes_.inv  to work
@@ -3097,12 +3400,17 @@ class bytes_(np.bytes_):
 #-------------------------------------------------------
 class str_(np.str_):
     """
-    riptable equivalent of np.str_
-    has invalid concept
-
+    The Riptable equivalent of `numpy.str_`, with the concept of an invalid added.
+    
     See Also
     --------
-    np.str_
+    numpy.str_
+    float32, float64, int8, uint8, int16, uint16, int32, uint32, int64, uint64, bytes_, bool_
+    
+    Examples
+    --------
+    >>> rt.str_.inv
+    ''
     """
 
     # Allow np.str_.inv  to work
@@ -3148,12 +3456,17 @@ def longdouble(a):
 #-------------------------------------------------------
 class float32(np.float32):
     """
-    riptable equivalent of np.float32
-    has invalid concept
-
+    The Riptable equivalent of `numpy.float32`, with the concept of an invalid added.
+    
     See Also
     --------
-    np.float32
+    numpy.float32
+    float64, int8, uint8, int16, uint16, int32, uint32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.float32.inv
+    nan
     """
 
     # Allow np.float32.inv  to work
@@ -3169,12 +3482,17 @@ class float32(np.float32):
 #-------------------------------------------------------
 class float64(np.float64):
     """
-    riptable equivalent of np.float64
-    has invalid concept
-
+    The Riptable equivalent of `numpy.float64`, with the concept of an invalid added.
+    
     See Also
     --------
-    np.float64
+    numpy.float64
+    float32, int8, uint8, int16, uint16, int32, uint32, int64, uint64, bytes_, str_, bool_
+    
+    Examples
+    --------
+    >>> rt.float64.inv
+    nan
     """
 
     # Allow np.float64.inv  to work

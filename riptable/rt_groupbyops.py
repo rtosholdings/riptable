@@ -326,16 +326,19 @@ class GroupByOps(object):
         Notes
         -----
         Grouping apply_reduce (for Categorical, groupby, accum2)
-        For every column of data to be computed:
-            The userfunc will be called back per group as a single array.  The order of the groups is either:
-                1) Order of first apperance (when coming from a hash)
-                2) Lexigraphical order (when ``lex=True`` or a Categorical with ordered=True)
+        
+        For every column of data to be computed, the userfunc will be called back per 
+        group as a single array. The order of the groups is either:
+        
+        * Order of first appearance (when coming from a hash)
+        * Lexigraphical order (when ``lex=True`` or a Categorical with ordered=True)
 
         The function passed to apply must take an array as its first argument and return back a single scalar value.
 
         Examples
         --------
         From a Dataset groupby:
+        
         >>> ds.gb(['Symbol'])['TradeSize'].apply_reduce(np.sum)
 
         From an existing categorical:
@@ -345,7 +348,7 @@ class GroupByOps(object):
         Create your own with forced dtype:
 
         >>> def mycumprodsum(arr):
-        >>>     return arr.cumprod().sum()
+        ...     return arr.cumprod().sum()
         >>> ds.Symbol.apply_reduce(mycumprodsum, ds.TradeSize, dtype=np.float32)
         '''
         if not callable(userfunc):
@@ -388,10 +391,12 @@ class GroupByOps(object):
         Notes
         -----
         Grouping apply_reduce (for Categorical, groupby, accum2)
-        For every column of data to be computed:
-            The userfunc will be called back per group as a single array.  The order of the groups is either:
-                1) Order of first apperance (when coming from a hash)
-                2) Lexigraphical order (when lex=True or a Categorical with ordered=True)
+        
+        For every column of data to be computed, the userfunc will be called back per group as 
+        a single array.  The order of the groups is either:
+        
+        * Order of first apperance (when coming from a hash)
+        * Lexigraphical order (when lex=True or a Categorical with ordered=True)
 
         The function passed to apply must take an array as its first argument and return back a single scalar value.
 
@@ -979,35 +984,36 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work Accum2 not supported.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work Accum2 not supported.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1025,36 +1031,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1070,36 +1077,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1115,36 +1123,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1160,36 +1169,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1205,36 +1215,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1250,36 +1261,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1295,36 +1307,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1340,36 +1353,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1385,36 +1399,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1430,36 +1445,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1475,36 +1491,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1533,36 +1550,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1575,42 +1593,44 @@ class GroupByOps(object):
             dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute standard deviation of groups
+        
         For multiple groupings, the result will be a MultiSet
 
         Parameters
         ----------
         ddof : integer, default 1
             degrees of freedom
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1626,36 +1646,37 @@ class GroupByOps(object):
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1669,42 +1690,44 @@ class GroupByOps(object):
             dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute variance of groups
+        
         For multiple groupings, the result will be a MultiSet
 
         Parameters
         ----------
         ddof : integer, default 1
             degrees of freedom
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1717,40 +1740,42 @@ class GroupByOps(object):
             dataset = None, return_all = False, computable = True, accum2 = False, func_param = 0, **kwargs):
         """
         Compute variance of groups, excluding missing values
+        
         For multiple groupings, the result will be a MultiSet
 
         Parameters
         ----------
-        *args : Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        *args : 
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
         filter : array of bool, optional
-        Elements to include in the GroupBy Operation.
+            Elements to include in the GroupBy Operation.
         transform : bool
-        If transform = True, the output will have the same shape as *args.
-        If transform = False, the output will typically have the same shape
-        as the categorical.
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
         showfilter : bool
-        If showfilter is True, there will be an extra row in the output
-        representing the GroupBy Operation applied to all those elements that
-        were filered out.
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
         col_idx : str, list of str, optional
-        If the input is a Dataset, col_idx specifies which columns to keep.
+            If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
-        If a dataset is specified, the GroupBy Operation will also be applied to
-        the dataset. If there is an *arg and dataset is specified then
-        the result will be appended to the dataset.
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
         return_all : bool
-        If return_all is True, will return all columns, even those where
-        the GroupBy Operation does not make sense. If return_all is False, it
-        will not return columns it cannot apply the GroupBy to. Does not work 
-        with Accum2.
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work 
+            with Accum2.
         computable : bool
-        If computable is True, will not try to apply the GroupBy Operation to
-        non-computable datatypes.
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
         accum2 : bool
-        Not recommended for use. If accum2 is True, the result is returned
-        as a dictionary.
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
         func_param :
-        Not recommended for use.
+            Not recommended for use.
         """
 
         kwargs = self._gb_keyword_wrapper(filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
@@ -1942,8 +1967,8 @@ class GroupByOps(object):
         """
         Ema base function for time based ema functions
 
-        Formula
-        -------
+        Formula:
+        
         grp loops over each item in a groupby group
             i loops over eachitem in the original dataset
                 Output[i] = <some formula>
@@ -1976,8 +2001,8 @@ class GroupByOps(object):
         """
         Ema decay for each group
 
-        Formula
-        -------
+        Formula:
+        
         grp loops over each item in a groupby group
             i loops over eachitem in the original dataset
                 Output[i] = Column[i] + LastEma[grp] * exp(-decay_rate * (Time[i] - LastTime[grp]));
@@ -2020,8 +2045,8 @@ class GroupByOps(object):
         """
         Ema decay for each group
 
-        Formula
-        -------
+        Formula:
+        
         grp loops over each item in a groupby group
            i loops over eachitem in the original dataset
                decayedWeight = exp(-decayRate * (Time[i] - LastTime[grp]));
@@ -2084,8 +2109,8 @@ class GroupByOps(object):
         """
         Ema decay for each group with constant decay value (no time parameter)
 
-        Formula
-        -------
+        Formula:
+        
         grp loops over each item in a groupby group
            i loops over eachitem in the original dataset
                LastEma[grp] = Column[i] * (1 - decay_rate) + LastEma[grp] * decay_rate

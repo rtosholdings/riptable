@@ -2,6 +2,7 @@ import pytest
 import os
 import pandas as pd
 import riptable as rt
+import unittest
 
 from enum import IntEnum
 from numpy.testing import assert_array_equal
@@ -79,7 +80,7 @@ def array_equal(arr1, arr2):
     return result
 
 
-class TestCategorical:
+class TestCategorical(unittest.TestCase):
     def _notimpl(self):
         pytest.skip("This test needs to be implemented.")
 
@@ -341,6 +342,10 @@ class TestCategorical:
                 func = c.__getattribute__(name)
                 with pytest.raises(ValueError):
                     result = func(bad_idx)
+
+    def test_eq_operator(self):
+        x = rt.Cat(['a','b','c'])
+        assert rt.all(x.eq('c')==rt.FA([False,False,True]))    
 
     def test_map(self):
 
@@ -2383,6 +2388,67 @@ class TestCategorical:
         c2 = c.as_singlekey(ordered=True)
         assert np.all(c1.expand_array == c2.expand_array)
         assert np.all(c3.expand_array == c2.expand_array)
+
+    def test_count_filter_length_check(self):
+        x = rt.Cat(rt.arange(10))
+        x.count(filter=True)
+        x.count(filter=rt.ones(10,dtype=bool))
+        with self.assertRaises(ValueError) as cm:
+            x.count(filter=rt.ones(9,dtype=bool))
+        self.assertEqual(str(cm.exception),'Filter is not the same length as categorical.')
+
+
+
+    def test_compare1(self):
+        myarr = rt.FA(np.random.randint(0,100,3_000_000))
+        mycat = rt.Cat(myarr)
+        assert rt.all(mycat==myarr), 'Failed check 1, eq'
+        assert rt.all(mycat<=myarr), 'Failed check 1, le'
+        assert rt.all(mycat>=myarr), 'Failed check 1, ge'
+        assert ~rt.any(mycat<myarr), 'Failed check 1, lt'
+        assert ~rt.any(mycat>myarr), 'Failed check 1, gt'
+        assert ~rt.any(mycat!=myarr), 'Failed check 1, ne'
+        assert rt.all(mycat<(myarr+1)), 'Failed check 1, lt + 1'
+        assert rt.all(mycat>(myarr - 3)), 'Failed check 1, gt - 3'
+    def test_compare2(self):
+        myarr = rt.arange(1_000_000,4_000_000)
+        mycat = rt.Cat(myarr,lex=True)
+        assert rt.all(mycat==myarr), 'Failed check 2, eq'
+        assert rt.all(mycat<=myarr), 'Failed check 2, le'
+        assert rt.all(mycat>=myarr), 'Failed check 2, ge'
+        assert ~rt.any(mycat<myarr), 'Failed check 2, lt'
+        assert ~rt.any(mycat>myarr), 'Failed check 2, gt'
+        assert ~rt.any(mycat!=myarr), 'Failed check 2, ne'
+        assert rt.all(mycat<(myarr+1)), 'Failed check 2, lt + 1'
+        assert rt.all(mycat>(myarr - 3)), 'Failed check 2, gt - 3'
+        out = mycat==3_500_000
+        assert out[2_500_000], 'Failed check 2, eq val'
+        assert ~rt.any(out[:2_200_000]), 'Failed check 2, eq val 2'
+        out = mycat>2_500_000
+        assert ~out[1_500_000], 'Failed check 2, gt val'
+        assert out[2_500_000], 'Failed check 2, gt val 2'
+    def test_compare3(self):
+        myarr = rt.Date(['20220518','20230518','20220107','19991231','19810101','20220518','20230518','20220107','19991231','19810101'])
+        mycat = rt.Cat(myarr)
+        assert rt.all(mycat==myarr), 'Failed check 3, eq'
+        assert rt.all(mycat<=myarr), 'Failed check 3, le'
+        assert rt.all(mycat>=myarr), 'Failed check 3, ge'
+        assert ~rt.any(mycat<myarr), 'Failed check 3, lt'
+        assert ~rt.any(mycat>myarr), 'Failed check 3, gt'
+        assert ~rt.any(mycat!=myarr), 'Failed check 3, ne'
+        assert rt.all(mycat<(myarr+1)), 'Failed check 3, lt + 1'
+        assert rt.all(mycat>(myarr - 3)), 'Failed check 3, gt - 3'
+        out = mycat == rt.Date('20220518')
+        assert out[0], 'Failed check 3'
+        assert ~out[1], 'Failed check 3'
+        assert ~out[2], 'Failed check 3'
+        assert ~out[3], 'Failed check 3'
+        assert ~out[4], 'Failed check 3'
+        assert out[5], 'Failed check 3'
+        assert ~out[6], 'Failed check 3'
+        assert ~out[7], 'Failed check 3'
+        assert ~out[8], 'Failed check 3'
+        assert ~out[9], 'Failed check 3'
 
 
 # Cannot use the pytest.mark.parameterize decorator within classes that inherit from unittest.TestCase.

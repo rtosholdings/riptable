@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_rtd_theme",
     'sphinx.ext.napoleon',
+    'nbsphinx',
 ]
 
 # Napoleon settings
@@ -84,3 +85,26 @@ master_doc = 'index'
 # Autoapi settings
 
 autoapi_dirs = ["../../riptable"]
+autoapi_ignore = ["*test*"]
+
+# Turn off SSL verification so Intersphinx can reach the endpoints below ------
+tls_verify = False
+
+# --Intersphinx configuration--------------------------------------------------
+intersphinx_mapping = {
+    'pyarrow': ('https://arrow.apache.org/docs', None),
+    'numba': ('https://numba.pydata.org/numba-doc/latest', None),
+    'neps': ('https://numpy.org/neps', None),
+    'python': ('https://docs.python.org/3', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy', None),
+    'matplotlib': ('https://matplotlib.org/stable', None),
+    'imageio': ('https://imageio.readthedocs.io/en/stable', None),
+    'skimage': ('https://scikit-image.org/docs/stable', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable', None),
+    'scipy-lecture-notes': ('https://scipy-lectures.org', None),
+    'pytest': ('https://docs.pytest.org/en/stable', None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    'numpy-tutorials': ('https://numpy.org/numpy-tutorials', None),
+    'numpydoc': ('https://numpydoc.readthedocs.io/en/latest', None),
+    'dlpack': ('https://dmlc.github.io/dlpack/latest', None)
+}

@@ -305,12 +305,14 @@ class ItemContainer():
     # -------------------------------------------------------
     def item_get_attribute(self, key, attrib_name, default=None):
         '''
-        Params
-        ------
-        Arg1: key: name of the item
-        Arg2: attrib_name: name of the attribute
-
-        Retrieves the value of the attribute previously assigned with item_set_attribute
+        Retrieve the value of the attribute previously assigned with `item_set_attribute`.
+        
+        Parameters
+        ----------
+        key: 
+            name of the item
+        attrib_name:
+            name of the attribute
         '''
         item = self._items.get(key, None)
         if item is None:
@@ -332,16 +334,20 @@ class ItemContainer():
     # -------------------------------------------------------
     def item_set_attribute(self, key, attrib_name, attrib_value):
         '''
-        Params
-        ------
-        Arg1: key: name of the item
-        Arg2: attrib_name: name of the attribute
-        Arg3: attrib_value: value of the attribute
+        Attach an attribute (name,value) pair to the item. 
 
-        Attaches an attribute (name,value) pair to the item
         Any valid dictionary name and any object can be assigned.
-
-        Note: see item_get_attribute to retrieve
+        
+        Note: see `item_get_attribute` to retrieve.
+        
+        Parameters
+        ----------
+        key: 
+            name of the item
+        attrib_name: 
+            name of the attribute
+        attrib_value: 
+            value of the attribute
         '''
 
         # check if already exists...

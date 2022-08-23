@@ -706,7 +706,7 @@ class Struct:
         ncols
         nrows
         row_arg
-            NB Any column names will be converted to str (from bytes or np.str_).
+            NB Any column names will be converted to str (from bytes or `numpy.str_`).
         """
         if isinstance(index, tuple):  # general case: ds[r, c]
             if len(index) == 2:
@@ -1099,16 +1099,12 @@ class Struct:
     def _build_sds_meta_data(self, name=None, nesting=True, **kwargs):
         '''
         Final SDS file will be laid out as follows:
-        --------------
-        header
-        -------------
-        meta data string (json, includes scalars)
-        -------------
-        arrays
-        --------------
-        special arrays
-        --------------
-        meta tuples [tuple(item name, SDSFlags) for all items]
+       
+        - header
+        - meta data string (json, includes scalars)
+        - arrays
+        - special arrays
+        - meta tuples [tuple(item name, SDSFlags) for all items]
 
         Nested data structures will generate their own SDS files.
         '''
@@ -2631,27 +2627,22 @@ class Struct:
         """
         import re
 
-        tempsum = sum([items is None, like is None, regex is None])
-
-        if tempsum != 2:
-            raise TypeError('Keyword arguments `items`, `like`, or `regex` are mutually exclusive.  one must be supplied')
-
+        newlist = []
         if items is not None:
             newlist = items
             if not isinstance(items, list):
-                newlist=[items]
-        elif like:
-            newlist=[]
+                newlist = [items]
+
+        if like:
             for k in self.keys():
                 if like in k:
                     newlist.append(k)
-        elif regex:
+        if regex:
             matcher = re.compile(regex)
-            newlist=[]
             for k in self.keys():
                 if matcher.search(k) is not None:
                     newlist.append(k)
-        else:
+        if (items is None) and not like and not regex:
             raise TypeError('Must pass either `items`, `like`, or `regex`')
 
         if len(newlist) == 0:
@@ -3560,7 +3551,7 @@ class Struct:
 
     def any(self):
         """
-        For use in boolean contexts: Does there exist an element (val) which either::
+        For use in boolean contexts: Does there exist an element (val) which either:
 
         1. val casts to True, or
         2. returns True for val.any() or any(val)
@@ -3594,7 +3585,7 @@ class Struct:
 
     def all(self):
         """
-        For use in boolean contexts: Is it true that for all elements (val) either::
+        For use in boolean contexts: Is it true that for all elements (val) either:
 
         1. val casts to True, or
         2. returns True for val.all() or all(val)
@@ -3976,20 +3967,22 @@ class Struct:
 
         Parameters
         ----------
-        userfunc: a callable function with the signature
-                    def userfunc(cols, **kwargs):
+        userfunc: function
+            This function must take two arguments, ``userfunc(cols, **kwargs)``.
 
-        scope: default, None.  The callback for just this dataset, or all datasets.
-                    can be None, 'Dataset', or 'Struct'
+        scope: default None  
+            The callback for just this Dataset, or all Datasets. Can be None, 
+            `Dataset`, or `Struct`.
+            
         Examples
         --------
         >>> from riptable.rt_display import DisplayColumnColors
         >>> def make_red(cols, **kwargs):
-                location = kwargs['location']  # could left, right, or main
-                if location == 'main':
-                    for col in cols:
-                        for cell in col:
-                            if cell.string.startswith('-'): cell.string = '(' + cell.string[1:] + ')'; cell.color=DisplayColumnColors.Red
+        ...     location = kwargs['location']  # could left, right, or main
+        ...     if location == 'main':
+        ...         for col in cols:
+        ...             for cell in col:
+        ...                 if cell.string.startswith('-'): cell.string = '(' + cell.string[1:] + ')'; cell.color=DisplayColumnColors.Red
         >>> ds=rt.Dataset({'test':rt.arange(5)-3, 'another':rt.arange(5.0)-2})
         >>> ds.set_display_callback(make_red)
         >>> ds

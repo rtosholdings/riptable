@@ -8,3 +8,13 @@ indent_size = 4
 tab_width = 4
 charset = utf-8
 #trim_trailing_whitespace = true
+
+# YAML config files
+[*.{yml,yaml}]
+indent_size = 2
+
+# Shell scripts
+[*.sh]
+end_of_line = lf
+[*.{cmd, bat}]
+end_of_line = crlf

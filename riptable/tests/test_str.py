@@ -1,5 +1,6 @@
 import math
 from typing import Tuple
+import re
 
 import pytest
 
@@ -238,15 +239,36 @@ class TestFAString:
         ('B$', [False, False, True, False, False]),
     ])
 
+    @parametrize('apply_unique', [True, False])
     @regex_match_test_cases
-    def test_regex_match(self, regex, expected):
-        fa = FA(SYMBOLS)
-        assert_array_equal(fa.str.regex_match(regex), expected)
+    def test_regex_match(self, regex, expected, apply_unique):
+        fa = FA(SYMBOLS * 2)
+        assert_array_equal(fa.str.regex_match(regex, apply_unique=apply_unique), expected * 2)
 
     @regex_match_test_cases
     def test_regex_match_cat(self, regex, expected):
         cat = Cat(SYMBOLS * 2)  # introduce duplicity to test ikey properly
         assert_array_equal(cat.str.regex_match(regex), expected * 2)
+
+    regex_replace_test_cases = parametrize('regex, repl', [
+        ('.', 'A'),
+        ('\w+', 'A'),
+        ('\d+', '0'),
+        ('[A|B|C]', 'C'),
+        ('B$', ''),
+    ])
+
+    @pytest.mark.parametrize('arr_type_factory', [
+        pytest.param(rt.FastArray, id='FastArray'),
+        pytest.param(rt.Categorical, id='Categorical')
+    ])
+    @parametrize('apply_unique', [True, False])
+    @regex_replace_test_cases
+    def test_regex_replace(self, regex, repl, apply_unique, arr_type_factory):
+        fa = arr_type_factory(SYMBOLS * 2)
+        result = fa.str.regex_replace(regex, repl, apply_unique=apply_unique)
+        expected = arr_type_factory([re.sub(regex, repl, s) for s in SYMBOLS * 2])
+        assert_array_or_cat_equal(result, expected)
 
     def test_removetrailing_empty(self) -> None:
         arr = rt.FA([], dtype='S11')  # empty array
@@ -304,6 +326,49 @@ class TestFAString:
     #
     # TODO: reverse_inplace tests
     #
+
+    def test_find(self):
+        res = FAString(['this', 'that', 'test'])._find('t')
+        expected = FastArray([[True, False, False, False],
+                              [True, False, False, True],
+                              [True, False, False, True]])
+        assert_array_equal(res, expected)
+
+    @pytest.mark.parametrize('arr_type_factory', [
+        pytest.param(rt.FastArray, id='FastArray'),
+        pytest.param(rt.Categorical, id='Categorical')
+    ])
+    @pytest.mark.parametrize('unicode', [pytest.param(False, id='ascii'), pytest.param(True, id='unicode')])
+    @pytest.mark.parametrize('parallel', [pytest.param(False, id='serial'), pytest.param(True, id='parallel')])
+    @pytest.mark.parametrize('old, new', [
+        ('A', 'B'),
+        ('A', 'BB'),
+        ('A', ''),
+        ('OO', 'O'),
+        ('FB', 'TWITTER'),
+        ('AAPL', ''),
+        ('XYZ', 'LMNOP')
+    ], ids=['one-for-one', 'one-for-two', 'one-for-none',
+            'two-for-one-pair', 'all-replaced',
+            'all-replaced-with-empty', 'no-op'])
+    def test_replace(self, arr_type_factory, unicode, parallel, old, new):
+        dtype_str = '<U' if unicode else '|S'
+        ndarray = np.array(SYMBOLS, dtype=dtype_str)
+        arr = arr_type_factory(ndarray)
+        arr, tile_count = (arr, None) if not parallel else _make_parallelizable_array(arr)
+        result = arr.str.replace(old, new)
+
+        expected_strings = [x.replace(old, new) for x in SYMBOLS]
+        expected_ndarray = np.array(expected_strings, dtype=dtype_str)
+        expected = arr_type_factory(expected_ndarray)
+        if tile_count is not None:
+            expected = _tile_array(expected, tile_count)
+        # breakpoint()
+        assert_array_or_cat_equal(
+            result, expected,
+            exact_dtype_match=False,
+            relaxed_cat_check=True,
+        )
 
     def test_startswith(self):
         arrsize = 200

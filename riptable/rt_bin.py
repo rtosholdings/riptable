@@ -179,8 +179,9 @@ def qcut(x, q, labels=True, retbins=False, precision=3, duplicates='raise'):
     out : Categorical or FastArray
         An array-like object representing the respective bin for each value
         of `x`. The type depends on the value of `labels`:
-            * False : returns a FastArray of integers
-            * array, True, or None : returns a Categorical
+        
+        * False : returns a FastArray of integers
+        * array, True, or None : returns a Categorical
     bins : ndarray of floats
         The computed or specified bins. Only returned when `retbins=True`.
 
@@ -426,8 +427,9 @@ def cut(x, bins, labels=True, right=True, retbins=False, precision=3,
     out : Categorical or FastArray
         An array-like object representing the respective bin for each value
         of `x`. The type depends on the value of `labels`:
-            * False : returns a FastArray of integers
-            * array, True, or None : returns a Categorical
+        
+        * False : returns a FastArray of integers
+        * array, True, or None : returns a Categorical
     bins : ndarray of floats
         The computed or specified bins. Only returned when `retbins=True`.
 

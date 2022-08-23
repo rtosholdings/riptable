@@ -50,8 +50,8 @@ from .rt_enum import TypeRegister, ColHeader
 
 def sub2ind(aSize,aPosition):
     """
-    MATLAB
-    ---------------------------------
+    **MATLAB**
+    
     sub2ind Linear index from multiple subscripts.
     sub2ind is used to determine the equivalent single index
     corresponding to a given set of subscript values.
@@ -68,8 +68,8 @@ def sub2ind(aSize,aPosition):
     as I1,I2,...,IN. For an array A, if IND = sub2ind(SIZE(A),I1,...,IN)),
     then A(IND(k))=A(I1(k),...,IN(k)) for all k.
 
-    PYTHON
-    ----------------------------
+    **PYTHON**
+    
     ravel_multi_index(...)
     ravel_multi_index(multi_index, dims, mode='raise', order='C')
 

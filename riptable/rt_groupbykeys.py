@@ -16,25 +16,28 @@ class GroupByKeys():
     ifirstkey : array, optional
         If set, first occurence to generate unique values from non-unique keys.
         Sometimes these are lazily evaluated and do not correspond to the grouping dict held.
-        See the ``prebinned`` keyword.
+        See the `prebinned` keyword.
     isortrows : array, optional
         A sorted index for the unique array.
-        May be calculated later on, after ``grouping_dict`` is reduced to unique values.
+        May be calculated later on, after `grouping_dict` is reduced to unique values.
     sort_display : bool, default False
         If True, unique keys in result of operation will be sorted. Otherwise, will appear unsorted.
     pre_sorted : bool, default False
-        Unique ``grouping_dict`` is already in a sorted order, do not apply / calculate ``isortrows``,
+        Unique `grouping_dict` is already in a sorted order, do not apply / calculate `isortrows`,
         even if sort on is True.
     prebinned : bool, default False
-        If True, ``grouping_dict`` contains unique values. ``ifirstkey`` will not be stored.
-        If False, ``grouping_dict contains non-unique values, the default if constructed by a GroupBy object.
+        If True, `grouping_dict` contains unique values. `ifirstkey` will not be stored.
+        If False, `grouping_dict` contains non-unique values, the default if constructed by a `GroupBy` object.
     
-    Constructor
-    -----------
+    Notes
+    -----
+    
+    **Constructor**
+
     GroupByKeys has two main ways of initialization:
 
     1. From a non-unique grouping_dict and ifirstkey (fancy index to unique values). The object 
-        will hold on to both, and lazily generate the groupby keys as necessary.
+       will hold on to both, and lazily generate the groupby keys as necessary.
     2. From already binned gbkeys (unique values). Most categoricals will initialize GroupByKeys this way.
        Because Categoricals are sometimes naturally sorted, they may set the pre_sorted keyword to True.
 
@@ -42,14 +45,14 @@ class GroupByKeys():
     a groupby calculation is made. After being sorted, the internal _sort_applied flag will be set. Despite the keys 
     being sorted, the sort might still need to be applied to the data columns of the groupby calculation's result.
 
-    Lazy Evaluation
-    ---------------
-    - If isortrows is not provided and the gbkeys are not pre-sorted, a lexsort will be performed, and the keys will be sorted inplace.
-    - If gbkeys are requested with a filter bin, a new bin will be permanently prepended to each key array. After the filtered bin is added,
-    the gbkeys will still default to return arrays without the filter (a view of the held arrays offset by 1).
-    - Multikey labels are a list of strings of the tuples that will appear when a multikey is displayed. They will also add a filtered tuple 
-    as necessary, and default to a reduced view after the addition - just like the gbkeys. Multikey labels will not be generated until 
-    they are requested for display (because they are constructed in a python loop, generating these is expensive).
+    **Lazy Evaluation**
+    
+    * If isortrows is not provided and the gbkeys are not pre-sorted, a lexsort will be performed, and the keys will be sorted inplace.
+    * If gbkeys are requested with a filter bin, a new bin will be permanently prepended to each key array. After the filtered bin is added,
+      the gbkeys will still default to return arrays without the filter (a view of the held arrays offset by 1).
+    * Multikey labels are a list of strings of the tuples that will appear when a multikey is displayed. They will also add a filtered tuple 
+      as necessary, and default to a reduced view after the addition - just like the gbkeys. Multikey labels will not be generated until 
+      they are requested for display (because they are constructed in a python loop, generating these is expensive).
     """
 
     def __init__(self, grouping_dict, ifirstkey=None, isortrows=None, sort_display=False, pre_sorted=False, prebinned=False):

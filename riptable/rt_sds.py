@@ -1550,7 +1550,7 @@ def load_sds(
     2    0.03    0.56    0.30
 
     Stacking multiple directories together while loading, explicitly specifying
-    the list of `Dataset`s to load (from each directory, then stack together).
+    the list of `Dataset` objects to load (from each directory, then stack together).
 
     >>> files = [ r'D:\dir1', r'D:\dir2' ]
     >>> include = [ 'ds1', 'ds2', 'ds3' ]

@@ -1769,6 +1769,8 @@ class TestUfunc(object):
         b = FA(b)
         c = np.empty(3, dtype=_rational_tests.rational)
         c = FA(c)
+        d = np.uint16(4)
+        d = FA(d)
 
         # Output must be specified so numpy knows what
         # ufunc signature to look for
@@ -1777,9 +1779,18 @@ class TestUfunc(object):
         target = FA(target)
         assert_equal(result, target)
 
-        # no output type should raise TypeError
+        # in numpy1.22 this was changed to allow promotions
+        if _numpy_version >= (1, 22, 0):
+            result = _rational_tests.test_add(a, b)
+            assert_equal(result, target)
+        else:
+            # no output type should raise TypeError
+            with assert_raises(TypeError):
+                _rational_tests.test_add(a, b)
+
+        # mismatched type should raise TypeError
         with assert_raises(TypeError):
-            _rational_tests.test_add(a, b)
+            _rational_tests.test_add(a, d)
 
     # FA ready
     def test_operand_flags(self):

@@ -22,6 +22,20 @@ class TestRTNumpy:
             err_msg=f"Results did not match for where. {arr} vs. {result}"
         )
 
+        x = Categorical(['a','b','a','c','b'])
+        y = Categorical(['b','a','b','b','e'])
+        z = FastArray(['a','c','f','g','a'])
+        f = FastArray([True,False,True,False,False])
+        out1 = where(f,x,y)
+        out2 = where(f,x,z)
+        out3 = where(f,z,y)
+        assert_array_equal(out1,FastArray(['a','a','a','b','e']))
+        assert(isinstance(out1,Categorical))
+        assert_array_equal(out2,FastArray(['a','c','a','g','a']))
+        assert(not isinstance(out2,Categorical))
+        assert_array_equal(out3,FastArray(['a','a','f','b','e']))
+        assert(not isinstance(out3,Categorical))
+
     def test_interp(self):
         x = interp(arange(3.0).astype(float32), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
         y = interp(arange(3.0), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])

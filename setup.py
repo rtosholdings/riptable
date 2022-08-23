@@ -1,14 +1,15 @@
-from setuptools import setup, find_packages, Extension, Command
-from setuptools.command.build_ext import build_ext
-from setuptools.command.build_py import build_py
-import os
-import sys
-import pathlib
-import datetime
-import logging
-import re
+from setuptools import setup
 
 package_name='riptable'
+
+install_requires = [
+    'riptide_cpp >=1.8,<1.9',
+    'pandas >=0.24,<2.0',
+    'ansi2html >=1.5.2',
+    'numpy >=1.21',
+    'numba >=0.55.2',
+    'python-dateutil'
+]
 
 setup(
     name = package_name,
@@ -22,9 +23,11 @@ setup(
     package_dir = {package_name: 'riptable'},
     description = 'Python Package for riptable studies framework',
     author = 'RTOS Holdings',
-    author_email = 'thomasdimitri@gmail.com',
+    author_email = 'rtosholdings-bot@sig.com',
     url="https://github.com/rtosholdings/riptable",
-    install_requires=['numpy','riptide_cpp>=1.6.27','ansi2html','numba','python-dateutil'],
+    python_requires='>=3.8',
+    install_requires=install_requires,
+    zip_safe=False,
     include_package_data=True,
     package_data={package_name: ['tests/*','tests/test_files/*', 'benchmarks/*', 'hypothesis_tests/*','Utils/*', 'test_tooling_integration/*']},
     classifiers=[
