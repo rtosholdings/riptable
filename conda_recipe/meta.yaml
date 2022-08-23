@@ -4,6 +4,7 @@ package:
 
 build:
   number: 0
+  preserve_egg_dir: True
 
 source:
   - path: ../
@@ -14,16 +15,18 @@ requirements:
     # The following requirements are in the build because setup.py requires them.
     - setuptools_scm
     - riptide_cpp >=1.8,<1.9
+    - pandas >=0.24,<2.0
     - ansi2html >=1.5.2
-    - numba >=0.51
+    - numpy >=1.21
+    - numba >=0.55.2
     - python-dateutil
   run:
     - python
-    - {{ pin_compatible('riptide_cpp', min_pin='x.x.x', max_pin='x.x') }}
+    - {{ pin_compatible('riptide_cpp', min_pin='x.x', max_pin='x.x') }}
     - pandas >=0.24,<2.0
     - ansi2html >=1.5.2
-    - numpy >=1.20,<1.22
-    - numba >=0.51
+    - numpy >=1.21
+    - numba >=0.55.2
     - python-dateutil
 
 test:
@@ -39,6 +42,8 @@ test:
     # Include pyarrow as a test requirement. It's an optional dependency at run-time,
     # but we want to be able to run interop tests with it.
     - pyarrow >=6.0.0
+    # Include bokeh as a test requirement, as it's an optional run-time dependency.
+    - bokeh
 
     # Known issues where ipykernel dies before reply messages.
     # The following ipykernel and jupyter_console versions are verified to work.

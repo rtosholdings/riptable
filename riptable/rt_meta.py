@@ -190,15 +190,16 @@ def apply_schema(obj, schema: dict, doc: bool=True):
     The schema should be in the form of a hierarchical dictionary, where
     for the data object, and recursively for each element it may contain,
     there is a descriptive dictionary with the following keys and values:
-        * Type: 'Struct', 'Dataset', 'Multiset', 'FastArray', etc.
-        * Description: a brief description of the data object
-        * Steward: the name of the steward for that data object
-        * Detail: any additional descriptive information
-        * Contents: if the data object is a :class:`~.rt_struct.Struct`,
-          :class:`~.rt_dataset.Dataset`, or :class:`~.rt_multiset.Multiset`, a
-          recursively formed dictionary where there is a descriptive
-          dictionary of this form associated with the name of each element
-          contained by the data object.
+    
+    * Type: 'Struct', 'Dataset', 'Multiset', 'FastArray', etc.
+    * Description: a brief description of the data object
+    * Steward: the name of the steward for that data object
+    * Detail: any additional descriptive information
+    * Contents: if the data object is a :class:`~.rt_struct.Struct`,
+      :class:`~.rt_dataset.Dataset`, or :class:`~.rt_multiset.Multiset`, a
+      recursively formed dictionary where there is a descriptive
+      dictionary of this form associated with the name of each element
+      contained by the data object.
 
     When the schema is applied to the data object, key/value pairs are set
     within the ``_meta`` dictionary attribute of the object and all of

@@ -69,21 +69,21 @@ class Dataset(Struct):
 
     **Column indexing behavior**::
 
-        >>> st['b'] # get a column (equiv. st.b)
-        >>> st[['a', 'e']] # get some columns
-        >>> st[[0, 4]] # get some columns (order is that of iterating st (== list(st))
-        >>> st[1:5:2] # standard slice notation, indexing corresponding to previous
-        >>> st[bool_vector_len5] # get 'True' columns
+    >>> st['b'] # get a column (equiv. st.b)
+    >>> st[['a', 'e']] # get some columns
+    >>> st[[0, 4]] # get some columns (order is that of iterating st (== list(st))
+    >>> st[1:5:2] # standard slice notation, indexing corresponding to previous
+    >>> st[bool_vector_len5] # get 'True' columns
 
     In all of the above: ``st[col_spec] := st[:, colspec]``
 
     **Row indexing behavior**::
 
-        >>> st[2, :] # get a row (all columns)
-        >>> st[[3, 7], :] # get some rows (all columns)
-        >>> st[1:5:2, :] # standard slice notation (all columns)
-        >>> st[bool_vector_len5, :] # get 'True' rows (all columns)
-        >>> st[row_spec, col_spec] # get specified rows for specified columns
+    >>> st[2, :] # get a row (all columns)
+    >>> st[[3, 7], :] # get some rows (all columns)
+    >>> st[1:5:2, :] # standard slice notation (all columns)
+    >>> st[bool_vector_len5, :] # get 'True' rows (all columns)
+    >>> st[row_spec, col_spec] # get specified rows for specified columns
 
     Note that because ``st[spec] := st[:, spec]``, to specify rows one *must* specify columns
     as well, at least as 'the all-slice': e.g., ``st[row_spec, :]``.
@@ -102,7 +102,7 @@ class Dataset(Struct):
 
     >>> ds.S = list('ABCDEFGHIJ')
 
-    Add a column of non-ascii strings (stored internally as a Categorical column)::
+    Add a column of non-ascii strings (stored internally as a Categorical column):
 
     >>> ds.U = list('ℙƴ☂ℌøἤ-613')
     >>> print(ds)
@@ -166,16 +166,16 @@ class Dataset(Struct):
     >>> if key in ds:
     ...    assert getattr(ds, key) is ds[key]
 
-    Context manager::
+    Context manager:
 
     >>> with Dataset({'a': 1, 'b': 'fish'}) as ds0:
-    ...     print(ds0.a)
+    ...    print(ds0.a)
     [1]
 
     >>> assert not hasattr(ds0, 'a')
 
     Dataset cannot be used in a boolean context ``(if ds: ...)``,
-    use ``ds.any(axis='all')`` or ``ds.all(axis='all')`` instead::
+    use ``ds.any(axis='all')`` or ``ds.all(axis='all')`` instead:
 
     >>> ds1 = ds[:-2] # Drop the string columns, Categoricals are 'funny' here.
     >>> ds1.any(axis='all')
@@ -848,7 +848,7 @@ class Dataset(Struct):
             data (if file found on disk) will be loaded into the user's workspace AND shared memory. a sharename
             must be accompanied by a file name. (the rest of a full path will be trimmed off internally)
         decompress : bool
-            **not implemented. the internal .sds loader will detect if the file is compressed
+            **not implemented.** the internal .sds loader will detect if the file is compressed
         info : bool
             Defaults to False. If True, load information about the contained arrays instead of loading them from file.
         include : sequence of str, optional
@@ -926,12 +926,18 @@ class Dataset(Struct):
         fld : (rowspec, colspec) or colspec (=> rowspec of :)
         value : scalar, sequence or dataset value
 
-            * scalar is always valid
-            * if (rowspec, colspec) is an NxK selection:
-                (1xK), K>1: allow |sequence| == K
-                (Nx1), N>1: allow |sequence| == N
-                (NxK), N, K>1: allow only w/ |dataset| = NxK
-            * sequence can be list, tuple, np.ndarray, FastArray
+            * Scalar is always valid. 
+            
+            * If (rowspec, colspec) is an NxK selection:
+            
+              * (1xK), K>1: allow ``|sequence| == K``
+              
+              * (Nx1), N>1: allow ``|sequence| == N``
+              
+              * (NxK), N, K>1: allow only w/ ``|dataset| = NxK``
+              
+            * Sequence can be list, tuple, np.ndarray, FastArray
+            
 
         Raises
         ------
@@ -1828,19 +1834,19 @@ class Dataset(Struct):
     ) -> Optional['Dataset']:
         """
         Apply function (or named method) on each column.
-        If results are all None (*=, +=, for example), None is returned;
-        otherwise a Dataset of the return values will be returned (+, *, abs);
+        If results are all None (``*=``, ``+=``, for example), None is returned;
+        otherwise a Dataset of the return values will be returned (``+``, ``*``, ``abs``);
         in this case they are expected to be scalars or vectors of same length.
 
         Constraints on first elem. of args (if unary is False, as for func being an arith op.).
-        lhs can be::
+        lhs can be:
 
-        1. a numeric scalar
-        2. a list of numeric scalars, length nrows (operating on each column)
-        3. an array of numeric scalars, length nrows (operating on each column)
-        4. a column vector of numeric scalars, shape (nrows, 1) (reshaped and operating on each column)
-        5. a Dataset of numeric scalars, shape (nrows, k) (operating on each matching column by name)
-        6. a Struct of (possibly mixed) (1), (2), (3), (4) (operating on each matching column by name)
+        #. a numeric scalar
+        #. a list of numeric scalars, length nrows (operating on each column)
+        #. an array of numeric scalars, length nrows (operating on each column)
+        #. a column vector of numeric scalars, shape (nrows, 1) (reshaped and operating on each column)
+        #. a Dataset of numeric scalars, shape (nrows, k) (operating on each matching column by name)
+        #. a Struct of (possibly mixed) (1), (2), (3), (4) (operating on each matching column by name)
 
         Parameters
         ----------
@@ -1859,8 +1865,8 @@ class Dataset(Struct):
                 will be dropped.
                 Key-value pairs where the value is ``None``, or an absent column name
                 None, or an absent column name if not a ``defaultdict`` still means
-              None (or absent if not a defaultdict) still means drop column
-              and an alt_func still means force compute via alt_func.
+                None (or absent if not a defaultdict) still means drop column
+                and an alt_func still means force compute via alt_func.
         unary: If False (default) then enforce shape constraints on first positional arg.
         labels: If False (default) then do not apply the function to any label columns.
         kwargs: all other kwargs are passed to func.
@@ -2373,17 +2379,28 @@ class Dataset(Struct):
 
     def head(self, n: int = 20) -> 'Dataset':
         """
-        Return view into beginning of Dataset.
+        Return the first `n` rows.
+        
+        This function returns the first `n` rows of the Dataset, based on position. It's
+        useful for spot-checking your data.
+        
+        For negative values of `n`, this function returns all rows except the last `n`
+        rows (equivalent to ``ds[:-n, :]``).
 
         Parameters
         ----------
-        n : int
-            Number of rows at the head to return.
+        n : int, default 20
+            Number of rows to select.
 
         Returns
         -------
         Dataset
-            A new dataset which is a view into the original.
+            A view of the first `n` rows of the Dataset.
+            
+        See Also
+        --------
+        Dataset.tail : Returns the last `n` rows of the Dataset.
+        Dataset.sample : Returns `N` randomly selected rows of the Dataset.
         """
         if self._nrows is None: self._nrows = 0
         rows = min(self._nrows, n)
@@ -2391,17 +2408,28 @@ class Dataset(Struct):
 
     def tail(self, n: int = 20) -> 'Dataset':
         """
-        Return view into end of Dataset.
+        Return the last `n` rows.
+        
+        This function returns the last `n` rows of the Dataset, based on position. It's
+        useful for spot-checking your data, especially after sorting or appending rows.
+        
+        For negative values of `n`, this function returns all rows except the first `n` 
+        rows (equivalent to ``ds[n:, :]``).
 
         Parameters
         ----------
-        n : int
-            Number of rows at the tail to return.
+        n : int, default 20
+            Number of rows to select.
 
         Returns
         -------
         Dataset
-            A new dataset which is a view into the original.
+            A view of the last `n` rows of the Dataset.
+            
+        See Also
+        --------
+        Dataset.head : Returns the first `n` rows of the Dataset.
+        Dataset.sample : Returns `N` randomly selected rows of the Dataset.
         """
         if self._nrows is None:
             self._nrows = 0
@@ -2711,7 +2739,7 @@ class Dataset(Struct):
             If True, an exception will be raised if the conversion to a `FastArray` would require copying the
             underlying data (e.g. in presence of nulls, or for non-primitive types).
         writable : bool, default False
-            For `FastArray`s created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
+            For a `FastArray` created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
             By setting this to True, a copy of the array is made to ensure it is writable.
         auto_widen : bool, optional, default to False
             When False (the default), if an arrow array contains a value which would be considered
@@ -4518,22 +4546,31 @@ class Dataset(Struct):
         seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None
     ) -> 'Dataset':
         """
-        Select N random samples from `Dataset` or `FastArray`.
-
+        Return `N` randomly selected rows.
+        
+        This function is useful for spot-checking your data, especially if the first or
+        last rows aren't representative.
+        
         Parameters
         ----------
-        N : int, optional, defaults to 10
-            Number of rows to sample.
-        filter : array-like (bool or rownums), optional, defaults to None
-            Filter for rows to sample.
-        seed : {None, int, array_like[ints], SeedSequence, Generator}, optional, defaults to None
-            A seed to initialize the `Generator`. If None, the generator is initialized using
-            fresh, random entropy data gathered from the OS.
-            See the docstring for `np.random.default_rng` for additional details.
-
+        N : int, default 10
+            Number of rows to select.
+        filter : array-like (bool or rownums), default None
+            Filter for rows to select sample from.
+        seed : {None, int, array_like[ints], SeedSequence, Generator}, default None
+            A seed to initialize the `Generator`. If None, the `Generator` is 
+            initialized using fresh, random entropy data gathered from the OS.
+        
         Returns
         -------
         Dataset
+            A view of `N` randomly selected rows of the Dataset.
+            
+        See Also
+        --------
+        Dataset.head : Returns the first `n` rows of the Dataset.
+        Dataset.tail : Returns the last `n` rows of the Dataset.
+        numpy.random.default_rng : Constructs a new `Generator`.
         """
 
         return sample(self, N=N, filter=filter, seed=seed)
@@ -5172,26 +5209,70 @@ class Dataset(Struct):
     #--------------------------------------------------------------------------
     def describe(self, q: Optional[List[float]] = None, fill_value = None) -> 'Dataset':
         """
-        Similar to pandas describe; columns remain stable, with extra column (Stats) added for names.
-
-        .. Caution:: This routine can be expensive if the dataset is large.
+        Generate descriptive statistics for a Dataset's numerical columns.
+        
+        Descriptive statistics include those that summarize the central tendency, 
+        dispersion, and shape of a Dataset's distribution, excluding `NaN` values.  
+        
+        Columns remain stable, with a 'Stats' column added to provide labels for each 
+        statistical measure. Non-numerical columns are ignored. If the Dataset has no 
+        numerical columns, only the column of labels is returned.
 
         Parameters
         ----------
-        q : list of float, optional
-            List of quantiles to calculate.
-            If not specified, defaults to ``[0.10, 0.25, 0.50, 0.75, 0.90]``.
-        fill_value: optional
-            Optional place-holder value for non-computable columns.
+        q : list of float, default [0.10, 0.25, 0.50, 0.75, 0.90]
+            The quantiles to calculate. All should fall between 0 and 1.
+        fill_value: int, float, or str, default None
+            Placeholder value for non-computable columns. Can be a single value, or a 
+            list or FastArray of values that is the same length as the Dataset.
 
         Returns
         -------
         Dataset
-            A Dataset containing the calculated, per-column quantile values.
+            A Dataset containing a label column and the calculated values for each 
+            numerical column, or filled values (if provided) for non-numerical columns.
 
+        Warnings
+        --------
+        This routine can be expensive if the Dataset is large.
+        
         See Also
         --------
-        FastArray.describe()
+        FastArray.describe : Generates descriptive statistics for a FastArray.
+                
+        Notes
+        -----
+        Descriptive statistics provided:
+        
+        +-------+---------------------------------+
+        | Stat  | Description                     |
+        +=======+=================================+
+        | Count | Total number of items           |
+        +-------+---------------------------------+
+        | Valid | Total number of valid values    |
+        +-------+---------------------------------+
+        | Nans  | Total number of `NaN` values    |
+        +-------+---------------------------------+
+        | Mean  | Mean                            |
+        +-------+---------------------------------+
+        | Std   | Standard deviation              |
+        +-------+---------------------------------+
+        | Min   | Minimum value                   |
+        +-------+---------------------------------+
+        | P10   | 10th percentile                 |
+        +-------+---------------------------------+
+        | P25   | 25th percentile                 |
+        +-------+---------------------------------+
+        | P50   | 50th percentile                 |
+        +-------+---------------------------------+
+        | P75   | 75th percentile                 |
+        +-------+---------------------------------+
+        | P90   | 90th percentile                 |
+        +-------+---------------------------------+
+        | Max   | Maximum value                   |
+        +-------+---------------------------------+
+        | MeanM | Mean without top or bottom 10%  |
+        +-------+---------------------------------+
         """
         return describe(self, q=q, fill_value=fill_value)
 
@@ -5686,13 +5767,9 @@ class Dataset(Struct):
     # -------------------------------------------------------------------
     def apply_rows_numba(self, *args, otype=None, myfunc="myfunc"):
         """
-        Usage:
-        -----
-        Prints to screen an example numba signature for the apply function.
+        Prints to screen an example numba signature for the apply function. 
         You can then copy this example to build your own numba function.
 
-        Inputs:
-        ------
         Can pass in multiple test arguments.
 
         Examples
@@ -6164,9 +6241,13 @@ class Dataset(Struct):
         Returns a Dataset with columns removed that contain all zeros or all nans (or either).
 
         If `rows` is True (the default), any rows which are all zeros or all nans will also be removed.
+        
         If `func` is set, it will bypass the zeros and nan check and instead call `func`.
-          - any column that contains all True after calling `func` will be removed.
-          - any row that contains all True after calling `func` will be removed if `rows` is True.
+        
+        * Any column that contains all True after calling `func` will be removed.
+        
+        * Any row that contains all True after calling `func` will be removed if `rows` is True.
+        
 
         Parameters
         ----------

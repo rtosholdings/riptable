@@ -255,7 +255,7 @@ class DisplayTable(object):
         Step 8: transpose the table for final display. we build the table by column, but it needs to be displayed by row. if the table should be transposed, don’t rotate it - clean up the headers.
         Step 9: pass the table string to our console or html routine for final output.
 
-        **TODO: reduce the measuring and building to one pass over the data. currently rendering time is not an issue. ~15ms
+        **TODO:** reduce the measuring and building to one pass over the data. currently rendering time is not an issue. ~15ms
         """
         return self.build_result_table_new(
         header_tups, 
@@ -909,7 +909,7 @@ class DisplayTable(object):
     # ------------------------------------------------------------------------------------
     def build_final_headers_console(self, plain=False):
         '''
-        **specifically for multi-line
+        **specifically for multi-line**
         Translates the tables header tuples into console strings with spaces for padding
         Note: this routine is very similar to build_final_headers_html.
         Keeping them separate for readability.
@@ -1252,9 +1252,9 @@ class DisplayTable(object):
         HTML display has been assigned a default value for self._console_x (see DisplayTable.__init__)
         
         If the user changes their self.options.COL_ALL to True, all columns will be displayed on the same line.
-        *note: this will break console display for large tables and should only be used in jupyter lab now.
+        **Note:** this will break console display for large tables and should only be used in jupyter lab now.
 
-        *in progress
+        **in progress**
         If the user requested all columns to be shown - regardless of width, the display will split them up into
         separate views with the maximum columns per line.
         '''
@@ -1382,7 +1382,7 @@ class DisplayTable(object):
     # -------------------------------------------------------------------------------------
     def all_columns_console_multiline(self, console_width, left_offset, headers, columns):
         '''
-        ** not implemented
+        **not implemented**
         only supports two-line headers
         '''
         current_width = left_offset
@@ -1952,7 +1952,7 @@ class DisplayColumn:
     #---------------------------------------------------------------------------
     def paint_posneg(self):
         '''
-        *** not implemented, maybe for future Dataset.style() call
+        ***not implemented**, maybe for future Dataset.style() call
         Will paint positive values green, negative values red for all numeric columns in IPython console.
         '''
         def apply_posneg(cell):
@@ -1978,7 +1978,7 @@ class DisplayColumn:
     #---------------------------------------------------------------------------
     def paint_highlightmax(self):
         '''
-        *** not implemented, maybe for future Dataset.style() call
+        **not implemented**, maybe for future Dataset.style() call
         Will paint max value of each numeric column gold.
         '''
         def get_argmax(dataslice):

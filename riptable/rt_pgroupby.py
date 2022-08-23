@@ -25,11 +25,8 @@ class PGroupBy(GroupBy):
     sort: bool
         Default to True.  Indicates 
 
-    Notes
-    -----
-    None at this time.
-
-    Properties
+   
+    Attributes
     ----------
     gbkeys:  dictionary of numpy arrays binned from
     isortrows: sorted index or None

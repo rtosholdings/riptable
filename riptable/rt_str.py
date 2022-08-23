@@ -3,8 +3,10 @@ __all__ = [
     'CatString',
 ]
 
-from functools import partial
+from functools import partial, wraps
+from inspect import signature
 from typing import List, NamedTuple, Optional, Union, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .rt_dataset import Dataset
 
@@ -43,7 +45,6 @@ class FAStrDispatchPair(NamedTuple):
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
-
 def _warn_deprecated_naming(old_func, new_func):
     warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=2)
 
@@ -75,6 +76,45 @@ def _warn_deprecated_naming(old_func, new_func):
 # Also note: On Windows as of Aug 2019, prange is much slower without tbb installed
 #
 # subclass from FastArray
+
+
+@nb.njit
+def _str_equal(str1, str2):
+    for char1, char2 in zip(str1, str2):
+        if char1 != char2:
+            return False
+    return True
+
+
+def _handle_apply_unique(func):
+    sign = signature(func)
+
+    if 'apply_unique' not in sign.parameters:
+        raise ValueError(f"apply_unique not found in the signature of {func}")
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        bound_args = sign.bind_partial(*args, **kwargs)
+        bound_args.apply_defaults()
+
+        if bound_args.kwargs['apply_unique']:
+            new_kwargs = bound_args.kwargs.copy()
+            new_kwargs['apply_unique'] = False
+            unique_values, index = unique(self.backtostring, return_inverse=True)
+            result = func(unique_values.str, *bound_args.args, **new_kwargs)
+            return result[index] if isinstance(result, FastArray) else result[index, :]
+        else:
+            return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+def _maybe_encode(x):
+    if not isinstance(x, bytes):
+        x = x.encode()
+    return x
+
+
 class FAString(FastArray):
     """
     String accessor class for `FastArray`.
@@ -128,7 +168,7 @@ class FAString(FastArray):
         convert back to FastArray or np.ndarray 'S' or 'U' string
         'S12'  or 'U40'
         '''
-        return self.view(self._intype + str(self._itemsize))
+        return FastArray(self._np).view(self._intype + str(self._itemsize))
 
     @property
     def n_elements(self):
@@ -154,6 +194,13 @@ class FAString(FastArray):
             arr = arr.astype(self._intype)
 
         return arr
+
+    def _validate_input(self, str2):
+        str2 = self.possibly_convert_tostr(str2)
+        if len(str2) != 1:
+            raise TypeError(f"A single string must be passed for str2 not {str2!r}")
+        str2 = FAString(str2)
+        return str2
 
     # -----------------------------------------------------
     def _apply_func(self, func, funcp, *args, dtype=None, input=None):
@@ -205,22 +252,22 @@ class FAString(FastArray):
         *args: pass in zero or more arguments (the arguments are always at the end)
         dtype: specify a different dtype
 
-        Example:
+        Example
         -------
-        import numba as nb
-        @nb.njit(cache=get_global_settings().enable_numba_cache, nogil=True)
-        def nb_upper(src, itemsize, dest):
-            for i in nb.prange(len(src) / itemsize):
-                rowpos = i * itemsize
-                for j in range(itemsize):
-                    c=src[rowpos+j]
-                    if c >= 97 and c <= 122:
-                        # convert to ASCII upper
-                        dest[rowpos+j] = c-32
-                    else:
-                        dest[rowpos+j] = c
+        >>> import numba as nb
+        ... @nb.njit(cache=get_global_settings().enable_numba_cache, nogil=True)
+        ... def nb_upper(src, itemsize, dest):
+        ...     for i in nb.prange(len(src) / itemsize):
+        ...         rowpos = i * itemsize
+        ...        for j in range(itemsize):
+        ...             c=src[rowpos+j]
+        ...             if c >= 97 and c <= 122:
+        ...                 # convert to ASCII upper
+        ...                 dest[rowpos+j] = c-32
+        ...             else:
+        ...                dest[rowpos+j] = c
 
-        FAString(['this  ','that ','test']).apply(nb_upper)
+        >>> FAString(['this  ','that ','test']).apply(nb_upper)
 
         '''
         return self._apply_func(func, func, *args, dtype=dtype, input=self)
@@ -371,13 +418,7 @@ class FAString(FastArray):
             dest[i] = -1
             # loop over all substrings of sufficient length
             for j in range(itemsize - str2len + 1):
-                # check if enough space left
-                k = 0
-                while k < str2len:
-                    if src[rowpos + j + k] != str2[k]:
-                        break
-                    k += 1
-                if k == str2len:
+                if _str_equal(src[rowpos + j:], str2):
                     # store location of match
                     dest[i] = j
                     break
@@ -391,17 +432,32 @@ class FAString(FastArray):
             dest[i] = False
             # loop over all substrings of sufficient length
             for j in range(itemsize - str2len + 1):
-                k = 0
-                while (k < str2len):
-                    if src[rowpos + j + k] != str2[k]:
-                        break
-                    k += 1
-                if k == str2len:
-                    # indicate we have a match
+                if _str_equal(src[rowpos + j:], str2):
                     dest[i] = True
                     break
 
+    def _nb_find(src, itemsize, dest, str2):
+        """
+        Searches src for occurrences of str2 and build a Boolean array
+        with a row per string indicating indicating the starting points of all such occurrences.
+        """
+        str2len = len(str2)
+        # loop over all rows
+        for i in nb.prange(np.int64(len(src) // itemsize)):
+            rowpos = i * itemsize
+            # loop over all substrings of sufficient length
+            str_pos = 0
+            while str_pos <= itemsize - str2len:
+                if _str_equal(src[rowpos + str_pos:], str2):
+                    dest[i, str_pos] = True
+                    str_pos += str2len
+                else:
+                    str_pos += 1
+
+        return dest
+
     # -----------------------------------------------------
+
     def _nb_endswith(src, itemsize, dest, str2):
         str2len = len(str2)
         # loop over all rows
@@ -573,11 +629,7 @@ class FAString(FastArray):
         if not isinstance(str2, FAString):
             if str2 == '':
                 return zeros(self.n_elements, dtype=np.int32)
-
-            str2 = self.possibly_convert_tostr(str2)
-            if len(str2) != 1:
-                return TypeError(f"A single string must be passed for str2 not {str2!r}")
-            str2 = FAString(str2)
+            str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_index_any_of, self.nb_index_any_of_par, str2, dtype=np.int32)
 
@@ -604,10 +656,7 @@ class FAString(FastArray):
             if str2 == '':
                 return zeros(self.n_elements, dtype=np.int32)
 
-            str2 = self.possibly_convert_tostr(str2)
-            if len(str2) != 1:
-                return TypeError(f"A single string must be passed for str2 not {str2!r}")
-            str2 = FAString(str2)
+            str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_index, self.nb_index_par, str2, dtype=np.int32)
 
@@ -635,16 +684,101 @@ class FAString(FastArray):
             if str2 == '':
                 return ones(self.n_elements, dtype=bool)
 
-            str2 = self.possibly_convert_tostr(str2)
-            if len(str2) != 1:
-                return TypeError(f"A single string must be passed for str2 not {str2!r}")
-            str2 = FAString(str2)
+            str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_contains, self.nb_contains_par, str2, dtype=bool)
+
+    def _find(self, str2):
+        """
+        Searches src for occurences of str2 and build a Boolean mask the same size
+        as src indicating the starting point of all such occurences.
+
+        Parameters
+        ----------
+        str2 - a string with one or more characters to search for
+
+        Examples
+        --------
+        >>> FAString(['this','that','test']).find('t')
+        FastArray([
+            [True, False, False, False],
+            [True, False, False, True],
+            [True, False, False, True]
+        ])
+        """
+        if not isinstance(str2, FAString):
+            if str2 == '':
+                return ones(len(self), dtype=bool)
+
+            str2 = self._validate_input(str2)
+
+        return self.nb_find(self._itemsize, str2=str2, dest=zeros((self.n_elements, self._itemsize), dtype=bool))
 
     def strstrb(self, str2):
         _warn_deprecated_naming('strstrb', 'contains')
         return self.contains(str2)
+
+    def _nb_replace(src, itemsize, dest, dest_itemsize, old, new, locations):
+        old_len = len(old)
+        new_len = len(new)
+
+        new_is_empty = len(new) == 1 and new[0] == 0
+
+        for row in nb.prange(np.int64(len(src) // itemsize)):
+            rowpos = row * itemsize
+            src_pos = 0
+            dest_pos = row * dest_itemsize
+
+            while src_pos < itemsize:
+                if locations[row, src_pos]:
+                    if new_is_empty:
+                        src_pos += old_len
+                    else:
+                        dest[dest_pos: dest_pos + new_len] = new
+                        src_pos += old_len
+                        dest_pos += new_len
+                else:
+                    dest[dest_pos] = src[rowpos + src_pos]
+                    src_pos += 1
+                    dest_pos += 1
+        return dest
+
+    def replace(self, old: str, new: str) -> FastArray:
+        """
+        Replace all occurrences of `old` with `new`
+        """
+        if not isinstance(old, FAString):
+            if old == '':
+                raise ValueError("cannot replace the empty string")
+            old = self._validate_input(old)
+
+        new = self._validate_input(new)
+
+        locations = self._find(old)
+        if not locations.any():
+            return self.backtostring
+
+        char_diff = len(new) - len(old)
+        if char_diff > 0:
+            max_n_replacements = locations.sum(axis=1).max()
+            dest_itemsize = self._itemsize + char_diff * max_n_replacements
+        elif char_diff < 0:
+            min_n_replacements = locations.sum(axis=1).min()
+            dest_itemsize = self._itemsize - char_diff * min_n_replacements
+        else:
+            dest_itemsize = self._itemsize
+
+        dest = zeros(self.n_elements * dest_itemsize, dtype=self.dtype)
+        replace = self.nb_replace_par if len(self) >= self._APPLY_PARALLEL_THRESHOLD else self.nb_replace
+        replaced = replace(
+            itemsize=self._itemsize,
+            dest=dest,
+            dest_itemsize=dest_itemsize,
+            old=old,
+            new=new,
+            locations=locations,
+        )
+        return replaced.view(self._intype + str(dest_itemsize))
 
     # -----------------------------------------------------
     def startswith(self, str2):
@@ -698,7 +832,8 @@ class FAString(FastArray):
 
         return self._apply_func(self.nb_endswith, self.nb_endswith_par, str2, dtype=bool)
 
-    def regex_match(self, regex):
+    @_handle_apply_unique
+    def regex_match(self, regex: Union["str", bytes], apply_unique: bool = True) -> FastArray:
         '''
         Return a Boolean array where the value is set True if the string contains str2.
         str2 may be a normal string or a regular expression.
@@ -713,14 +848,36 @@ class FAString(FastArray):
         >>> FAString(['abab','ababa','abababb']).regex_match('ab$')
         FastArray([True, False, False])
         '''
-        if not isinstance(regex, bytes):
-            regex = bytes(regex, 'utf-8')
+        if self._intype == 'S':
+            regex = _maybe_encode(regex)
         regex = re.compile(regex)
         vmatch = np.vectorize(lambda x: bool(regex.search(x)))
         bools = vmatch(self.backtostring)
 
         return bools
 
+    @_handle_apply_unique
+    def regex_replace(self, regex: Union["str", bytes], repl: Union["str", bytes],
+                      apply_unique: bool = True) -> FastArray:
+        '''
+        Replace each instance of `regex` with `repl`. Behaviour is identical to re.sub.
+        In particular, replacments happend once per whole instance such that, e.g.,
+        replacing 'aa' with 'b in 'aaa' yields 'ba'.
+
+        Examples
+        --------
+        >>> FAString(['abab','ababa','abababb']).regex_replace('ab', 'cd')
+        FastArray(['cdcd', 'cdcda', 'cdcdcdb'], dtype='<U7')
+        >>> FAString(['aaa', 'aaaa', 'aaaaa']).regex_replace('aa', 'b')
+        FastArray(['ba', 'bb', 'bba'], dtype='<U3>')
+        '''
+        if self._intype == 'S':
+            regex, repl = map(_maybe_encode, (regex, repl))
+        regex = re.compile(regex)
+        vmatch = np.vectorize(lambda x: regex.sub(repl, x))
+        return vmatch(self.backtostring)
+
+    @_handle_apply_unique
     def extract(self, regex: str, expand: Optional[bool] = None,
                 fillna: str = '', names=None, apply_unique: bool = True
                 ) -> Union[FastArray, "Dataset"]:
@@ -770,14 +927,9 @@ class FAString(FastArray):
         1   SPXW
         '''
         kwargs = dict(expand=expand, fillna=fillna, names=names, apply_unique=apply_unique)
-        if apply_unique:
-            kwargs['apply_unique'] = False
-            unique_values, index = unique(self.backtostring, return_inverse=True)
-            result = unique_values.str.extract(regex, **kwargs)
-            return result[index] if isinstance(result, FastArray) else result[index, :]
 
-        if not isinstance(regex, bytes):
-            regex = bytes(regex, 'utf-8')
+        if self._intype == 'S':
+            regex = _maybe_encode(regex)
         compiled = re.compile(regex)
 
         ngroups = compiled.groups
@@ -992,6 +1144,10 @@ class FAString(FastArray):
     nb_contains = _njit_serial(_nb_contains)
     nb_contains_par = _njit_par(_nb_contains)
 
+    nb_find = _njit_serial(_nb_find)
+    nb_replace = _njit_serial(_nb_replace)
+    nb_replace_par = _njit_serial(_nb_replace)
+
     nb_endswith = _njit_serial(_nb_endswith)
     nb_endswith_par = _njit_par(_nb_endswith)
 
@@ -1024,8 +1180,11 @@ def _populate_wrappers(cls):
         'startswith',
         'endswith',
         'regex_match',
+        'regex_replace',
         '_substr',
         'char',
+        'replace',
+        '_find',
 
         # Deprecated methods.
         'strstr',

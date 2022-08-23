@@ -39,8 +39,8 @@ class PDataset(Dataset):
 
     pds['20190204']  or  pds[20190204]  will return a dataset for the given partition name
 
-    Construction:
-    -------------
+    **Construction**
+    
     inputval : -list of files to load and stack
                -list of datasets to stack
                -regular dataset inputval (will only have one partition)
@@ -440,9 +440,9 @@ class PDataset(Dataset):
 
     def set_pnames(self, pnames):
         '''
-        Input
-        -----
-        A list of strings
+        Parameters
+        ----------
+        pnames: list of str
 
         Examples
         --------
@@ -769,8 +769,8 @@ class PDataset(Dataset):
         Returns a PDataset of stacked files from multiple days.
         Will load all files found within the date range provided.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         path  : format string for filepath, {} in place of YYYYMMDD. {} may appear multiple times.
         start : integer or string start date in format YYYYMMDD
         end   : integer or string end date in format YYYYMMDD

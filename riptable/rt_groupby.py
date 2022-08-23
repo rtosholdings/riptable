@@ -86,16 +86,6 @@ class GroupBy(GroupByOps):
         Defaults to False. When True uses a lexsort to find the groups (otherwise uses a hash).
     
     totals: bool
-
-    Notes
-    -----
-    None at this time.
-
-    Properties
-    ----------
-    gbkeys:  dictionary of numpy arrays binned from
-    isortrows: sorted index or None
-
     """
     DebugMode=False
     TestCatGb = True
@@ -244,11 +234,17 @@ class GroupBy(GroupByOps):
     #---------------------------------------------------------------
     @property
     def gbkeys(self):
+        """
+        dictionary of numpy arrays binned from
+        """ 
         return self.gb_keychain.gbkeys
 
     #---------------------------------------------------------------
     @property
     def isortrows(self):
+        """
+        sorted index or None
+        """
         return self.gb_keychain.isortrows
 
     #---------------------------------------------------------------
@@ -335,7 +331,9 @@ class GroupBy(GroupByOps):
         '''
         __getattr__ is hit when '.' is used to trim a single column.
         
-        ds = Dataset({'col_'+str(i): np.random.rand(5) for i in range(5)})
+        Examples
+        --------
+        >>> ds = Dataset({'col_'+str(i): np.random.rand(5) for i in range(5)})
         >>> ds.keycol = FA(['a','a','b','c','a'])
         >>> ds.gb('keycol').col_4.mean()
         *keycol   col_4
@@ -460,9 +458,9 @@ class GroupBy(GroupByOps):
         The property transform sets a flag so that the next reduce function called after transform,
         will repopulate the original array with the reduced value.
 
-        Example:
+        Example
         -------
-        ds.groupby(['side', 'venue']).transform.sum()
+        >>> ds.groupby(['side', 'venue']).transform.sum()
         '''
         warnings.warn("Deprecation warning: Use kwarg transform=True instead of transform.")
         self._transform=True
@@ -472,7 +470,7 @@ class GroupBy(GroupByOps):
     def get_group(self, category, **kwargs):
         '''
         The name of the group to get as a Dataset.
-
+        
         Parameters
         ----------
         category: string or tuple
@@ -482,10 +480,10 @@ class GroupBy(GroupByOps):
         Returns
         -------
         Dataset
-
-        Examples
-        --------
-        ds.groupby('symbol').get_group('AAPL')
+        
+        Example
+        -------
+        >>> ds.groupby('symbol').get_group('AAPL')
         '''
         # categorical has method to get the bin
         cat = self.as_categorical()

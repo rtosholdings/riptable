@@ -9,6 +9,7 @@ import numpy as np
 from numpy.core.numeric import ScalarType
 import riptide_cpp as rc
 
+from .rt_stats import statx
 from .rt_enum import gBinaryUFuncs, gBinaryLogicalUFuncs, gBinaryBitwiseUFuncs, gUnaryUFuncs, gReduceUFuncs
 from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDUCE_FUNCTIONS, gNumpyScalarType, NumpyCharTypes, MATH_OPERATION, INVALID_DICT
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
@@ -300,70 +301,188 @@ def _ASTYPE(self, dtype):
 #--------------------------------------------------------------
 class FastArray(np.ndarray):
     '''
-    Class FastArray
-    replaces a numpy array for 1 dimensional arrays
-    arrays with more than 1 dimension are often punted back to numpy for calculations
+    
+    A `FastArray` is a 1-dimensional array of items that are the same data type. 
+    
+    Because it's a subclass of NumPy's `numpy.ndarray`, all ``ndarray`` functions and attributes 
+    can be used with `FastArray` objects. However, Riptable optimizes many of NumPy's 
+    functions to make them faster and more memory-efficient. Riptable has also added 
+    some methods.
 
-    example usage:
-       arr = FastArray([1,2,3,4,5])
-       arr = FastArray(np.arange(100))
-       arr = FastArray(list('abc'), unicode=True)
+    `FastArray` objects with more than 1 dimension are not supported.
+    
+    See `NumPy's 
+    docs <https://numpy.org/devdocs/reference/generated/numpy.ndarray.html>`_ for
+    details on all ``ndarray`` methods and attributes.
+    
+    Parameters
+    ----------
+    arr : array, iterable, or scalar value
+        Contains data to be stored in the `FastArray`.
+       
+    **kwargs
+        Additional keyword arguments to be passed to the function.
+       
+    Notes
+    -----
+    To improve performance, `FastArray` objects take over some of NumPy's universal functions
+    (ufuncs), use array recycling and multiple threads, and pass certain method calls to
+    `Bottleneck <https://kwgoodman.github.io/bottleneck-doc/index.html>`_.
+    
+    Note that whenever Riptable has implemented its own version of 
+    an existing NumPy method, a call to the NumPy method results in a call to the 
+    optimized Riptable version instead. We encourage users to directly call the Riptable
+    method in order to avoid any confusion as to what method is actually being called.
+      
+    See the list of `NumPy Methods Optimized by Riptable for FastArrays 
+    <https://eot.gitlab.ds.susq.com/sigpydata/riptable/riptable/tutorial/tutorial_numpy_rt.html>`_.
 
-    to flip an existing numpy array such as nparray use the view method
-       fa = nparray.view(FastArray)
+    
+    Examples
+    --------
+    **Construct a FastArray**
 
-    to change it back
-       fa.view(np.ndarray) or fa._np
+    Pass a list to the constructor:
+    
+    >>> rt.FastArray([1, 2, 3, 4, 5])
+    FastArray([1, 2, 3, 4, 5])
+    
+    >>> #NOTE: rt.FA also works.
+    >>> rt.FA([1.0, 2.0, 3.0, 4.0, 5.0])
+    FastArray([1., 2., 3., 4., 5.])
+    
+    Or use a utility function:
+       
+    >>> rt.full(10, 0.7)
+    FastArray([0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7])
+    
+    >>> rt.arange(10)
+    FastArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        
+    You can optionally specify a data type:
+    
+    >>> x = rt.FastArray([3, 6, 10],  dtype = rt.float64)
+    >>> x, x.dtype
+    (FastArray([ 3.,  6., 10.]), dtype('float64'))
+    
+    >>> # Using a string shortcut:
+    >>> x = rt.FastArray([3,6,10],  dtype = 'float64')
+    >>> x, x.dtype
+    (FastArray([ 3.,  6., 10.]), dtype('float64'))
+    
+    By default, characters are stored as byte strings. When ``unicode=True``, 
+    the `FastArray` allows Unicode characters.
+    
+    >>> rt.FA(list('abc'), unicode=True)
+    FastArray(['a', 'b', 'c'], dtype='<U1')
 
-    FastArray will take over many numpy ufuncs, can recycle arrays, and use multiple threads
+    To convert an existing NumPy array, use the `FastArray` constructor.
+    
+    >>> np_arr = np.array([1, 2, 3])
+    >>> rt.FA(np_arr)
+    FastArray([1, 2, 3])
+    
+    To view the NumPy array as a `FastArray` (which is slightly less expensive than
+    using the constructor), use the `view` method.
+    
+    >>> fa = np_arr.view(FA)
+    >>> fa
+    FastArray([1, 2, 3])
+    
+    To view it as a NumPy array again:
+    
+    >>> fa.view(np.ndarray)
+    array([1, 2, 3])
+    
+    >>> # Alternatively:
+    >>> fa._np
+    array([1, 2, 3])
 
-    How to subclass FastArray:
-    --------------------------
-    Required class definition:
+    **Get a Subset of a FastArray**
+    
+    You can use standard Python slicing notation or fancy indexing to access a 
+    subset of a `FastArray`.
+    
+    >>> # Create a FastArray:
+    >>> array = rt.arange(8)**2
+    >>> array
+    FastArray([0, 1, 4, 9, 16, 25, 36, 49])
+    >>> # Use Python slicing to get elements 2, 3, and 4:
+    >>> array[2:5]
+    FastArray([4, 9, 16])
+    
+    >>> # Use fancy indexing to get elements 2, 4, and 1 (in that order):
+    >>> array[[2, 4, 1]]
+    FastArray([4, 16, 1])
+    
+    For more details, see the examples for 1-dimensional arrays in NumPy's docs: 
+    `Indexing on ndarrays <https://numpy.org/doc/stable/user/basics.indexing.html>`_.
+    
+    Note that slicing creates a view of the array and does not copy the underlying data;
+    modifying the slice modifies the original array. Fancy indexing creates a copy of 
+    the extracted data; modifying this array does not modify the original array.
+    
+    You can also pass a Boolean mask array.
+    
+    >>> # Create a Boolean mask:
+    >>> evenMask = (array % 2 == 0)
+    >>> evenMask
+    FastArray([True, False, True, False, True, False, True, False])
+    >>> # Index using the Boolean mask:
+    >>> array[evenMask]
+    FastArray([0, 4, 16, 36])
 
-    class TestSubclass(FastArray):
-        def __new__(cls, arr, **args):
-            # before arr this call, arr needs to be a np.ndarray instance
-            return arr.view(cls)
+    **How to Subclass FastArray**
+    
+    Include the required class definition:
 
-        def __init__(self, arr, **args):
-            pass
+    >>> class TestSubclass(FastArray):
+    ...     def __new__(cls, arr, **args):
+    ...         # Before this call, arr needs to be a np.ndarray instance.
+    ...         return arr.view(cls)
+    ...     def __init__(self, arr, **args):
+    ...         pass
 
-    If the subclass is computable, you might define your own math operations.
-    In these operations, you might define what the subclass can be computed with. DateTimeNano is a good example.
-    Common operations to hook are comparisons:
-    __eq__(), __ne__(), __gt__(), __lt__(), __le__(), __ge__()
-    Basic math functions:
-    __add__(), __sub__(), __mul__(), etc.
+    If the subclass is computable, you might define your own math operations. In these 
+    operations, you might define what the subclass can be computed with. For examples of
+    new definitions, see the `DateTimeNano` class.
+    
+    Common operations to hook are comparisons (``__eq__()``, ``__ne__()``, ``__gt__()``,
+    ``__lt__()``, ``__le__()``, ``__ge__()``) and basic math functions (``__add__()``, 
+    ``__sub__()``, ``__mul__()``, etc.).
 
-    Bracket indexing operations are very common. If the subclass needs to set or return a value
-    other than that in the underlying array, you need to take over:
-    __getitem__(), __setitem__()
+    Bracket indexing operations are very common. If the subclass needs to set or return 
+    a value other than that in the underlying array, you need to take over 
+    `__getitem__()` or `__setitem__()`.
 
-    Indexing is also used in display.
-    For regular console/notebook display, you need to take over:
-    __repr__():
-    >>> arr
-    __str__():
-    >>> print(arr)
-    _repr_html_() *for Jupyter Lab/Notebook
+    Indexing is also used in display. For regular console/notebook display, you need to 
+    take over:
+    
+    * `__repr__()`
+    * `__str__()`
+    * `_repr_html_()` (for JupyterLab and Jupyter notebooks)
 
-    If the array is being displayed in a Dataset, and you require certain formatting you need to define two more methods:
-    display_query_properties() - returns an ItemFormat object (see Utils.rt_display_properties), and a conversion function
-    display_convert_func() - the conversion function returned by display_query_properties(), must return a string. each item being
-                            displayed will go through this function individually, accompanied by an ItemFormat object.
-                            The item going through this is the result of __getitem__() at a single index.
+    If the array is being displayed in a `Dataset` and you require certain formatting, you
+    need to define two more methods:
+    
+    ``display_query_properties()``
+        Returns an `ItemFormat` object (see `rt.Utils.rt_display_properties`)
+    
+    ``display_convert_func()``
+        The conversion function returned by ``display_query_properties()`` 
+        must return a string. Each item being displayed, the result of ``__getitem__()`` 
+        at a single index, will go through this function individually, accompanied by 
+        an `ItemFormat` object.
 
-    Many riptable operations need to return arrays of the same class they received. To ensure that your
-    subclass will retain its special properties, you need to take over newclassfrominstance().
-    Failure to take this over will often result in an object with uninitialized variables.
+    Many Riptable operations need to return arrays of the same class they received. To 
+    ensure that your subclass will retain its special properties, you need to take over 
+    `newclassfrominstance()`. Failure to take this over will often result in an object 
+    with uninitialized variables.
 
-    copy() is another method that is called generically in riptable routines, and needs to be taken
-    over to retain subclass properties.
+    `copy()` is another method that is called generically in Riptable routines, and 
+    needs to be taken over to retain subclass properties.
 
-    For a view of the underlying FastArray, you can use the _fa property.
-
-    TODO: Need more text
+    For a view of the underlying `FastArray`, you can use the `_fa` property.
     '''
     # Defines a generic np.ndarray subclass, that can cache numpy arrays
     # Static Class VARIABLES
@@ -1058,8 +1177,8 @@ class FastArray(np.ndarray):
         >>> rt.arange(5).copy_invalid().astype(np.float32)
         FastArray([nan, nan, nan, nan, nan], dtype=float32)
 
-        See Also:
-        ---------
+        See Also
+        --------
         FastArray.inv
         FastArray.fill_invalid
         '''
@@ -1080,8 +1199,8 @@ class FastArray(np.ndarray):
         >>> rt.arange(5).inv
         -2147483648
 
-        See Also:
-        ---------
+        See Also
+        --------
         FastArray.copy_invalid
         FastArray.fill_invalid
         INVALID_DICT
@@ -1100,8 +1219,8 @@ class FastArray(np.ndarray):
         >>> a
         FastArray([-2147483648, -2147483648, -2147483648, -2147483648, -2147483648])
 
-        See Also:
-        ---------
+        See Also
+        --------
         FastArray.inv
         FastArray.fill_invalid
         '''
@@ -1288,7 +1407,7 @@ class FastArray(np.ndarray):
         # create an return array all set to True
         result = ones(len(arr), dtype=np.bool_)
 
-        g = Grouping(arr._fa if hasattr(arr,'_fa') else arr)
+        g = Grouping(arr._fa if hasattr(arr,'_fa') else arr,lex=high_unique)
 
         if keep is False:
             # search for groups with a count of 1
@@ -1433,6 +1552,21 @@ class FastArray(np.ndarray):
     def __gt__(self, other):  return self._compare_check(super().__gt__,other)
     def __le__(self, other):  return self._compare_check(super().__le__,other)
     def __lt__(self, other):  return self._compare_check(super().__lt__,other)
+
+    def eq(self,other): return self.__eq__(other)
+    def ne(self,other): return self.__ne__(other)
+    def ge(self,other): return self.__ge__(other)
+    def le(self,other): return self.__le__(other)
+    def gt(self,other): return self.__gt__(other)
+    def lt(self,other): return self.__lt__(other)
+
+    add = np.ndarray.__add__
+    sub = np.ndarray.__sub__
+    mul = np.ndarray.__mul__
+    div = np.ndarray.__truediv__
+    floordiv = np.ndarray.__floordiv__
+    pow = np.ndarray.__pow__
+    mod = np.ndarray.__mod__
 
     #---------------------------------------------------------------------------
     def str_append(self, other):
@@ -1784,6 +1918,13 @@ class FastArray(np.ndarray):
 
 
     def _fa_keyword_wrapper(self, filter = None, dtype = None, axis = None, keepdims = None, ddof = None, **kwargs):
+
+        if self.dtype.char in 'OSU':
+            raise TypeError('FastArray operation applied to string or object array.') 
+
+        if 'out' in kwargs:
+            if kwargs['out'] is None:
+                kwargs.pop('out')
 
         if any(kwargs):
             logging.warning('Unexpected FastArray operation keyword(s): ' +  ', '.join([ key for key, value in kwargs.items()]) )
@@ -2288,9 +2429,11 @@ class FastArray(np.ndarray):
     #---------------------------------------------------------------------------
     def map_old(self, npdict:dict):
         '''
-        d = {1:10, 2:20}
-        dat['c'] = dat.a.map(d)
-        print(dat)
+        Example
+        -------
+        >>> d = {1:10, 2:20}
+        >>> dat['c'] = dat.a.map(d)
+        >>> print(dat)
            a  b   cb   c
         0  1  0  0.0  10
         1  1  1  1.0  10
@@ -2593,6 +2736,9 @@ class FastArray(np.ndarray):
             raise KeyError(f"fillna: There is no limit when method is None")
 
         return self.replacena(value, inplace=inplace)
+
+    def statx(self):
+        return statx(self)
 
     #---------------------------------------------------------------------------
     def _is_not_supported(self, arr):
@@ -3306,23 +3452,26 @@ class FastArray(np.ndarray):
     #-----------------------------------------------------------
     def apply_numba(self, *args, otype=None, myfunc="myfunc",name=None):
         '''
-        Usage:
-        -----
-        Prints to screen an example numba signature for the array.
+        Print to screen an example numba signature for the array.
+        
         You can then copy this example to build your own numba function.
 
-        Inputs:
-        ------
-        Can pass in multiple test arguments.
+        Parameters
+        ----------
+        *args: 
+            Test arguments
+        
+        otype: str, default None
+            A different output data type
+        
+        myfunc: str, default 'myfunc'
+            A string to call the function
+            
+        name: str, default None
+            A string to name the array
 
-        kwargs
-        ------
-        otype: specify a different output type
-        myfunc: specify a string to call the function
-        name: specify a string to name the array
-
-        Example using numba
-        -------------------
+        Examples
+        --------
         >>> import numba
         >>> @numba.guvectorize(['void(int64[:], int64[:])'], '(n)->(n)')
         ... def squarev(x,out):
@@ -3644,7 +3793,7 @@ class FastArray(np.ndarray):
             If True, an exception will be raised if the conversion to a `FastArray` would require copying the
             underlying data (e.g. in presence of nulls, or for non-primitive types).
         writable : bool, default False
-            For `FastArray`s created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
+            For a `FastArray` created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
             By setting this to True, a copy of the array is made to ensure it is writable.
         auto_widen : bool, optional, default to False
             When False (the default), if an arrow array contains a value which would be considered
@@ -3699,7 +3848,7 @@ class FastArray(np.ndarray):
             If True, an exception will be raised if the conversion to a `FastArray` would require copying the
             underlying data (e.g. in presence of nulls, or for non-primitive types).
         writable : bool, default False
-            For `FastArray`s created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
+            For a `FastArray` created with zero copy (view on the Arrow data), the resulting array is not writable (Arrow data is immutable).
             By setting this to True, a copy of the array is made to ensure it is writable.
         auto_widen : bool, optional, default to False
             When False (the default), if an arrow array contains a value which would be considered
@@ -3821,19 +3970,31 @@ class FastArray(np.ndarray):
             return result
 
         elif pat.is_fixed_size_binary(arr.type):
-            if arr.null_count != 0:
-                return arr.to_numpy(zero_copy_only=True, writable=writable).view(FastArray)
+            null_count = arr.null_count
+            if null_count != 0:
+                if zero_copy_only:
+                    raise ValueError("Can't perform a zero-copy conversion of a fixed-size binary array to riptable when the input array contains nulls.")
 
-            elif zero_copy_only:
-                raise ValueError("Can't perform a zero-copy conversion of a fixed-size binary array to riptable when the input array contains nulls.")
+                arr = arr.fill_null(b"\x00"*arr.type.byte_width) # can't fill with b"", since b"" is not valid for fixed width type
 
-            else:
-                # If the input array contains nulls, convert them to an empty string.
-                # riptable doesn't really support nulls for string arrays (ASCII or Unicode), but when gap-filling
-                # it'll use an empty string so that seems reasonable to use here.
-                # TODO: Maybe only allow this when the input array doesn't already contain any empty strings?
-                # TODO: May need to differentiate bytes (ASCII) vs. str (Unicode) for the empty string passed to fill_null() here.
-                return arr.fill_null(b'').to_numpy(zero_copy_only=True, writable=writable).view(FastArray)
+            # Calling pa.Array.to_numpy with zero_copy=True raises an error with fixed sized binary type.
+            # Calling pa.Array.to_numpy with zero_copy=False returns a numpy array where types are python bytes objects.
+            # Workaround below creates the numpy buffer of type "S" manually. 
+            buf = np.frombuffer(
+                arr.buffers()[1],
+                dtype="S" + str(arr.type.byte_width),
+            )
+
+            if writable and null_count == 0: # already made a copy if null_count != 0
+                result = FastArray(np.copy(buf))
+                result.flags.writeable = writable
+                return result 
+
+            result = FastArray(buf)
+            result.flags.writeable = writable
+            return result
+            
+
 
         else:
             raise ValueError(f"FastArray cannot be created from a pyarrow array of type '{arr.type}'. You may need to call the `from_arrow` method on one of the derived subclasses instead.")

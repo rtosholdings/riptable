@@ -241,65 +241,69 @@ def strptime_to_nano(dtstrings, format, from_tz=None, to_tz='NYC'):
 
                 Currently supports the following escape codes:
 
-                Date:
-                -----
-                %y      Year without century as zero-padded decimal number.
-                %Y      Year with century as decimal number.
-                %m      Month as a decimal number (with or without zero-padding).
-                %B      Full month name: ['January', 'February', 'March', 'April', 'May', 'June',
-                                          'July', 'August', 'September', 'October', 'November', 'December']
-                %b      Abbreviated month name: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                %d      Day of the month as a decimal number (with or without zero-padding).
+                **Date**
+                
+                * ``%y`` Year without century as zero-padded decimal number.
+                * ``%Y`` Year with century as decimal number.
+                * ``%m`` Month as a decimal number (with or without zero-padding).
+                * ``%B`` Full month name: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+                * ``%b`` Abbreviated month name: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                * ``%d`` Day of the month as a decimal number (with or without zero-padding).
 
-                Time:
-                -----
-                %H      Hour (24-hour clock) as a decimal number (with or without zero-padding).
-                        (Note: if a %p formatter is present, this will be interpretted as a 12-hour clock hour)
-                %I      Hour (12-hour clock) as a decimal number (with or without zero-padding).
-                        (Note: unlike %H, must be 1-12)
-                %p      Locale’s equivalent of either AM or PM.
-                %M	    Minute as a decimal number (with or without zero-padding).
-                %S	    Second as a decimal number (with or without zero-padding).
+                **Time**
+                
+                * ``%H`` Hour (24-hour clock) as a decimal number (with or without zero-padding). (Note: if a ``%p`` formatter is present, this will be interpretted as a 12-hour clock hour)
+                * ``%I`` Hour (12-hour clock) as a decimal number (with or without zero-padding). (Note: unlike ``%H``, must be 1-12)
+                * ``%p`` Locale’s equivalent of either AM or PM.
+                * ``%M`` Minute as a decimal number (with or without zero-padding).
+                * ``%S`` Second as a decimal number (with or without zero-padding).
 
-    from_tz   : a string for the timezone of origin: 'NYC', 'GMT', 'DUBLIN', etc.
-    to_tz     : a string for the timezone that the time will be displayed in
+    from_tz   : str
+        The timezone of origin: 'NYC', 'GMT', 'DUBLIN', etc.
+    to_tz     : str
+        The timezone that the time will be displayed in.
 
 
-    Other Notes:
-    ------------
+    Notes
+    -----
     Works best with timestrings that include a date:
-    - If no year is present in the string, an invalid time will be returned for all values.
-    - If no form of year/month/day is present, values will yield a time in 1970.
-      Consider using timestring_to_nano(), which also will accept one datestring for all times.
+    
+    * If no year is present in the string, an invalid time will be returned for all values.
+    * If no form of year/month/day is present, values will yield a time in 1970.
+    
+    Consider using `timestring_to_nano()`, which also will accept one datestring for all times.
 
     If the timestring ends in a '.', the following numbers will be parsed as a second fraction. This happens
     automatically, no escape character is required in the format string.
 
     If no time escape characters are present, will return midnight at all date values.
-    If formatted correctly, consider using datestring_to_nano()
+    If formatted correctly, consider using `datestring_to_nano()`.
 
     Examples
     --------
     Date, with/without padding:
+    
     >>> dt = FastArray(['02/01/1992', '2/1/1992'])
     >>> fmt = '%m/%d/%Y'
     >>> strptime_to_nano(dt, fmt, from_tz='NYC')
     DateTimeNano([19920201 00:00:00.000000000, 19920201 00:00:00.000000000])
 
     Date + 24-hour clock:
+    
     >>> dt = FastArray(['02/01/1992 7:48:30', '2/1/1992 19:48:30'])
     >>> fmt = '%m/%d/%Y %H:%M:%S'
     >>> strptime_to_nano(dt, fmt, from_tz='NYC')
     DateTimeNano([19920201 07:48:30.000000000, 19920201 19:48:30.000000000])
 
     Date + 12-hour clock + am/pm:
+    
     >>> dt = FastArray(['02/01/1992 7:48:30 AM', '2/1/1992 7:48:30 PM'])
     >>> fmt = '%m/%d/%Y %I:%M:%S %p'
     >>> strptime_to_nano(dt, fmt, from_tz='NYC')
     DateTimeNano([19920201 07:48:30.000000000, 19920201 19:48:30.000000000])
 
     Date + time + second fraction:
+    
     >>> dt = FastArray(['02/01/1992 7:48:30.123456789', '2/1/1992 15:48:30.000000006'])
     >>> fmt = '%m/%d/%Y %H:%M:%S'
     >>> strptime_to_nano(dt, fmt, from_tz='NYC')
@@ -411,8 +415,8 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz='NYC'):
     If a date is specified, a DateTimeNano object will be returned.
     If a date is not specified, a TimeSpan will be returned.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     timestring : array of timestrings in format HH:MM:SS, H:MM:SS, HH:MM:SS.ffffff (bytestrings/unicode supported)
     date       : a single string or array of date strings in format YYYY-MM-DD (bytestrings/unicode supported)
     from_tz    : a string for the timezone of origin: 'NYC', 'GMT', 'DUBLIN', etc.
@@ -423,7 +427,7 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz='NYC'):
     See Also: datestring_to_nano(), datetimestring_to_nano()
 
     Examples
-    ---------
+    --------
 
     Return TimeSpan:
 
@@ -1075,15 +1079,15 @@ class Date(DateBase, TimeStampBase):
     Date arrays have an underlying int32 array. The array values are number of days since January 1st. 1970.
     Can be initialized from integer date values, strings, or matlab ordinal dates.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     arr         : array, categorical, list, or scalar
     from_matlab : indicates that values are from matlab datenum
     format      : if initialized with string, specify a format string for strptime to parse date information
                   otherwise, will assume format is YYYYMMDD
 
     Examples
-    ---------
+    --------
     From strings:
 
     >>> datestrings = tile(np.array(['2018-02-01', '2018-03-01', '2018-04-01']), 3)
@@ -1218,8 +1222,8 @@ class Date(DateBase, TimeStampBase):
         '''
         TODO: move this to a more generic superclass - almost exactly the same as DateTimeNano._convert_matlab_days
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
 
         arr      : array of matlab datenums (1 is 1-Jan-0000)
         timezone : TimeZone object from DateTimeNano constructor
@@ -1459,8 +1463,8 @@ class Date(DateBase, TimeStampBase):
         hstacks Date objects and returns a new Date object.
         Will be called by riptable.hstack() if the first item in the sequence is a Date object.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         dates : list or tuple of Date objects
 
 
@@ -1608,9 +1612,8 @@ class Date(DateBase, TimeStampBase):
     # ------------------------------------------------------------
     def __add__(self, value):
         '''
-        Addition rules:
-        ------------------
-
+        **Addition rules**
+        
         Date + Date = TypeError
         Date + DateTimeNano = TypeError
         Date + DateSpan = Date
@@ -1629,8 +1632,7 @@ class Date(DateBase, TimeStampBase):
     # ------------------------------------------------------------
     def __sub__(self, value):
         '''
-        Subtraction rules:
-        ------------------
+        **Subtraction rules**
 
         Date - Date = DateSpan
         Date - DateSpan = Date
@@ -1761,8 +1763,8 @@ class Date(DateBase, TimeStampBase):
         This gets called after a math operation has been performed on the Date's FastArray.
         Return type may differ based on operation. Preserves invalids from original input.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         funcname       : name of ufunc
         value          : original operand in math operation
 
@@ -1798,8 +1800,8 @@ class Date(DateBase, TimeStampBase):
         '''
         Operations with TimeSpan and DateTimeNano will flip to nano precision, or raise an error.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         funcname       : name of ufunc
         value          : original operand in math operation
         other_inv_mask : None, might be set in this routine
@@ -1981,8 +1983,8 @@ class DateSpan(DateBase):
     DateSpan arrays have an underlying int32 array. The array values are in number of days.
     These are created as the result of certain math operations on Date objects.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     arr  : numeric array, list, or scalar
     unit : can set units to 'd' (day) or 'w' (week)
 
@@ -2107,8 +2109,8 @@ class DateSpan(DateBase):
         hstacks DateSpan objects and returns a new DateSpan object.
         Will be called by riptable.hstack() if the first item in the sequence is a DateSpan object.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         dates : list or tuple of DateSpan objects
 
 
@@ -2126,8 +2128,8 @@ class DateSpan(DateBase):
         '''
         Operations with TimeSpan and DateTimeNano will flip to nano precision, or raise an error.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         funcname       : name of ufunc
         value          : original operand in math operation
         other_inv_mask : None, might be set in this routine
@@ -2156,8 +2158,8 @@ class DateSpan(DateBase):
         This gets called after a math operation has been performed on the Date's FastArray.
         Return type may differ based on operation. Preserves invalids from original input.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         funcname       : name of ufunc
         value          : original operand in math operation
 
@@ -3276,9 +3278,13 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                     See strptime_to_nano() docstring for format info
     start_date  : specify a string start date for times in format YYYYMMDD. all values in the provided array
                   will be interpretted as nanoseconds, timespan, or clock strings in HH:MM
-    (gmt **deprecated)
+    (gmt **deprecated**)
 
 
+    Notes
+    -----
+    The constructor does not attempt to preserve NaN times from python datetime objects.
+    
     Examples
     --------
     From DateTimeNano timestamps already in GMT:
@@ -3301,7 +3307,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     DateTimeNano([20181102 09:30:00.002000000, 20181102 09:30:00.004000000, 20181102 09:30:00.005000000])
 
     String parsing differences:
-    ---------------------------
+
     - riptable DateTimeNano string parsing is more forgiving than Numpy datetime64 arrays
     - In some cases an object is returned when numpy returns an error.
     - In other cases, a different result is returned.
@@ -3309,12 +3315,14 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     - You can always guarantee the same results by using the full ISO-8601 datetime format (YYYY-MM-DDTHH:mm:ss.fffffffff)
 
     Without zero padding:
+    
     >>> DateTimeNano(['2018-1-1 1'], from_tz='NYC')
     DateTimeNano([20180101 01:00:00.000000000])
     >>> np.array(['2018-1-1 1'], dtype='datetime64[ns]')
     ValueError: Error parsing datetime string "2018-1-1 1" at position 5
 
     Extra characters:
+    
     >>> DateTimeNano(['2018-10-11 10:11:00.123           '], from_tz='NYC')
     DateTimeNano([20181011 10:11:00.123000000])
     >>> np.array(['2018-10-11 10:11:00.123           '], dtype='datetime64[ns]')
@@ -3322,23 +3330,27 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     array(['2018-10-11T10:11:00.123000000'], dtype='datetime64[ns]')
 
     Without separators:
+    
     >>> DateTimeNano(['20181231'], from_tz='NYC')
     DateTimeNano([20181231 00:00:00.000000000])
     >>> np.array(['20181231'], dtype='datetime64[ns]')
     array(['1840-08-31T19:51:12.568664064'], dtype='datetime64[ns]')
 
     ISO-8601 format:
+    
     >>> DateTimeNano(['2018-12-31T12:34:56.789123456'],from_tz='NYC')
     DateTimeNano([20181231 12:34:56.789123456])
     >>> np.array(['2018-12-31T12:34:56.789123456'], dtype='datetime64[ns]')
     array(['2018-12-31T12:34:56.789123456'], dtype='datetime64[ns]')
 
-    strptime like formatting
+    strptime-like formatting:
+    
     >>> a=DateTimeNano(['12/31/19', '6/30/19'], format='%m/%d/%y', from_tz='NYC')
     >>> a=DateTimeNano(['12/31/2019', '6/30/2019'], format='%m/%d/%Y', from_tz='NYC')
     DateTimeNano([20191231 00:00:00.000000000, 20190630 00:00:00.000000000])
 
     From Matlab:
+    
     >>> a=DateTimeNano([737426], from_matlab=True, from_tz='NYC')
     >>> a
     DateTimeNano([20190101 00:00:00.000000000])
@@ -3346,6 +3358,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     DateTimeNano([20190101])
 
     From utcnow:
+    
     >> from datetime import datetime as dt
     >> dt.utcnow()
     datetime.datetime(2019, 2, 7, 20, 12, 44, 116810)
@@ -3353,7 +3366,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     DateTimeNano([20190207 15:12:44.116810400])
 
     Math operations:
-    ----------------
+    
     The following math operations can be performed and will yeild the following object types
 
     DateTimeNano - DateTimeNano = TimeSpan
@@ -3361,12 +3374,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     DateTimeNano + TimeSpan = DateTimeNano
     TimeSpan - TimeSpan = TimeSpan
     TimeSpan + TimeSpan = TimeSpan
-
-    Other notes:
-    ------------
-    - The constructor does not attempt to preserve NaN times from python datetime objects.
-
-
     '''
     MetaVersion = 0
     MetaDefault = {
@@ -3404,8 +3411,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         Array of nanoseconds since Unix Epoch (held in int64)
         All DateTimeNano objects hold nanoseconds in GMT time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         arr         : nanoseconds in integer, timestrings, numpy datetime64 array
         from_tz     : if initialized from strings, user is required to specify the timezone of origin (otherwise default is UTC)
                       Currently supported:
@@ -3418,7 +3425,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                       See strptime_to_nano() docstring for format info
         start_date   : specify a single date for datetime nano. all times in provided array will be interpretted
                       as nanoseconds.
-        (gmt **deprecated)
+        (gmt **deprecated**)
 
         Notes:
         ------
@@ -3584,8 +3591,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     @classmethod
     def _convert_matlab_days(cls, arr, timezone):
         '''
-        Parameters:
-        -----------
+        Parameters
+        ----------
 
         arr      : array of matlab datenums (1 is 1-Jan-0000)
         timezone : TimeZone object from DateTimeNano constructor
@@ -4823,11 +4830,9 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         if arr.type.tz is None:
             raise ValueError("The input array is timezone-naive, which is not supported by riptable.")
 
-        # TODO: Need to convert the pyarrow array's timezone to a riptable TZ string,
-        #       then set that on the output array.
-        from_tz_str = TypeRegister.TimeZone.long_to_short_timezone_names.get(arr.type.tz, None)
-        if from_tz_str is None:
-            raise ValueError(f"The input array's timezone '{arr.type.tz}' is not supported by riptable.")
+        # Convert the pyarrow array's timezone (id from tz database) to a riptable TZ string,
+        # then set that on the output array.
+        from_tz_str = TypeRegister.TimeZone.normalize_tz_to_short_name(arr.type.tz)
 
         # Create a view of the underlying data as int64 epoch-nanoseconds.
         arr_int64 = arr.view(pa.int64())
@@ -4881,7 +4886,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         import pyarrow as pa
 
         # Get the tz db / ICU timezone name.
-        tz_name = TypeRegister.TimeZone.timezone_long_strings[self._timezone._from_tz]
+        tz_name = TypeRegister.TimeZone.normalize_tz_to_tzdb_name(self._timezone._from_tz)
 
         # Create the corresponding pyarrow type.
         arr_type = pa.timestamp('ns', tz=tz_name)
@@ -5434,13 +5439,13 @@ class TimeSpanBase:
 class TimeSpan(TimeSpanBase, DateTimeBase):
     """Array of time delta in nanoseconds, held in float64.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
 
     values : numeric or string array or scalar
         If string, interpreted as HH:MM:SS.ffffff ( seconds/second fractions optional )
         If numeric, interpreted as nanoseconds, unless `unit` provided.
-             single number or array / list of numbers (unless unit is specified, will assume nanoseconds)
+        single number or array / list of numbers (unless unit is specified, will assume nanoseconds)
     unit : str, optional, default 'ns'
         Precision of data in the constructor. All will be converted to nanoseconds.
         Valid units: 'Y', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns'

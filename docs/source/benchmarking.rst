@@ -2,7 +2,7 @@ Performance Benchmarks
 ======================
 
 riptable Benchmarking
---------------------
+---------------------
 riptable offers a benchmark module. From the riptable workspace change to the ``Python\core`` directory and run the
 ``riptable.benchmark`` module with the ``help`` flag as follows:
 

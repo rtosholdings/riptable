@@ -301,11 +301,12 @@ class Accum2(GroupByOps, FastArray):
     #---------------------------------------------------------------
     def _make_imatrix(self, input_arr, col_keys, row_keys, showfilter=False):
         """
-        return a fortan ordered 2d matrix
-        if showfilter is False, the first column is removed
-            shape is (row_keys.unique_count+1, col_keys.unique_count)
-        else if showfilter is True
-            shape is (row_keys.unique_count +1, col_keys.unique_count+1)
+        Return a Fortran-ordered 2d matrix. ::
+                        
+            if showfilter is False, the first column is removed
+                shape is (row_keys.unique_count+1, col_keys.unique_count)
+            else if showfilter is True
+                shape is (row_keys.unique_count +1, col_keys.unique_count+1)
         """
         if showfilter:
             tempi = input_arr[0:-1]

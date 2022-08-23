@@ -5,11 +5,11 @@ __all__ = [
 import numpy as np
 
 import riptide_cpp as rc
-
 from .rt_fastarray import FastArray
 from .rt_enum import TypeRegister
 from .rt_datetime import NANOS_PER_HOUR
 from .rt_numpy import putmask, searchsorted, zeros, where
+
 
 DST_CUTOFFS_NYC = FastArray([
 '1970-04-26 02:00:00', '1970-10-25 02:00:00', 
@@ -159,6 +159,9 @@ DST_REVERSE_NYC = FastArray([
 '2040-03-11 07:00:00', '2040-11-04 06:00:00'
 ])
 
+NYC_OFFSET_DST = 4
+NYC_OFFSET     = 5
+
 
 DST_CUTOFFS_DUBLIN = FastArray([
  '1972-03-19 02:00:00', '1972-10-29 02:00:00',
@@ -232,7 +235,6 @@ DST_CUTOFFS_DUBLIN = FastArray([
  '2040-03-25 02:00:00', '2040-10-28 02:00:00'
  ])
 
-
 DST_REVERSE_DUBLIN = FastArray([
  '1972-03-19 01:00:00', '1972-10-29 01:00:00',
  '1973-03-18 01:00:00', '1973-10-28 01:00:00',
@@ -305,12 +307,166 @@ DST_REVERSE_DUBLIN = FastArray([
  '2040-03-25 01:00:00', '2040-10-28 01:00:00'
  ])
 
-NYC_OFFSET_DST = 4
-NYC_OFFSET     = 5
-
 DUBLIN_OFFSET_DST = -1
 DUBLIN_OFFSET = 0
 
+DST_CUTOFFS_Australia__Sydney = FastArray([
+    # Prefix the array with one additional entry compared to timezones in the northern hemisphere.
+    # Code below in the TimeZone class assumes even-indexed entries represent start-of-DST transition times
+    # (local date/time within this timezone) and odd-numbered entries represent end-of-DST transition times.
+    # Timezones in the southern hemisphere start DST later in the year and end earlier in the year,
+    # so this one additional entry fixes the DST calculations below.
+    '1969-10-26 02:00:00',
+    '1970-04-05 03:00:00', '1970-10-04 02:00:00',
+    '1971-04-04 03:00:00', '1971-10-03 02:00:00',
+    '1972-04-02 03:00:00', '1972-10-01 02:00:00',
+    '1973-04-01 03:00:00', '1973-10-07 02:00:00',
+    '1974-04-07 03:00:00', '1974-10-06 02:00:00',
+    '1975-04-06 03:00:00', '1975-10-05 02:00:00',
+    '1976-04-04 03:00:00', '1976-10-03 02:00:00',
+    '1977-04-03 03:00:00', '1977-10-02 02:00:00',
+    '1978-04-02 03:00:00', '1978-10-01 02:00:00',
+    '1979-04-01 03:00:00', '1979-10-07 02:00:00',
+    '1980-04-06 03:00:00', '1980-10-05 02:00:00',
+    '1981-04-05 03:00:00', '1981-10-04 02:00:00',
+    '1982-04-04 03:00:00', '1982-10-03 02:00:00',
+    '1983-04-03 03:00:00', '1983-10-02 02:00:00',
+    '1984-04-01 03:00:00', '1984-10-07 02:00:00',
+    '1985-04-07 03:00:00', '1985-10-06 02:00:00',
+    '1986-04-06 03:00:00', '1986-10-05 02:00:00',
+    '1987-04-05 03:00:00', '1987-10-04 02:00:00',
+    '1988-04-03 03:00:00', '1988-10-02 02:00:00',
+    '1989-04-02 03:00:00', '1989-10-01 02:00:00',
+    '1990-04-01 03:00:00', '1990-10-07 02:00:00',
+    '1991-04-07 03:00:00', '1991-10-06 02:00:00',
+    '1992-04-05 03:00:00', '1992-10-04 02:00:00',
+    '1993-04-04 03:00:00', '1993-10-03 02:00:00',
+    '1994-04-03 03:00:00', '1994-10-02 02:00:00',
+    '1995-04-02 03:00:00', '1995-10-01 02:00:00',
+    '1996-04-07 03:00:00', '1996-10-06 02:00:00',
+    '1997-04-06 03:00:00', '1997-10-05 02:00:00',
+    '1998-04-05 03:00:00', '1998-10-04 02:00:00',
+    '1999-04-04 03:00:00', '1999-10-03 02:00:00',
+    '2000-04-02 03:00:00', '2000-10-01 02:00:00',
+    '2001-04-01 03:00:00', '2001-10-07 02:00:00',
+    '2002-04-07 03:00:00', '2002-10-06 02:00:00',
+    '2003-04-06 03:00:00', '2003-10-05 02:00:00',
+    '2004-04-04 03:00:00', '2004-10-03 02:00:00',
+    '2005-04-03 03:00:00', '2005-10-02 02:00:00',
+    '2006-04-02 03:00:00', '2006-10-01 02:00:00',
+    '2007-04-01 03:00:00', '2007-10-07 02:00:00',
+    '2008-04-06 03:00:00', '2008-10-05 02:00:00',
+    '2009-04-05 03:00:00', '2009-10-04 02:00:00',
+    '2010-04-04 03:00:00', '2010-10-03 02:00:00',
+    '2011-04-03 03:00:00', '2011-10-02 02:00:00',
+    '2012-04-01 03:00:00', '2012-10-07 02:00:00',
+    '2013-04-07 03:00:00', '2013-10-06 02:00:00',
+    '2014-04-06 03:00:00', '2014-10-05 02:00:00',
+    '2015-04-05 03:00:00', '2015-10-04 02:00:00',
+    '2016-04-03 03:00:00', '2016-10-02 02:00:00',
+    '2017-04-02 03:00:00', '2017-10-01 02:00:00',
+    '2018-04-01 03:00:00', '2018-10-07 02:00:00',
+    '2019-04-07 03:00:00', '2019-10-06 02:00:00',
+    '2020-04-05 03:00:00', '2020-10-04 02:00:00',
+    '2021-04-04 03:00:00', '2021-10-03 02:00:00',
+    '2022-04-03 03:00:00', '2022-10-02 02:00:00',
+    '2023-04-02 03:00:00', '2023-10-01 02:00:00',
+    '2024-04-07 03:00:00', '2024-10-06 02:00:00',
+    '2025-04-06 03:00:00', '2025-10-05 02:00:00',
+    '2026-04-05 03:00:00', '2026-10-04 02:00:00',
+    '2027-04-04 03:00:00', '2027-10-03 02:00:00',
+    '2028-04-02 03:00:00', '2028-10-01 02:00:00',
+    '2029-04-01 03:00:00', '2029-10-07 02:00:00',
+    '2030-04-07 03:00:00', '2030-10-06 02:00:00',
+    '2031-04-06 03:00:00', '2031-10-05 02:00:00',
+    '2032-04-04 03:00:00', '2032-10-03 02:00:00',
+    '2033-04-03 03:00:00', '2033-10-02 02:00:00',
+    '2034-04-02 03:00:00', '2034-10-01 02:00:00',
+    '2035-04-01 03:00:00', '2035-10-07 02:00:00',
+    '2036-04-06 03:00:00', '2036-10-05 02:00:00',
+    '2037-04-05 03:00:00', '2037-10-04 02:00:00',
+    '2038-04-04 03:00:00', '2038-10-03 02:00:00',
+    '2039-04-03 03:00:00', '2039-10-02 02:00:00',
+    '2040-04-01 03:00:00', '2040-10-07 02:00:00'
+])
+
+DST_REVERSE_Australia__Sydney = FastArray([
+    '1969-10-25 16:00:00',
+    '1970-04-04 16:00:00', '1970-10-03 16:00:00',
+    '1971-04-03 16:00:00', '1971-10-02 16:00:00',
+    '1972-04-01 16:00:00', '1972-09-30 16:00:00',
+    '1973-03-31 16:00:00', '1973-10-06 16:00:00',
+    '1974-04-06 16:00:00', '1974-10-05 16:00:00',
+    '1975-04-05 16:00:00', '1975-10-04 16:00:00',
+    '1976-04-03 16:00:00', '1976-10-02 16:00:00',
+    '1977-04-02 16:00:00', '1977-10-01 16:00:00',
+    '1978-04-01 16:00:00', '1978-09-30 16:00:00',
+    '1979-03-31 16:00:00', '1979-10-06 16:00:00',
+    '1980-04-05 16:00:00', '1980-10-04 16:00:00',
+    '1981-04-04 16:00:00', '1981-10-03 16:00:00',
+    '1982-04-03 16:00:00', '1982-10-02 16:00:00',
+    '1983-04-02 16:00:00', '1983-10-01 16:00:00',
+    '1984-03-31 16:00:00', '1984-10-06 16:00:00',
+    '1985-04-06 16:00:00', '1985-10-05 16:00:00',
+    '1986-04-05 16:00:00', '1986-10-04 16:00:00',
+    '1987-04-04 16:00:00', '1987-10-03 16:00:00',
+    '1988-04-02 16:00:00', '1988-10-01 16:00:00',
+    '1989-04-01 16:00:00', '1989-09-30 16:00:00',
+    '1990-03-31 16:00:00', '1990-10-06 16:00:00',
+    '1991-04-06 16:00:00', '1991-10-05 16:00:00',
+    '1992-04-04 16:00:00', '1992-10-03 16:00:00',
+    '1993-04-03 16:00:00', '1993-10-02 16:00:00',
+    '1994-04-02 16:00:00', '1994-10-01 16:00:00',
+    '1995-04-01 16:00:00', '1995-09-30 16:00:00',
+    '1996-04-06 16:00:00', '1996-10-05 16:00:00',
+    '1997-04-05 16:00:00', '1997-10-04 16:00:00',
+    '1998-04-04 16:00:00', '1998-10-03 16:00:00',
+    '1999-04-03 16:00:00', '1999-10-02 16:00:00',
+    '2000-04-01 16:00:00', '2000-09-30 16:00:00',
+    '2001-03-31 16:00:00', '2001-10-06 16:00:00',
+    '2002-04-06 16:00:00', '2002-10-05 16:00:00',
+    '2003-04-05 16:00:00', '2003-10-04 16:00:00',
+    '2004-04-03 16:00:00', '2004-10-02 16:00:00',
+    '2005-04-02 16:00:00', '2005-10-01 16:00:00',
+    '2006-04-01 16:00:00', '2006-09-30 16:00:00',
+    '2007-03-31 16:00:00', '2007-10-06 16:00:00',
+    '2008-04-05 16:00:00', '2008-10-04 16:00:00',
+    '2009-04-04 16:00:00', '2009-10-03 16:00:00',
+    '2010-04-03 16:00:00', '2010-10-02 16:00:00',
+    '2011-04-02 16:00:00', '2011-10-01 16:00:00',
+    '2012-03-31 16:00:00', '2012-10-06 16:00:00',
+    '2013-04-06 16:00:00', '2013-10-05 16:00:00',
+    '2014-04-05 16:00:00', '2014-10-04 16:00:00',
+    '2015-04-04 16:00:00', '2015-10-03 16:00:00',
+    '2016-04-02 16:00:00', '2016-10-01 16:00:00',
+    '2017-04-01 16:00:00', '2017-09-30 16:00:00',
+    '2018-03-31 16:00:00', '2018-10-06 16:00:00',
+    '2019-04-06 16:00:00', '2019-10-05 16:00:00',
+    '2020-04-04 16:00:00', '2020-10-03 16:00:00',
+    '2021-04-03 16:00:00', '2021-10-02 16:00:00',
+    '2022-04-02 16:00:00', '2022-10-01 16:00:00',
+    '2023-04-01 16:00:00', '2023-09-30 16:00:00',
+    '2024-04-06 16:00:00', '2024-10-05 16:00:00',
+    '2025-04-05 16:00:00', '2025-10-04 16:00:00',
+    '2026-04-04 16:00:00', '2026-10-03 16:00:00',
+    '2027-04-03 16:00:00', '2027-10-02 16:00:00',
+    '2028-04-01 16:00:00', '2028-09-30 16:00:00',
+    '2029-03-31 16:00:00', '2029-10-06 16:00:00',
+    '2030-04-06 16:00:00', '2030-10-05 16:00:00',
+    '2031-04-05 16:00:00', '2031-10-04 16:00:00',
+    '2032-04-03 16:00:00', '2032-10-02 16:00:00',
+    '2033-04-02 16:00:00', '2033-10-01 16:00:00',
+    '2034-04-01 16:00:00', '2034-09-30 16:00:00',
+    '2035-03-31 16:00:00', '2035-10-06 16:00:00',
+    '2036-04-05 16:00:00', '2036-10-04 16:00:00',
+    '2037-04-04 16:00:00', '2037-10-03 16:00:00',
+    '2038-04-03 16:00:00', '2038-10-02 16:00:00',
+    '2039-04-02 16:00:00', '2039-10-01 16:00:00',
+    '2040-03-31 16:00:00', '2040-10-06 16:00:00'
+])
+
+Australia__Sydney_OFFSET_DST = -11
+Australia__Sydney_OFFSET = -10
 
 class TimeZone:
     """
@@ -345,45 +501,87 @@ class TimeZone:
     -----
     'UTC' is not a timezone, but accepted as an alias for GMT
     """
-    valid_timezones = ('NYC', 'DUBLIN', 'GMT', 'UTC')
-    timezone_long_strings = {
+    _short_to_long_timezone_names = {
         'NYC'    : 'America/New_York',
         'DUBLIN' : 'Europe/Dublin',
+        # Everything below here must be a valid tz database identifier;
+        # the key and value should be the same for each entry.
         'GMT'    : 'GMT',
-        'UTC'    : 'UTC'
+        'UTC'    : 'UTC',
+        'Australia/Sydney': 'Australia/Sydney'
     }
-    long_to_short_timezone_names = {
+    _long_to_short_timezone_names = {
         'America/New_York': 'NYC',
         'Europe/Dublin': 'DUBLIN',
+        # Everything below here must be a valid tz database identifier;
+        # the key and value should be the same for each entry.
         'UTC': 'UTC',
-        'GMT': 'GMT'
+        'GMT': 'GMT',
+        'Australia/Sydney': 'Australia/Sydney'
     }
-    tz_error_msg = f"If constructing from strings specify a timezone in from_tz keyword. Valid options: {valid_timezones}. Example: dtn = DateTimeNano(['2018-12-13 10:30:00'], from_tz='NYC')"
+    # TODO: Assert `short_to_long_timezone_names` and `long_to_short_timezone_names` form a bimap (bijective map).
+    valid_timezones = tuple(sorted(set(_short_to_long_timezone_names.keys()).union(_long_to_short_timezone_names.keys())))
+    tz_error_msg = f"If constructing from strings specify a timezone in `from_tz` keyword. Valid options: {valid_timezones}. Example: dtn = DateTimeNano(['2018-12-13 10:30:00'], from_tz='NYC')"
 
     #------------------------------------------------------------
     def __init__(self, from_tz: str = None, to_tz: str = 'NYC'):
-
         if from_tz is None:
             raise ValueError(self.tz_error_msg)
 
-        # might not need these, hang on to them for now
-        self._from_tz = from_tz
-        self._to_tz = to_tz
+        # might not need these, but hang on to them for now
+        # Normalize timezone names to 'short' names, because that's what some code
+        # in this class (and other parts of riptable) assumes will be used.
+        self._from_tz = TimeZone.normalize_tz_to_short_name(from_tz)
+        self._to_tz = TimeZone.normalize_tz_to_short_name(to_tz)
 
         # get appropriate daylight savings dictionaries
-        self._dst_cutoffs, self._fix_offset = self._init_from_tz(from_tz)
-        self._dst_reverse, self._offset = self._init_to_tz(to_tz)
+        self._dst_cutoffs, self._fix_offset = self._init_from_tz(self._from_tz)
+        self._dst_reverse, self._offset = self._init_to_tz(self._to_tz)
+
+    @staticmethod
+    def normalize_tz_to_short_name(tz_name: str) -> str:
+        # Internal code expects the "short" (riptable) timezone strings,
+        # so if this is a "long" (tz database) timezone name, convert it
+        # to the short name before storing it.
+        if tz_name in TimeZone._short_to_long_timezone_names:
+            # Already a short name, return it.
+            return tz_name
+
+        # Maybe this is a "long" (tz database) timezone name;
+        # try converting to the short name.
+        tz_short_name = TimeZone._long_to_short_timezone_names.get(tz_name, None)
+        if tz_short_name is not None:
+            return tz_short_name
+
+        raise KeyError(f"The timezone name '{tz_name}' is not recognized as either a 'short' (riptable) or 'long' (tz database) timezone name.")
+
+    @staticmethod
+    def normalize_tz_to_tzdb_name(tz_name: str) -> str:
+        if tz_name in TimeZone._long_to_short_timezone_names:
+            # Already a short name, return it.
+            return tz_name
+
+        # Maybe this is a "long" (tz database) timezone name;
+        # try converting to the short name.
+        tz_long_name = TimeZone._short_to_long_timezone_names.get(tz_name, None)
+        if tz_long_name is not None:
+            return tz_long_name
+
+        raise KeyError(f"The timezone name '{tz_name}' is not recognized as either a 'short' (riptable) or 'long' (tz database) timezone name.")
 
     #------------------------------------------------------------
     @classmethod
-    def _init_from_tz(cls, from_tz):
+    def _init_from_tz(cls, from_tz: str):
         # TODO: as we add more timezone support, put into a dictionary
-        if from_tz == 'NYC':
+        if from_tz == 'NYC' or from_tz == 'America/New_York':
             _dst_cutoffs = DST_CUTOFFS_NYC
             _fix_offset = NYC_OFFSET
-        elif from_tz == 'DUBLIN':
+        elif from_tz == 'DUBLIN' or from_tz == 'Europe/Dublin':
             _dst_cutoffs = DST_CUTOFFS_DUBLIN
             _fix_offset = DUBLIN_OFFSET
+        elif from_tz == 'Australia/Sydney':
+            _dst_cutoffs = DST_CUTOFFS_Australia__Sydney
+            _fix_offset = Australia__Sydney_OFFSET
         elif from_tz in ('GMT', 'UTC'):
             _dst_cutoffs = None
             _fix_offset = 0
@@ -396,20 +594,24 @@ class TimeZone:
 
     #------------------------------------------------------------
     @classmethod
-    def _init_to_tz(cls, to_tz):
+    def _init_to_tz(cls, to_tz: str):
         '''
         Return daylight savings information, timezone string for correctly displaying the datetime
         based on the to_tz keyword in the constructor.
         '''
         # TODO: as we add more timezone support, put into a dictionary
         # probably dont need _timezone_str
-        if to_tz == 'NYC':
+        if to_tz == 'NYC' or to_tz == 'America/New_York':
             _dst_reverse = DST_REVERSE_NYC
             _timezone_offset = NYC_OFFSET
 
-        elif to_tz == 'DUBLIN':
+        elif to_tz == 'DUBLIN' or to_tz == 'Europe/Dublin':
             _dst_reverse = DST_REVERSE_DUBLIN
             _timezone_offset = DUBLIN_OFFSET
+
+        elif to_tz == 'Australia/Sydney':
+            _dst_reverse = DST_REVERSE_Australia__Sydney
+            _timezone_offset = Australia__Sydney_OFFSET
 
         elif to_tz in ('GMT', 'UTC'):
             _dst_reverse = None
@@ -423,7 +625,8 @@ class TimeZone:
     #------------------------------------------------------------
     @property
     def _timezone_str(self):
-        return self.timezone_long_strings[self._to_tz]
+        """Get the name for this timezone within the 'tz' database."""
+        return self._short_to_long_timezone_names[self._to_tz]
 
     #------------------------------------------------------------
     def _set_timezone(self, tz):
@@ -498,13 +701,13 @@ class TimeZone:
         Called by DateTimeNano routines that need to adjust time for timezone.
         Also called by DateTimeNanoScalar
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         arr     : underlying array of int64, UTC nanoseconds OR a scalar np.int64
         cutoffs : lookup array for daylight savings time cutoffs for the active timezone
 
-        Notes:
-        ------
+        Notes
+        -----
         There is a difference in daylight savings fixup for Dublin timezone. The python 
         datetime.astimezone() routine works differently than fromutctimestamp(). Python datetime 
         may set a 'fold' attribute, indicating that the time is invalid, within an ambiguous daylight 
@@ -591,6 +794,9 @@ DST_REVERSE_NYC = rc.DateTimeStringToNanos(DST_REVERSE_NYC)
 
 DST_CUTOFFS_DUBLIN = rc.DateTimeStringToNanos(DST_CUTOFFS_DUBLIN)
 DST_REVERSE_DUBLIN = rc.DateTimeStringToNanos(DST_REVERSE_DUBLIN)
+
+DST_CUTOFFS_Australia__Sydney = rc.DateTimeStringToNanos(DST_CUTOFFS_Australia__Sydney)
+DST_REVERSE_Australia__Sydney = rc.DateTimeStringToNanos(DST_REVERSE_Australia__Sydney)
 
 TypeRegister.TimeZone = TimeZone
 TypeRegister.Calendar = Calendar

@@ -1037,7 +1037,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(isinstance(since_year, TimeSpan))
 
     def test_time_since_midnight(self):
-        dtn = DateTimeNano(['2018-02-01 00:00:00.000123456'], from_tz='NYC')
+        dtn = DateTimeNano(['2018-02-01 00:00:00.000123456'], from_tz='America/New_York')
         since_mn = dtn.time_since_midnight()
         correct = TimeSpan([123456])
         self.assertTrue(bool(np.all(since_mn == correct)))
@@ -1208,6 +1208,60 @@ class DateTime_Test(unittest.TestCase):
 
         self.assertEqual(pdt_str_first, dtn_str_last)
 
+    def test_vs_python_dst_spring_sydney(self):
+        format_str = "%Y-%m-%dT%H:%M:%S.000000000"
+        zone = tz.gettz('Australia/Sydney')
+
+        # N.B. Spring occurs later in the year in the southern hemisphere, so the annual transition
+        #      from standard -> daylight time also happens towards the end of the year.
+        pdt_first = datetime.datetime(
+            2022, 10, 1, 15, 1, 0, tzinfo=datetime.timezone.utc
+        )
+        pdt_last = datetime.datetime(2022, 10, 1, 16, 1, 0, tzinfo=datetime.timezone.utc)
+
+        dtn_first = DateTimeNano(['2022-10-02 01:01'], from_tz='Australia/Sydney', to_tz='Australia/Sydney')
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz='GMT', to_tz="Australia/Sydney")
+
+        correct_first = '2022-10-02T01:01:00.000000000'
+        pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
+        dtn_str_first = dtn_first.to_iso()[0].decode()
+        self.assertEqual(pdt_str_first, dtn_str_first)
+        self.assertEqual(dtn_str_first, correct_first)
+
+        correct_last = '2022-10-02T03:01:00.000000000'
+        pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
+        dtn_str_last = dtn_last.to_iso()[0].decode()
+        self.assertEqual(pdt_str_last, dtn_str_last)
+        self.assertEqual(dtn_str_last, correct_last)
+
+    def test_vs_python_dst_fall_sydney(self):
+        format_str = "%Y-%m-%dT%H:%M:%S.000000000"
+        zone = tz.gettz('Australia/Sydney')
+
+        # N.B. Fall occurs earlier in the year in the southern hemisphere, so the annual transition
+        #      from standard -> daylight time also happens towards the beginning of the year.
+        pdt_first = datetime.datetime(
+            2022, 4, 2, 15, 1, 0, tzinfo=datetime.timezone.utc
+        )
+        pdt_last = datetime.datetime(2022, 4, 2, 16, 1, 0, tzinfo=datetime.timezone.utc)
+        t1 = pdt_first.timestamp()
+        t2 = pdt_last.timestamp()
+        t1 = int(NANOS_PER_SECOND * t1)
+        t2 = int(NANOS_PER_SECOND * t2)
+
+        dtn_first = DateTimeNano([t1], from_tz='GMT', to_tz='Australia/Sydney')
+        dtn_last = DateTimeNano([t2], from_tz='GMT', to_tz='Australia/Sydney')
+
+        pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
+        dtn_str_first = dtn_first.to_iso()[0].decode()
+        self.assertEqual(pdt_str_first, dtn_str_first)
+
+        pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
+        dtn_str_last = dtn_last.to_iso()[0].decode()
+        self.assertEqual(pdt_str_last, dtn_str_last)
+
+        self.assertEqual(pdt_str_first, dtn_str_last)
+
     def test_dst_fall_hour(self):
         '''
         When daylight savings time ends, clocks go back one hour. However, UTC is
@@ -1263,7 +1317,7 @@ class DateTime_Test(unittest.TestCase):
         pdt1_dub = pdt1.astimezone(zone)
 
         dtn = DateTimeNano(
-            ['2018-03-25 00:59', '2018-03-25 01:59'], from_tz='GMT', to_tz='DUBLIN'
+            ['2018-03-25 00:59', '2018-03-25 01:59'], from_tz='GMT', to_tz='Europe/Dublin'
         )
         dtn_hour = dtn.hour.astype(np.int32)
 
@@ -1279,7 +1333,7 @@ class DateTime_Test(unittest.TestCase):
         pdt1_nyc = pdt1.astimezone(zone)
 
         dtn = DateTimeNano(
-            ['2019-03-10 06:01', '2019-03-10 07:01'], from_tz='GMT', to_tz='NYC'
+            ['2019-03-10 06:01', '2019-03-10 07:01'], from_tz='GMT', to_tz='America/New_York'
         )
         dtn_hour = dtn.hour.astype(np.int32)
 

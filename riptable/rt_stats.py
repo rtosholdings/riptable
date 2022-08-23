@@ -5,13 +5,18 @@ import riptable as rt
 import numpy as np
 from .rt_enum import TypeRegister
 
-from .rt_fastarray import FastArray
 from .rt_numpy import zeros
 
 # extra classes
 import pandas as pd
-from bokeh.plotting import output_notebook, figure, show
-from bokeh.models import Label
+
+# bokeh is an optional dependency.
+try:
+    from bokeh.plotting import output_notebook, figure, show
+    #from bokeh.models import Label
+except ImportError:
+    pass
+
 
 #TODO: Organize the functions in here better
 #TODO: Add documentation
@@ -23,11 +28,14 @@ def statx(X):
     pValNames = ['min', '0.1%', '1%', '10%', '25%', '50%', '75%', '90%','99%','99.9%' , 'max' , 'Mean', 'StdDev', 'Count', 'NaN_Count']
     filt = np.isfinite(X)
     X_sub = X[filt]
-    vals = np.percentile(X_sub,pVals)
-    vals =np.insert(vals,0,np.min(X_sub))
-    vals =np.append(vals,np.max(X_sub))
-    vals = np.append(vals,np.mean(X_sub))
-    vals = np.append(vals,np.std(X_sub))
+    if len(X_sub) > 0:
+        vals = np.percentile(X_sub,pVals)
+        vals = np.insert(vals,0,np.min(X_sub))
+        vals = np.append(vals,np.max(X_sub))
+        vals = np.append(vals,np.mean(X_sub))
+        vals = np.append(vals,np.std(X_sub))
+    else:
+        vals = np.array(13 * [rt.nan])
     validcount = np.sum(filt)
 
     # plain count

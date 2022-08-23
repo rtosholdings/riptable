@@ -1029,6 +1029,16 @@ class FastArray_Test(unittest.TestCase):
                 msg=f'Failure in {func}.',
             )
 
+    def test_str_mean(self):
+        with self.assertRaises(TypeError) as cm:
+            rt.FA(['a']).mean()
+        self.assertEqual(str(cm.exception),'FastArray operation applied to string or object array.')
+
+        with self.assertRaises(TypeError) as cm:
+            rt.FA(['a']).var()
+        self.assertEqual(str(cm.exception),'FastArray operation applied to string or object array.')
+
+
     def test_nanfunctions_var_bug(self):
         if FastArray.var == FastArray.nanvar:
             warnings.warn('FastArray.var is temp. hacked to map to FastArray.nanvar.')
@@ -1677,6 +1687,42 @@ def test_ctor_from_str_obj_array_with_None(as_unicode: bool) -> None:
     none_results = result[none_mask]
     assert_array_equal(none_results, rt.full(none_results.shape, result.inv, dtype=none_results.dtype))
 
+
+@pytest.mark.parametrize('op_name', [
+    'eq',
+    'ne',
+    'ge',
+    'le',
+    'gt',
+    'lt',
+    'add',
+    'sub',
+    'mul',
+    'pow',
+    'floordiv',
+    'mod',
+])
+def test_operator_methods(op_name):
+    arr = rt.arange(5)
+    result = getattr(arr, op_name)(2)
+    expected = getattr(operator, op_name)(arr, 2)
+    assert_array_equal(result, expected)
+
+
+def test_div_method():
+    arr = rt.arange(5)
+    result = arr.div(2)
+    expected = arr / 2
+    assert_array_equal(result, expected)
+
+@pytest.mark.parametrize('arr', [
+    [1.0],
+    [1.0, rt.nan],
+    [float("nan")]
+])
+def test_statx(arr):
+    fa = rt.FA(arr)
+    fa.statx()
 
 if __name__ == "__main__":
     tester = unittest.main()

@@ -12,7 +12,9 @@ from enum import IntEnum, EnumMeta
 from typing import Any, Collection, Dict, List, Mapping, Optional, Tuple, Union, TYPE_CHECKING
 import warnings
 import sys
-
+import logging
+import numba as nb
+import operator
 import numpy as np
 
 from .rt_fastarray import FastArray
@@ -2207,7 +2209,7 @@ class Categorical(GroupByOps, FastArray):
         -----
         Unicode is used because the column names are often going to a dataset.
 
-        *performance warning for large amount of uniques - an array will be generated for ALL of them
+        Performance warning for large amount of uniques - an array will be generated for ALL of them
 
         Examples
         --------
@@ -2237,8 +2239,8 @@ class Categorical(GroupByOps, FastArray):
           FastArray([False, False,  True, False, False])])
 
         Multikey:
-        _Note: the double-quotes in the category names are not part of the actual string_.
-
+        
+        >>> #NOTE: The double-quotes in the category names are not part of the actual string.
         >>> c = rt.Categorical([rt.FA(['a','a','b','c','a']), rt.FA([1, 1, 2, 3, 1]) ] )
         >>> c.one_hot_encode()
         (FastArray(["('a', '1')", "('b', '2')", "('c', '3')"], dtype='<U10'),
@@ -2367,6 +2369,68 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------------------------
     def filter(self, filter:Optional[np.ndarray]=None) -> 'Categorical':
         """
+        **To Be Deprecated In Favor Of The Identical set_valid Method. Please Use set_valid Instead**
+
+        Apply a filter to the categorical's values. If values no longer occur in the uniques,
+        the uniques will be reduced, and the index will be recalculated.
+
+        Parameters
+        ----------
+        filter : boolean array, optional
+            If provided, must be the same size as the categorical's underlying array. Will be used
+            to mask non-unique values.
+            If not provided, categorical may still reduce its unique values to the unique occuring values.
+
+        Returns
+        -------
+        c : Categorical
+            New categorical with possibly reduced uniques.
+        """
+
+        warnings.warn('filter will be deprecated / changed in the future. Please use the set_valid method which has the identical behavior.')
+
+        # mapped categoricals will be flipped to array
+        if self.isenum:
+            ikey=self._fa
+            if filter is not None:
+                if filter.dtype.char == '?':
+                    # set the invalids (technically filtering not allowed on an enum)
+                    ikey[~filter] = ikey.inv
+                else:
+                    mask = ones(len(ikey), dtype='?')
+                    mask[filter] = False
+                    ikey[mask] = ikey.inv
+
+            # get the uniques
+            uniques = unique(ikey, sorted=False)
+
+            # now get expected uniques
+            unumbers=FastArray(list(self.categories().keys()))
+            ustrings=FastArray(list(self.categories().values()))
+
+            # find out which values still remain
+            mask, index = ismember(unumbers, uniques)
+            newdict = {k:v for k,v in zip(unumbers[mask], ustrings[mask])}
+
+            if filter is not None:
+                # add filtered into the dict
+                newdict[ikey.inv] = 'Filtered'
+
+            result = Categorical( ikey, newdict, ordered=False, sort_gb=self._sort_gb)
+            # need to unset new grouping's dirty flag
+
+        # all others will be flipped to base index 1
+        else:
+            newgroup = self.grouping.regroup(filter=filter, ikey=self._fa)
+            if self.base_index == 0:
+                warnings.warn(f'Base index was 0, returned categorical will use 1-based indexing.')
+            result = Categorical(newgroup)
+
+        self._copy_extra(result)
+        return result
+
+    def set_valid(self, filter:Optional[np.ndarray]=None) -> 'Categorical':
+        """
         Apply a filter to the categorical's values. If values no longer occur in the uniques,
         the uniques will be reduced, and the index will be recalculated.
 
@@ -2422,6 +2486,7 @@ class Categorical(GroupByOps, FastArray):
         self._copy_extra(result)
         return result
 
+
     # ------------------------------------------------------------------------------
     @classmethod
     def newclassfrominstance(cls, instance, origin):
@@ -2451,8 +2516,8 @@ class Categorical(GroupByOps, FastArray):
         --------
         >>> rt.Cat(['a','b','c']).shift(1)
         Categorical([Filtered, a, b]) Length: 3
-        FastArray([0, 1, 2], dtype=int8) Base Index: 1
-        FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+          FastArray([0, 1, 2], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
         """
         temp = FastArray.shift(self, periods=periods, invalid=0)
         return self.newclassfrominstance(temp, self)
@@ -3463,8 +3528,7 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     def __getitem__(self, fld):
         """
-        Indexing
-        --------
+        Indexing:
         Bracket indexing for Categoricals will *always* hit the FastArray of indices/codes first.
         If indexed by integer, the retrieved index or code will be passed to the Categories object so the
         corresponding Category can be returned. Otherwise, a new Categorical will be returned, using the
@@ -3475,42 +3539,42 @@ class Categorical(GroupByOps, FastArray):
         >>> c = rt.Categorical(['a','a','a','b','c','a','b'])
         >>> c
         Categorical([a, a, a, b, c, a, b]) Length: 7
-            FastArray([1, 1, 1, 2, 3, 1, 2], dtype=int8) Base Index: 1
-            FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+          FastArray([1, 1, 1, 2, 3, 1, 2], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
-        Single Integer
-        ~~~~~~~~~~~~~~
+        Single Integer:
+        
         For convenience, any bytestrings will be returned/displayed as unicode strings.
 
         >>> c[3]
         'b'
 
-        Multiple Integers
-        ~~~~~~~~~~~~~~~~~
+        Multiple Integers:
+        
         >>> c[[1,2,3,4]]
         Categorical([a, a, b, c]) Length: 4
-            FastArray([1, 1, 2, 3], dtype=int8) Base Index: 1
-            FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+          FastArray([1, 1, 2, 3], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
         >>> c[np.arange(4,6)]
         Categorical([c, a]) Length: 2
-            FastArray([3, 1], dtype=int8) Base Index: 1
-            FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+          FastArray([3, 1], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
-        Boolean Array
-        ~~~~~~~~~~~~~
+        Boolean Array:
+        
         >>> mask = FastArray([False,  True,  True,  True,  True,  True, False])
         >>> c[mask]
         Categorical([a, a, b, c, a]) Length: 5
-            FastArray([1, 1, 2, 3, 1], dtype=int8) Base Index: 1
-            FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+          FastArray([1, 1, 2, 3, 1], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
-        Slice
-        ~~~~~
+        Slice:
+        
         >>> c[2:5]
         Categorical([a, b, c]) Length: 3
-            FastArray([1, 2, 3], dtype=int8) Base Index: 1
-            FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+          FastArray([1, 2, 3], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
         """
         if np.isscalar(fld):
@@ -3740,6 +3804,15 @@ class Categorical(GroupByOps, FastArray):
                     other = [ self._categories_wrap.get_multikey_index(item) for item in other ]
                     func = getattr(caller, func_name)
                     return mask_ori([func(item) for item in other])
+            
+            if len(other) == len(self):
+                return FastArray(getattr(CompareCheckHelper,func_name)(self.categories(),self._fa,other))
+
+            if len(other) == 1:
+                return self._categorical_compare_check(func_name,other[0])
+
+            logging.warn("Tried to compare a categorical to an array of a different size. May compare to the categorical's underlying FastArray")
+
 
 
         # COMPARE TO TUPLE--------------------------------------------
@@ -4027,6 +4100,19 @@ class Categorical(GroupByOps, FastArray):
         # grouping and groupbykeys objects will always be built for count
         # TJD bug here
         # if th gb keys are multikey, and sort_gb is true then not sure keychain.isortrows is correct
+        
+        if filter is not None:
+            if isinstance(filter,bool):
+                if filter:
+                    filter = ones(len(self),dtype=bool)
+                else:
+                    filter = zeros(len(self), dtype=bool)
+            if len(filter)!=len(self):
+                raise ValueError("Filter is not the same length as categorical.")
+            if filter.dtype!=bool:
+                filter = filter.astype(bool)
+                logging.warning('Had to convert filter to bool dtype')
+        
         return self.grouping.count(keychain=self.gb_keychain, filter=filter, transform=transform)
 
     # ------------------------------------------------------------
@@ -4986,20 +5072,20 @@ class Categorical(GroupByOps, FastArray):
         cats: List[Union['Categorical', np.ndarray, Tuple[np.ndarray, ...]]]
      ) -> Tuple[bool, List['Categorical']]:
         """
-        Check if all `Categorical`s or arrays have the same categories (same unique values in the same order).
+        Check if every `Categorical` or array has the same categories (same unique values in the same order).
 
         Parameters
         ----------
         cats : list of Categorical or np.ndarray or tuple of np.ndarray
-            `cats` must be a list of `Categorical`s or arrays that can be converted to a `Categorical`.
+            `cats` must be a list of `Categorical` objects or arrays that can be converted to `Categorical` objects.
 
         Returns
         -------
         match : bool
-            True if all the `Categorical`s have the same categories (same unique values in same order),
+            True if every `Categorical` has the same categories (same unique values in same order),
             otherwise False.
         fixed_cats : list of Categorical
-            List of `Categorical`s which may have been fixed up.
+            List of `Categorical` objects which may have been fixed up.
 
         Notes
         -----
@@ -5149,7 +5235,59 @@ def CatZero(values, categories=None,                             # main data
 
     return Categorical(values, categories=categories, ordered=ordered, sort_gb=sort_gb, lex=lex, base_index=base_index, **kwargs)
 
+# Used in _categorical_compare_check. Previously, if you did
+# mycat == myFA it would generally return mycat._fa == myFA
+# when ideally it should mirror mycat.expand_array = myFA without
+# re-expanding. CompareCheckHelper contains parallelized numba
+# functions which replicate this behavior.
+class CompareCheckHelper:
+    @staticmethod
+    @nb.njit(parallel=True)
+    def __eq__(a,x,y):
+        out = np.full(len(x),False)
+        for i in nb.prange(len(x)):
+            out[i] = operator.__eq__(a[x[i]],y[i])
+        return out
 
+    @staticmethod
+    @nb.njit(parallel=True)
+    def __ne__(a,x,y):
+        out = np.full(len(x),False)
+        for i in nb.prange(len(x)):
+            out[i] = operator.__ne__(a[x[i]],y[i])
+        return out
+
+    @staticmethod
+    @nb.njit(parallel=True)
+    def __gt__(a, x, y):
+        out = np.full(len(x), False)
+        for i in nb.prange(len(x)):
+            out[i] = operator.__gt__(a[x[i]], y[i])
+        return out
+
+    @staticmethod
+    @nb.njit(parallel=True)
+    def __ge__(a, x, y):
+        out = np.full(len(x), False)
+        for i in nb.prange(len(x)):
+            out[i] = operator.__ge__(a[x[i]], y[i])
+        return out
+
+    @staticmethod
+    @nb.njit(parallel=True)
+    def __le__(a, x, y):
+        out = np.full(len(x), False)
+        for i in nb.prange(len(x)):
+            out[i] = operator.__le__(a[x[i]], y[i])
+        return out
+
+    @staticmethod
+    @nb.njit(parallel=True)
+    def __lt__(a, x, y):
+        out = np.full(len(x), False)
+        for i in nb.prange(len(x)):
+            out[i] = operator.__lt__(a[x[i]], y[i])
+        return out
 
 # keep this as the last line
 TypeRegister.Categorical = Categorical

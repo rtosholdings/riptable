@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 # from io import StringIO
 import numpy as np
-from riptable import Struct, FastArray, Dataset, Categorical
+from riptable import Struct, FastArray, Dataset, Categorical, arange
 from riptable.rt_enum import TypeRegister
 from riptable.rt_numpy import arange
 from riptable.rt_display import DisplayString
@@ -423,6 +423,12 @@ class Struct_Test(unittest.TestCase):
         self.assertEqual(list(st1.keys()), [])
         st1.col_remove([])
         self.assertEqual(list(st1.keys()), [])
+
+    def test_col_filter(self):
+        x = arange(3)
+        ds = Dataset({'a':x,'b':x,'ca':x,'cb':x,'d':x,'e':x,'ear':x})
+        self.assertEqual(ds.col_filter(['a','b'],'c','e.r').keys(),['a', 'b', 'ca', 'cb', 'ear'])
+
 
     def test_col_pop(self):
         cols = ['aa', 'b', 'c', 'μεαν']

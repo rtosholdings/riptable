@@ -382,97 +382,90 @@ class Grouping:
     Every GroupBy and Categorical object holds a grouping in self.grouping;
     this class informs the groupby algorithms how to group the data.
 
-    Stage 1
-    -------
-    **Initializing from a GroupBy object or unbinned Categorical object:**
-        grouping_dict: dictionary of non-unique key columns (hash will be performed)
-        iKey: array size is same as multikey, the unique key for which this row in multikey belongs
-        iFirstKey: array size is same as unique keys, index into the first row for that unique key
-        iNextKey:array  size is same as multikey, index to the next row that hashed to same value
-        nCountGroup: array size is same as unique keys, for each unique item, how many values
+    **Stage 1**
+    
+    Initializing from a GroupBy object or unbinned Categorical object:
+        
+    * grouping_dict: dictionary of non-unique key columns (hash will be performed)
+    * iKey: array size is same as multikey, the unique key for which this row in multikey belongs
+    * iFirstKey: array size is same as unique keys, index into the first row for that unique key
+    * iNextKey:array  size is same as multikey, index to the next row that hashed to same value
+    * nCountGroup: array size is same as unique keys, for each unique item, how many values
 
-    **Initializing form a pre-binned Categorical object:**
-        grouping_dict: dictionary of pre-binned columns (no hash performed)
-        iKey: array size is same as Categorical's underlying index array - often uses the same array.
-        unique_count : unique number of items in the categorical.
+    Initializing from a pre-binned Categorical object:
+    
+    * grouping_dict: dictionary of pre-binned columns (no hash performed)
+    * iKey: array size is same as Categorical's underlying index array - often uses the same array.
+    * unique_count: unique number of items in the categorical.
 
-    Stage 2
-    -------
-    iGroup :      unique keys are grouped together
-    iFirstGroup:  index into first row for the group
-    nCountGroup:  number of items in the group
+    **Stage 2**
+    
+    * iGroup:      unique keys are grouped together
+    * iFirstGroup:  index into first row for the group
+    * nCountGroup:  number of items in the group
+    
+    **Performing calculations**
+    
+    (See `Grouping._calculate_all`)
+    
+    Parameters:
 
-    Properties:
-    -----------
-    categorical:
-    ikey:
-    firstkey:
-    unique_count:
-    isortrows:
-    gbkeys:
-    iprevkey:
-    inextkey:
-    igroup:
-    ifirstgroup:
-    ncountgroup:
-    packed : boolean, whether or not packed (Stage 2)
-    uniquedict:  lazily evaluated
-        if uniquedict is None: (all the time unless returning from regroup)
-        cannot use ifirstkey to get uniques
-
-    Performing calculations:
-    ------------------------
-    (See Grouping._calculate_all)
-
-    :param origdict: a dictionary of all data to perform the operation on
-    :param funcNum: a unique code for each math operation
-    :func_parm: 0 extra parameter for operations that take more than one argument - will be a tuple if used
+    * `origdict`: a dictionary of all data to perform the operation on
+    * `funcNum`: a unique code for each math operation
+    * `func_param`: 0 extra parameter for operations that take more than one argument - will be a tuple if used
 
     1. Check the keywords for "invalid" (wether or not an invalid bin will be included in the result table)
     2. Check the keywords for a filter and store it.
 
     3. If the function requires packing, call pack_by_group.
-    pack_by_group(filter=None, mustrepack=False)
+       
+       ``pack_by_group(filter=None, mustrepack=False)``
         1. If the grouping object has already been packed and no filter is present, return.
         2. If a filter is present, discard any existing iNextKey and combine the filter with the iKey.
         3. Call the groupbypack routine -> sends info to CPP.
         4. iGroup, iFirstGroup, nCountGroup are returned and stored.
 
     4. Prepare the origdict for calculation.
-    _get_calculate_dict(origdict, funcNum, func=None, func_param=0)
+    
+    ``_get_calculate_dict(origdict, funcNum, func=None, func_param=0)``
         1. Check for "col_idx" in keywords (used for agg function mapping certain operations to certain columns)
         2. The grouping object has a _grouping_dict (keys). If these columns are in origdict, they are removed.
         3. Most operations cannot be performed on strings or string-based categoricals. Remove columns of those types.
         4. Return the cleaned up dictionary, and a list of its columns. (npdict, values)
 
     5. Perform the operation.
-        * rc.EmaAll32 - for cumsum, cumprod, ema_decay, etc.
-        * _groupbycalculateall - for basic functions that don't require packing (combine filter if exists)
-        * _groupbycalculateallpack - for level 2 functions that require packing
+    
+    * rc.EmaAll32 - for cumsum, cumprod, ema_decay, etc.
+    * _groupbycalculateall - for basic functions that don't require packing (combine filter if exists)
+    * _groupbycalculateallpack - for level 2 functions that require packing
 
     accum_tuple is a series of columns after the operation. The data has not been sorted.
+    
     accum_tuple has an invalid item at [0] for each column. If no invalid was requested, trim it off.
+    
     Store the columns in a list.
+    
     If the function was called from accum2, return here.
 
     6. Make a dictionary from the list of calculated columns.
-    _make_accum_dataset
+    
+    ``_make_accum_dataset``
         1. Make a dictionary from the list of calculated columns. Use the names from npdict (see step 4)
         2. If nothing was calculated for the column, the value will be None. Remove it.
         3. If the column was a categorical, the calculate dict only has its indices. Pull the categories from the original dictionary and build a new categorical (shallow copy)
 
     7. Make a dataset from the dictionary of calculated columns.
-    _return_dataset
+    
+    ``_return_dataset``
         1. If the function is in cumsum, cumprod, ema_decay, etc. no groupby keys will appear (set to None)
         2. If the function is count, it will have a single column (Count) - build a dataset from this.
         3. Initialize an empty diciontary (newdict).
         4. Iterate over the column names in the *original* dictionary and copy them to the newdict. accumdict only contains
-            columns that were operated on. If the return_all flag was set to True, these columns still need to be included.
+           columns that were operated on. If the return_all flag was set to True, these columns still need to be included.
         5. If the function is in cumsum, cumprod, ema_decay, etc. no sort will be applied, no labels (gbkeys) will be tagged
         6. Otherwise, apply a sort (default for GroupBy) to each column with isortrows (from the GroupByKeys object). Tag all label columns in final dataset.
 
     8. Return the dataset
-
     '''
 
     # test/debug flags
@@ -1855,7 +1848,7 @@ class Grouping:
     #---------------------------------------------------------------
     def shrink(self, newcats, misc=None, inplace=False, name=None) -> 'Grouping':
         '''
-        Parameters:
+        Parameters
         ----------
         newcats : array_like
             New categories to replace the old - typically a reduced set of strings
@@ -2259,11 +2252,11 @@ class Grouping:
         '''
         Used to prepare data for custom functions
 
-        Preapres 3 arrays
-        -----------------
-        iGroup: array size is same as multikey, unique keys are grouped together
-        iFirstGroup: array size is number of unique keys for that group, indexes into isort
-        nCountGroup: array size is number of unique keys for the group
+        Prepares 3 arrays:
+        
+        * iGroup: array size is same as multikey, unique keys are grouped together
+        * iFirstGroup: array size is number of unique keys for that group, indexes into isort
+        * nCountGroup: array size is number of unique keys for the group
 
         the user should use...
         igroup, ifirstgroup, ncountgroup
@@ -2401,9 +2394,11 @@ class Grouping:
         A reduce function must take an array as its first argument and return back a single scalar value.
         A non-reduce function must take an array as its first argument and return back another array.
         The first argument to apply MUST be the callable user function.
-        The second argument to apply contains one or more arrays to operate one
-             If passed as a list, the userfunc is called for each array in the list
-             If passed as a tuple, the userfunc is called once with all the arrays as parameters
+        
+        The second argument to apply contains one or more arrays to operate on.
+        
+        * If passed as a list, the userfunc is called for each array in the list
+        * If passed as a tuple, the userfunc is called once with all the arrays as parameters
 
         Parameters
         ----------
@@ -2763,16 +2758,18 @@ class Grouping:
         Grouping apply (for Categorical, groupby, accum2)
         Apply function userfunc group-wise and combine the results together.
         The userfunc will be called back per group.  The order of the groups is either:
-            1) Order of first apperance (when coming from a hash)
-            2) Lexigraphical order (when lex=True or a Categorical with ordered=True)
+        
+        * Order of first apperance (when coming from a hash)
+        * Lexigraphical order (when lex=True or a Categorical with ordered=True)
 
         If a group from a categorical has no rows (an empty group), then a dataset
         with one row of invalids (as a place holder) will be used and the userfunc will be called.
 
-        The function passed to apply must take a Dataset as its first argument and return a
-            1) Dataset (with one or more rows returned)
-            2) dictionary of name:array pairs
-            3) single array
+        The function passed to apply must take a Dataset as its first argument and return one of the following:
+        
+        * a Dataset (with one or more rows returned)
+        * a dictionary of name:array pairs
+        * a single array
 
         The set of returned columns must be consistent for each input (group) dataset.
         ``apply`` will then take care of combining the results back
@@ -3298,8 +3295,9 @@ class Grouping:
         countcol = ncountkey[base:]
         if transform:
             if not showfilter and self.base_index == 1:
-                ikey = ikey - 1
-            countcol = countcol[ikey]
+                countcol = countcol[self.ikey-1]
+            else:
+                countcol = countcol[ikey]
 
         accumdict = {'Count':countcol}
         #return self._make_accum_dataset(origdict, accumdict, accumdict['Count'], GB_FUNC_COUNT)
