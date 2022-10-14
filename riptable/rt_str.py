@@ -666,20 +666,41 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     def contains(self, str2):
-        '''
-        Return a boolean array where the value is set True if str2 is a substring of the element
-        or False otherwise. Note this does not support regex like in Pandas.
-        Please use regex_match for that.
-
+        """
+        Return a boolean array that's True for each string element that contains the
+        given substring, otherwise False.
+        
+        The entire substring must match.
+        
         Parameters
         ----------
-        str2 - a string with one or more characters to search for
+        str2 : str
+            A string with one or more characters to search for. To search using regular
+            expressions, use :meth:`FAString.regex_match`.
+            
+        Returns
+        -------
+        `FastArray`
+            A boolean array where the value is True if the string contains the 
+            entire substring specified in `str2`, otherwise False.
 
+        See Also
+        --------
+        FAString.startswith
+        FAString.endswith
+        FAString.regex_match
+        
         Examples
         --------
         >>> FAString(['this  ','that ','test']).contains('at')
         FastArray([False, True, False])
-        '''
+        
+        This can be called on a `FastArray` using ``.str.contains()``.
+        
+        >>> a = rt.FastArray(['this  ','that ','test'])
+        >>> a.str.contains('at')
+        FastArray([False,  True, False])
+        """
         if not isinstance(str2, FAString):
             if str2 == '':
                 return ones(self.n_elements, dtype=bool)
@@ -782,19 +803,41 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     def startswith(self, str2):
-        '''
-        return a boolean array where the value is set True if the string starts with the entire substring specified in str2,
-        or False if the substring does not start with the entire substring
+        """
+        Return a boolean array that's True where the given substring matches the start 
+        of each string element, otherwise False.
+        
+        The entire substring must match.
 
         Parameters
         ----------
-        str2 - a string with one or more characters to search for
+        str2 : str
+            A string with one or more characters to search for. To search using regular
+            expressions, use :meth:`FAString.regex_match`.
+        
+        Returns
+        -------
+        `FastArray`
+            A boolean array where the value is True if the string starts with the 
+            entire substring specified in `str2`, otherwise False.
 
+        See Also
+        --------
+        FAString.endswith
+        FAString.contains   
+        FAString.regex_match
+        
         Examples
         --------
         >>> FAString(['this  ','that ','test']).startswith('thi')
         FastArray([True, False, False])
-        '''
+        
+        This can be called on a `FastArray` using ``.str.startswith()``.
+        
+        >>> a = rt.FastArray(['this  ','that ','test'])
+        >>> a.str.startswith('thi')
+        FastArray([True, False, False])
+        """
         if not isinstance(str2, FAString):
             if str2 == '':
                 return ones(self.n_elements, dtype=bool)
@@ -808,19 +851,41 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     def endswith(self, str2):
-        '''
-        return a boolean array where the value is set True if the string ends with the entire substring specified in str2,
-        or False if the substring does not end with the entire substring
+        """
+        Return a boolean array that's True where the given substring matches the end 
+        of each string element, otherwise False.
+        
+        The entire substring must match.
 
         Parameters
         ----------
-        str2 - a string with one or more characters to search for
+        str2 : str
+            A string with one or more characters to search for. To search using regular
+            expressions, use :meth:`FAString.regex_match`.
+        
+        Returns
+        -------
+        `FastArray`
+            A boolean array where the value is True if the string ends with the entire
+            substring specified in `str2`, otherwise False.
 
+        See Also
+        --------
+        FAString.startswith
+        FAString.contains   
+        FAString.regex_match
+        
         Examples
         --------
         >>> FAString(['abab','ababa','abababb']).endswith('ab')
         FastArray([True, False, False])
-        '''
+        
+        This can be called on a `FastArray` using ``.str.endswith()``.
+        
+        >>> a = rt.FastArray(['abab','ababa','abababb'])
+        >>> a.str.endswith('ab')
+        FastArray([True, False, False])
+        """
         if not isinstance(str2, FAString):
             if str2 == '':
                 return ones(self.n_elements, dtype=bool)
@@ -834,20 +899,52 @@ class FAString(FastArray):
 
     @_handle_apply_unique
     def regex_match(self, regex: Union["str", bytes], apply_unique: bool = True) -> FastArray:
-        '''
-        Return a Boolean array where the value is set True if the string contains str2.
-        str2 may be a normal string or a regular expression.
-        Applies re.search on each element with str2 as the pattern.
+        """
+        Return a boolean array that's True where the given substring or regular 
+        expression pattern is contained in each string element, otherwise False.
+        
+        The entire substring or pattern must match.
+        
+        Applies :py:func:`re.search` on each element with `regex` as the pattern.
 
         Parameters
         ----------
-        regex - Perform element-wise regex matching to this regex
+        regex : str
+            String or regular expression pattern to search for.
+        apply_unique: bool, default True
+            When True, the regex is applied to the unique values and then expanded 
+            using the reverse index (see :meth:`riptable.unique`). This is optimal 
+            for repetitive data and benign for unique or highly non-repetitive data.
 
+        Returns
+        -------
+        `FastArray`
+            A boolean array where the value is True if the string element contains the 
+            entire substring or regex pattern specified in `regex`, otherwise False.
+
+        See Also
+        --------
+        FAString.regex_replace : Replace each instance of a specified substring or 
+            pattern.
+        FAString.extract : 
+            Extract one or more pattern groups into a `Dataset` or `FastArray`.
+        FAString.contains
+        FAString.startswith
+        FAString.endswith        
+        
         Examples
         --------
+        Find any instance of 'ab' that appears at the end of a string:
+        
         >>> FAString(['abab','ababa','abababb']).regex_match('ab$')
         FastArray([True, False, False])
-        '''
+        
+        This can be called on a `FastArray` using ``.str.regex_match()``.
+        
+        >>> a = rt.FastArray(['abab','ababa','abababb'])
+        >>> a.str.regex_match('ab$')
+        FastArray([True, False, False])
+        """
         if self._intype == 'S':
             regex = _maybe_encode(regex)
         regex = re.compile(regex)
@@ -859,18 +956,63 @@ class FAString(FastArray):
     @_handle_apply_unique
     def regex_replace(self, regex: Union["str", bytes], repl: Union["str", bytes],
                       apply_unique: bool = True) -> FastArray:
-        '''
-        Replace each instance of `regex` with `repl`. Behaviour is identical to re.sub.
-        In particular, replacments happend once per whole instance such that, e.g.,
-        replacing 'aa' with 'b in 'aaa' yields 'ba'.
-
+        """
+        Replace each instance of a specified substring or pattern.
+        
+        The entire substring or pattern must match. If the substring or pattern isn't 
+        found, the original string is returned unchanged.
+        
+        The behavior is identical to that of :py:func:`re.sub`. In particular, the 
+        returned string is obtained by replacing the leftmost non-overlapping 
+        occurrences of the substring or pattern with the replacement string.
+        
+        Parameters
+        ----------
+        regex : str
+            String or regular expression pattern to search for.
+        repl : str
+            The replacement string.
+        apply_unique : bool, default True
+            When True, the regex is applied to the unique values and then expanded 
+            using the reverse index (see :meth:`riptable.unique`). This is optimal 
+            for repetitive data and benign for unique or highly non-repetitive data.
+        
+        Returns
+        -------
+        `FastArray`
+            An array with all occurrences of the substring or pattern replaced.
+        
+        See Also
+        --------
+        FAString.regex_match : 
+            Return a boolean array that indicates whether given substring or regular 
+            expression pattern is contained in each string element.
+        FAString.extract : 
+            Extract one or more pattern groups into a `Dataset` or `FastArray`.
+        FAString.contains
+        FAString.startswith
+        FAString.endswith 
+        
         Examples
         --------
-        >>> FAString(['abab','ababa','abababb']).regex_replace('ab', 'cd')
-        FastArray(['cdcd', 'cdcda', 'cdcdcdb'], dtype='<U7')
+        Replace instances of 'aa' with 'b'. All non-overlapping occurrences are 
+        replaced, starting from the left:
+        
         >>> FAString(['aaa', 'aaaa', 'aaaaa']).regex_replace('aa', 'b')
         FastArray(['ba', 'bb', 'bba'], dtype='<U3>')
-        '''
+        
+        Replace any instance of 'ab' that appears at the end of a string with 'b'.
+        
+        >>> FAString(['abab','ababa','abababb']).regex_replace('ab$', 'b')
+        FastArray(['abb', 'ababa', 'abababb'], dtype='<U7')
+        
+        This can be called on a FastArray using ``.str.regex_replace()``. The
+        returned `FastArray` elements are byte strings.
+        
+        >>> a = rt.FastArray(['abab','ababa','abababb'])
+        >>> a.str.regex_replace('ab$', 'b')
+        FastArray([b'abb', b'ababa', b'abababb'], dtype='|S7')
+        """
         if self._intype == 'S':
             regex, repl = map(_maybe_encode, (regex, repl))
         regex = re.compile(regex)
@@ -881,51 +1023,89 @@ class FAString(FastArray):
     def extract(self, regex: str, expand: Optional[bool] = None,
                 fillna: str = '', names=None, apply_unique: bool = True
                 ) -> Union[FastArray, "Dataset"]:
-        '''
-        Extract one or more pattern groups into a Dataset or FastArray.
-        For one capture group the default is to return a FastArray
-        but this can be overridden by passing expand=True or by providing names.
-        Column names can be specified within the regex using (?P<name>) in the search group(s)
-        or by passing the names argument which may be more convenient.
-
+        """
+        Extract one or more pattern groups from each element of an array into a 
+        `FastArray` or `Dataset`.
+        
+        This is useful when you have pieces of data in a string that you want to split 
+        into separate elements.
+        
+        For one capture group, the default is to return a `FastArray`, but this can be 
+        overridden by setting `expand` to True or by providing a name of a `Dataset` 
+        column to populate. For more than one capture group, a `Dataset` is returned.
+        
+        Column names for the resulting `Dataset` can be specified within the regex 
+        using ``(?P<name>)`` in the capture group(s) or by passing the `names` argument, 
+        which may be more convenient.
+         
         Parameters
         ----------
-        regex: str
-            Contains the patterns to search for
-        expand: bool
-            set to True to return a Dataset for a single capture group.
-        fillna: str
-            Used for rows where no regex does not match
-        names: List[str]
-            Optional list of strings provides keys for resultant dataset
-        apply_unique: bool
-            When True we apply the regex to the unique values and then expand using the reverse index.
-            This is optimal for repetitive data and benign for unique or close highly non-repetitive data
+        regex : str
+            The pattern(s) to search for. Define multiple capture groups using 
+            parentheses.
+        expand : bool, default False
+            Set to True to return a `Dataset` for a single capture group. If False, a 
+            `FastArray` is returned.
+        fillna : str, default '' (empty string)
+            For elements where there's no match, this is the fill value for the 
+            resulting `FastArray` or `Dataset` column.
+        names : list of str, default None
+            For more than one capture group, a `Dataset` is returned. Optionally, you
+            can provide column names (keys) for the extracted data.
+        apply_unique : bool
+            When True, the regex is applied to the unique values and then expanded 
+            using the reverse index (see :meth:`riptable.unique`). This is optimal 
+            for repetitive data and benign for unique or highly non-repetitive data.
+            
+        Returns
+        -------
+        `FastArray` or `Dataset`
+            For one capture group, a `FastArray` (or optionally a `Dataset`) is 
+            returned. For more than one capture group, a `Dataset` is returned.
+            
+        See Also
+        --------
+        FAString.regex_match : 
+            Return a boolean array that indicates whether given string or regular 
+            expression pattern is contained in each string element.
+        FAString.regex_replace : Replace each instance of a specified string or pattern.
 
         Examples
         --------
+        These examples use a `FastArray` containing OSI symbols. 
+        
         >>> osi = rt.FastArray(['SPX UO 12/15/23 C5700', 'SPXW UO 09/17/21 C3650'])
+
+        Extract one substring:
+        
         >>> osi.str.extract('\w+')
         FastArray([b'SPX', b'SPXW'], dtype='|S4')
+        
+        Provide a name for the resulting `Dataset` column:
 
         >>> osi.str.extract('(?P<root>\w+)')
         #   root
         -   ----
         0   SPX
         1   SPXW
+        
+        Define two capture groups and provide names for the resulting `Dataset` columns:
 
-        >>> osi.str.extract('(\w+).* (\d{2}/\d{2}/\d{2})', names=['root', 'expiration'])
+        >>> osi.str.extract('(\w+).* (\d{2}/\d{2}/\d{2})', names = ['root', 'expiration'])
         #   root   expiration
         -   ----   ----------
         0   SPX    12/15/23
         1   SPXW   09/17/21
+        
+        Extract one substring into a `Dataset` column using ``expand = True``. (Note 
+        that for the element with an unmatched pattern, an empty string is returned).
 
-        >>> osi.str.extract('\w+W', expand=True)
+        >>> osi.str.extract('\w+W', expand = True)
         #   group_0
         -   -------
         0
         1   SPXW
-        '''
+        """
         kwargs = dict(expand=expand, fillna=fillna, names=names, apply_unique=apply_unique)
 
         if self._intype == 'S':
@@ -939,7 +1119,7 @@ class FAString(FastArray):
 
         # expand defaults to False if we have one capture group and do not specify names
         if expand is None:
-            expand = ngroups > 1 or names is not None
+            expand = ngroups > 1 or names is not None or compiled.groupindex
         elif not expand and ngroups > 1:
             raise ValueError("expand cannot be False with multiple capture groups")
 

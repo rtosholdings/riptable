@@ -3,7 +3,7 @@ from setuptools import setup
 package_name='riptable'
 
 install_requires = [
-    'riptide_cpp >=1.8,<1.9',
+    'riptide_cpp >=1.8,<2',
     'pandas >=0.24,<2.0',
     'ansi2html >=1.5.2',
     'numpy >=1.21',

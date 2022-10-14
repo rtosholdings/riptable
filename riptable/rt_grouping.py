@@ -3286,6 +3286,8 @@ class Grouping:
             # create a temp filter where nonfilter is 0
             ikey = where(filter, self.ikey, 0)
             ncountkey = rc.BinCount(ikey, self.unique_count+1)
+        elif self._packedwithfilter:
+            ncountkey = rc.BinCount(self.ikey, self.unique_count+1)
         else:
             # ncountgroup will call BinCount if it needs to
             ncountkey = self.ncountgroup

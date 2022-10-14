@@ -618,7 +618,7 @@ class TimeZone:
             _timezone_offset = 0
 
         else:
-            raise ValueError(f"{to_tz} is not a valid entry for from_tz keyword. Valid options: {cls.valid_timezones}.")
+            raise ValueError(f"{to_tz} is not a valid entry for to_tz keyword. Valid options: {cls.valid_timezones}.")
 
         return _dst_reverse, _timezone_offset
 

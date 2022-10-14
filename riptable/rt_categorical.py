@@ -1,3 +1,4 @@
+from __future__ import annotations
 __all__ = [
     # Classes/types
     'Categorical',
@@ -9,13 +10,14 @@ __all__ = [
 ]
 
 from enum import IntEnum, EnumMeta
+import logging
+import operator
+import sys
 from typing import Any, Collection, Dict, List, Mapping, Optional, Tuple, Union, TYPE_CHECKING
 import warnings
-import sys
-import logging
-import numba as nb
-import operator
+
 import numpy as np
+import numba as nb
 
 from .rt_fastarray import FastArray
 from .rt_grouping import Grouping, GroupingEnum, merge_cats
@@ -31,7 +33,7 @@ from .rt_numpy import (
 from .rt_hstack import hstack_any
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
 from .Utils.rt_metadata import MetaData
-from .Utils.common import cached_property
+from .Utils.common import cached_weakref_property
 
 # groupby imports
 from .rt_groupbyops import GroupByOps
@@ -355,12 +357,12 @@ class Categories:
 
     # ------------------------------------------------------------------------------
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     # ------------------------------------------------------------------------------
     @property
-    def ncols(self):
+    def ncols(self) -> int:
         """
         Returns the number of key columns in a multikey categorical or 1 if a single key's categories
         are being held in a dictionary.
@@ -369,14 +371,14 @@ class Categories:
 
     # ------------------------------------------------------------------------------
     @property
-    def nrows(self):
+    def nrows(self) -> int:
         """
         Returns the number of unique categories in a multikey categorical.
         """
         return len(self.uniquelist[0])
 
     # ------------------------------------------------------------------------------
-    def __len__(self):
+    def __len__(self) -> int:
         """
         TODO: consider changing length of enum/dict mode categories to be the length of the dictionary.
         using max int so the calling Categorical can properly recast the integer array.
@@ -422,14 +424,14 @@ class Categories:
         return c
 
     # ------------------------------------------------------------------------------
-    def copy(self, deep=True):
+    def copy(self, deep=True) -> Categorical:
         """
         Wrapper for internal _copy.
         """
         return self._copy(deep=deep)
 
     # ------------------------------------------------------------------------------
-    def get_categories(self):
+    def get_categories(self) -> FastArray:
         """
         TODO: decide what to return for int enum categories. for now returning list of category strings
         """
@@ -1435,7 +1437,7 @@ class Categorical(GroupByOps, FastArray):
         # origin, possible fast track
         from_matlab: bool = False,
         _from_categorical = None
-    ):
+    ) -> Categorical:
 
         invalid_category=invalid
         # possibly set categories with defaults
@@ -1795,11 +1797,11 @@ class Categorical(GroupByOps, FastArray):
         pass
 
     # ------------------------------------------------------------
-    def argsort(self):
+    def argsort(self) -> FastArray:
         return argsort(self._fa)
 
     # ------------------------------------------------------------
-    def _nan_idx(self):
+    def _nan_idx(self) -> int:
         """
         Internal - for isnan, isnotnan
         """
@@ -1823,49 +1825,93 @@ class Categorical(GroupByOps, FastArray):
         return func(idx)
 
     # ------------------------------------------------------------
-    def isnan(self, *args, **kwargs):
+    def isnan(self, *args, **kwargs) -> FastArray:
         return self._nanfunc(self._fa.__eq__, False)
 
     # ------------------------------------------------------------
-    def isnotnan(self, *args, **kwargs):
+    def isnotnan(self, *args, **kwargs) -> FastArray:
         return self._nanfunc(self._fa.__ne__, True)
 
     # ------------------------------------------------------------
-    def isna(self, *args, **kwargs):
+    def isna(self, *args, **kwargs) -> FastArray:
         return self.isnan()
 
     # ------------------------------------------------------------
-    def notna(self, *args, **kwargs):
+    def notna(self, *args, **kwargs) -> FastArray:
         return self.isnotnan()
 
     # ------------------------------------------------------------
-    def fill_forward(self, *args, limit:int=0, fill_val=None,inplace:bool=False):
+    def fill_forward(self, *args, limit:int=0, fill_val=None,inplace:bool=False) -> Dataset:
         """
-        Forward fill the values of the categorical, by group.
-        By default this is done inplace.
-
+        Replace NaN and invalid array values by propagating the last encountered valid 
+        group value forward.
+        
+        Optionally, you can modify the original array if it's not locked.
+        
         Parameters
         ----------
-        list of one or more arrays the same len as the categorical to fill
+        *args : array or list of arrays
+            The array or arrays that contain NaN or invalid values you want to replace.
+        limit : int, default 0 (disabled)
+            The maximium number of consecutive NaN or invalid values to fill. If there 
+            is a gap with more than this number of consecutive NaN or invalid values, 
+            the gap will be only partially filled. If no `limit` is specified, all 
+            consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default None
+            The value to use where there is no valid group value to propagate forward. 
+            If `fill_val` is not specified, NaN and invalid values aren't replaced where 
+            there is no valid group value to propagate forward. 
+        inplace: bool, default False
+            If False, return a copy of the array. If True, modify original data. This 
+            will modify any other views on this object. This fails if the array is 
+            locked.
 
-        Other Parameters
-        ----------------
-        limit : integer, optional
-            limit of how many values to fill
-        inplace: defaults to False
-
-        Examples
-        --------
-        >>> x = rt.FA([1, 4, 9, 16, np.nan, np.nan])
-        >>> y = rt.Categorical(['A', 'B', 'A', 'B', 'A', 'B'])
-        >>> y.fill_forward(x)[0]
-        FastArray([ 1.,  4.,  9., 16.,  9., 16.])
-
+        Returns
+        -------
+        `Categorical`
+            The `Categorical` will be the same size and have the same dtypes as the 
+            original input.
+                
         See Also
         --------
-        rt.fill_forward
-        rt.Cat.fill_backward
-        rt.GroupBy.fill_forward
+        Categorical.fill_backward : 
+            Replace NaN and invalid array values with the next valid group value.
+        GroupBy.fill_forward : 
+            Replace NaN and invalid array values with the last valid group value.
+        riptable.fill_forward : Replace NaN and invalid values with the last valid 
+            value.
+        Dataset.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+        FastArray.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+           
+        Examples
+        --------
+        >>> cat = rt.Categorical(['A', 'B', 'A', 'B', 'A', 'B'])
+        >>> x = rt.FastArray([0, 1, 2, 3, rt.nan, rt.nan])
+        >>> cat.fill_forward(x)
+        *gb_key_0   col_0
+        ---------   -----
+        A            0.00
+        B            1.00
+        A            2.00
+        B            3.00
+        A            2.00
+        B            3.00
+
+        Use a `fill_val` to replace values where there's no valid group value to 
+        propagate forward:
+    
+        >>> x = rt.FastArray([rt.nan, rt.nan, 2, 3, 4, 5])
+        >>> cat.fill_forward(x, fill_val = 0)[0]
+        FastArray([0., 0., 2., 3., 4., 5.])
+        
+        Replace only the first NaN or invalid value in any consecutive series of NaN or
+        invalid values in a group:
+
+        >>> x = rt.FastArray([0, 1, rt.nan, rt.nan, rt.nan, rt.nan])
+        >>> cat.fill_forward(x, limit = 1)[0]
+        FastArray([ 0.,  1.,  0.,  1., nan, nan])
         """
         result = self.apply_nonreduce(fill_forward, *args, fill_val=fill_val, limit=limit, inplace=True)
         if inplace is True:
@@ -1877,33 +1923,77 @@ class Categorical(GroupByOps, FastArray):
 
 
     # ------------------------------------------------------------
-    def fill_backward(self, *args, limit:int=0, fill_val=None, inplace:bool=False):
+    def fill_backward(self, *args, limit:int=0, fill_val=None, inplace:bool=False) -> Dataset:
         """
-        Backward fill the values of the categorical, by group.
-        By default this is done inplace.
-
+        Replace NaN and invalid array values by propagating the next encountered valid 
+        group value backward.
+        
+        Optionally, you can modify the original array if it's not locked.
+        
         Parameters
         ----------
-        list of one or more arrays the same len as the categorical to fill
+        *args : array or list of arrays
+            The array or arrays that contain NaN or invalid values you want to replace.
+        limit : int, default 0 (disabled)
+            The maximium number of consecutive NaN or invalid values to fill. If there 
+            is a gap with more than this number of consecutive NaN or invalid values, 
+            the gap will be only partially filled. If no `limit` is specified, all 
+            consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default None
+            The value to use where there is no valid group value to propagate backward. 
+            If `fill_val` is not specified, NaN and invalid values aren't replaced where 
+            there is no valid group value to propagate backward. 
+        inplace: bool, default False
+            If False, return a copy of the array. If True, modify original data. This 
+            will modify any other views on this object. This fails if the array is 
+            locked.
 
-        Other Parameters
-        ----------------
-        limit : integer, optional
-            limit of how many values to fill
-        inplace: defaults to False
-
-        Examples
-        --------
-        >>> x = rt.FA([1, 4, np.nan, np.nan, 9, 16])
-        >>> y = rt.Categorical(['A', 'B', 'A', 'B', 'A', 'B'])
-        >>> y.fill_backward(x)[0]
-        FastArray([ 1.,  4.,  9., 16.,  9., 16.])
-
+        Returns
+        -------
+        `Categorical`
+            The `Categorical` will be the same size and have the same dtypes as the 
+            original input.
+                
         See Also
         --------
-        rt.fill_forward
-        rt.Cat.fill_forward
-        rt.GroupBy.fill_backward
+        Categorical.fill_forward : 
+            Replace NaN and invalid array values with the last valid group value.
+        GroupBy.fill_backward : 
+            Replace NaN and invalid array values with the next valid group value.
+        riptable.fill_backward : Replace NaN and invalid values with the next valid 
+            value.
+        Dataset.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+        FastArray.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+           
+        Examples
+        --------
+        >>> cat = rt.Categorical(['A', 'B', 'A', 'B', 'A', 'B'])
+        >>> x = rt.FA([rt.nan, rt.nan, 2, 3, 4, 5])
+        >>> cat.fill_backward(x)
+        *gb_key_0   col_0
+        ---------   -----
+        A            2.00
+        B            3.00
+        A            2.00
+        B            3.00
+        A            4.00
+        B            5.00
+        
+        Use a `fill_val` to replace values where there's no valid group value to 
+        propagate backward:
+    
+        >>> x = rt.FastArray([0, 1, 2, 3, rt.nan, rt.nan])
+        >>> cat.fill_backward(x, fill_val = 0)[0]
+        FastArray([0., 1., 2., 3., 0., 0.])        
+        
+        Replace only the first NaN or invalid value in any consecutive series of NaN or
+        invalid values in a group:
+
+        >>> x = rt.FastArray([rt.nan, rt.nan, rt.nan, rt.nan, 4, 5])
+        >>> cat.fill_backward(x, limit = 1)[0]
+        FastArray([nan, nan,  4.,  5.,  4.,  5.])
         """
         result = self.apply_nonreduce(fill_backward, *args, fill_val=fill_val, limit=limit, inplace=True)
         if inplace is True:
@@ -1914,7 +2004,7 @@ class Categorical(GroupByOps, FastArray):
         return result
 
     # ------------------------------------------------------------
-    def isfiltered(self):
+    def isfiltered(self) -> FastArray:
         """
         True where bin == 0.
         Only applies to categoricals with base index 1, otherwise returns all False.
@@ -1931,7 +2021,7 @@ class Categorical(GroupByOps, FastArray):
             return zeros(len(self),dtype=bool)
 
     # ------------------------------------------------------------
-    def set_name(self, name):
+    def set_name(self, name) -> Categorical:
         """
         If the grouping dict contains a single item, rename it.
 
@@ -1948,14 +2038,14 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @property
-    def _fa(self):
+    def _fa(self) -> FastArray:
         result = self.view(FastArray)
         _copy_name(self, result)
         return result
 
     # ------------------------------------------------------------
     @property
-    def base_index(self):
+    def base_index(self) -> IntEnum:
         return self.grouping.base_index
 
     # -----------------------------------------------------------------------------------
@@ -1989,7 +2079,7 @@ class Categorical(GroupByOps, FastArray):
         return []
 
     # -----------------------------------------------------------------------------------
-    def categories(self, showfilter:bool=True):
+    def categories(self, showfilter:bool=True) -> FastArray | dict:
         """
         If the categories are stored in a single array or single-key dictionary, an array will be returned.
         If the categories are stored in a multikey dictionary, a dictionary will be returned.
@@ -2051,7 +2141,7 @@ class Categorical(GroupByOps, FastArray):
 
     # -----------------------------------------------------------------------------------
     @property
-    def category_array(self):
+    def category_array(self) -> FastArray:
         """
         When possible, returns the array of stored unique categories, otherwise raises an error.
 
@@ -2060,11 +2150,11 @@ class Categorical(GroupByOps, FastArray):
         return self._categories_wrap._get_array()
 
     @property
-    def category_codes(self):
+    def category_codes(self) -> FastArray:
         return self._categories_wrap._get_codes()
 
     @property
-    def category_mapping(self):
+    def category_mapping(self) -> dict:
         return self._categories_wrap._get_mapping()
 
     @property
@@ -2136,11 +2226,11 @@ class Categorical(GroupByOps, FastArray):
         self._categories_wrap._filtered_name = name
 
     # -----------------------------------------------------------------------------------
-    def copy_invalid(self):
+    def copy_invalid(self) -> Categorical:
         return self.fill_invalid(inplace=False)
 
     # -----------------------------------------------------------------------------------
-    def fill_invalid(self, shape=None, dtype=None, order=None, inplace=True):
+    def fill_invalid(self, shape=None, dtype=None, order=None, inplace=True) -> Categorical:
         """
         Returns a Categorical full of invalids, with reference to same categories.
         Must be base index 1.
@@ -2180,6 +2270,39 @@ class Categorical(GroupByOps, FastArray):
     @property
     def sort_gb(self) -> bool:
         return self._sort_gb
+
+    @staticmethod
+    def full(size: int, value) -> 'Categorical':
+        """
+        Create a `Categorical` of a given length, filled with a single value.
+
+        Parameters
+        ----------
+        size : int
+            The size/length of the `Categorical` to create.
+        value
+            The value to be repeated.
+
+        Returns
+        -------
+        Categorical
+
+        Examples
+        --------
+        Create a 1D `Categorical` array of length 100_000, filled with the string "example".
+
+        >>> rt.Categorical.full(100_000, 'example')
+        Categorical([example, example, example, example, example, ..., example, example, example, example, example]) Length: 100000
+          FastArray([1, 1, 1, 1, 1, ..., 1, 1, 1, 1, 1], dtype=int8) Base Index: 1
+          FastArray([b'example'], dtype='|S7') Unique count: 1
+        """
+        # TODO: Make this work for the case when 'value' is a tuple and we want to create a single-element multi-key Categorical.
+        # TODO: The Categorical can be created by first creating a Grouping object, then creating the Categorical from that;
+        #       this allows the _trusted flag to be specified, so we avoid binning (hashing or sorting) the 'ones' array.
+        #       That version is ~10% faster; but before switching to it, let's validate the returned Categorical behaves
+        #       like we expect it to (like the simpler version below does).
+        #           Categorical(Grouping(ones(size, dtype=np.int8), categories=[value], _trusted=True))
+        return Categorical(ones(size, dtype=np.int8), [value])
 
     # -----------------------------------------------------------------------------------
     def one_hot_encode(self, dtype:Optional[np.dtype]=None, categories=None, return_labels:bool=True) -> Tuple[FastArray, List[FastArray]]:
@@ -2239,7 +2362,7 @@ class Categorical(GroupByOps, FastArray):
           FastArray([False, False,  True, False, False])])
 
         Multikey:
-        
+
         >>> #NOTE: The double-quotes in the category names are not part of the actual string.
         >>> c = rt.Categorical([rt.FA(['a','a','b','c','a']), rt.FA([1, 1, 2, 3, 1]) ] )
         >>> c.one_hot_encode()
@@ -3543,14 +3666,14 @@ class Categorical(GroupByOps, FastArray):
           FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
         Single Integer:
-        
+
         For convenience, any bytestrings will be returned/displayed as unicode strings.
 
         >>> c[3]
         'b'
 
         Multiple Integers:
-        
+
         >>> c[[1,2,3,4]]
         Categorical([a, a, b, c]) Length: 4
           FastArray([1, 1, 2, 3], dtype=int8) Base Index: 1
@@ -3562,7 +3685,7 @@ class Categorical(GroupByOps, FastArray):
           FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
         Boolean Array:
-        
+
         >>> mask = FastArray([False,  True,  True,  True,  True,  True, False])
         >>> c[mask]
         Categorical([a, a, b, c, a]) Length: 5
@@ -3570,7 +3693,7 @@ class Categorical(GroupByOps, FastArray):
           FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
         Slice:
-        
+
         >>> c[2:5]
         Categorical([a, b, c]) Length: 3
           FastArray([1, 2, 3], dtype=int8) Base Index: 1
@@ -3717,7 +3840,7 @@ class Categorical(GroupByOps, FastArray):
         return self._categories_wrap.isenum
 
     # --------------------------------------------------------
-    def _categorical_compare_check(self, func_name, other):
+    def _categorical_compare_check(self, func_name, other) -> FastArray:
         """
         Converts a category to a valid index for faster logical comparison operations on the underlying
         index fastarray.
@@ -3804,7 +3927,7 @@ class Categorical(GroupByOps, FastArray):
                     other = [ self._categories_wrap.get_multikey_index(item) for item in other ]
                     func = getattr(caller, func_name)
                     return mask_ori([func(item) for item in other])
-            
+
             if len(other) == len(self):
                 return FastArray(getattr(CompareCheckHelper,func_name)(self.categories(),self._fa,other))
 
@@ -3968,8 +4091,11 @@ class Categorical(GroupByOps, FastArray):
         return self
 
     # ------------------------------------------------------------
-    def _calculate_all(self, funcNum, *args, func_param=0, **kwargs):
+    def _calculate_all(self, funcNum, *args, func_param=0, **kwargs) -> Dataset:
         origdict, user_args, tups = self._prepare_gb_data('Categorical', funcNum, *args, **kwargs)
+
+        if funcNum != GB_FUNCTIONS.GB_ROLLING_COUNT and len(args) != 0 and isinstance(args[0], FastArray) and len(self) != len(args[0]):
+            raise ValueError('Tried to perform a groupby operation where the length of the input was not equal to the length of the categorical.')
 
         # lock after groupby operation
         self._locked = True
@@ -3992,7 +4118,7 @@ class Categorical(GroupByOps, FastArray):
         return result_ds
 
     # ------------------------------------------------------------
-    def apply(self, userfunc=None, *args, dataset=None, **kwargs):
+    def apply(self, userfunc=None, *args, dataset=None, **kwargs) -> Dataset | FastArray:
         """
         See Grouping.apply for examples.
         Categorical needs remove unused bins from its uniques before an apply.
@@ -4005,7 +4131,7 @@ class Categorical(GroupByOps, FastArray):
         return result
 
     # ------------------------------------------------------------
-    def apply_nonreduce(self, userfunc=None, *args, dataset=None, **kwargs):
+    def apply_nonreduce(self, userfunc=None, *args, dataset=None, **kwargs) -> Dataset | FastArray:
         """
         See GroupByOps.apply_nonreduce for examples.
         Categorical needs remove unused bins from its uniques before an apply.
@@ -4100,7 +4226,7 @@ class Categorical(GroupByOps, FastArray):
         # grouping and groupbykeys objects will always be built for count
         # TJD bug here
         # if th gb keys are multikey, and sort_gb is true then not sure keychain.isortrows is correct
-        
+
         if filter is not None:
             if isinstance(filter,bool):
                 if filter:
@@ -4112,7 +4238,7 @@ class Categorical(GroupByOps, FastArray):
             if filter.dtype!=bool:
                 filter = filter.astype(bool)
                 logging.warning('Had to convert filter to bool dtype')
-        
+
         return self.grouping.count(keychain=self.gb_keychain, filter=filter, transform=transform)
 
     # ------------------------------------------------------------
@@ -4192,7 +4318,7 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @property
-    def as_string_array(self):
+    def as_string_array(self) -> FastArray:
         """
         Returns
         -------
@@ -4212,7 +4338,7 @@ class Categorical(GroupByOps, FastArray):
             raise ValueError(f"Could not re-expand string array with Categorical in {CategoryMode(self.category_mode).name}.")
 
     # ------------------------------------------------------------
-    def as_singlekey(self, ordered=False, sep='_'):
+    def as_singlekey(self, ordered=False, sep='_') -> Categorical:
         '''
         Normalizes categoricals by returning a base 1 single key categorical.
 
@@ -4738,7 +4864,7 @@ class Categorical(GroupByOps, FastArray):
         return self.to_arrow(type=type)
 
     # -----------------------------------------------------
-    @cached_property
+    @cached_weakref_property
     def str(self):
         return CatString(self)
 
@@ -5170,6 +5296,133 @@ class Categorical(GroupByOps, FastArray):
             res += [combined[start_idx:end_idx]]
             start_idx = end_idx
         return res
+
+    # ------------------------------------------------------------
+
+    def numba_apply(self, userfunc, *args, filter = None, transform = False, **kwargs):
+        """
+        Applies a user numba function over the groups of a categorical.
+        Numba function should either return a scalar or np.array the size of the input array.
+        If numba function returns scalar, set transform = True to reshape result to size of categorical.
+
+        Parameters
+        ----------
+        userfunc : a numba function
+        args : a np.array, userfunc must return scalar or np.array of same length
+        filter : boolean filter
+        kwargs : kwargs to pass to userfunc
+        transform : Set to true if userfunc returns a scalar, but you want re-expanded to the size of original array
+
+        Returns
+        -------
+        Dataset with categorical keys for scalar function with transform = False, otherwise aligned to original categorical
+        """
+        
+        if kwargs != {}:
+            raise NotImplementedError("numba_apply does not accept kwargs for userfunc")
+
+        if len(args) != 1:
+            raise NotImplementedError("numba_apply does not accept more than one argument for userfunc")
+
+        grp = self.grouping
+        grp.pack_by_group(filter = filter, mustrepack = True)
+
+        iGroup, iFirstGroup, nCountGroup = grp.iGroup, grp.iFirstGroup, grp.nCountGroup,
+
+        idx_0 = iGroup[iFirstGroup[0]: iFirstGroup[0]+ nCountGroup[0]]
+        example_res = userfunc(args[0][idx_0])
+
+        def column_name(arg):
+            try:
+                value = args[0].get_name() if args[0].get_name() is not None else 'col_0'
+            except AttributeError: #np.arrays dont have a name
+                value = 'col_0'
+
+            return value
+
+        if np.isscalar(example_res) & ~transform: #userfunc is a scalar function
+            res = self._scalar_compiled_numba_apply(iGroup,
+                                                    iFirstGroup,
+                                                    nCountGroup,
+                                                    userfunc,
+                                                    args)
+
+            res_ds = TypeRegister.Dataset(self.gb_keychain.gbkeys)
+            res_ds.label_set_names(res_ds.keys())
+            value = column_name(args[0])
+            res_ds[value] = res
+            return res_ds
+
+        elif np.isscalar(example_res) & transform:
+            res = self._transformed_scalar_compiled_numba_apply(iGroup,
+                                                                iFirstGroup,
+                                                                nCountGroup,
+                                                                userfunc,
+                                                                args)
+            return TypeRegister.Dataset({
+                column_name(args[0]) : res
+            })
+
+        else:
+            if transform:
+                warnings.warn("Transform set to True when userfunc already returned np.array", UserWarning)
+
+            res = self._array_compiled_numba_apply(iGroup,
+                                                    iFirstGroup,
+                                                    nCountGroup,
+                                                    userfunc,
+                                                    args)
+            return TypeRegister.Dataset({
+                column_name(args[0]) : res
+            })
+
+    @staticmethod
+    @nb.njit(parallel = True)
+    def _scalar_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
+
+        ngrp = iFirstGroup.shape[0] - 1 #exclude the filtered group
+        res = np.full(ngrp, np.nan)
+
+        for grp_idx in nb.prange(1, ngrp+1): #exclude filtered group
+            idx = iGroup[iFirstGroup[grp_idx]: iFirstGroup[grp_idx]+ nCountGroup[grp_idx]]
+            res[grp_idx-1] = userfunc(args[0][idx])
+
+        return res
+
+    @staticmethod
+    @nb.njit(parallel=True)
+    def _transformed_scalar_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
+
+        ngrp = iFirstGroup.shape[0]-1
+        res = np.full((iGroup.shape[0],), np.nan) 
+
+        for grp_idx in nb.prange(1, ngrp+1): #exclude filtered group
+            first, count = iFirstGroup[grp_idx], nCountGroup[grp_idx]
+            idx = iGroup[first: first + count]
+            grp_res = userfunc(args[0][idx])
+
+            for i in range(count):
+                res[idx[i]] = grp_res
+
+        return res
+
+    @staticmethod
+    @nb.njit(parallel = True)
+    def _array_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
+
+        ngrp = iFirstGroup.shape[0]-1
+        res = np.full((iGroup.shape[0],), np.nan) 
+
+        for grp_idx in nb.prange(1, ngrp+1): #exclude filtered group
+            first, count = iFirstGroup[grp_idx], nCountGroup[grp_idx]
+            idx = iGroup[first: first + count]
+            grp_res = userfunc(args[0][idx])
+
+            for i in range(count):
+                res[idx[i]] = grp_res[i]
+
+        return res
+
 
 # ------------------------------------------------------------
 def categorical_merge_dict(list_categories, return_is_safe:bool=False, return_type:type=Categorical):

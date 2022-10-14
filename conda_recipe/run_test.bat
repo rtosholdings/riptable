@@ -1,1 +1,0 @@
-pytest -v riptable\tests

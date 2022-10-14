@@ -55,6 +55,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 riptable/tests/temp/
+test-output/
 
 # Translations
 *.mo

@@ -549,6 +549,15 @@ class TestExtract:
     @dataset_out_test_cases
     def test_extract_dataset(self, pattern, expected, apply_unique):
         result = self.osi.str.extract(pattern, expand=True, apply_unique=apply_unique)
+        assert result.keys() == list(expected)
+        [assert_array_or_cat_equal(FastArray(expected[key]), result[key], ) for key in result]
+
+    @parametrize('apply_unique', [True, False])
+    def test_extract_dataset_detected_names(self, apply_unique):
+        pattern = ' [C|P](?P<strike>\d+)$'
+        expected = dict(strike=self.strikes)
+        result = self.osi.str.extract(pattern, apply_unique=apply_unique)
+        assert result.keys() == list(expected)
         [assert_array_or_cat_equal(FastArray(expected[key]), result[key], ) for key in result]
 
     array_out_test_cases = parametrize("pattern, expected", [

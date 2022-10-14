@@ -11,6 +11,53 @@ try:
 except ImportError:
     cached_property = property
 
+from threading import RLock
+import weakref
+
+# Cached_weakref_property, based on functools.cached_property.
+# Stores weakrefs to values in a WeakValueDictionary to avoid cycles.
+# Particularly valueable when caching views of self in self, which currently produces an
+# unbreakable cycle in NumPy (see https://github.com/numpy/numpy/issues/6581).
+class cached_weakref_property:
+    _NO_OBJECT = object()
+    _WEAKREF_CACHE_NAME = '_weakref_cache'
+
+    def __init__(self, func):
+        self.func = func
+        self.attrname = None
+        self.__doc__ = func.__doc__
+        self.lock = RLock()
+
+    def __set_name__(self, owner, name):
+        if self.attrname is None:
+            self.attrname = name
+        elif name != self.attrname:
+            raise TypeError(f"Cannot reassign name from {self.attrname} to {name}")
+
+    def __get__(self, instance, owner=None):
+        if instance is None:
+            return self
+        if self.attrname is None:
+            raise TypeError("Missing call to __set_name__() to set attribute name")
+        # First, obtain the weakref cache using double-checked locking patttern.
+        cache = getattr(instance, cached_weakref_property._WEAKREF_CACHE_NAME, None)
+        if cache is None:
+            with self.lock:
+                cache = getattr(instance, cached_weakref_property._WEAKREF_CACHE_NAME, None)
+                if cache is None:
+                    try:
+                        cache = weakref.WeakValueDictionary()
+                        setattr(instance, cached_weakref_property._WEAKREF_CACHE_NAME, cache)
+                    except AttributeError:
+                        raise TypeError(f"Cannot create f{cached_weakref_property._WEAKREF_CACHE_NAME} attribute on {type(instance)}") from None
+        # Second, obtain the unwrapped value, always under lock since WeakValueDictonary is not thread-safe.
+        with self.lock:
+            val = cache.get(self.attrname, cached_weakref_property._NO_OBJECT)
+            if val is cached_weakref_property._NO_OBJECT:
+                # Definintely not there so while under lock store cached value
+                val = self.func(instance)
+                cache[self.attrname] = val
+        return val
 
 _SEED = 1234
 """

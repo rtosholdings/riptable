@@ -387,18 +387,85 @@ class GroupBy(GroupByOps):
     #-------------------------------------------------------
     def fill_forward(self, limit=0, fill_val=None, **kwargs):
         """
-        Forward fill the values
-
+        Replace NaN and invalid array values by propagating the last encountered valid 
+        group value forward.
+        
         Parameters
         ----------
-        limit : integer, optional
-            limit of how many values to fill
-
+        limit : int, default 0
+            The maximium number of consecutive NaN or invalid values to fill. If there 
+            is a gap with more than this number of consecutive NaN or invalid values, 
+            the gap will be only partially filled. If no `limit` is specified, all 
+            consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default None
+            The value to use where there is no valid group value to propagate forward. 
+            If `fill_val` is not specified, NaN and invalid values aren't replaced where 
+            there is no valid group value to propagate forward. 
+        **kwargs
+            Additional keyword arguments.
+        
+        Returns
+        -------
+        `Dataset`
+            The returned `Dataset` contains the input `Dataset` object's numerical 
+            columns.
+                
         See Also
         --------
-        fill_forward
-        fill_backward
-        fill_invalid
+        GroupBy.fill_backward : 
+            Replace NaN and invalid array values with the next valid group value.
+        Categorical.fill_forward : 
+            Replace NaN and invalid array values with the last valid group value.
+        riptable.fill_forward : Replace NaN and invalid values with the last valid 
+            value.
+        Dataset.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+        FastArray.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+        FastArray.replacena : Replace NaN and invalid values with a specified value.
+           
+        Examples
+        --------
+        >>> ds = rt.Dataset({'Key_col' : ['A', 'B', 'A', 'B', 'A', 'B'], 
+        ...                  'Vals' : [0, 1, 2, 3, rt.nan, rt.nan]})
+        >>> ds.gb('Key_col').fill_forward()
+        #   Vals
+        -   ----
+        0   0.00
+        1   1.00
+        2   2.00
+        3   3.00
+        4   2.00
+        5   3.00
+        
+        Use a `fill_val` to replace values where there's no valid group value to 
+        propagate forward:
+    
+        >>> ds.Vals = rt.FastArray([rt.nan, rt.nan, 2, 3, 4, 5])
+        >>> ds.gb('Key_col').fill_forward(fill_val = 0)
+        #   Vals
+        -   ----
+        0   0.00
+        1   0.00
+        2   2.00
+        3   3.00
+        4   4.00
+        5   5.00
+        
+        
+        Replace only the first NaN or invalid value in any consecutive series of NaN or
+        invalid values in a group:
+
+        >>> ds.Vals = rt.FastArray([0, 1, rt.nan, rt.nan, rt.nan, rt.nan])
+        >>> ds.gb('Key_col').fill_forward(limit = 1)
+        #   Vals
+        -   ----
+        0   0.00
+        1   1.00
+        2   0.00
+        3   1.00
+        4    nan
+        5    nan
         """
         return self.apply_nonreduce(fill_forward, fill_val=fill_val, limit=limit, inplace=True)
 
@@ -424,18 +491,84 @@ class GroupBy(GroupByOps):
     #-------------------------------------------------------
     def fill_backward(self, limit=0, fill_val=None, **kwargs):
         """
-        Backward fill the values
+        Replace NaN and invalid array values by propagating the next encountered valid 
+        group value backward.
         
         Parameters
         ----------
-        limit : integer, optional
-            limit of how many values to fill
+        limit : int, default 0
+            The maximium number of consecutive NaN or invalid values to fill. If there 
+            is a gap with more than this number of consecutive NaN or invalid values, 
+            the gap will be only partially filled. If no `limit` is specified, all 
+            consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default None
+            The value to use where there is no valid group value to propagate backward. 
+            If `fill_val` is not specified, NaN and invalid values aren't replaced where 
+            there is no valid group value to propagate backward.
+        **kwargs
+            Additional keyword arguments.
         
+        Returns
+        -------
+        `Dataset`
+            The returned `Dataset` contains the input `Dataset` object's numerical 
+            columns.
+                
         See Also
         --------
-        fill_forward
-        fill_backward
-        fill_invalid
+        GroupBy.fill_forward : 
+            Replace NaN and invalid array values with the last valid group value.
+        Categorical.fill_backward : 
+            Replace NaN and invalid array values with the next valid group value.
+        riptable.fill_backward : Replace NaN and invalid values with the next valid 
+            value.
+        Dataset.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+        FastArray.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+        FastArray.replacena : Replace NaN and invalid values with a specified value.
+           
+        Examples
+        --------
+        >>> ds = rt.Dataset({'Key_col' : ['A', 'B', 'A', 'B', 'A', 'B'], 
+        ...             'Vals' : [rt.nan, rt.nan, 2, 3, 4, 5]})
+        >>> ds.gb('Key_col').fill_backward()
+        #   Vals
+        -   ----
+        0   2.00
+        1   3.00
+        2   2.00
+        3   3.00
+        4   4.00
+        5   5.00
+        
+        Use a `fill_val` to replace values where there's no valid group value to 
+        propagate backward:
+    
+        >>> ds.Vals = rt.FastArray([0, 1, 2, 3, rt.nan, rt.nan])
+        >>> ds.gb('Key_col').fill_backward(fill_val = 0)
+        #   Vals
+        -   ----
+        0   0.00
+        1   1.00
+        2   2.00
+        3   3.00
+        4   0.00
+        5   0.00      
+        
+        Replace only the first NaN or invalid value in any consecutive series of NaN or
+        invalid values in a group:
+
+        >>> ds.Vals = rt.FastArray([rt.nan, rt.nan, rt.nan, rt.nan, 4, 5])
+        >>> ds.gb('Key_col').fill_backward(limit = 1)
+        #   Vals
+        -   ----
+        0    nan
+        1    nan
+        2   4.00
+        3   5.00
+        4   4.00
+        5   5.00
         """
         return self.apply_nonreduce(fill_backward, fill_val=fill_val, limit=limit, inplace=True)
 

@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import riptable as rt
 import unittest
+import numba as nb
 
 from enum import IntEnum
 from numpy.testing import assert_array_equal
@@ -26,7 +27,7 @@ from riptable.tests.test_utils import (
 )
 from riptable.rt_sds import SDSMakeDirsOn
 from riptable.tests.utils import LikertDecision
-
+from riptable.testing.array_assert import assert_array_or_cat_equal, assert_categorical_equal
 
 
 # change to true since we write into /tests directory
@@ -2397,7 +2398,12 @@ class TestCategorical(unittest.TestCase):
             x.count(filter=rt.ones(9,dtype=bool))
         self.assertEqual(str(cm.exception),'Filter is not the same length as categorical.')
 
-
+    def test_count_filter_length_check(self):
+        a = rt.Cat([1, 2, 3])
+        b = rt.FA([1, 1, 1])
+        c = rt.FA([1, 0, 1])
+        a.first(b, filter=c > 0, transform=True)
+        assert_array_equal(a.count().Count,rt.FA([1,1,1]))
 
     def test_compare1(self):
         myarr = rt.FA(np.random.randint(0,100,3_000_000))
@@ -2449,6 +2455,60 @@ class TestCategorical(unittest.TestCase):
         assert ~out[7], 'Failed check 3'
         assert ~out[8], 'Failed check 3'
         assert ~out[9], 'Failed check 3'
+
+    # ------------------------- TEST NUMBA_APPLY -------------------------------------------
+
+
+    def test_numba_apply_1(self):
+
+        @nb.njit
+        def nb_sum(x):
+            s = 0
+            for i in range(len(x)):
+                s += x[i]
+            return s
+
+        @nb.njit
+        def nb_vector(x):
+            return 2*x + 1
+        
+        c1 = rt.Cat([1, 1, 2, 2, 1, 1, 3, 3])
+        c2 = rt.Cat(['a', 'b', 'a', 'b', 'a', 'b', 'a', 'b'])
+        mcat = rt.Cat([c1, c2])
+
+        res = c2.numba_apply(nb_sum, np.arange(8))
+        assert res.equals(c2.nansum(np.arange(8))), 'Failed check 1'
+
+        res = mcat.numba_apply(nb_sum, np.arange(8))
+        assert res.equals(mcat.nansum(np.arange(8))), 'Failed check 2'
+
+        res = c1.numba_apply(nb_sum, np.arange(8), transform = True)
+        assert res.equals(c1.nansum(np.arange(8), transform = True)), 'Failed check 3'
+
+        c1 = rt.Cat([1]*1000+[2]*1000+[3]*1000)
+        c2 = rt.Cat([1]*500+[2]*500+[3]*500+[1]*500+[2]*500+[3]*500)
+        mcat = rt.Cat([c1, c2])
+        res = mcat.numba_apply(nb_vector, np.arange(3000))
+
+        assert res.equals(mcat.apply(nb_vector, np.arange(3000))), 'Failed check 4'
+
+        with pytest.raises(NotImplementedError):
+            mcat.numba_apply(nb_sum, np.arange(3000), keyword = 'keyword')
+
+        with pytest.raises(NotImplementedError):
+            mcat.numba_apply(nb_sum, np.arange(3000), np.arange(3000))
+
+        with pytest.warns(UserWarning):
+            mcat.numba_apply(nb_vector, np.arange(3000), transform = True)
+
+        filter = np.arange(3000) % 5 == 0
+        res = mcat.numba_apply(nb_sum, np.arange(3000), filter = filter)
+
+        assert res.equals(mcat.nansum(np.arange(3000), filter = filter)), 'Failed check 5'
+
+
+
+
 
 
 # Cannot use the pytest.mark.parameterize decorator within classes that inherit from unittest.TestCase.
@@ -3092,3 +3152,23 @@ def test_category_make_unique_multikey(base_index):
 
     res = cat.category_make_unique()
     assert list(cat) == list(res)
+
+
+@pytest.mark.parametrize(('value', 'shape'), [
+    ('abc', 5),
+    (b'abc', 11)
+])
+def test_full(value, shape) -> None:
+    import os
+
+    result = rt.Cat.full(shape, value)
+    expected_shape = (shape,) if isinstance(shape, int) else shape
+    assert result.shape == expected_shape
+    assert result.base_index == 1
+
+    # N.B. Assertions below this line will need to be refined if .full() ever supports multi-key Cat.
+    assert len(result.category_dict) == 1
+    assert len(next(iter(result.category_dict.values()))) == 1
+
+    extracted_category = next(iter(result.category_dict.values()))[0]
+    assert extracted_category == os.fsencode(value)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 __all__ = ['GroupByOps']
 #import abc
 from typing import TYPE_CHECKING, Optional
@@ -451,7 +452,7 @@ class GroupByOps(object):
         return list(gbkeys.values())[0]
 
     #---------------------------------------------------------------
-    def _calculate_all(self, funcNum, *args, func_param=0, gbkeys=None, isortrows=None, **kwargs):
+    def _calculate_all(self, funcNum, *args, func_param=0, gbkeys=None, isortrows=None, **kwargs) -> Dataset:
         raise TypeError("_calculate_all should have been overriden!")
 
 
