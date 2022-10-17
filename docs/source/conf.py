@@ -18,11 +18,11 @@ sys.path.insert(0, os.path.abspath('../../riptable/'))
 # -- Project information -----------------------------------------------------
 
 project = 'riptable'
-copyright = '2020, rtosholdings'
+copyright = '2022, rtosholdings'
 author = 'rtosholdings'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0.5'
+release = '1.3'
 
 
 # -- General configuration ---------------------------------------------------

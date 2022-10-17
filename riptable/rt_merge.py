@@ -1,4 +1,5 @@
-﻿__all__ = [
+﻿from __future__ import annotations
+__all__ = [
     # Original merge implementation.
     'merge',
     # New merge implementation.

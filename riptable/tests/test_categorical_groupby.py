@@ -1,5 +1,6 @@
 import numpy as np
 import riptable as rt
+import pytest
 from numpy.testing import assert_array_equal
 from riptable import (
     FastArray,
@@ -998,3 +999,9 @@ class TestCategoricalGroupby:
         soln = rt.FA([5, 6, 6, 3, 5, 2, 3, 5, 4, 2, 3, 6, 5, 4, 6, 3, 2, 4, 2, 5, 3,
            2, 6, 5, 5, 3, 6, 5, 4, 5])
         assert_array_equal(x.count(filter=f,transform=True).Count,soln)
+
+    def test_length_error(self):
+        x = rt.Cat(rt.arange(5))
+        y = rt.arange(4)
+        with pytest.raises(ValueError, match='Tried to perform a groupby operation where the length of the input was not equal to the length of the categorical.'):
+            _ = x.median(y)

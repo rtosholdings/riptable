@@ -36,6 +36,9 @@ class TestRTNumpy:
         assert_array_equal(out3,FastArray(['a','a','f','b','e']))
         assert(not isinstance(out3,Categorical))
 
+    def test_where_length_one(self):
+        assert_array_equal(rt.where(rt.FA([False]))[0],np.array([]))
+
     def test_interp(self):
         x = interp(arange(3.0).astype(float32), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
         y = interp(arange(3.0), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])

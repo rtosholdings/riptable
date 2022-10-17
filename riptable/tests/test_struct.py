@@ -13,6 +13,7 @@ from riptable import Struct, FastArray, Dataset, Categorical, arange
 from riptable.rt_enum import TypeRegister
 from riptable.rt_numpy import arange
 from riptable.rt_display import DisplayString
+import riptable as rt
 
 
 class Struct_Test(unittest.TestCase):
@@ -813,6 +814,27 @@ class Struct_Test(unittest.TestCase):
         self.assertIsInstance(s.tree(), DisplayString)
         s['foo'] = Dataset({'bar': arange(5)})
         self.assertIsInstance(s.tree(), DisplayString)
+
+    def test_key_search(self):
+        st = Struct()
+        st.column1 = rt.arange(10)
+        st.Apple = rt.arange(10)
+        myds = rt.Dataset()
+        myds.animal = rt.arange(10)
+        myds.ale = rt.arange(10)
+        st.opp = myds
+        mystruct = rt.Struct()
+        mystruct.allen = rt.arange(10)
+        substruct = rt.Struct()
+        myds2 = rt.Dataset()
+        myds2.oval = rt.arange(10)
+        myds2.elena = rt.arange(10)
+        myds2.Valence = rt.arange(10)
+        substruct.myds2 = myds2
+        mystruct.substruct = substruct
+        st.Alex = mystruct
+        self.assertEqual(st.key_search('a.*e'),['Apple','Alex','opp.ale','Alex.allen','Alex.substruct.myds2.Valence'])
+
 
 
 if __name__ == "__main__":

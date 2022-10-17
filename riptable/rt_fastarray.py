@@ -1,3 +1,4 @@
+from __future__ import annotations
 __all__ = ['FastArray', 'Threading', 'Recycle','Ledger']
 
 import logging
@@ -13,7 +14,7 @@ from .rt_stats import statx
 from .rt_enum import gBinaryUFuncs, gBinaryLogicalUFuncs, gBinaryBitwiseUFuncs, gUnaryUFuncs, gReduceUFuncs
 from .rt_enum import TypeRegister, ROLLING_FUNCTIONS, TIMEWINDOW_FUNCTIONS, REDUCE_FUNCTIONS, gNumpyScalarType, NumpyCharTypes, MATH_OPERATION, INVALID_DICT
 from .Utils.rt_display_properties import ItemFormat, DisplayConvert, default_item_formats
-from .Utils.common import cached_property
+from .Utils.common import cached_weakref_property
 from .rt_mlutils import normalize_minmax, normalize_zscore
 from .rt_numpy import ismember, ones, zeros, unique, sort, full, empty, empty_like, searchsorted, _searchsorted, bool_to_fancy, issorted, repeat, tile, where, groupbyhash, asanyarray, crc32c, hstack
 from .rt_sds import save_sds
@@ -27,6 +28,7 @@ except Exception:
 
 if TYPE_CHECKING:
     from .rt_str import FAString
+    from .rt_dataset import Dataset
 
     # pyarrow is an optional dependency.
     try:
@@ -682,7 +684,7 @@ class FastArray(np.ndarray):
         raise TypeError(warning_string)
 
     #--------------------------------------------------------------------------
-    def __new__(cls,arr,**kwargs):
+    def __new__(cls,arr,**kwargs) -> FastArray:
 
         allow_unicode = kwargs.get('unicode', False)
         try:
@@ -789,7 +791,7 @@ class FastArray(np.ndarray):
         return aboveone
 
     #--------------------------------------------------------------------------
-    def get_name(self):
+    def get_name(self) -> str:
         '''
         FastArray can hold a name.  When a Dataset puts a FastArray into a column, it may receive a name.
 
@@ -810,7 +812,7 @@ class FastArray(np.ndarray):
         return name
 
     #--------------------------------------------------------------------------
-    def set_name(self, name):
+    def set_name(self, name) -> FastArray:
         '''
         FastArray can hold a name.  Use set_name to assign a name.
         When a Dataset puts a FastArray into a named column, it may call set_name().
@@ -847,7 +849,7 @@ class FastArray(np.ndarray):
         FastArray.FasterUFunc = False
 
     @property
-    def _np(self):
+    def _np(self) -> np.ndarray:
         '''
         quick way to return a numpy array instead of fast array
         '''
@@ -1067,7 +1069,7 @@ class FastArray(np.ndarray):
         np.ndarray.__setitem__(self, fld, value)
 
     #--------------------------------------------------------------------------
-    def __getitem__(self, fld):
+    def __getitem__(self, fld) -> FastArray:
         '''
         riptable has special routines to handle array input in the indexer.
         Everything else will go to numpy getitem.
@@ -1122,7 +1124,7 @@ class FastArray(np.ndarray):
         return display_format, convert_func
 
     #--------------------------------------------------------------------------
-    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):
+    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True) -> FastArray:
         #result= super(FastArray, self).astype(dtype, order,casting,subok,copy)
         # 17 is object
         # 18 = ASCII string
@@ -1154,7 +1156,7 @@ class FastArray(np.ndarray):
         return self.view(FastArray)
 
     #--------------------------------------------------------------------------
-    def copy(self, order='K'):
+    def copy(self, order='K') -> FastArray:
         #result= super(FastArray, self).copy(order)
         if self.flags.f_contiguous or self.flags.c_contiguous:
             if order=='K' and self.dtype.num <= 13:
@@ -1165,7 +1167,7 @@ class FastArray(np.ndarray):
         return result.view(FastArray)
 
     #--------------------------------------------------------------------------
-    def copy_invalid(self):
+    def copy_invalid(self) -> FastArray:
         '''
         Makes a copy of the array filled with invalids.
 
@@ -1186,7 +1188,7 @@ class FastArray(np.ndarray):
 
     #--------------------------------------------------------------------------
     @property
-    def inv(self):
+    def inv(self) -> np.number:
         '''
         Returns the invalid value for the array.
         np.int8: -128
@@ -1208,7 +1210,7 @@ class FastArray(np.ndarray):
         return INVALID_DICT[self.dtype.num]
 
     #--------------------------------------------------------------------------
-    def fill_invalid(self, shape=None, dtype=None, inplace=True):
+    def fill_invalid(self, shape=None, dtype=None, inplace=True) -> FastArray:
         '''
         Fills array or returns copy of array with invalid value of array's dtype or a specified one.
         Warning: by default this operation is inplace.
@@ -1251,7 +1253,7 @@ class FastArray(np.ndarray):
             return arr
 
     # -------------------------------------------------------------------------
-    def isin(self, test_elements, assume_unique=False, invert=False):
+    def isin(self, test_elements, assume_unique=False, invert=False) -> FastArray:
         '''
         Calculates `self in test_elements`, broadcasting over `self` only.
         Returns a boolean array of the same shape as `self` that is True
@@ -1327,7 +1329,7 @@ class FastArray(np.ndarray):
             return np.isin(self._np, test_elements, assume_unique=assume_unique, invert=invert)
 
     # -------------------------------------------------------------------------
-    def between(self, low, high, include_low:bool=True, include_high:bool=False):
+    def between(self, low, high, include_low:bool=True, include_high:bool=False) -> FastArray:
         """
         Determine which elements of the array are in a a given interval.
 
@@ -1369,7 +1371,7 @@ class FastArray(np.ndarray):
     def sample(
         self, N: int = 10, filter: Optional[np.ndarray] = None,
         seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None
-    ):
+    ) -> FastArray:
         '''
         Examples
         --------
@@ -1380,7 +1382,7 @@ class FastArray(np.ndarray):
         return sample(self, N=N, filter=filter, seed=seed)
 
     #--------------------------------------------------------------------------
-    def duplicated(self, keep='first', high_unique=False):
+    def duplicated(self, keep='first', high_unique=False) -> FastArray:
         '''
         See pandas.Series.duplicated
 
@@ -1420,7 +1422,7 @@ class FastArray(np.ndarray):
         return result
 
     #--------------------------------------------------------------------------
-    def save(self, filepath: Union[str, os.PathLike], share: Optional[str] = None, compress: bool = True, overwrite: bool = True, name: Optional[str] = None):
+    def save(self, filepath: Union[str, os.PathLike], share: Optional[str] = None, compress: bool = True, overwrite: bool = True, name: Optional[str] = None) -> None:
         '''
         Save a single array in an .sds file.
 
@@ -1439,7 +1441,7 @@ class FastArray(np.ndarray):
         save_sds(filepath, self, share=share, compress=compress, overwrite=overwrite, name=name)
 
     #--------------------------------------------------------------------------
-    def reshape(self, *args, **kwargs):
+    def reshape(self, *args, **kwargs) -> FastArray:
         result = super(FastArray, self).reshape(*args, **kwargs)
         # this warning happens too much now
         #if FastArray._check_ndim(result) != 1:
@@ -1451,12 +1453,12 @@ class FastArray(np.ndarray):
         return result
 
     #--------------------------------------------------------------------------
-    def repeat(self, repeats, axis=None):
+    def repeat(self, repeats, axis=None) -> FastArray:
         ''' see rt.repeat '''
         return repeat(self, repeats, axis=axis)
 
     #--------------------------------------------------------------------------
-    def tile(self, reps):
+    def tile(self, reps) -> FastArray:
         ''' see rt.tile '''
         return tile(self, reps)
 
@@ -1524,7 +1526,7 @@ class FastArray(np.ndarray):
 
         return np.float64(result)
     #---------------------------------------------------------------------------
-    def _compare_check(self, func, other):
+    def _compare_check(self, func, other) -> FastArray:
         # a user might type in a string and we want a bytes string
         if self.dtype.char in 'SU':
             if isinstance(other, str):
@@ -1580,7 +1582,7 @@ class FastArray(np.ndarray):
         return self._np.squeeze(*args, **kwargs)
 
     #---------------------------------------------------------------------------
-    def iscomputable(self):
+    def iscomputable(self) -> bool:
         return TypeRegister.is_computable(self)
 
     #############################################
@@ -1749,33 +1751,57 @@ class FastArray(np.ndarray):
     #############################################
     # Helper section
     #############################################
-    def abs(self, *args, **kwargs):            return np.abs(self, *args, **kwargs)
-    def median(self, *args, **kwargs):         return np.median(self, *args, **kwargs)
-    def unique(self,  *args, **kwargs):        return unique(self, *args, **kwargs)
-    def clip_lower(self, a_min, **kwargs):     return self.clip(a_min, None, **kwargs)
-    def clip_upper(self, a_max, **kwargs):     return self.clip(None, a_max, **kwargs)
-    def sign(self, **kwargs):                  return np.sign(self, **kwargs)
-    def trunc(self, **kwargs):                 return np.trunc(self, **kwargs)
-    def where(self, condition, y=np.nan, **kwargs):      return where(condition, self, y, **kwargs)
+    def abs(self,**kwargs) -> FastArray:            return np.abs(self,**kwargs)
+    def median(self,**kwargs) -> np.number:         return np.median(self,**kwargs)
+    def nanmedian(self,**kwargs) -> np.number:      return np.nanmedian(self,**kwargs)
+    def clip_lower(self, a_min, **kwargs) -> FastArray:     return self.clip(a_min, None, **kwargs)
+    def clip_upper(self, a_max, **kwargs) -> FastArray:     return self.clip(None, a_max, **kwargs)
+    def sign(self, **kwargs) -> FastArray:                  return np.sign(self, **kwargs)
+    def trunc(self, **kwargs) -> FastArray:                 return np.trunc(self, **kwargs)
+    def where(self, condition, y=np.nan, **kwargs) -> FastArray:      return where(condition, self, y, **kwargs)
 
-    def count(self, sorted=True):
+    def count(self, sorted=True) -> Dataset:
         '''
-        Returns the unique counts
-        Same as calling.unique(return_counts=True)
+        The count of each unique value.
+        
+        This returns the same information that ``.unique(return_counts = True)``
+        does, except in a `Dataset` instead of a tuple.
+        
+        Parameters
+        ----------
+        sorted : bool, default True
+            When True (the default), unique values are returned in sorted order. Set to 
+            False to return them in order of first appearance.
+        
+        Returns
+        -------
+        Dataset
+            A `Dataset` containing the unique values and their counts.
 
-        Other Parameters
-        ----------------
-        sorted=True, set to False for first appearance
-
+        See Also
+        --------
+        FastArray.unique
+        
         Examples
         --------
-        >>> a=arange(10) %3
+        >>> a = rt.FastArray([0, 2, 1, 3, 3, 2, 2])
         >>> a.count()
         *Unique   Count
         -------   -----
-              0       4
-              1       3
+              0       1
+              1       1
               2       3
+              3       2
+              
+        With ``sorted = False``:
+        
+        >>> a.count(sorted = False)
+        *Unique   Count
+        -------   -----
+              0       1
+              2       3
+              1       1
+              3       2
         '''
         unique_counts= unique(self, sorted=sorted, return_counts=True)
         name=self.get_name()
@@ -1787,14 +1813,14 @@ class FastArray(np.ndarray):
     #############################################
     # Rolling section (cannot handle strides)
     #############################################
-    def rolling_sum(self, window:int = 3):     return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_SUM, window)
-    def rolling_nansum(self, window:int = 3):  return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANSUM, window)
-    def rolling_mean(self, window:int = 3):    return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_MEAN, window)
-    def rolling_nanmean(self, window:int = 3): return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANMEAN, window)
-    def rolling_var(self, window:int = 3):     return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_VAR, window)
-    def rolling_nanvar(self, window:int = 3):  return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANVAR, window)
-    def rolling_std(self, window:int = 3):     return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_STD, window)
-    def rolling_nanstd(self, window:int = 3):  return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANSTD, window)
+    def rolling_sum(self, window:int = 3) -> FastArray:     return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_SUM, window)
+    def rolling_nansum(self, window:int = 3) -> FastArray:  return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANSUM, window)
+    def rolling_mean(self, window:int = 3) -> FastArray:    return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_MEAN, window)
+    def rolling_nanmean(self, window:int = 3) -> FastArray: return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANMEAN, window)
+    def rolling_var(self, window:int = 3) -> FastArray:     return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_VAR, window)
+    def rolling_nanvar(self, window:int = 3) -> FastArray:  return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANVAR, window)
+    def rolling_std(self, window:int = 3) -> FastArray:     return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_STD, window)
+    def rolling_nanstd(self, window:int = 3) -> FastArray:  return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANSTD, window)
 
 
     #############################################
@@ -1841,12 +1867,12 @@ class FastArray(np.ndarray):
     # Bottleneck section (only handles int32/int64/float32/float64)
     # bottleneck is optional
     #############################################
-    def move_sum(self,  *args, **kwargs):      return bn.move_sum(self, *args, **kwargs)
+    def move_sum(self, *args, **kwargs):      return bn.move_sum(self, *args,**kwargs)
     def move_mean(self, *args, **kwargs):      return bn.move_mean(self, *args, **kwargs)
     def move_std(self,  *args, **kwargs):      return bn.move_std(self, *args, **kwargs)
-    def move_var(self,  *args, **kwargs):      return bn.move_var(self, *args, **kwargs)
-    def move_min(self,  *args, **kwargs):      return bn.move_min(self, *args, **kwargs)
-    def move_max(self,  *args, **kwargs):      return bn.move_max(self, *args, **kwargs)
+    def move_var(self, *args,  **kwargs):      return bn.move_var(self, *args, **kwargs)
+    def move_min(self, *args,  **kwargs):      return bn.move_min(self, *args, **kwargs)
+    def move_max(self, *args, **kwargs):      return bn.move_max(self, *args, **kwargs)
     def move_argmin(self, *args, **kwargs):    return bn.move_argmin(self, *args, **kwargs)
     def move_argmax(self, *args, **kwargs):    return bn.move_argmax(self, *args, **kwargs)
     def move_median(self, *args, **kwargs):    return bn.move_median(self, *args, **kwargs)
@@ -1860,13 +1886,13 @@ class FastArray(np.ndarray):
     def push(self, *args, **kwargs):           return bn.push(self, *args, **kwargs)
 
    #---------------------------------------------------------------------------
-    def issorted(self):
+    def issorted(self) -> bool:
         ''' returns True if the array is sorted otherwise False
         If the data is likely to be sorted, call the issorted property to check.
         '''
         return issorted(self)
     #---------------------------------------------------------------------------
-    def _unary_op(self, funcnum, fancy=False):
+    def _unary_op(self, funcnum, fancy=False) -> FastArray:
         if self._is_not_supported(self):
             # make it contiguous
             arr = self.copy()
@@ -1945,46 +1971,83 @@ class FastArray(np.ndarray):
 
         return(kwargs)
 
-    def nansum(self, *args, filter = None, dtype = None, axis = None, keepdims = None, **kwargs):
+    def nansum(self,filter = None, dtype = None, axis = None, keepdims = None, **kwargs) -> np.number:
         '''
-        Computes the sum of the first argument ignoring NaNs. For example
-        >>> a = rt.FastArray( [1,2,3,rt.nan])
-        >>> a.nansum()
-        6.0
+        Compute the sum of the values in the first argument, ignoring NaNs.
+        
+        If all values in the first argument are NaNs, ``0.0`` is returned.
+        
+        Parameters
+        ----------
+        filter : array of bool, default None
+            Specifies which elements to include in the sum calculation. If the filter is 
+            uniformly ``False``, `nansum` returns ``0.0``.
+        dtype : rt.dtype or numpy.dtype, default float64
+            The data type of the result. For a `FastArray` ``x``, 
+            ``x.nansum(dtype = my_type)`` is equivalent to ``my_type(x.nansum())``.
 
-        Parameters:
-        filter : array of bool, optional
-        Specifies which elements to include in the mean. For example,
-        >>> a = rt.FastArray( [1,3,5,7,rt.nan])
-        >>> b = rt.FastArray( [False, True, False, True,True] )
-        >>> a.nansum(filter = b)
-        10.0
-        If the filter is uniformly False, this will return 0.
-
-        dtype : optional
-        What datatype should the result be returned as. For a FastArray x,
-        x.nansum(dtype = my_type) is equivalent to my_type( x.nansum() ).
-
-
-        Numpy Parameters:
-        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
-        with these parameters. The filter parameter will take precedence and if nansum is passed a filter and
-        one of these parameters, it will ignore these parameters.
-
+        Returns
+        -------
+        scalar
+            The sum of the values.
+        
+        See Also
+        --------
+        numpy.nansum
+        Dataset.nansum : Sums the values of numerical `Dataset` columns, ignoring NaNs.
+        GroupByOps.nansum : Sums the values of each group, ignoring NaNs. Used by 
+                            `Categorical` objects.
+            
+        Notes
+        -----
+        The `dtype` keyword for `FastArray.nansum` specifies the data type of the 
+        result. This differs from `numpy.nansum`, where it specifies the data type used 
+        to compute the sum.
+        
+        **Notes on Using NumPy Parameters**
+          
+        Using either of the following NumPy parameters will cause Riptable to switch to 
+        the NumPy implementation of this method (`numpy.nansum`). However, until a 
+        reported bug is fixed, if you also include the `dtype` parameter it will be 
+        applied to the result, not used to compute the sum as it is in `numpy.nansum`.
+        
+        Also note that if you use either of the following NumPy parameters and also 
+        include a `filter` keyword argument (which `numpy.nansum` does not accept), 
+        Riptable's implementation of `nansum` will be used with the filter argument and 
+        the NumPy parameters will be ignored.
+        
         axis : {int, tuple of int, None}, optional
             Axis or axes along which the sum is computed. The default is to compute the
             sum of the flattened array.
 
         keepdims : bool, optional
-            If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one. With this option,
-            the result will broadcast correctly against the original `a`.
-
-
-            If the value is anything but the default, then
-            `keepdims` will be passed through to the `mean` or `sum` methods
-            of sub-classes of `ndarray`.  If the sub-classes methods
-            does not implement `keepdims` any exceptions will be raised.
+            If this is set to True, the axes which are reduced are left in the result as 
+            dimensions with size one. With this option, the result will broadcast 
+            correctly against the original input array.
+            
+            If the value is anything but the default, then `keepdims` will be passed 
+            through to the `mean` or `sum` methods of sub-classes of `ndarray`. If the 
+            sub-classes' methods do not implement `keepdims`, any exceptions will be 
+            raised.
+            
+        Examples
+        --------
+        >>> a = rt.FastArray([1, 3, 5, 7, rt.nan])
+        >>> a.nansum()
+        16.0
+    
+        With a `dtype` specified: 
+    
+        >>> a = rt.FastArray([1.0, 3.0, 5.0, 7.0, rt.nan])
+        >>> a.nansum(dtype = rt.int32)
+        16
+    
+        With a filter:
+    
+        >>> a = rt.FastArray([1, 3, 5, 7, rt.nan])
+        >>> b = rt.FastArray([False, True, False, True, True])
+        >>> a.nansum(filter = b)
+        10.0
         '''
 
         kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=None, **kwargs)
@@ -1992,48 +2055,83 @@ class FastArray(np.ndarray):
         if filter is not None:
             return self._fa_filter_wrapper(_fnansum, filter=filter, dtype=dtype)
 
-        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSUM, np.nansum,  *args, **kwargs)
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSUM, np.nansum, **kwargs)
 
-    def mean(self, *args, filter = None, dtype = None, axis = None, keepdims = None,  **kwargs):
+    def mean(self,filter = None, dtype = None, axis = None, keepdims = None,  **kwargs) -> np.number:
         '''
-        Computes the arithmetic mean of the first argument. For example
-        >>> a = rt.FastArray( [1,2,3,4])
-        >>> a.mean()
-        2.5
+        Compute the arithmetic mean of the values in the first argument.
 
-        Parameters:
-        filter : array of bool, optional
-        Specifies which elements to include in the mean. For example,
-        >>> a = rt.FastArray( [1,3,5,7])
-        >>> b = rt.FastArray( [False, True, False, True] )
-        >>> a.mean(filter = b)
-        5
-        If the filter is uniformly False, this will return 0.
-
-        dtype : optional
-        What datatype should the result be returned as. For a FastArray x,
-        x.mean(dtype = my_type) is equivalent to my_type( x.mean() ).
-
-
-        Numpy Parameters:
-        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
-        with these parameters. The filter parameter will take precedence and if mean is passed a filter and
-        one of these parameters, it will ignore these parameters.
-
+        Parameters
+        ----------    
+        filter : array of bool, default None
+            Specifies which elements to include in the mean calculation. If the filter 
+            is uniformly ``False``, `mean` returns a `ZeroDivisionError`.
+        dtype : rt.dtype or numpy.dtype, default float64
+            The data type of the result. For a `FastArray` ``x``, 
+            ``x.mean(dtype = my_type)`` is equivalent to ``my_type(x.mean())``.
+    
+        Returns
+        -------
+        scalar
+            The mean of the values.
+            
+        See Also
+        --------
+        numpy.mean
+        FastArray.nanmean : Computes the mean of `FastArray` values, ignoring NaNs.
+        Dataset.mean : Computes the mean of numerical `Dataset` columns.
+        GroupByOps.mean : Computes the mean of each group. Used by `Categorical` objects.
+        
+        Notes
+        -----
+        The `dtype` keyword for `FastArray.mean` specifies the data type of the result. 
+        This differs from `numpy.mean`, where it specifies the data type used to compute
+        the mean.
+        
+        **Notes on Using NumPy Parameters**
+        
+        Using either of the following NumPy parameters will cause Riptable to switch to 
+        the NumPy implementation of this method (`numpy.mean`). However, until a 
+        reported bug is fixed, if you also include the `dtype` parameter it will be 
+        applied to the result, not used to compute the mean as it is in `numpy.mean`.
+        
+        Also note that if you use either of the following NumPy parameters and also 
+        include a `filter` keyword argument (which `numpy.mean` does not accept), 
+        Riptable's implementation of `mean` will be used with the filter argument and 
+        the NumPy parameters will be ignored.
+        
         axis : None or int or tuple of ints, optional
-            Axis or axes along which the means are computed. The default is to
-            compute the mean of the flattened array.
+            Axis or axes along which the means are computed. The default is to compute 
+            the mean of the flattened array.
 
         keepdims : bool, optional
-            If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one. With this option,
-            the result will broadcast correctly against the original `a`.
+            If this is set to True, the axes which are reduced are left in the result as 
+            dimensions with size one. With this option, the result will broadcast 
+            correctly against the original input array.
 
+            If the default value is passed, then `keepdims` will not be passed through 
+            to the `mean` method of sub-classes of `ndarray`, however any non-default 
+            value will be. If the sub-class's method does not implement `keepdims`, any 
+            exceptions will be raised.
 
-            If the value is anything but the default, then
-            `keepdims` will be passed through to the `mean` or `sum` methods
-            of sub-classes of `ndarray`.  If the sub-classes methods
-            does not implement `keepdims` any exceptions will be raised.
+        Examples
+        --------
+        >>> a = rt.FastArray([1, 3, 5, 7])
+        >>> a.mean()
+        4.0
+    
+        With a `dtype` specified: 
+    
+        >>> a = rt.FastArray([1, 3, 5, 7])
+        >>> a.mean(dtype = rt.int32)
+        4
+        
+        With a filter:
+    
+        >>> a = rt.FastArray([1, 3, 5, 7])
+        >>> b = rt.FastArray([False, True, False, True])
+        >>> a.mean(filter = b)
+        5.0
         '''
 
         kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=None, **kwargs)
@@ -2041,50 +2139,87 @@ class FastArray(np.ndarray):
         if filter is not None:
             return self._fa_filter_wrapper(_fmean, filter=filter, dtype=dtype)
 
-        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_MEAN,   np.mean,    *args, **kwargs)
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_MEAN,   np.mean, **kwargs)
 
-    def nanmean(self, *args, filter = None, dtype = None, axis = None, keepdims = None, **kwargs):
+    def nanmean(self,filter = None, dtype = None, axis = None, keepdims = None, **kwargs) -> np.number:
         '''
-        Computes the arithmetic mean of the first argument, ignoring NaNs.
-        For example
-        >>> a = rt.FastArray( [1,2,3,rt.nan])
-        >>> a.mean()
-        2
-
-        Parameters:
-        filter : array of bool, optional
-        Specifies which elements to include in the nanmean. For example,
-        >>> a = rt.FastArray( [1,3,5,rt.nan])
-        >>> b = rt.FastArray( [False, True, False, True] )
-        >>> a.mean(filter = b)
-        3
-        If the filter is uniformly False, this will return 0.
-
-
-        dtype : optional
-        What datatype should the result be returned as. For a FastArray x,
-        x.nanmean(dtype = my_type) is equivalent to my_type( x.nanmean() ).
-
-
-        Numpy Parameters:
-        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
-        with these parameters. The filter parameter will take precedence and if nanmean is passed a filter and
-        one of these parameters, it will ignore these parameters.
-
+        Compute the arithmetic mean of the values in the first argument, ignoring NaNs.
+    
+        If all values in the first argument are NaNs, ``0.0`` is returned.
+        
+        Parameters
+        ----------    
+        filter : array of bool, default None
+            Specifies which elements to include in the mean calculation. If the filter 
+            is uniformly ``False``, `nanmean` returns a `ZeroDivisionError`.
+        dtype : rt.dtype or numpy.dtype, default float64
+            The data type of the result. For a `FastArray` ``x``, 
+            ``x.nanmean(dtype = my_type)`` is equivalent to ``my_type(x.nanmean())``.
+    
+        Returns
+        -------
+        scalar
+            The mean of the values.
+            
+        See Also
+        --------
+        numpy.nanmean
+        FastArray.mean : Computes the mean of `FastArray` values.
+        Dataset.nanmean : Computes the mean of numerical `Dataset` columns, ignoring 
+                          NaNs.
+        GroupByOps.nanmean : Computes the mean of each group, ignoring NaNs. Used by 
+                             `Categorical` objects.
+    
+        Notes
+        -----
+        The `dtype` keyword for `FastArray.nanmean` specifies the data type of the 
+        result. This differs from `numpy.nanmean`, where it specifies the data type used 
+        to compute the mean.
+        
+        **Notes on Using NumPy Parameters**
+        
+        Using either of the following NumPy parameters will cause Riptable to switch to 
+        the NumPy implementation of this method (`numpy.nanmean`). However, until a 
+        reported bug is fixed, if you also include the `dtype` parameter it will be 
+        applied to the result, not used to compute the mean as it is in `numpy.nanmean`.
+        
+        Also note that if you use either of the following NumPy parameters and also 
+        include a `filter` keyword argument (which `numpy.nanmean` does not accept), 
+        Riptable's implementation of `nanmean` will be used with the filter argument 
+        and the NumPy parameters will be ignored.
+        
         axis : {int, tuple of int, None}, optional
-            Axis or axes along which the means are computed. The default is to compute
+            Axis or axes along which the means are computed. The default is to compute 
             the mean of the flattened array.
 
         keepdims : bool, optional
-            If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one. With this option,
-            the result will broadcast correctly against the original `a`.
+            If this is set to True, the axes which are reduced are left in the result as 
+            dimensions with size one. With this option, the result will broadcast 
+            correctly against the original input array.
 
+            If the value is anything but the default, then `keepdims` will be passed 
+            through to the `mean` or `sum` methods of sub-classes of `ndarray`. If the 
+            sub-classes' methods do not implement `keepdims`, any exceptions will be 
+            raised.
+    
+        Examples
+        --------
+        >>> a = rt.FastArray([1, 3, 5, rt.nan])
+        >>> a.nanmean()
+        3.0
+    
+        With a `dtype` specified:
+    
+        >>> a = rt.FastArray([1, 3, 5, rt.nan])
+        >>> a.nanmean(dtype = rt.int32)
+        3
 
-            If the value is anything but the default, then
-            `keepdims` will be passed through to the `mean` or `sum` methods
-            of sub-classes of `ndarray`.  If the sub-classes methods
-            does not implement `keepdims` any exceptions will be raised.
+        With a filter:
+    
+        >>> a = rt.FastArray([1, 3, 5, rt.nan])
+        >>> b = rt.FastArray([False, True, True, True])
+        >>> a.nanmean(filter = b)
+        4.0   
         '''
 
         kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=None, **kwargs)
@@ -2092,62 +2227,97 @@ class FastArray(np.ndarray):
         if filter is not None:
             return self._fa_filter_wrapper(_fnanmean, filter=filter, dtype=dtype)
 
-        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMEAN,np.nanmean, *args, **kwargs)
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMEAN,np.nanmean, **kwargs)
     #---------------------------------------------------------------------------
     # these function take a ddof kwarg
-    def var(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+    def var(self, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
         '''
-        Computes the variance of the first argument. Uses the convention that ddof = 1 unlike
-        numpy, meaning the variance of [x_1, ... , x_n] is defined by
-        var = 1/(n-1) * sum( x_i - mean )**2.
-        (Note the n-1 instead of n).
+        Compute the variance of the values in the first argument.
+    
+        Riptable uses the convention that ``ddof = 1``, meaning the variance of 
+        ``[x_1, ..., x_n]`` is defined by ``var = 1/(n - 1) * sum(x_i - mean )**2`` 
+        (note the ``n - 1`` instead of ``n``). This differs from NumPy, which uses 
+        ``ddof = 0`` by default.
+    
+        Parameters
+        ----------
+        filter : array of bool, default None
+            Specifies which elements to include in the variance calculation. If the 
+            filter is uniformly ``False``, `var` returns a `ZeroDivisionError`.
 
-        For example
-        >>> a = rt.FastArray( [1,2,3])
-        >>> a.var()
-        1.0
-
-
-        Parameters:
-        filter : array of bool, optional
-        Specifies which elements to include in the variance calculation. For example,
-        >>> a = rt.FastArray( [1,3,5,7])
-        >>> b = rt.FastArray( [False, True, False, True] )
-        >>> a.var(filter = b)
-        8.0
-
-
-        dtype : optional
-        What datatype should the result be returned as. For a FastArray x,
-        x.var(dtype = my_type) is equivalent to my_type( x.var() ).
-
-
-        Numpy Parameters:
-        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
-        with these parameters. The filter parameter will take precedence and if var is passed a filter and
-        one of these parameters, it will ignore these parameters.
-
+        dtype : rt.dtype or numpy.dtype, default float64
+            The data type of the result. For a `FastArray` ``x``, 
+            ``x.var(dtype = my_type)`` is equivalent to ``my_type(x.var())``.
+    
+        Returns
+        -------
+        scalar
+            The variance of the values.
+            
+        See Also
+        --------
+        numpy.var
+        FastArray.nanvar : Computes the variance of `FastArray` values, ignoring NaNs.
+        Dataset.var : Computes the variance of numerical `Dataset` columns.
+        GroupByOps.var : Computes the variance of each group. Used by `Categorical` 
+                         objects.
+    
+        Notes
+        -----
+        The `dtype` keyword for `FastArray.var` specifies the data type of the result. 
+        This differs from `numpy.var`, where it specifies the data type used to compute 
+        the variance.
+    
+        **Notes on Using NumPy Parameters**
+        
+        Using any of the following NumPy parameters will cause Riptable to switch to 
+        the NumPy implementation of this method (`numpy.var`). However, until a 
+        reported bug is fixed, if you also include the `dtype` parameter it will be 
+        applied to the result, not used to compute the variance as it is in `numpy.var`.
+        
+        Also note that if you use any of the following NumPy parameters and also 
+        include a `filter` keyword argument (which `numpy.var` does not accept), 
+        Riptable's implementation of `var` will be used with the filter argument 
+        and the NumPy parameters will be ignored.
+        
         axis : None or int or tuple of ints, optional
-            Axis or axes along which the variance is computed.  The default is to
+            Axis or axes along which the variance is computed. The default is to
             compute the variance of the flattened array.
-
-
+ 
         keepdims : bool, optional
-            If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one. With this option,
-            the result will broadcast correctly against the original `a`.
+            If this is set to True, the axes which are reduced are left in the result as 
+            dimensions with size one. With this option, the result will broadcast 
+            correctly against the input array.
 
-
-            If the value is anything but the default, then
-            `keepdims` will be passed through to the `mean` or `sum` methods
-            of sub-classes of `ndarray`.  If the sub-classes methods
-            does not implement `keepdims` any exceptions will be raised.
+            If the default value is passed, then `keepdims` will not be passed through 
+            to the `var` method of sub-classes of `ndarray`, however any non-default 
+            value will be. If the sub-classes' method does not implement `keepdims`, any 
+            exceptions will be raised.
 
         ddof : int, optional
             "Delta Degrees of Freedom": the divisor used in the calculation is
-            ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero
-            if you use the numpy implementation.
-
+            ``N - ddof``, where ``N`` represents the number of elements. By default 
+            `ddof` is zero for the NumPy implementation, versus one for the Riptable
+            implementation.
+           
+        Examples
+        --------
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> a.var()
+        1.0
+    
+        With a `dtype` specified:
+    
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> a.var(dtype = rt.int32)
+        1
+    
+        With a filter:
+    
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> b = rt.FastArray([False, True, True])
+        >>> a.var(filter = b)
+        0.5
         '''
 
         kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
@@ -2155,59 +2325,94 @@ class FastArray(np.ndarray):
         if filter is not None:
             return self._fa_filter_wrapper(_fvar, filter=filter, dtype = dtype)
 
-        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_VAR, np.var, *args, **kwargs)
-    def nanvar(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_VAR, np.var,**kwargs)
+    def nanvar(self,  filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs) -> np.number:
         '''
-        Computes the variance of the first argument ignoring NaNs. Uses the convention that
-        ddof = 1 unlike numpy, meaning the variance of [x_1, ... , x_n] is defined by
-        var = 1/(n-1) * sum( x_i - mean )**2.
-        (Note the n-1 instead of n).
+        Compute the variance of the values in the first argument, ignoring NaNs.
+    
+        If all values in the first argument are NaNs, ``NaN`` is returned.
+    
+        Riptable uses the convention that ``ddof = 1``, meaning the variance of 
+        ``[x_1, ..., x_n]`` is defined by ``var = 1/(n - 1) * sum(x_i - mean )**2`` (note 
+        the ``n - 1`` instead of ``n``). This differs from NumPy, which uses ``ddof = 0`` by
+        default.
 
-        For example
-        >>> a = rt.FastArray( [1,2,3, rt.nan])
-        >>> a.var()
-        1.0
+        Parameters
+        ----------
+        filter : array of bool, default None
+            Specifies which elements to include in the variance calculation. If the filter 
+            is uniformly ``False``, `nanvar` returns a `ZeroDivisionError`. 
 
-
-        Parameters:
-        filter : array of bool, optional
-        Specifies which elements to include in the variance calculation. For example,
-        >>> a = rt.FastArray( [1,3,5,7, rt.nan])
-        >>> b = rt.FastArray( [False, True, False, True, True] )
-        >>> a.nanvar(filter = b)
-        8.0
-
-
-        dtype : optional
-        What datatype should the result be returned as. For a FastArray x,
-        x.nanvar(dtype = my_type) is equivalent to my_type( x.nanvar() ).
-
-
-        Numpy Parameters:
-        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
-        with these parameters. The filter parameter will take precedence and if nanvar is passed a filter and
-        one of these parameters, it will ignore these parameters.
-
+        dtype : rt.dtype or numpy.dtype, default float64
+            The data type of the result. For a `FastArray` ``x``, 
+            ``x.nanvar(dtype = my_type)`` is equivalent to ``my_type(x.nanvar())``.
+       
+        Returns
+        -------
+        scalar
+            The variance of the values.
+            
+        See Also
+        --------
+        numpy.nanvar
+        FastArray.var : Computes the variance of `FastArray` values.
+        Dataset.nanvar : Computes the variance of numerical `Dataset` columns, 
+                         ignoring NaNs.
+        GroupByOps.nanvar : Computes the variance of each group, ignoring NaNs. Used by 
+                            `Categorical` objects.
+    
+        Notes
+        -----
+        The `dtype` keyword for `FastArray.nanvar` specifies the data type of the 
+        result. This differs from `numpy.nanvar`, where it specifies the data type used 
+        to compute the variance.
+        
+        **Notes on Using NumPy Parameters**
+        
+        Using any of the following NumPy parameters will cause Riptable to switch to 
+        the NumPy implementation of this method (`numpy.nanvar`). However, until a 
+        reported bug is fixed, if you also include the `dtype` parameter it will be 
+        applied to the result, not used to compute the variance as it is in 
+        `numpy.nanvar`.
+        
+        Also note that if you use any of the following NumPy parameters and also 
+        include a `filter` keyword argument (which `numpy.nanvar` does not accept), 
+        Riptable's implementation of `nanvar` will be used with the filter argument 
+        and the NumPy parameters will be ignored.
+        
         axis : {int, tuple of int, None}, optional
-            Axis or axes along which the variance is computed.  The default is to compute
-            the variance of the flattened array.
-
+            Axis or axes along which the variance is computed. The default is to
+            compute the variance of the flattened array.
+ 
         keepdims : bool, optional
-            If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one. With this option,
-            the result will broadcast correctly against the original `a`.
-
-
-            If the value is anything but the default, then
-            `keepdims` will be passed through to the `mean` or `sum` methods
-            of sub-classes of `ndarray`.  If the sub-classes methods
-            does not implement `keepdims` any exceptions will be raised.
+            If this is set to True, the axes which are reduced are left in the result as 
+            dimensions with size one. With this option, the result will broadcast 
+            correctly against the original input array.
 
         ddof : int, optional
             "Delta Degrees of Freedom": the divisor used in the calculation is
-            ``N - ddof``, where ``N`` represents the number of non-NaN
-            elements. By default `ddof` is zero if you use the numpy implementation.
-
+            ``N - ddof``, where ``N`` represents the number of non-NaN elements. By 
+            default `ddof` is zero for the NumPy implementation, versus one for the 
+            Riptable implementation.
+     
+        Examples
+        --------
+        >>> a = rt.FastArray([1, 2, 3, rt.nan])
+        >>> a.nanvar()
+        1.0
+    
+        With a `dtype` specified:
+    
+        >>> a = rt.FastArray([1, 2, 3, rt.nan])
+        >>> a.nanvar(dtype = rt.int32)
+        1
+    
+        With a filter:
+    
+        >>> a = rt.FastArray([1, 2, 3, rt.nan])
+        >>> b = rt.FastArray([False, True, True, True])
+        >>> a.nanvar(filter = b)
+        0.5
         '''
 
         kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
@@ -2215,57 +2420,102 @@ class FastArray(np.ndarray):
         if filter is not None:
             return self._fa_filter_wrapper(_fnanvar, filter=filter, dtype = dtype)
 
-        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANVAR, np.nanvar,  *args, **kwargs)
-    def std(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANVAR, np.nanvar,   **kwargs)
+    def std(self,  filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs) -> np.number:
         '''
-        Computes the standard deviation of the first argument. Uses the convention that
-        ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n] is defined by
-        std**2 = 1/(n-1) * sum( x_i - mean )**2.
-        (Note the n-1 instead of n).
+        Compute the standard deviation of the values in the first argument.
+    
+        Riptable uses the convention that ``ddof = 1``, meaning the standard deviation of 
+        ``[x_1, ..., x_n]`` is defined by ``std = 1/(n - 1) * sum(x_i - mean )**2`` (note 
+        the ``n - 1`` instead of ``n``). This differs from NumPy, which uses ``ddof = 0`` by
+        default.
+    
+        Parameters
+        ----------
+        filter : array of bool, default None
+            Specifies which elements to include in the standard deviation calculation. If 
+            the filter is uniformly ``False``, `std` returns a `ZeroDivisionError`.
 
-        For example
-        >>> a = rt.FastArray( [1,2,3])
-        >>> a.std()
-        1.0
-
-        Parameters:
-        filter : array of bool, optional
-        Specifies which elements to include in the variance calculation. For example,
-        >>> a = rt.FastArray( [1,3,5,7])
-        >>> b = rt.FastArray( [False, True, False, True] )
-        >>> a.std(filter = b)
-        2.8284271247461903
-
-
-        dtype : optional
-        What datatype should the result be returned as. For a FastArray x,
-        x.std(dtype = my_type) is equivalent to my_type( x.std() ).
-
-
-        Numpy Parameters:
-        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
-        with these parameters. The filter parameter will take precedence and if nanvar is passed a filter and
-        one of these parameters, it will ignore these parameters.
-
+        dtype : rt.dtype or numpy.dtype, default float64
+            The data type of the result. For a `FastArray` ``x``, 
+            ``x.std(dtype = my_type)`` is equivalent to ``my_type(x.std())``.
+       
+        Returns
+        -------
+        scalar
+            The standard deviation of the values.
+            
+        See Also
+        --------
+        numpy.std
+        FastArray.nanstd : Computes the standard deviation of `FastArray` values, ignoring 
+                           NaNs.
+        Dataset.std : Computes the standard deviation of numerical `Dataset` columns.
+        GroupByOps.std : Computes the standard deviation of each group. Used by 
+                         `Categorical` objects.
+    
+        Notes
+        -----
+        The `dtype` keyword for `FastArray.std` specifies the data type of the result. 
+        This differs from `numpy.std`, where it specifies the data type used to compute 
+        the standard deviation.
+        
+        **Notes on Using NumPy Parameters**
+        
+        Using any of the following NumPy parameters will cause Riptable to switch to 
+        the NumPy implementation of this method (`numpy.std`). However, until a 
+        reported bug is fixed, if you also include the `dtype` parameter it will be 
+        applied to the result, not used to compute the variance as it is in 
+        `numpy.std`.
+        
+        Also note that if you use any of the following NumPy parameters and also 
+        include a `filter` keyword argument (which `numpy.std` does not accept), 
+        Riptable's implementation of `std` will be used with the filter argument 
+        and the NumPy parameters will be ignored.
+               
         axis : None or int or tuple of ints, optional
             Axis or axes along which the standard deviation is computed. The
             default is to compute the standard deviation of the flattened array.
+            
+            .. versionadded:: 1.7.0
+            
+            If this is a tuple of ints, a standard deviation is performed over multiple 
+            axes, instead of a single axis or all the axes as before.
 
         keepdims : bool, optional
-            If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one. With this option,
-            the result will broadcast correctly against the original `a`.
+            If this is set to True, the axes which are reduced are left in the result as 
+            dimensions with size one. With this option, the result will broadcast 
+            correctly against the input array.
 
-
-            If the value is anything but the default, then
-            `keepdims` will be passed through to the `mean` or `sum` methods
-            of sub-classes of `ndarray`.  If the sub-classes methods
-            does not implement `keepdims` any exceptions will be raised.
+            If the default value is passed, then `keepdims` will not be passed through 
+            to the `std` method of sub-classes of `ndarray`, however any non-default 
+            value will be. If the sub-class' method does not implement `keepdims`, 
+            any exceptions will be raised.
 
         ddof : int, optional
             "Delta Degrees of Freedom": the divisor used in the calculation is
-            ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero for the
-            numpy implementation.
+            ``N - ddof``, where ``N`` represents the number of elements. By default 
+            `ddof` is zero for the NumPy implementation, versus one for the 
+            Riptable implementation.
+    
+        Examples
+        --------
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> a.std()
+        1.0
+    
+        With a `dtype` specified:
+    
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> a.std(dtype = rt.int32)
+        1    
+    
+        With a filter:
+    
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> b = rt.FA([False, True, True])
+        >>> a.std(filter = b)
+        0.7071067811865476
         '''
 
         kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
@@ -2273,80 +2523,121 @@ class FastArray(np.ndarray):
         if filter is not None:
             return self._fa_filter_wrapper(_fstd, filter=filter, dtype = dtype)
 
-        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_STD,    np.std,     *args, **kwargs)
-    def nanstd(self, *args, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs):
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_STD,    np.std,     **kwargs)
+    
+    def nanstd(self, filter = None, dtype = None, axis = None, keepdims = None, ddof = None,  **kwargs) -> np.number:
         '''
-        Computes the standard deviation of the first argument ignoring NaNs. Uses
-        the convention that ddof = 1 unlike numpy, meaning the std of [x_1, ... , x_n]
-        is defined by
-        std**2 = 1/(n-1) * sum( x_i - mean )**2.
-        (Note the n-1 instead of n).
+        Compute the standard deviation of the values in the first argument, ignoring NaNs.
+    
+        If all values in the first argument are NaNs, ``NaN`` is returned.
+    
+        Riptable uses the convention that ``ddof = 1``, meaning the standard deviation of 
+        ``[x_1, ..., x_n]`` is defined by ``std = 1/(n - 1) * sum(x_i - mean )**2`` (note 
+        the ``n - 1`` instead of ``n``). This differs from NumPy, which uses ``ddof = 0`` by
+        default.
+        
+        Parameters
+        ----------
+        filter : array of bool, default None
+            Specifies which elements to include in the standard deviation calculation. If 
+            the filter is uniformly ``False``, `nanstd` returns a `ZeroDivisionError`.
 
-        For example
-        >>> a = rt.FastArray( [1,2,3,rt.nan])
-        >>> a.nanstd()
-        1.0
-
-        Parameters:
-        filter : array of bool, optional
-        Specifies which elements to include in the variance calculation. For example,
-        >>> a = rt.FastArray( [1,3,5,7,rt.nan])
-        >>> b = rt.FastArray( [False, True, False, True, True] )
-        >>> nanstd.a(filter = b)
-        2.8284271247461903
-
-
-        dtype : optional
-        What datatype should the result be returned as. For a FastArray x,
-        x.nanstd(dtype = my_type) is equivalent to my_type( x.nanstd() ).
-
-
-        Numpy Parameters:
-        Using these parameters will switch to the numpy implementation. In particular, filter cannot be used
-        with these parameters. The filter parameter will take precedence and if nanvar is passed a filter and
-        one of these parameters, it will ignore these parameters.
-
+        dtype : rt.dtype or numpy.dtype, default float64
+            The data type of the result. For a `FastArray` ``x``, 
+            ``x.nanstd(dtype = my_type)`` is equivalent to ``my_type(x.nanstd())``.
+       
+        Returns
+        -------
+        scalar
+            The standard deviation of the values.
+            
+        See Also
+        --------
+        numpy.nanstd
+        FastArray.std : Computes the standard deviation of `FastArray` values.
+        Dataset.nanstd : Computes the standard deviation of numerical `Dataset` columns, 
+                         ignoring NaNs.
+        GroupByOps.nanstd : Computes the standard deviation of each group, ignoring NaNs. 
+                            Used by `Categorical` objects.
+    
+        Notes
+        -----
+        The `dtype` keyword for `FastArray.nanstd` specifies the data type of the 
+        result. This differs from `numpy.nanstd`, where it specifies the data type used 
+        to compute the standard deviation.
+        
+        **Notes on Using NumPy Parameters**
+        
+        Using any of the following NumPy parameters will cause Riptable to switch to 
+        the NumPy implementation of this method (`numpy.nanstd`). However, until a 
+        reported bug is fixed, if you also include the `dtype` parameter it will be 
+        applied to the result, not used to compute the variance as it is in 
+        `numpy.nanstd`.
+        
+        Also note that if you use any of the following NumPy parameters and also 
+        include a `filter` keyword argument (which `numpy.nanstd` does not accept), 
+        Riptable's implementation of `nanstd` will be used with the filter argument 
+        and the NumPy parameters will be ignored.
+        
         axis : {int, tuple of int, None}, optional
-            Axis or axes along which the sum is computed. The default is to compute the
-            sum of the flattened array.
+            Axis or axes along which the standard deviation is computed. The default is 
+            to compute the standard deviation of the flattened array.
 
         keepdims : bool, optional
-            If this is set to True, the axes which are reduced are left
-            in the result as dimensions with size one. With this option,
-            the result will broadcast correctly against the original `a`.
+            If this is set to True, the axes which are reduced are left in the result as 
+            dimensions with size one. With this option, the result will broadcast 
+            correctly against the original input array.
 
-
-            If the value is anything but the default, then
-            `keepdims` will be passed through to the `mean` or `sum` methods
-            of sub-classes of `ndarray`.  If the sub-classes methods
-            does not implement `keepdims` any exceptions will be raised.
+            If this value is anything but the default it is passed through as-is to the 
+            relevant functions of the sub-classes. If these functions do not have a 
+            `keepdims` kwarg, a RuntimeError will be raised.
 
         ddof : int, optional
             "Delta Degrees of Freedom": the divisor used in the calculation is
-            ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero for the
-            numpy implementation.
+            ``N - ddof``, where ``N`` represents the number of elements. By default 
+            `ddof` is zero for the NumPy implementation, versus one for the 
+            Riptable implementation.
+       
+        Examples
+        --------
+        >>> a = rt.FastArray([1, 2, 3, rt.nan])
+        >>> a.nanstd()
+        1.0
+    
+        With a `dtype` specified:
+    
+        >>> a = rt.FastArray([1, 2, 3, rt.nan])
+        >>> a.nanstd(dtype = rt.int32)
+        1  
+    
+        With filter:
+    
+        >>> a = rt.FastArray([1, 2, 3, rt.nan])
+        >>> b = rt.FastArray([False, True, True, True])
+        >>> a.nanstd(filter = b)
+        0.7071067811865476
         '''
         kwargs = self._fa_keyword_wrapper(filter=filter, dtype=dtype, axis=axis, keepdims=keepdims, ddof=ddof, **kwargs)
 
         if filter is not None:
             return self._fa_filter_wrapper(_fnanstd, filter=filter, dtype=dtype)
 
-        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSTD, np.nanstd,  *args, **kwargs)
+        return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANSTD, np.nanstd, **kwargs)
     
     #---------------------------------------------------------------------------
-    def nanmin(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMIN, np.nanmin,  *args, **kwargs)
-    def nanmax(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMAX, np.nanmax,  *args, **kwargs)
+    def nanmin(self,  **kwargs) -> np.number:         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMIN, np.nanmin,   **kwargs)
+    def nanmax(self,  **kwargs) -> np.number:         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANMAX, np.nanmax,   **kwargs)
     #---------------------------------------------------------------------------
-    def argmin(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_ARGMIN, np.argmin,  *args, **kwargs)
-    def argmax(self, *args, **kwargs):         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_ARGMAX, np.argmax,  *args, **kwargs)
-    def nanargmin(self, *args, **kwargs):      return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANARGMIN, np.nanargmin,  *args, **kwargs)
-    def nanargmax(self, *args, **kwargs):      return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANARGMAX, np.nanargmax,  *args, **kwargs)
+    def argmin(self,  **kwargs) -> int:         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_ARGMIN, np.argmin,   **kwargs)
+    def argmax(self,  **kwargs) -> int:         return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_ARGMAX, np.argmax,   **kwargs)
+    def nanargmin(self,  **kwargs) -> int:      return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANARGMIN, np.nanargmin,   **kwargs)
+    def nanargmax(self,  **kwargs) -> int:      return self._reduce_check( REDUCE_FUNCTIONS.REDUCE_NANARGMAX, np.nanargmax,   **kwargs)
 
     #############################################
     # Stats/ML section
     #############################################
-    def normalize_zscore(self):                return normalize_zscore(self)
-    def normalize_minmax(self):                return normalize_minmax(self)
+    def normalize_zscore(self) -> FastArray:                return normalize_zscore(self)
+    def normalize_minmax(self) -> FastArray:                return normalize_minmax(self)
 
     #############################################
     # BasicMath section (to be hooked at C level now)
@@ -2377,7 +2668,27 @@ class FastArray(np.ndarray):
     #todo: stats/nanstats
 
     #-------------------------------------------------------
-    def nunique(self):
+    def unique(
+        self, 
+        return_index: bool = False,
+        return_inverse: bool = False,
+        return_counts: bool = False,
+        sorted: bool = True,
+        lex: bool = False,
+        dtype: Optional[Union[str, np.dtype]] = None,
+        filter: Optional[np.ndarray] = None, 
+        **kwargs
+    ) -> Union['FastArray', Tuple['FastArray', ...], List['FastArray'], tuple]:
+        """
+        Find the unique elements of an array or the unique combinations of elements with 
+        corresponding indices in multiple arrays.
+        
+        See :meth:`riptable.unique` for full documentation.
+        """
+        return unique(self,**kwargs)
+    
+    #-------------------------------------------------------
+    def nunique(self) -> int:
         '''
         Returns number of unique values in array. Does not include nan or sentinel values in the count.
 
@@ -2423,7 +2734,7 @@ class FastArray(np.ndarray):
         return count
 
     #-------------------------------------------------------
-    def searchsorted(self, v, side='left', sorter=None):
+    def searchsorted(self, v, side='left', sorter=None) -> np.number:
         return _searchsorted(self, v, side=side, sorter=sorter)
 
     #---------------------------------------------------------------------------
@@ -2447,7 +2758,7 @@ class FastArray(np.ndarray):
             outArray[self==k]=v
         return outArray
 
-    def map(self, npdict:dict):
+    def map(self, npdict:dict) -> FastArray:
         '''
         Notes
         -----
@@ -2470,7 +2781,7 @@ class FastArray(np.ndarray):
         return outArray
 
     #---------------------------------------------------------------------------
-    def shift(self, periods=1, invalid=None):
+    def shift(self, periods=1, invalid=None) -> FastArray:
         """
         Modeled on pandas.shift.
         Values in the array will be shifted to the right for positive, to the left for negative.
@@ -2547,7 +2858,7 @@ class FastArray(np.ndarray):
         return result
 
     #-------------------------------------------------------
-    def differs(self, periods=1, fancy=False):
+    def differs(self, periods=1, fancy=False) -> FastArray:
         """
         Returns a boolean array.
         The boolean array is set to True when the previous item in the array equals the current.
@@ -2568,7 +2879,7 @@ class FastArray(np.ndarray):
         return self._internal_self_compare(MATH_OPERATION.CMP_EQ, periods=periods, fancy=fancy)
 
     #---------------------------------------------------------------------------
-    def transitions(self, periods=1, fancy=False):
+    def transitions(self, periods=1, fancy=False) -> FastArray:
         """
         Returns a boolean array.
         The boolean array is set to True when the previous item in the array does not equal the current.
@@ -2599,7 +2910,7 @@ class FastArray(np.ndarray):
         return self._internal_self_compare(MATH_OPERATION.CMP_NE, periods=periods, fancy=fancy)
 
     #-------------------------------------------------------
-    def diff(self, periods=1):
+    def diff(self, periods=1) -> FastArray:
         """
         Only works for integers and floats.
 
@@ -2636,7 +2947,7 @@ class FastArray(np.ndarray):
         return temp
 
     #-------------------------------------------------------
-    def isna(self):
+    def isna(self) -> FastArray:
         '''
         isnan is mapped directly to isnan()
         Categoricals and DateTime take over isnan.
@@ -2652,7 +2963,7 @@ class FastArray(np.ndarray):
         '''
         return self.isnan()
 
-    def notna(self):
+    def notna(self) -> FastArray:
         '''
         notna is mapped directly to isnotnan()
         Categoricals and DateTime take over isnotnan.
@@ -2668,19 +2979,56 @@ class FastArray(np.ndarray):
         '''
         return self.isnotnan()
 
-    def replacena(self, value, inplace=False):
+    def replacena(self, value, inplace=False) -> FastArray:
         """
-        Returns a copy with all invalid values set to the given value.
-        Optionally modify the original, this might fail if locked.
+        Return a `FastArray` with all NaN and invalid values set to the specified value.
+        
+        Optionally, you can modify the original `FastArray` if it's not locked.
 
         Parameters
         ----------
-        value: a replacement value
-        inplace: defaults False. If True modify original and return None
+        value : scalar or array
+            A value or an array of values to replace all NaN and invalid values. If an 
+            array, the number of values must equal the number of NaN and invalid values.
+        inplace : bool, default False
+            If False, return a copy of the `FastArray`. If True, modify the original. 
+            This will modify any other views on this object. This fails if the
+            `FastArray` is locked.
 
         Returns
         -------
-        FastArray (size and dtype == original) or None
+        `FastArray` or None
+            The `FastArray` will be the same size and dtype as the original array.
+            Returns None if ``inplace = True``.
+            
+        See Also
+        --------
+        FastArray.fillna : Replace NaN and invalid values with a specified value or nearby data.
+        Dataset.fillna : Replace NaN and invalid values with a specified value or nearby data.
+        Categorical.fill_forward : Replace NaN and invalid values with the last valid group value.
+        Categorical.fill_backward : Replace NaN and invalid values with the next valid group value.
+        GroupBy.fill_forward : Replace NaN and invalid values with the last valid group value.
+        GroupBy.fill_backward : Replace NaN and invalid values with the next valid group value.
+            
+        Examples
+        --------
+        Replace all instances of NaN with a single value:
+        
+        >>> a = rt.FastArray([rt.nan, 1.0, rt.nan, 3.0])
+        >>> a.replacena(0)
+        FastArray([0., 1., 0., 3.])
+        
+        Replace all invalid values with 0s:
+        
+        >>> b = rt.FastArray([0, 1, 2, 3, 4, 5])
+        >>> b[0:3] = b.inv
+        >>> b.replacena(0)
+        FastArray([0, 0, 0, 3, 4, 5])
+
+        Replace each instance of NaN with a different value:
+        
+        >>> a.replacena([0, 2])
+        FastArray([0., 1., 2., 3.])
         """
         inst = self if inplace else self.copy()
         isna = inst.isna()
@@ -2690,37 +3038,103 @@ class FastArray(np.ndarray):
             return None
         return inst
 
-    def fillna(self, value=None, method=None, inplace=False, limit=None):
+    def fillna(self, value=None, method=None, inplace=False, limit=None) -> FastArray:
         """
-        Returns a copy with all invalid values set to the given value.
-        Optionally modify the original, this might fail if locked.
-
+        Replace NaN and invalid values with a specified value or nearby data.
+        
+        Optionally, you can modify the original `FastArray` if it's not locked.
+        
         Parameters
         ----------
-        value: a replacement value
-        method : {'backfill', 'bfill', 'pad', 'ffill', None},
-             backfill/bfill: call fill_backward
-             pad/ffill: calls fill_forward
-             None: calls replacena
-
-        inplace: defaults False. If True modify original and return None
-        limit: only valid when method is not None
+        value : scalar or array, default None
+            A value or an array of values to replace all NaN and invalid values. 
+            A `value` is required if ``method = None``. An array can be used only when 
+            ``method = None``. If an array is used, the number of values in the array 
+            must equal the number of NaN and invalid values.
+        method : {None, 'backfill', 'bfill', 'pad', 'ffill'}, default None
+            Method to use to propagate valid values.
+            
+            * backfill/bfill: Propagates the next encountered valid value backward. 
+              Calls `FastArray.fill_backward <https://eot.gitlab.ds.susq.com/sigpydata/riptable/riptable/autoapi/riptable/rt_fastarraynumba/index.html#riptable.rt_fastarraynumba.fill_backward>`_.
+            * pad/ffill: Propagates the last encountered valid value forward. Calls 
+              `FastArray.fill_forward <https://eot.gitlab.ds.susq.com/sigpydata/riptable/riptable/autoapi/riptable/rt_fastarraynumba/index.html#riptable.rt_fastarraynumba.fill_forward>`_.
+            * None: A replacement value is required if ``method = None``. Calls 
+              :meth:`FastArray.replacena`.
+            If there's not a valid value to propagate forward or backward, the NaN or 
+            invalid value is not replaced unless you also specify a `value`.
+        inplace : bool, default False
+            If False, return a copy of the `FastArray`. If True, modify original data. 
+            This will modify any other views on this object. This fails if the 
+            `FastArray` is locked.
+        limit : int, default None
+            If `method` is specified, this is the maximium number of consecutive NaN or
+            invalid values to fill. If there is a gap with more than this number of 
+            consecutive NaN or invalid values, the gap will be only partially filled.
 
         Returns
         -------
-        FastArray (size and dtype == original) or None
-
+        `FastArray`
+            The `FastArray` will be the same size and dtype as the original array.
+        
+        See Also
+        --------
+        riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with 
+            the last valid value.
+        riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with 
+            the next valid value.
+        riptable.fill_forward : Replace NaN and invalid values with the last valid 
+            value.
+        riptable.fill_backward : Replace NaN and invalid values with the next valid 
+            value.
+        Dataset.fillna : Replace NaN and invalid values with a specified value or 
+            nearby data.
+        FastArray.replacena : Replace NaN and invalid values with a specified value.
+        Categorical.fill_forward : Replace NaN and invalid values with the last valid 
+            group value.
+        Categorical.fill_backward : Replace NaN and invalid values with the next valid 
+            group value.
+        GroupBy.fill_forward : Replace NaN and invalid values with the last valid 
+            group value.
+        GroupBy.fill_backward : Replace NaN and invalid values with the next valid 
+            group value.
+                
         Examples
         --------
-        >>> ds = rt.Dataset({'A': arange(3), 'B': arange(3.0)})^M
-        >>> ds.A[2]=ds.A.inv; ds.B[1]=np.nan;
-        >>> ds.fillna(FastArray.fillna, 0)
-        #   A      B
-        -   -   ----
-        0   0   0.00
-        1   1   0.00
-        2   0   2.00
-
+        Replace all NaN values with 0s:
+        
+        >>> a = rt.FastArray([rt.nan, 1.0, rt.nan, rt.nan, rt.nan, 5.0])
+        >>> a.fillna(0)
+        FastArray([0., 1., 0., 0., 0., 5.])
+        
+        Replace all invalid values with 0s:
+        
+        >>> b = rt.FastArray([0, 1, 2, 3, 4, 5])
+        >>> b[0:3] = b.inv
+        >>> b.fillna(0)
+        FastArray([0, 0, 0, 3, 4, 5])
+        
+        Replace each instance of NaN with a different value:
+        
+        >>> a.fillna([0, 2, 3, 4])
+        FastArray([0., 1., 2., 3., 4., 5.])
+        
+        Propagate the last encountered valid value forward. Note that where there's no
+        valid value to propagate, the NaN or invalid value isn't replaced.
+        
+        >>> a.fillna(method = 'ffill')
+        FastArray([nan,  1.,  1.,  1.,  1.,  5.])
+        
+        You can use the `value` parameter to specify a value to use where there's no 
+        valid value to propagate.
+        
+        >>> a.fillna(value = 0, method = 'ffill')
+        FastArray([0., 1., 1., 1., 1., 5.])
+        
+        Replace only the first NaN or invalid value in any consecutive series of NaN or
+        invalid values.
+        
+        >>> a.fillna(method = 'bfill', limit = 1)
+        FastArray([ 1.,  1., nan, nan,  5.,  5.])
         """
         if method is not None:
             if method in ['backfill','bfill']:
@@ -2737,7 +3151,7 @@ class FastArray(np.ndarray):
 
         return self.replacena(value, inplace=inplace)
 
-    def statx(self):
+    def statx(self) -> Dataset:
         return statx(self)
 
     #---------------------------------------------------------------------------
@@ -3054,7 +3468,7 @@ class FastArray(np.ndarray):
             #results [[33.]]
             #Out[26]: array([[33.]], dtype=float32)
             #print("!!reduce ", method, 'nin:', ufunc.nin, ufunc.nout, ufunc,  args, 'out:', outputs,  'kwargs:', kwargs,'ndim', args[0].ndim)
-            #resultN = super(FastArray, self).__array_ufunc__(ufunc, method, *args, **kwargs)
+            #resultN = super(FastArray, self).__array_ufunc__(ufunc, method,**kwargs)
             #print("!!result numpy", resultN, type(resultN))
             # NOTE:
             # look for reduce logical_or
@@ -3733,7 +4147,7 @@ class FastArray(np.ndarray):
         return result.values
 
     #-----------------------------------------------------------
-    @cached_property
+    @cached_weakref_property
     def str(self) -> 'FAString':
         r"""Casts an array of byte strings or unicode as ``FAString``.
 

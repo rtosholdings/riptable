@@ -4,7 +4,7 @@ package:
 
 build:
   number: 0
-  preserve_egg_dir: True
+  script: python setup.py install --single-version-externally-managed --record=record.txt
 
 source:
   - path: ../
@@ -14,7 +14,7 @@ requirements:
     - python {{ python }}
     # The following requirements are in the build because setup.py requires them.
     - setuptools_scm
-    - riptide_cpp >=1.8,<1.9
+    - riptide_cpp >=1.8,<2  # build with latest version in this range
     - pandas >=0.24,<2.0
     - ansi2html >=1.5.2
     - numpy >=1.21
@@ -22,7 +22,7 @@ requirements:
     - python-dateutil
   run:
     - python
-    - {{ pin_compatible('riptide_cpp', min_pin='x.x', max_pin='x.x') }}
+    - riptide_cpp >=1.8,<2  # run with any (compatible) version in this range
     - pandas >=0.24,<2.0
     - ansi2html >=1.5.2
     - numpy >=1.21
@@ -44,7 +44,6 @@ test:
     - pyarrow >=6.0.0
     # Include bokeh as a test requirement, as it's an optional run-time dependency.
     - bokeh
-
     # Known issues where ipykernel dies before reply messages.
     # The following ipykernel and jupyter_console versions are verified to work.
     # https://github.com/jupyter/jupyter_client/issues/154
@@ -52,6 +51,9 @@ test:
     - jupyter_console >=6.0.0
   imports:
     - riptable
+  commands:
+    # Assumes RECIPE_DIR={root}/conda_recipe, to output report into {root}/test-output.
+    - pytest -v riptable/tests --junitxml {{RECIPE_DIR}}/../test-output/report.xml
 
 about:
   home: https://github.com/rtosholdings/riptable

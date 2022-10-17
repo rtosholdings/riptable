@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # -*- coding: utf-8 -*-
 __all__ = ['Dataset', ]
 
@@ -213,7 +215,7 @@ class Dataset(Struct):
         inputval: Optional[Union[ArrayCompatible, dict, Iterable[ArrayCompatible], Iterable[Tuple[str, ArrayCompatible]], 'ItemContainer']] = None,
         base_index: int = 0,
         sort: bool = False,
-        unicode: bool = False):
+        unicode: bool = False) -> None:
         if inputval is None:
             inputval = dict()
 
@@ -668,20 +670,26 @@ class Dataset(Struct):
     # --------------------------------------------------------
     def copy(self, deep=True):
         """
-        Make a copy of the Dataset.
+        Make a copy of the `Dataset`.
 
         Parameters
         ----------
-        deep : bool
-            Indicates whether the underlying data should be copied too. Defaults to True.
+        deep : bool, default True
+            Whether the underlying data should be copied. When ``deep = True`` (the 
+            default), changes to the copy do not modify the underlying data (and vice
+            versa). When ``deep = False``, the copy is shallow: Only references to the
+            underlying data are copied, and any changes to the copy also modify the 
+            underlying data (and vice versa).            
 
         Returns
         -------
-        Dataset
+        `Dataset`
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': np.arange(-3,3), 'b':3*['A', 'B'], 'c':3*[True, False]})
+        Create a `Dataset`:
+        
+        >>> ds = rt.Dataset({'a': rt.arange(-3,3), 'b':3*['A', 'B'], 'c':3*[True, False]})
         >>> ds
         #    a   b       c
         -   --   -   -----
@@ -691,6 +699,9 @@ class Dataset(Struct):
         3    0   B   False
         4    1   A    True
         5    2   B   False
+        
+        When ``deep = True`` (the default), changes to the original ``ds`` do not modify
+        the copy, ``ds1``.
 
         >>> ds1 = ds.copy()
         >>> ds.a = ds.a + 1
@@ -703,26 +714,76 @@ class Dataset(Struct):
         3    0   B   False
         4    1   A    True
         5    2   B   False
-
-        Even though we have changed ds, ds1 remains unchanged.
-
         """
         return self._copy(deep)
 
     # --------------------------------------------------------
     def filter(self, rowfilter: np.ndarray, inplace:bool=False) -> 'Dataset':
         """
-        Use a row filter to make a copy of the Dataset.
+        Return a copy of the `Dataset` containing only the rows that meet the specified 
+        condition.
 
         Parameters
         ----------
-        rowfilter: array, fancy index or boolean mask
-        inplace : bool
-            When set to True will reduce memory overhead. Defaults to False.
+        rowfilter : array: fancy index or Boolean mask
+            A fancy index specifies both the desired rows and their order in the
+            returned `Dataset`. When a Boolean mask is passed, only rows that meet the 
+            specified condition are in the returned `Dataset`.
+        inplace : bool, default False
+            When set to True, reduces memory overhead by modifying the original
+            `Dataset` instead of making a copy.
 
+        Returns
+        -------
+        `Dataset`
+        
+        Notes
+        -----
+        Making a copy of a large `Dataset` is expensive. Use ``inplace = True`` when 
+        possible. 
+        
+        If you want to perform an operation on a filtered column, get the column and 
+        then perform the operation using the ``filter`` keyword argument. For example,
+        ``ds.ColumnName.sum(filter = boolean_mask)``. 
+        
+        Alternatively, you can filter the column and then perform the operation. For 
+        example, ``ds.ColumnName[boolean_mask].sum()``.
+        
         Examples
         --------
-        Filter a Dataset using the least memory possible
+        Create a `Dataset`:
+        
+        >>> ds = rt.Dataset({'a': rt.arange(-3,3), 'b':3*['A', 'B'], 'c':3*[True, False]})
+        >>> ds
+        #    a   b       c
+        -   --   -   -----
+        0   -3   A    True
+        1   -2   B   False
+        2   -1   A    True
+        3    0   B   False
+        4    1   A    True
+        5    2   B   False
+        
+        Filter using a fancy index:
+        
+        >>> ds.filter([5, 0, 1])
+        #    a   b       c
+        -   --   -   -----
+        0    2   B   False
+        1   -3   A    True
+        2   -2   B   False
+        
+        Filter using a condition that creates a Boolean mask array:
+        
+        >>> ds.filter(ds.filter(ds.b == 'A'))
+        #    a   b      c
+        -   --   -   ----
+        0   -3   A   True
+        1   -1   A   True
+        2    1   A   True
+        
+        Filter a large `Dataset` using the least memory possible with 
+        ``inplace = True``.
 
         >>> ds = rt.Dataset({'a': rt.arange(10_000_000), 'b': rt.arange(10_000_000.0)})
         >>> f = rt.logical(rt.arange(10_000_000) % 2)
@@ -761,12 +822,27 @@ class Dataset(Struct):
 
     def get_nrows(self):
         """
-        Get the number of elements in each column of the Dataset.
+        The number of elements in each column of the `Dataset`.
 
         Returns
         -------
         int
-            The number of elements in each column of the Dataset.
+            The number of elements in each column of the `Dataset`.
+            
+        See Also
+        --------
+        Dataset.size : The number of elements in the `Dataset` (nrows x ncols).
+        Struct.get_ncols : 
+            The number of items in a `Struct` or the number of elements in each row
+            of a `Dataset`.
+        Struct.shape : A tuple containing the number of rows and columns in a `Struct` 
+                       or `Dataset`.
+                
+        Examples
+        --------
+        >>> ds = rt.Dataset({'A': [1.0, 2.0], 'B': [3, 4], 'C': ['c', 'c']})
+        >>> ds.get_nrows()
+        2
         """
         return self._nrows
 
@@ -891,12 +967,28 @@ class Dataset(Struct):
     @property
     def size(self) -> int:
         """
-        Number of elements in the Dataset (nrows x ncols).
+        The number of elements in the `Dataset` (the number of rows times the number of 
+        columns).
 
         Returns
         -------
         int
-            The number of elements in the Dataset (nrows x ncols).
+            The number of elements in the `Dataset` (nrows x ncols).
+            
+        See Also
+        --------
+        Dataset.get_nrows : The number of elements in each column of a `Dataset`.
+        Struct.get_ncols : 
+            The number of items in a `Struct` or the number of elements in each row
+            of a `Dataset`.
+        Struct.shape : A tuple containing the number of rows and columns in a `Struct` 
+                       or `Dataset`. 
+        
+        Examples
+        --------
+        >>> ds = rt.Dataset({'A': [1.0, 2.0], 'B': [3, 4], 'C': ['c', 'c']})
+        >>> ds.size
+        6
         """
         return self._ncols * self._nrows
 
@@ -1764,51 +1856,126 @@ class Dataset(Struct):
             return self
 
     # -------------------------------------------------------
-    def fillna(self, value=None, method: Optional[str] = None, inplace: bool = False, limit: Optional[int] = None) -> Optional['Dataset']:
+    def fillna(self, value=None, method: Optional[str] = None, inplace: bool = False, 
+               limit: Optional[int] = None) -> Optional['Dataset']:
         """
-        Returns a copy with all invalid values set to the given value.
-        Optionally modify the original, this might fail if locked.
-
+        Replace NaN and invalid values with a specified value or nearby data.
+        
+        Optionally, you can modify the original `Dataset` if it's not locked.
+        
         Parameters
         ----------
-        value
-            A replacement value (CANNOT be a dict yet)
-        method : {'backfill', 'bfill', 'pad', 'ffill', None}
-            * backfill/bfill: calls :meth:`~rt.rt_fastarray.FastArray.fill_backward`
-            * pad/ffill: calls :meth:`~rt.rt_fastarray.FastArray.fill_forward`
-            * None: calls :meth:`~rt.rt_fastarray.FastArray.replacena`
+        value : scalar, default None
+            A value to replace all NaN and invalid values. Required if 
+            ``method = None``. Note that this **cannot** be a `dict` yet. If a `method` 
+            is also provided, the `value` will be used to replace NaN and invalid values 
+            only where there's not a valid value to propagate forward or backward.
+        method : {None, 'backfill', 'bfill', 'pad', 'ffill'}, default None
+            Method to use to propagate valid values within each column.
+            
+            * backfill/bfill: Propagates the next encountered valid value backward. 
+              Calls `FastArray.fill_backward <https://eot.gitlab.ds.susq.com/sigpydata/riptable/riptable/autoapi/riptable/rt_fastarraynumba/index.html#riptable.rt_fastarraynumba.fill_backward>`_.
+            * pad/ffill: Propagates the last encountered valid value forward. Calls 
+              `FastArray.fill_forward <https://eot.gitlab.ds.susq.com/sigpydata/riptable/riptable/autoapi/riptable/rt_fastarraynumba/index.html#riptable.rt_fastarraynumba.fill_forward>`_.
+            * None: A replacement value is required if ``method = None``. Calls 
+              :meth:`FastArray.replacena`.
+            If there's not a valid value to propagate forward or backward, the NaN or 
+            invalid value is not replaced unless you also specify a `value`.
         inplace : bool, default False
-            If True, modify original column arrays.
-        limit : int, optional, default None
-            Only valid when `method` is not None.
-            The maximium number of consecutive invalid values.
-            A gap with more than this will be partially filled.
+            If False, return a copy of the `Dataset`. If True, modify original column 
+            arrays. This will modify any other views on this object. This fails if the 
+            `Dataset` is locked.
+        limit : int, default None
+            If `method` is specified, this is the maximium number of consecutive NaN or
+            invalid values to fill. If there is a gap with more than this number of 
+            consecutive NaN or invalid values, the gap will be only partially filled.
 
         Returns
         -------
-        Dataset, optional
+        `Dataset`
+            The `Dataset` will be the same size and have the same dtypes as the original 
+            input.
 
+        See Also
+        --------
+        riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with 
+            the last valid value.
+        riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with 
+            the next valid value.
+        riptable.fill_forward : Replace NaN and invalid values with the last valid value.
+        riptable.fill_backward : Replace NaN and invalid values with the next valid value.
+        FastArray.replacena : Replace NaN and invalid values with a specified value.
+        FastArray.fillna : Replace NaN and invalid values with a specified value or nearby data.
+        Categorical.fill_forward : Replace NaN and invalid values with the last valid group value.
+        Categorical.fill_backward : Replace NaN and invalid values with the next valid group value.
+        GroupBy.fill_forward : Replace NaN and invalid values with the last valid group value.
+        GroupBy.fill_backward : Replace NaN and invalid values with the next valid group value.
+        
         Examples
         --------
+        Replace all NaN and invalid values with 0s.
+        
         >>> ds = rt.Dataset({'A': rt.arange(3), 'B': rt.arange(3.0)})
-        >>> ds.A[2]=ds.A.inv
-        >>> ds.B[1]=np.nan
-        >>> ds.fillna(rt.FastArray.fillna, 0)
+        >>> ds.A[2]=ds.A.inv  # Replace with the invalid value for the column's dtype.
+        >>> ds.B[1]=rt.nan
+        >>> ds
+        #     A      B
+        -   ---   ----
+        0     0   0.00
+        1     1    nan
+        2   Inv   2.00
+        >>> ds.fillna(0)
         #   A      B
         -   -   ----
         0   0   0.00
         1   1   0.00
         2   0   2.00
-
-        >>> ds = rt.Dataset({'A':[np.nan, 2, np.nan, 0], 'B': [3, 4, np.nan, 1],
-        ...   'C':[np.nan, np.nan, np.nan, 5], 'D':[np.nan, 3, np.nan, 4]})
-        >>> ds.fillna(method='ffill')
-        #      A      B      C      D
-        -   ----   ----   ----   ----
-        0    nan   3.00    nan    nan
-        1   2.00   4.00    nan   3.00
-        2   2.00   4.00    nan   3.00
-        3   0.00   1.00   5.00   4.00
+        
+        The following examples will use this `Dataset`:
+        
+        >>> ds = rt.Dataset({'A':[rt.nan, 2, rt.nan, 0], 'B': [3, 4, 2, 1],
+        ...                  'C':[rt.nan, rt.nan, rt.nan, 5], 'D':[rt.nan, 3, rt.nan, 4]})
+        >>> ds.B[2] = ds.B.inv  # Replace with the invalid value for the column's dtype.
+        >>> ds
+        #      A     B      C      D
+        -   ----   ---   ----   ----
+        0    nan     3    nan    nan
+        1   2.00     4    nan   3.00
+        2    nan   Inv    nan    nan
+        3   0.00     1   5.00   4.00
+        
+        Propagate the last encountered valid value forward. Note that where there's no
+        valid value to propagate, the NaN or invalid value isn't replaced.
+        
+        >>> ds.fillna(method = 'ffill')
+        #      A   B      C      D
+        -   ----   -   ----   ----
+        0    nan   3    nan    nan
+        1   2.00   4    nan   3.00
+        2   2.00   4    nan   3.00
+        3   0.00   1   5.00   4.00
+        
+        You can use the `value` parameter to specify a value to use where there's no 
+        valid value to propagate.
+        
+        >>> ds.fillna(value = 10, method = 'ffill')
+        #       A   B       C       D
+        -   -----   -   -----   -----
+        0   10.00   3   10.00   10.00
+        1    2.00   4   10.00    3.00
+        2    2.00   4   10.00    3.00
+        3    0.00   1    5.00    4.00
+        
+        Replace only the first NaN or invalid value in any consecutive series of NaN or
+        invalid values.
+        
+        >>> ds.fillna(method = 'bfill', limit = 1)
+        #      A   B      C      D
+        -   ----   -   ----   ----
+        0   2.00   3    nan   3.00
+        1   2.00   4    nan   3.00
+        2   0.00   1   5.00   4.00
+        3   0.00   1   5.00   4.00
         """
 
         if method is not None:
@@ -2272,12 +2439,18 @@ class Dataset(Struct):
     @property
     def dtypes(self) -> Mapping[str, np.dtype]:
         """
-        Returns dictionary of dtype for each column.
+        The data type of each `Dataset` column.
 
         Returns
         -------
         dict
-            Dictionary containing the dtype for each column in the Dataset.
+            Dictionary containing each column's name/label and dtype.
+            
+        Examples
+        --------
+        >>> ds = rt.Dataset({'Int' : [1], 'Float' : [1.0], 'String': ['aaa']})
+        >>> ds.dtypes
+        {'Int': dtype('int32'), 'Float': dtype('float64'), 'String': dtype('S3')}
         """
         return {colname: getattr(self, colname).dtype for colname in self.keys()}
 
@@ -3351,18 +3524,40 @@ class Dataset(Struct):
     # -------------------------------------------------------
     def sort_view(self, by, ascending=True, kind='mergesort', na_position='last'):
         """
-        Sorts all columns by the labels only when displayed. This routine is fast and does not change data underneath.
+        Sort the specified columns only when displayed. 
+        
+        This routine is fast and does not change data underneath.
 
         Parameters
         ----------
         by : string or list of strings
-            The column name or list of column names by which to sort
-        ascending : bool
-            Determines if the order of sorting is ascending or not.
+            The column name or list of column names to sort by. The columns are sorted
+            in the order given.
+        ascending : bool, default True
+            Whether the sort is ascending. When True (the default), the sort is
+            ascending. When False, the sort is descending.
+        kind : str
+            **Not used.** The sorting algorithm used is 'mergesort'; user-provided 
+            values for this parameter are ignored.
+        na_position : str
+            **Not used.** If `ascending` is True (the default), NaN values are put last. 
+            If `ascending` is False, NaN values are put first. User-provided values for 
+            this parameter are ignored.
 
+        Returns
+        -------
+        `Dataset`
+        
+        See Also
+        --------
+        Dataset.sort_copy : Return a sorted copy of the `Dataset`.
+        Dataset.sort_inplace : Sort the `Dataset`, modifying the original data.
+        
         Examples
-        ----------
-        >>> ds = rt.Dataset({'a': np.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
+        --------
+        Create a `Dataset`:
+        
+        >>> ds = rt.Dataset({'a': rt.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
         >>> ds
         #   a   b    c
         -   -   -   --
@@ -3377,6 +3572,7 @@ class Dataset(Struct):
         8   8   A   30
         9   9   B   10
 
+        Sort column ``b``, then column ``c``:
 
         >>> ds.sort_view(['b','c'])
         #   a   b    c
@@ -3392,7 +3588,8 @@ class Dataset(Struct):
         8   7   B   20
         9   5   B   30
 
-
+        Sort column ``a`` in descending order:
+        
         >>> ds.sort_view('a', ascending = False)
         #   a   b    c
         -   -   -   --
@@ -3406,8 +3603,6 @@ class Dataset(Struct):
         7   2   A   30
         8   1   B   20
         9   0   A   10
-
-
         """
         self._sort_values(by, ascending=ascending, inplace=False, kind=kind, na_position=na_position, copy=False)
         return self
@@ -3415,23 +3610,43 @@ class Dataset(Struct):
     # -------------------------------------------------------
     def sort_inplace(self, by: Union[str, List[str]], ascending: bool = True, kind: str = 'mergesort', na_position: str = 'last') -> 'Dataset':
         """
-        Sorts all columns by the labels inplace. This routine will modify the order of all columns.
+        Return a `Dataset` with the specified columns sorted in place. 
+        
+        The columns are sorted in the order given. To preserve data alignment, this 
+        method modifies the order of all `Dataset` rows.
 
         Parameters
         ----------
         by : str or list of str
-            The column name or list of column names by which to sort
-        ascending : bool
-            Determines if the order of sorting is ascending or not.
+            The column name or list of column names to sort by. The columns are sorted
+            in the order given.
+        ascending : bool, default True
+            Whether the sort is ascending. When True (the default), the sort is
+            ascending. When False, the sort is descending.
+        kind : str
+            **Not used.** The sorting algorithm used is 'mergesort'; user-provided 
+            values for this parameter are ignored.
+        na_position : str
+            **Not used.** If `ascending` is True (the default), NaN values are put last. 
+            If `ascending` is False, NaN values are put first. User-provided values for 
+            this parameter are ignored.
 
         Returns
         -------
-        Dataset
-            The reference to the input Dataset is returned to allow for method chaining.
+        `Dataset`
+            The reference to the input `Dataset` is returned to allow for method 
+            chaining.
 
+        See Also
+        --------
+        Dataset.sort_copy : Returns a sorted copy of the `Dataset`.
+        Dataset.sort_view : Sorts the `Dataset` columns only when displayed.
+        
         Examples
-        ----------
-        >>> ds = rt.Dataset({'a': np.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
+        --------
+        Create a `Dataset`:
+        
+        >>> ds = rt.Dataset({'a': rt.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
         >>> ds
         #   a   b    c
         -   -   -   --
@@ -3446,7 +3661,8 @@ class Dataset(Struct):
         8   8   A   30
         9   9   B   10
 
-
+        Sort column ``b``, then column ``c``:
+        
         >>> ds.sort_inplace(['b','c'])
         #   a   b    c
         -   -   -   --
@@ -3461,7 +3677,8 @@ class Dataset(Struct):
         8   7   B   20
         9   5   B   30
 
-
+        Sort column ``a`` in descending order:
+        
         >>> ds.sort_inplace('a', ascending = False)
         #   a   b    c
         -   -   -   --
@@ -3475,29 +3692,47 @@ class Dataset(Struct):
         7   2   A   30
         8   1   B   20
         9   0   A   10
-
         """
         return self._sort_values(by, ascending=ascending, inplace=True, kind=kind, na_position=na_position, copy=False)
 
 
     def sort_copy(self, by: Union[str, List[str]], ascending: bool = True, kind: str = 'mergesort', na_position: str ='last') -> 'Dataset':
         """
-        Sorts all columns by the labels and returns a copy.  The original dataset is not modified.
+        Return a copy of the `Dataset` that's sorted by the specified columns.
+        
+        The columns are sorted in the order given. The original `Dataset` is not 
+        modified.
 
         Parameters
         ----------
         by : str or list of str
-            The column name or list of column names by which to sort
-        ascending : bool
-            Determines if the order of sorting is ascending or not.
+            The column name or list of column names to sort by. The columns are sorted
+            in the order given.
+        ascending : bool, default True
+            Whether the sort is ascending. When True (the default), the sort is
+            ascending. When False, the sort is descending.
+        kind : str
+            **Not used.** The sorting algorithm used is 'mergesort'; user-provided 
+            values for this parameter are ignored.
+        na_position : str
+            **Not used.** If `ascending` is True (the default), NaN values are put last. 
+            If `ascending` is False, NaN values are put first. User-provided values for 
+            this parameter are ignored.
 
         Returns
         -------
-        Dataset
+        `Dataset`
 
+        See Also
+        --------
+        Dataset.sort_inplace : Sort the `Dataset`, modifying the original data.
+        Dataset.sort_view : Sort the `Dataset` columns only when displayed.
+        
         Examples
-        ----------
-        >>> ds = rt.Dataset({'a': np.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
+        --------
+        Create a `Dataset`:
+        
+        >>> ds = rt.Dataset({'a': rt.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
         >>> ds
         #   a   b    c
         -   -   -   --
@@ -3512,7 +3747,8 @@ class Dataset(Struct):
         8   8   A   30
         9   9   B   10
 
-
+        Sort column ``b``, then column ``c``:
+        
         >>> ds.sort_copy(['b','c'])
         #   a   b    c
         -   -   -   --
@@ -3527,7 +3763,8 @@ class Dataset(Struct):
         8   7   B   20
         9   5   B   30
 
-
+        Sort column ``a`` in descending order:
+        
         >>> ds.sort_copy('a', ascending = False)
         #   a   b    c
         -   -   -   --
@@ -3541,8 +3778,6 @@ class Dataset(Struct):
         7   2   A   30
         8   1   B   20
         9   0   A   10
-
-
         """
         return self._sort_values(by, ascending=ascending, inplace=False, kind=kind, na_position=na_position, copy=True)
 
@@ -3675,26 +3910,32 @@ class Dataset(Struct):
 
     def mask_or_isnan(self) -> FastArray:
         """
-        Returns a boolean mask of all columns ORed with :meth:`~rt.rt_numpy.isnan`.
-
-        Useful to see if any elements in the dataset contain a NaN.
+        Return a boolean array that's True for each `Dataset` row that contains at least 
+        one NaN, otherwise False.
+        
+        This method applies ``OR`` to all columns using :meth:`riptable.isnan`.
 
         Returns
         -------
-        FastArray
+        `FastArray`
+            A `FastArray` that's True for each `Dataset` row that contains at least one 
+            NaN, otherwise False.
+        
+        See Also
+        --------
+        riptable.isnan
+        Dataset.mask_and_isnan : Return a boolean array that's True for each all-NaN 
+            `Dataset` row.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a' : [1,2,np.nan], 'b':[0, np.nan, np.nan]})
+        >>> ds = rt.Dataset({'a': [1, 2, rt.nan], 'b': [0, rt.nan, rt.nan]})
         >>> ds
-        #      a     b
-        -   ----   ---
+        #      a      b
+        -   ----   ----
         0   1.00   0.00
-        1   2.00    inf
-        2    inf    inf
-
-        [3 rows x 2 columns] total bytes: 48.0 B
-
+        1   2.00    nan
+        2    nan    nan
         >>> ds.mask_or_isnan()
         FastArray([False, True,  True])
         """
@@ -3702,24 +3943,32 @@ class Dataset(Struct):
 
     def mask_and_isnan(self) -> FastArray:
         """
-        Returns a boolean mask of all columns ANDed with :meth:`~rt.rt_numpy.isnan`.
-
+        Return a boolean array that's True for each `Dataset` row in which every value 
+        is NaN, otherwise False.
+        
+        This method applies ``AND`` to all columns using :meth:`riptable.isnan`.
+        
         Returns
         -------
-        FastArray
+        `FastArray`
+            A `FastArray` that's True for each `Dataset` row that contains all NaNs, 
+            otherwise False.
 
+        See Also
+        --------
+        riptable.isnan
+        Dataset.mask_or_isnan : Return a boolean array that's True for each `Dataset` 
+            row that contains at least one NaN.
+        
         Examples
         --------
-        >>> ds = rt.Dataset({'a' : [1,2,np.nan], 'b':[0, np.nan, np.nan]})
+        >>> ds = rt.Dataset({'a': [1, 2, rt.nan], 'b': [0, rt.nan, rt.nan]})
         >>> ds
-        #      a     b
-        -   ----   ---
+        #      a      b
+        -   ----   ----
         0   1.00   0.00
-        1   2.00    inf
-        2    inf    inf
-
-        [3 rows x 2 columns] total bytes: 48.0 B
-
+        1   2.00    nan
+        2    nan    nan
         >>> ds.mask_and_isnan()
         FastArray([False, False,  True])
         """
@@ -5350,223 +5599,204 @@ class Dataset(Struct):
     @classmethod
     def hstack(cls, ds_list, destroy: bool = False) -> 'Dataset':
         """
-        Stacks columns from multiple datasets.
-
-        See Also
-        --------
-        Dataset.concat_rows
+        See :meth:`Dataset.concat_rows`.
         """
         return cls.concat_rows(ds_list, destroy=destroy)
 
     #--------------------------------------------------------------------------
     @classmethod
-    def concat_rows(cls, ds_list: Iterable['Dataset'], destroy: bool = False) -> 'Dataset':
+    def concat_rows(cls:'Dataset', ds_list: Iterable['Dataset'], destroy: bool = False) -> 'Dataset':
         """
-        Stacks columns from multiple datasets.
-
-        If a dataset is missing a column that appears in others, it will fill the gap with the default invalid for that column's type.
-        Categoricals will be merged and stacked.
-        Column types will be checked to make sure they can be safely stacked - no general type mismatch allowed.
-        Columns of the same name must have the same number of dimension in each dataset (1 or 2 dimensions allowed)
-
+        Stack columns from multiple `Dataset` objects vertically (row-wise).
+        
+        Columns must have the same name to be concatenated. If a `Dataset` is missing a 
+        column that appears in others, the gap is filled with the default invalid value
+        for the existing column's data type (for example, `NaN` for floats).
+        
+        `Categorical` objects are merged and stacked.
+        
         Parameters
         ----------
-        ds_list : iterable of Dataset
-            The Datasets to be concatenated
-        destroy : bool
-            Set to True to destroy any dataset in the list to save memory. Defaults to False.
+        cls : class
+            The class (`Dataset`).
+        ds_list : iterable of `Dataset` objects
+            The `Dataset` objects to be concatenated.
+        destroy : bool, default False
+            Set to True to destroy the input `Dataset` objects to save memory.
 
         Returns
         -------
-        Dataset
-            A new Dataset created from the concatenated rows of the input Datasets.
+        `Dataset`
+            A new `Dataset` created from the concatenated rows of the input `Dataset`
+            objects.
 
+        Warnings
+        --------
+        * Vertically stacking columns that have a general data type mismatch (for 
+          example, a string column and a float column) is not recommended. Currently, a 
+          run-time warning is issued; in future versions of Riptable, general dtype 
+          mismatches will not be allowed.
+        
+        * `Dataset` columns with two dimensions are technically supported by Riptable, 
+          but not recommended. Concatenating `Dataset` objects with two-dimensional 
+          columns is possible, but not recommended because it may produce unexpected 
+          results.
+          
+        See Also
+        --------
+        Dataset.concat_columns : Horizontally stack columns from multiple `Dataset` 
+                                 objects.
+        
         Examples
         --------
-        Basic:
-
-        >>> ds1 = rt.Dataset({'col_'+str(i):np.random.rand(5) for i in range(3)})
-        >>> ds2 = rt.Dataset({'col_'+str(i):np.random.rand(5) for i in range(3)})
+        >>> ds1 = rt.Dataset({'A': ['A0', 'A1', 'A2'], 'B': ['B0', 'B1', 'B2']})
+        >>> ds2 = rt.Dataset({'A': ['A3', 'A4', 'A5'], 'B': ['B3', 'B4', 'B5']})
         >>> ds1
-        #   col_0   col_1   col_2
-        -   -----   -----   -----
-        0    0.39    0.80    0.64
-        1    0.54    0.80    0.36
-        2    0.14    0.75    0.86
-        3    0.05    0.61    0.95
-        4    0.37    0.39    0.03
-
+        #   A    B 
+        -   --   --
+        0   A0   B0
+        1   A1   B1
+        2   A2   B2
         >>> ds2
-        #   col_0   col_1   col_2
-        -   -----   -----   -----
-        0    0.09    0.75    0.37
-        1    0.90    0.34    0.17
-        2    0.52    0.32    0.78
-        3    0.37    0.20    0.34
-        4    0.73    0.69    0.41
-
+        #   A    B 
+        -   --   --
+        0   A3   B3
+        1   A4   B4
+        2   A5   B5
+        
+        Basic concatenation:
+        
         >>> rt.Dataset.concat_rows([ds1, ds2])
-        #   col_0   col_1   col_2
-        -   -----   -----   -----
-        0    0.39    0.80    0.64
-        1    0.54    0.80    0.36
-        2    0.14    0.75    0.86
-        3    0.05    0.61    0.95
-        4    0.37    0.39    0.03
-        5    0.09    0.75    0.37
-        6    0.90    0.34    0.17
-        7    0.52    0.32    0.78
-        8    0.37    0.20    0.34
-        9    0.73    0.69    0.41
-
-        With columns missing in one from some datasets:
-
-        >>> ds1 = rt.Dataset({'col_'+str(i):np.random.rand(5) for i in range(3)})
-        >>> ds2 = rt.Dataset({'col_'+str(i):np.random.rand(5) for i in range(2)})
+        #   A    B 
+        -   --   --
+        0   A0   B0
+        1   A1   B1
+        2   A2   B2
+        3   A3   B3
+        4   A4   B4
+        5   A5   B5
+        
+        When a column exists in one `Dataset` but is missing in another, the gap is 
+        filled with the default invalid value for the existing column.
+        
+        >>> ds1 = rt.Dataset({'A': rt.arange(3)})
+        >>> ds2 = rt.Dataset({'A': rt.arange(3, 6), 'B': rt.arange(3, 6)})
         >>> rt.Dataset.concat_rows([ds1, ds2])
-        #   col_0   col_1   col_2
-        -   -----   -----   -----
-        0    0.78    0.64    0.98
-        1    0.61    0.87    0.85
-        2    0.57    0.42    0.90
-        3    0.82    0.50    0.60
-        4    0.19    0.16    0.23
-        5    0.69    0.83     nan
-        6    0.07    0.82     nan
-        7    0.58    0.34     nan
-        8    0.69    0.38     nan
-        9    0.89    0.07     nan
+        #   A     B
+        -   -   ---
+        0   0   Inv
+        1   1   Inv
+        2   2   Inv
+        3   3     3
+        4   4     4
+        5   5     5
 
-        With categorical column:
+        Concatenate two `Dataset` objects with `Categorical` columns:
 
         >>> ds1 = rt.Dataset({'cat_col': rt.Categorical(['a','a','b','c','a']),
-        ...                   'num_col': np.random.rand(5)})
+        ...                   'num_col': rt.arange(5)})
         >>> ds2 = rt.Dataset({'cat_col': rt.Categorical(['b','b','a','c','d']),
-        ...                   'num_col': np.random.rand(5)})
-        >>> rt.Dataset.concat_rows([ds1, ds2])
+        ...                   'num_col': rt.arange(5)})
+        >>> ds_concat = rt.Dataset.concat_rows([ds1, ds2])
+        >>> ds_concat
         #   cat_col   num_col
         -   -------   -------
-        0   a            0.38
-        1   a            0.71
-        2   b            0.84
-        3   c            0.47
-        4   a            0.18
-        5   b            0.18
-        6   b            0.47
-        7   a            0.16
-        8   c            0.96
-        9   d            0.88
-
-        Multiple dimensions (note: numpy v-stack will be used to concatenate 2-dimensional columns):
-
-        >>> ds1 = rt.Dataset({'nums': rt.ones((4,4))})
-        >>> ds1
-        #                       nums
-        -   ------------------------
-        0   [1.00, 1.00, 1.00, 1.00]
-        1   [1.00, 1.00, 1.00, 1.00]
-        2   [1.00, 1.00, 1.00, 1.00]
-        3   [1.00, 1.00, 1.00, 1.00]
-
-        >>> ds2 = rt.Dataset({'nums': rt.zeros((4,4))})
-        >>> ds2
-        #                       nums
-        -   ------------------------
-        0   [0.00, 0.00, 0.00, 0.00]
-        1   [0.00, 0.00, 0.00, 0.00]
-        2   [0.00, 0.00, 0.00, 0.00]
-        3   [0.00, 0.00, 0.00, 0.00]
-
-        >>> rt.Dataset.concat_rows([ds1, ds2])
-        #                       nums
-        -   ------------------------
-        0   [1.00, 1.00, 1.00, 1.00]
-        1   [1.00, 1.00, 1.00, 1.00]
-        2   [1.00, 1.00, 1.00, 1.00]
-        3   [1.00, 1.00, 1.00, 1.00]
-        4   [0.00, 0.00, 0.00, 0.00]
-        5   [0.00, 0.00, 0.00, 0.00]
-        6   [0.00, 0.00, 0.00, 0.00]
-        7   [0.00, 0.00, 0.00, 0.00]
-
-        Multiple dimensions with missing columns (sentinels/invalids will be flipped to final vstack dtype)
-
-        >>> ds1 = rt.Dataset({'nums': rt.ones((5,5)), 'nums2': rt.zeros((5,5), dtype=np.float64)})
-        >>> ds2 = rt.Dataset({'nums': rt.ones((5,5))})
-        >>> ds3 = rt.Dataset({'nums': rt.ones((5,5)), 'nums2': rt.zeros((5,5), dtype=np.int8)})
-        >>> rt.Dataset.concat_rows([ds1, ds2, ds3])
-         #                             nums                            nums2
-        --   ------------------------------   ------------------------------
-         0   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-         1   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-         2   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-         3   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-         4   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-         5   [1.00, 1.00, 1.00, 1.00, 1.00]        [nan, nan, nan, nan, nan]
-         6   [1.00, 1.00, 1.00, 1.00, 1.00]        [nan, nan, nan, nan, nan]
-         7   [1.00, 1.00, 1.00, 1.00, 1.00]        [nan, nan, nan, nan, nan]
-         8   [1.00, 1.00, 1.00, 1.00, 1.00]        [nan, nan, nan, nan, nan]
-         9   [1.00, 1.00, 1.00, 1.00, 1.00]        [nan, nan, nan, nan, nan]
-        10   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-        11   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-        12   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-        13   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
-        14   [1.00, 1.00, 1.00, 1.00, 1.00]   [0.00, 0.00, 0.00, 0.00, 0.00]
+        0   a               0
+        1   a               1
+        2   b               2
+        3   c               3
+        4   a               4
+        5   b               0
+        6   b               1
+        7   a               2
+        8   c               3
+        9   d               4
+        
+        The `Categorical` objects are merged:
+        
+        >>> ds_concat.cat_col
+        Categorical([a, a, b, c, a, b, b, a, c, d]) Length: 10
+            FastArray([1, 1, 2, 3, 1, 2, 2, 1, 3, 4], dtype=int8) Base Index: 1
+            FastArray([b'a', b'b', b'c', b'd'], dtype='|S1') Unique count: 4
         """
         return hstack_any(ds_list, cls, Dataset, destroy=destroy)
 
     #--------------------------------------------------------------------------
     @classmethod
-    def concat_columns(cls, dsets, do_copy:bool, on_duplicate:str='raise', on_mismatch:str='warn'):
+    def concat_columns(cls:'Dataset', dsets, do_copy:bool, on_duplicate:str='raise', on_mismatch:str='warn'):
         r"""
-        Concatenates a list of Datasets or Structs horizontally.
-
+        Stack columns from multiple `Dataset` objects horizontally (column-wise).
+        
+        All `Dataset` columns must be the same length.
+        
         Parameters
         ----------
         cls : class
-            The class (Dataset)
-        dsets : iterable
-            An iterable of Datasets
+            The class (`Dataset`).
+        dsets : iterable of `Dataset` objects
+            The `Dataset` objects to be concatenated.
         do_copy : bool
-            Makes deep copies of arrays if set to True
-        on_duplicate : {'raise', 'first', 'last'}
-            Governs behavior in case of duplicate columns.
-        on_mismatch : {'warn', 'raise', 'ignore'}
-            Optional, governs behavior for allowed duplicate column names, how to
-            address mismatched column values; can be 'warn' (default), 'raise' or 'ignore'.
+            When True, makes deep copies of the arrays. When False, shallow copies are
+            made. 
+        on_duplicate : {'raise', 'first', 'last'}, default 'raise'
+            Governs behavior in case of duplicate column names.
+            
+            * 'raise' (default): Raises a KeyError. Overrides all `on_mismatch` values.
+            * 'first': Keeps the column data from the first duplicate column. Overridden
+              by ``on_mismatch = 'raise'``.
+            * 'last': Keeps the column data from the last duplicate column. Overridden
+              by ``on_mismatch = 'raise'``.
+        on_mismatch : {'warn', 'raise', 'ignore'}, default 'warn'
+            Governs how to address duplicate column names.
+
+            * 'warn' (default): Issues a warning. Overridden by 
+              ``on_duplicate = 'raise'``.
+            * 'raise': Raises a RuntimeError. Overrides ``on_duplicate = 'first'`` and 
+              ``on_duplicate = 'last'``. Overridden by ``on_duplicate = 'raise'``.
+            * 'ignore': No error or warning. Overridden by ``on_duplicate = 'raise'``.
 
         Returns
         -------
-        Dataset
-            The resulting dataset after concatenation.
+        `Dataset`
+            A new `Dataset` created from the concatenated columns of the input `Dataset`
+            objects.
 
+        See Also
+        --------
+        Dataset.concat_rows : Vertically stack columns from multiple `Dataset` objects.
+        
         Examples
         --------
-        With the ``'last'`` `on_duplicate` option:
-
-        >>> N = 5
-        >>> dset1 = rt.Dataset(dict(A=rt.arange(N), B=rt.ones(N), C=N*['c']))
-        >>> dset2 = rt.Dataset(dict(A=rt.arange(N, 2*N, 1), B=rt.zeros(N), D=N*['d']))
-        >>> dsets = [dset1, dset2]
-        >>> rt.Dataset.concat_columns(dsets, do_copy=True, on_duplicate='last')
-        #   A      B   C   D
-        -   -   ----   -   -
-        0   5   0.00   c   d
-        1   6   0.00   c   d
-        2   7   0.00   c   d
-        3   8   0.00   c   d
-        4   9   0.00   c   d
-        <BLANKLINE>
-        [5 rows x 4 columns] total bytes: 70.0 B
-
-        With the default (``'raise'``) for the `on_duplicate` option:
-
-        >>> rt.Dataset.concat_columns(dsets, do_copy=True)
+        Basic concatenation:
+        
+        >>> ds1 = rt.Dataset({'A': ['A0', 'A1', 'A2'], 'B': ['B0', 'B1', 'B2']})
+        >>> ds2 = rt.Dataset({'C': ['C0', 'C1', 'C2'], 'D': ['D0', 'D1', 'D2']})
+        >>> rt.Dataset.concat_columns([ds1, ds2], do_copy = True)
+        #   A    B    C    D 
+        -   --   --   --   --
+        0   A0   B0   C0   D0
+        1   A1   B1   C1   D1
+        2   A2   B2   C2   D2
+        
+        With a duplicated column 'B' and ``on_duplicate = 'last'``:
+        
+        >>> ds1 = rt.Dataset({'A': ['A0', 'A1', 'A2'], 'B': ['B0', 'B1', 'B2']})
+        >>> ds2 = rt.Dataset({'C': ['C0', 'C1', 'C2'], 'B': ['B3', 'B4', 'B5']})
+        >>> ds3 = rt.Dataset({'D': ['D0', 'D1', 'D2'], 'B': ['B6', 'B7', 'B8']})
+        >>> rt.Dataset.concat_columns([ds1, ds2, ds3], do_copy = True, 
+        ...                           on_duplicate = 'last', on_mismatch = 'ignore')
+        #   A    B    C    D 
+        -   --   --   --   --
+        0   A0   B6   C0   D0
+        1   A1   B7   C1   D1
+        2   A2   B8   C2   D2
+        
+        With ``on_mismatch = 'raise'``:
+        
+        >>> rt.Dataset.concat_columns([ds1, ds2, ds3], do_copy = True, 
+        ...                           on_duplicate = 'last', on_mismatch = 'raise')
         Traceback (most recent call last):
-        File "<stdin>", line 1, in <module>
-        File "C:\ProgramData\Anaconda3\envs\riptable-dev37\lib\site-packages\riptable-0.0.0-py3.7-win-amd64.egg\riptable\rt_dataset.py", line 4308, in concat_columns
-            raise KeyError(f"Duplicate column '{column}'")
-        KeyError: "Duplicate column 'A'"
+        RuntimeError: concat_columns() duplicate column mismatch: {'B'}
         """
         # check that all Datasets have the same number of rows
         if on_duplicate not in ('raise', 'first', 'last'):

@@ -27,3 +27,16 @@ Questions or suggestions? Email RiptableDocumentation@sig.com.
    tutorial_sample_data
    tutorial_io
    tutorial_performance
+   RiptableExercises
+   RiptableSolutions
+   
+   
+Appendix
+--------
+.. toctree::
+   :maxdepth: 1
+   
+   tutorial_numpy_rt
+   tutorial_cat_reduce
+   
+   

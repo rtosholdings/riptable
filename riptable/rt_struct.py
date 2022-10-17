@@ -10,6 +10,7 @@ import itertools
 from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
 from collections import OrderedDict
 from re import IGNORECASE, compile
+import re
 
 import numpy as np
 import riptide_cpp as rc
@@ -4415,6 +4416,17 @@ class Struct:
 
         return (total_physical_size, total_logical_size)
 
+    def key_search(self,regex,case_sensitive=False,recursive=True,path=''):
+        if case_sensitive:
+            pattern = re.compile(regex)
+        else:
+            pattern = re.compile(regex, re.IGNORECASE)
+        output = [path + s for s in self.keys() if pattern.search(s)]
+        if recursive:
+            for s in self.keys():
+                if isinstance(self[s],Struct):
+                    output = output + self[s].key_search(regex,case_sensitive=case_sensitive,recursive=recursive,path=path+s+'.')
+        return output
 
 # keep this as the last line
 TypeRegister.Struct = Struct
