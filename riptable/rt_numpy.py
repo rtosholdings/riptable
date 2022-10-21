@@ -3051,7 +3051,7 @@ def bincount(*args, **kwargs) -> int:
 #-------------------------------------------------------
 def isnan(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each element that's a NaN (Not a Number).
+    Return True for each element that's a NaN (Not a Number), False otherwise.
     
     Parameters
     ----------
@@ -3068,29 +3068,24 @@ def isnan(*args, **kwargs) -> FastArray | bool:
     
     See Also
     --------
-    riptable.isnotnan
-    FastArray.isnan
-    Categorical.isnan
-    Date.isnan
-    DateTimeNano.isnan
-    Dataset.mask_or_isnan : 
-        Return a boolean array that's True for each `Dataset` row that contains at 
-        least one NaN.
-    Dataset.mask_and_isnan : 
+    riptable.isnotnan, riptable.isnanorzero, FastArray.isnan, FastArray.isnotnan,
+    FastArray.notna, FastArray.isnanorzero, Categorical.isnan, Categorical.isnotnan, 
+    Categorical.notna, Date.isnan, Date.isnotnan, DateTimeNano.isnan, 
+    DateTimeNano.isnotnan
+    Dataset.mask_or_isnan :
+        Return a boolean array that's True for each `Dataset` row that contains 
+        at least one NaN.
+    Dataset.mask_and_isnan :
         Return a boolean array that's True for each all-NaN `Dataset` row.
      
     Examples
     --------
-    >>> a = rt.FastArray([rt.nan, 1, 2, 3])
+    >>> a = rt.FastArray([rt.nan, np.inf, 2])
     >>> rt.isnan(a)
-    FastArray([ True, False, False, False])
+    FastArray([ True, False, False])
     
     >>> rt.isnan(0)
     False
-    >>> rt.isnan(np.inf)
-    False
-    >>> rt.isnan(rt.nan)
-    True
     """
     try:
         return args[0].isnan(**kwargs)
@@ -3099,7 +3094,44 @@ def isnan(*args, **kwargs) -> FastArray | bool:
 
 #-------------------------------------------------------
 def isnotnan(*args, **kwargs) -> FastArray | bool:
-    """ opposite of isnan """
+    """
+    Return True for each element that's not a NaN (Not a Number), False otherwise.
+        
+    Parameters
+    ----------
+    *args : 
+        See :py:data:`numpy.isnan`.
+    **kwargs : 
+        See :py:data:`numpy.isnan`.
+
+    Returns
+    -------
+    `FastArray` or bool
+        For array input, a `FastArray` of booleans is returned that's True for each 
+        element that's not a NaN, False otherwise. For scalar input, a boolean is 
+        returned.
+        
+    See Also
+    --------
+    riptable.isnan, riptable.isnanorzero, FastArray.isnan, FastArray.isnotnan,
+    FastArray.notna, FastArray.isnanorzero, Categorical.isnan, Categorical.isnotnan, 
+    Categorical.notna, Date.isnan, Date.isnotnan, DateTimeNano.isnan, 
+    DateTimeNano.isnotnan
+    Dataset.mask_or_isnan :
+        Return a boolean array that's True for each `Dataset` row that contains 
+        at least one NaN.
+    Dataset.mask_and_isnan :
+        Return a boolean array that's True for each all-NaN `Dataset` row.
+        
+    Examples
+    --------
+    >>> a = rt.FastArray([rt.nan, np.inf, 2])
+    >>> rt.isnotnan(a)
+    FastArray([False,  True,  True])
+
+    >>> rt.isnotnan(0)
+    True
+    """
     try:
         return args[0].isnotnan(**kwargs)
     except:
@@ -3107,6 +3139,43 @@ def isnotnan(*args, **kwargs) -> FastArray | bool:
 
 #-------------------------------------------------------
 def isnanorzero(*args, **kwargs) -> FastArray | bool:
+    """
+    Return True for each element that's a NaN (Not a Number) or zero, False otherwise.
+    
+    Parameters
+    ----------
+    *args : 
+        See :py:data:`numpy.isnan`.
+    **kwargs : 
+        See :py:data:`numpy.isnan`.
+            
+    Returns
+    -------
+    `FastArray` or bool
+        For array input, a `FastArray` of booleans is returned that's True for each 
+        element that's a NaN or zero, False otherwise. For scalar input, a boolean is 
+        returned.
+    
+    See Also
+    --------
+    FastArray.isnanorzero, riptable.isnan, riptable.isnotnan, FastArray.isnan, 
+    FastArray.isnotnan, Categorical.isnan, Categorical.isnotnan, Date.isnan,
+    Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan
+    Dataset.mask_or_isnan :
+        Return a boolean array that's True for each `Dataset` row that contains at least 
+        one NaN.
+    Dataset.mask_and_isnan :
+        Return a boolean array that's True for each all-NaN `Dataset` row.
+     
+    Examples
+    --------
+    >>> a = rt.FastArray([0, rt.nan, np.inf, 3])
+    >>> rt.isnanorzero(a)
+    FastArray([ True,  True, False, False])
+    
+    >>> rt.isnanorzero(0)
+    True
+    """
     try:
         return args[0].isnanorzero(**kwargs)
     except:
