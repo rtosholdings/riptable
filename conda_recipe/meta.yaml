@@ -10,16 +10,9 @@ source:
   - path: ../
 
 requirements:
-  build:
-    - python {{ python }}
-    # The following requirements are in the build because setup.py requires them.
+  host:
+    - python {{ python}}
     - setuptools_scm
-    - riptide_cpp >=1.8,<2  # build with latest version in this range
-    - pandas >=0.24,<2.0
-    - ansi2html >=1.5.2
-    - numpy >=1.21
-    - numba >=0.55.2
-    - python-dateutil
   run:
     - python
     - riptide_cpp >=1.8,<2  # run with any (compatible) version in this range

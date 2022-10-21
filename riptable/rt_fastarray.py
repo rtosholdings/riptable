@@ -792,18 +792,34 @@ class FastArray(np.ndarray):
 
     #--------------------------------------------------------------------------
     def get_name(self) -> str:
-        '''
-        FastArray can hold a name.  When a Dataset puts a FastArray into a column, it may receive a name.
+        """
+        Get the name that's assigned to a `FastArray`.
 
+        When a `FastArray` object is created, it has no name. It can be assigned a name 
+        via `set_name`. For details, see :meth:`FastArray.set_name`.
+                
         Returns
         -------
-        str, optional
-            The array name; or None if the array has not been named.
-
+        str or None
+            The assigned name, or None if the array has not been named.
+            
         See Also
         --------
-        set_name
-        '''
+        FastArray.set_name
+        
+        Examples
+        --------
+        Assign the `FastArray` a name using :meth:`FastArray.set_name`:
+        
+        >>> a = rt.arange(5)
+        >>> a.set_name('FA Name')
+        FastArray([0, 1, 2, 3, 4])
+        
+        Get the name:
+        
+        >>> a.get_name()
+        'FA Name'
+        """
         name=None
         try:
             name=self._name
@@ -813,27 +829,111 @@ class FastArray(np.ndarray):
 
     #--------------------------------------------------------------------------
     def set_name(self, name) -> FastArray:
-        '''
-        FastArray can hold a name.  Use set_name to assign a name.
-        When a Dataset puts a FastArray into a named column, it may call set_name().
-        If the same FastArray is in two datasets, with two different column names,
-        another FastArray wrapper object will be created to hold the different name,
-        however the underlying array will remain the same in both datasets.
+        """
+        Assign a name to a `FastArray`.
+
+        A `FastArray` is a wrapper around a NumPy `ndarray`. When a `FastArray` is 
+        created, it has no name. You can assign it a name using `set_name`.
+
+        **Interactions with Dataset Objects**
+
+        When an unnamed `FastArray` is added to a `Dataset`:
+        
+        - The `FastArray` inherits the name of the `Dataset` column.
+        - Calling ``fa.set_name`` or ``ds.col.set_name``, or changing the displayed 
+          column name via ``ds.col_rename``, changes the name assigned to the 
+          `FastArray`.
+            - Note that calling ``fa.set_name`` or ``ds.col.set_name`` doesn't change the 
+              displayed column name.
+          
+        When a named `FastArray` is added to a `Dataset`:
+        
+        - A new `FastArray` instance is created that inherits the `Dataset` column name.
+        - Calling ``ds.col.set_name`` or changing the displayed column name via 
+          ``ds.col_rename`` changes the new instance's name.
+        - Calling `set_name` on the original `FastArray` instance changes only that instance's
+          name.
+         
+        In both cases, the NumPy array underlying the `FastArray` is shared -- changes 
+        to its values appear in the `Dataset` column, and vice-versa.
+
+        **Interactions with FastArray Objects**
+
+        - When a `FastArray` is created as a view of another, named `FastArray`, the new
+          `FastArray` instance inherits the name from the original `FastArray`. 
+        - Whether the original `FastArray` is named or unnamed, calling `set_name` on 
+          either `FastArray` does not change the name of the other `FastArray`.
+        
+        Parameters
+        ----------
+        name : str
+            The name to assign to the `FastArray`.
 
         Returns
         -------
-        FastArray
-            Returns 'self', so this will be the same type as the instance it's called on.
-
-        Examples
-        --------
-        >>> a=rt.arange(100)
-        >>> a.set_name('test')
-
+        `FastArray`
+            The `FastArray` is returned. The name can be accessed using 
+            :meth:`FastArray.get_name`.
+            
         See Also
         --------
         FastArray.get_name
-        '''
+        
+        Examples
+        --------
+        >>> a = rt.arange(5)
+        >>> a.set_name('FA Name')
+        FastArray([0, 1, 2, 3, 4])
+        
+        You can get the name using :meth:`FastArray.get_name`:
+        
+        >>> a.get_name()
+        'FA Name'
+        
+        When an unnamed `FastArray` is added to a `Dataset` column, the `FastArray`
+        inherits the name of the column.
+        
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> ds = rt.Dataset()
+        >>> ds.Column_Name = a
+        >>> a.get_name()
+        'Column_Name'
+        
+        Calling ``ds.col.set_name`` changes the name assigned to the `FastArray`
+        (but not the displayed column name).
+        
+        >>> ds.Column_Name.set_name('New Name')
+        >>> a.get_name()
+        'New Name'
+        >>> ds
+        #   Column_Name
+        -   -----------
+        0             1
+        1             2
+        2             3
+        
+        When a named `FastArray` is added to a `Dataset` column, a new `FastArray` 
+        instance is created that inherits the column name. The original instance is 
+        not renamed.
+        
+        >>> a = rt.FastArray([1, 2, 3])
+        >>> a.set_name('FA Name')
+        >>> ds = rt.Dataset()
+        >>> ds.Column_Name = a
+        >>> ds.Column_Name.get_name()
+        'Column_Name'
+        >>> a.get_name()
+        'FA Name'
+        
+        Changing the displayed column name affects the name of the new instance,
+        but not the name of the original `FastArray`.
+        
+        >>> ds.col_rename('Column_Name', 'New_Column')
+        >>> ds.New_Column.get_name()
+        'New_Column'
+        >>> a.get_name()
+        'FA Name'
+        """
         self._name = name
         return self
 
@@ -1913,14 +2013,133 @@ class FastArray(np.ndarray):
     #############################################
     def isnan(self, fancy=False):       return self._unary_op(MATH_OPERATION.ISNAN, fancy=fancy)
     def isnotnan(self, fancy=False):    return self._unary_op(MATH_OPERATION.ISNOTNAN, fancy=fancy)
-    def isnanorzero(self, fancy=False): return self._unary_op(MATH_OPERATION.ISNANORZERO, fancy=fancy)
     def isfinite(self, fancy=False):    return self._unary_op(MATH_OPERATION.ISFINITE, fancy=fancy)
     def isnotfinite(self, fancy=False): return self._unary_op(MATH_OPERATION.ISNOTFINITE, fancy=fancy)
     def isinf(self, fancy=False):       return self._unary_op(MATH_OPERATION.ISINF, fancy=fancy)
     def isnotinf(self, fancy=False):    return self._unary_op(MATH_OPERATION.ISNOTINF, fancy=fancy)
     def isnormal(self, fancy=False):    return self._unary_op(MATH_OPERATION.ISNORMAL, fancy=fancy)
     def isnotnormal(self, fancy=False): return self._unary_op(MATH_OPERATION.ISNOTNORMAL, fancy=fancy)
+    
+    def isnanorzero(self, fancy=False):
+        """
+        Return a boolean array that's True for each element that's a NaN (Not a Number)
+        or zero, False otherwise.
+        
+        Parameters
+        ----------
+        fancy : bool, default False
+            Set to True to instead return the indices of the True (NaN or zero) values.
+            
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans or indices.
+        
+        See Also
+        --------
+        riptable.isnanorzero, riptable.isnan, riptable.isnotnan, FastArray.isnan, 
+        FastArray.isnotnan, Categorical.isnan, Categorical.isnotnan, Date.isnan, 
+        Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that contains 
+            at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+        
+        Examples
+        --------
+        >>> a = rt.FastArray([0, rt.nan, np.inf, 3])
+        >>> a.isnanorzero()
+        FastArray([ True,  True, False, False])
+        
+        With ``fancy = True``:
+        
+        >>> a.isnanorzero(fancy = True)
+        FastArray([0, 1])
+        """
+        return self._unary_op(MATH_OPERATION.ISNANORZERO, fancy=fancy)
 
+    def isnan(self, fancy=False):       
+        """
+        Return a boolean array that's True for each element that's a NaN (Not a Number),
+        False otherwise.
+        
+        Parameters
+        ----------
+        fancy : bool, default False
+            Set to True to instead return the indices of the True (NaN) values.
+            
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans or indices.
+        
+        See Also
+        --------
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero, riptable.isnan, 
+        riptable.isnotnan, riptable.isnanorzero, Categorical.isnan, 
+        Categorical.isnotnan, Categorical.notna, Date.isnan, Date.isnotnan, 
+        DateTimeNano.isnan, DateTimeNano.isnotnan
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that contains 
+            at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+        
+        Examples
+        --------
+        >>> a = rt.FastArray([rt.nan, rt.nan, np.inf, 3])
+        >>> a.isnan()
+        FastArray([ True,  True, False, False])
+        
+        With ``fancy = True``:
+        
+        >>> a.isnan(fancy = True)
+        FastArray([0, 1])
+        """
+        return self._unary_op(MATH_OPERATION.ISNAN, fancy=fancy)
+        
+    def isnotnan(self, fancy=False):    
+        """
+        Return a boolean array that's True for each element that's not a NaN (Not a 
+        Number), False otherwise.
+        
+        Parameters
+        ----------
+        fancy : bool, default False
+            Set to True to instead return the indices of the True (non-NaN) values.
+            
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans or indices.
+        
+        See Also
+        --------
+        FastArray.isnan, FastArray.notna, FastArray.isnanorzero, riptable.isnan, 
+        riptable.isnotnan, riptable.isnanorzero, Categorical.isnan, 
+        Categorical.isnotnan, Categorical.notna, Date.isnan, Date.isnotnan, 
+        DateTimeNano.isnan, DateTimeNano.isnotnan
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that contains 
+            at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+        
+        Examples
+        --------
+        >>> a = rt.FastArray([rt.nan, np.inf, 2])
+        >>> a.isnotnan()
+        FastArray([False,  True,  True])
+        
+        With ``fancy = True``:
+        
+        >>> a.isnotnan(fancy = True)
+        FastArray([1, 2])
+        """  
+        return self._unary_op(MATH_OPERATION.ISNOTNAN, fancy=fancy)
+        
+        
     #############################################
     # Reduce section
     #############################################
