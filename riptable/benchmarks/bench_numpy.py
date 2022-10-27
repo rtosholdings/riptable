@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 from itertools import product
 from typing import Generator, List, Optional
-from .benchmark import benchmark
-from .runner import benchmark as bench, create_comparison_dataset
-from ..rt_multiset import Multiset
+
+import numpy as np
+
 from ..rt_fastarray import FastArray
+from ..rt_multiset import Multiset
 from ..rt_numpy import (
     all,
     any,
@@ -27,8 +27,8 @@ from ..rt_numpy import (
     nanmedian,
     nanmin,
     nanpercentile,
-    nansum,
     nanstd,
+    nansum,
     nanvar,
     percentile,
     std,
@@ -36,7 +36,9 @@ from ..rt_numpy import (
     trunc,
     var,
 )
-
+from .benchmark import benchmark
+from .runner import benchmark as bench
+from .runner import create_comparison_dataset
 
 DEFAULT_ARRAY_SIZES: List[int] = [100, 1000, 10_000, 100_000, 1_000_000, 10_000_000]
 DEFAULT_DTYPES: List[type] = [np.int32, np.float32]
@@ -302,7 +304,9 @@ def bench_rt_nanargmax(farr):
 
 # ----------------------------------------------------
 @bench(
-    benchmark_params={"arr": gen_arange(),}
+    benchmark_params={
+        "arr": gen_arange(),
+    }
 )
 def bench_np_argmax(arr):
     np.argmax(arr)
@@ -322,7 +326,9 @@ def bench_rt_nanargmin(farr):
 
 # ----------------------------------------------------
 @bench(
-    benchmark_params={"arr": gen_arange(),}
+    benchmark_params={
+        "arr": gen_arange(),
+    }
 )
 def bench_np_argmin(arr):
     np.argmin(arr)
@@ -355,19 +361,31 @@ def bench_np_lexsort_reversed(arr):
 
 # ----------------------------------------------------
 # TODO vary percentile and interpolation
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_percentile(farr):
     percentile(farr, 50)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_nanpercentile(farr):
     nanpercentile(farr, 50)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_percentile(arr):
     np.percentile(arr, 50)
 
@@ -402,62 +420,99 @@ def bench_rt_nansum(farr):
 
 # ----------------------------------------------------
 @bench(
-    benchmark_params={"arr": gen_arange()}, benchmark_iterations=5,
+    benchmark_params={"arr": gen_arange()},
+    benchmark_iterations=5,
 )
 def bench_np_sum(arr):
     np.sum(arr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_max(farr):
     max(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_nanmax(farr):
     nanmax(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_max(arr):
     np.max(arr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_mean(farr):
     mean(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_nanmean(farr):
     nanmean(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_mean(arr):
     np.mean(arr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_median(farr):
     median(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_nanmedian(farr):
     nanmedian(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_median(arr):
     np.median(arr)
 
@@ -487,7 +542,9 @@ def bench_rt_nanmin(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_min(arr):
     np.min(arr)
 
@@ -517,7 +574,9 @@ def bench_rt_nanstd(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_std(arr):
     np.std(arr)
 
@@ -537,7 +596,9 @@ def bench_rt_add(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_add(arr):
     np.add(arr, arr)
 
@@ -555,7 +616,9 @@ def bench_rt_minimum(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_minimum(arr):
     np.minimum(arr, arr)
 
@@ -575,7 +638,9 @@ def bench_rt_true_divide(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_true_divide(arr):
     np.true_divide(arr, arr)
 
@@ -593,7 +658,9 @@ def bench_rt_isnan(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_isnan(arr):
     np.isnan(arr)
 
@@ -611,7 +678,9 @@ def bench_rt_trunc(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_trunc(arr):
     np.trunc(arr)
 
@@ -631,25 +700,39 @@ def bench_rt_sqrt(farr):
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_sqrt(arr):
     np.sqrt(arr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_var(farr):
     var(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"farr": gen_farange(), "thread_count": DEFAULT_THREADS,},)
+@bench(
+    benchmark_params={
+        "farr": gen_farange(),
+        "thread_count": DEFAULT_THREADS,
+    },
+)
 def bench_rt_nanvar(farr):
     nanvar(farr)
 
 
 # ----------------------------------------------------
-@bench(benchmark_params={"arr": gen_arange()},)
+@bench(
+    benchmark_params={"arr": gen_arange()},
+)
 def bench_np_var(arr):
     np.var(arr)
 
@@ -679,28 +762,40 @@ def compare_argmax():
 # ----------------------------------------------------
 def compare_all():
     return create_comparison_dataset(
-        {"rt_all": bench_rt_all(), "np_all": bench_np_all(),}
+        {
+            "rt_all": bench_rt_all(),
+            "np_all": bench_np_all(),
+        }
     )
 
 
 # ----------------------------------------------------
 def compare_any():
     return create_comparison_dataset(
-        {"rt_any": bench_rt_any(), "np_any": bench_np_any(),}
+        {
+            "rt_any": bench_rt_any(),
+            "np_any": bench_np_any(),
+        }
     )
 
 
 # ----------------------------------------------------
 def compare_all_with_nan():
     return create_comparison_dataset(
-        {"rt_all": bench_rt_all_with_nan(), "np_all": bench_np_all_with_nan(),}
+        {
+            "rt_all": bench_rt_all_with_nan(),
+            "np_all": bench_np_all_with_nan(),
+        }
     )
 
 
 # ----------------------------------------------------
 def compare_any_with_nan():
     return create_comparison_dataset(
-        {"rt_any": bench_rt_any_with_nan(), "np_any": bench_np_any_with_nan(),}
+        {
+            "rt_any": bench_rt_any_with_nan(),
+            "np_any": bench_np_any_with_nan(),
+        }
     )
 
 
@@ -796,14 +891,20 @@ def compare_sum():
 # ----------------------------------------------------
 def compare_add():
     return create_comparison_dataset(
-        {"rt_add": bench_rt_add(), "np_add": bench_np_add(),}
+        {
+            "rt_add": bench_rt_add(),
+            "np_add": bench_np_add(),
+        }
     )
 
 
 # ----------------------------------------------------
 def compare_minimum():
     return create_comparison_dataset(
-        {"rt_minimum": bench_rt_minimum(), "np_minimum": bench_np_minimum(),}
+        {
+            "rt_minimum": bench_rt_minimum(),
+            "np_minimum": bench_np_minimum(),
+        }
     )
 
 
@@ -820,21 +921,30 @@ def compare_true_divide():
 # ----------------------------------------------------
 def compare_isnan():
     return create_comparison_dataset(
-        {"rt_isnan": bench_rt_isnan(), "np_isnan": bench_np_isnan(),}
+        {
+            "rt_isnan": bench_rt_isnan(),
+            "np_isnan": bench_np_isnan(),
+        }
     )
 
 
 # ----------------------------------------------------
 def compare_trunc():
     return create_comparison_dataset(
-        {"rt_trunc": bench_rt_trunc(), "np_trunc": bench_np_trunc(),}
+        {
+            "rt_trunc": bench_rt_trunc(),
+            "np_trunc": bench_np_trunc(),
+        }
     )
 
 
 # ----------------------------------------------------
 def compare_sqrt():
     return create_comparison_dataset(
-        {"rt_sqrt": bench_rt_sqrt(), "np_sqrt": bench_np_sqrt(),}
+        {
+            "rt_sqrt": bench_rt_sqrt(),
+            "np_sqrt": bench_np_sqrt(),
+        }
     )
 
 
@@ -851,7 +961,13 @@ def compare_var():
 
 # ----------------------------------------------------
 def compare_numpy_reduce():
-    return Multiset({"min": compare_min(), "std": compare_std(), "sum": compare_sum(),})
+    return Multiset(
+        {
+            "min": compare_min(),
+            "std": compare_std(),
+            "sum": compare_sum(),
+        }
+    )
 
 
 # ----------------------------------------------------
@@ -868,5 +984,9 @@ def compare_numpy_binary():
 # ----------------------------------------------------
 def compare_numpy_unary():
     return Multiset(
-        {"isnan": compare_isnan(), "trunc": compare_trunc(), "sqrt": compare_sqrt(),}
+        {
+            "isnan": compare_isnan(),
+            "trunc": compare_trunc(),
+            "sqrt": compare_sqrt(),
+        }
     )

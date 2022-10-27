@@ -2,35 +2,34 @@ from collections import Counter
 from typing import List
 
 import hypothesis
-import pytest
 import numpy as np
-
-from hypothesis import given, HealthCheck
-from hypothesis.strategies import (
-    composite,
-    shared,
-    integers,
-    lists,
-    booleans,
-    one_of,
-)
+import pytest
+from hypothesis import HealthCheck, given
 from hypothesis.extra.numpy import (
     arrays,
-    integer_dtypes,
-    unsigned_integer_dtypes,
-    datetime64_dtypes,
-    timedelta64_dtypes,
     byte_string_dtypes,
+    datetime64_dtypes,
+    integer_dtypes,
+    timedelta64_dtypes,
     unicode_string_dtypes,
+    unsigned_integer_dtypes,
 )
-from hypothesis.strategies import data
+from hypothesis.strategies import (
+    booleans,
+    composite,
+    data,
+    integers,
+    lists,
+    one_of,
+    shared,
+)
 
-from .strategies.categorical_strategy import CategoricalStrategy
-from .strategies.helper_strategies import one_darray_shape_strategy
-from riptable import Categorical, hstack, FastArray
+from riptable import Categorical, FastArray, hstack
 from riptable.rt_enum import CategoryMode
 from riptable.Utils.teamcity_helper import is_running_in_teamcity
 
+from .strategies.categorical_strategy import CategoricalStrategy
+from .strategies.helper_strategies import one_darray_shape_strategy
 
 _MAX_SIZE = 1_000
 
@@ -57,21 +56,19 @@ def _check_categorical(categorical: Categorical) -> (bool, str):
     errors: List[str] = list()
     if not isinstance(categorical, Categorical):
         valid = False
-        errors.append(
-            f"Categorical {categorical} should be of type {type(Categorical)}"
-        )
+        errors.append(f"Categorical {categorical} should be of type {type(Categorical)}")
     return valid, "\n".join(errors)
 
 
 @composite
 def one_of_categorical_values(draw):
-    cat_values = integers(
-        min_value=1, max_value=np.iinfo(np.int64).max
-    )  # add - bytes(), characters(),
+    cat_values = integers(min_value=1, max_value=np.iinfo(np.int64).max)  # add - bytes(), characters(),
     return draw(one_of(cat_values))
 
 
-@pytest.mark.skipif(reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds.")
+@pytest.mark.skipif(
+    reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds."
+)
 # 2020-09-09T21:02:22.3088485Z ================================== FAILURES ===================================
 # 2020-09-09T21:02:22.3088746Z ________ test_categorical_ctor[CategoryMode.StringArray-integer_dtype] ________
 # 2020-09-09T21:02:22.3088996Z
@@ -91,9 +88,7 @@ def one_of_categorical_values(draw):
             id="list",
         ),
         pytest.param(
-            lists(
-                one_of_categorical_values(), min_size=1, unique=True, max_size=10
-            ),
+            lists(one_of_categorical_values(), min_size=1, unique=True, max_size=10),
             id="unique_list",
         ),
         pytest.param(
@@ -110,27 +105,23 @@ def one_of_categorical_values(draw):
                 dtype=integer_dtypes(endianness="=", sizes=(64,)),
                 elements=integers(min_value=1, max_value=np.iinfo(np.int64).max),
                 fill=integers(min_value=0, max_value=np.iinfo(np.int64).max),
-                unique=True
+                unique=True,
             ),
             id="integer_dtype_unique",
             marks=[
                 pytest.mark.skip,
-                pytest.mark.xfail(reason='Now throws a hypothesis.errors.InvalidArgument: Cannot fill unique array with non-NaN value 1'),
-            ]
+                pytest.mark.xfail(
+                    reason="Now throws a hypothesis.errors.InvalidArgument: Cannot fill unique array with non-NaN value 1"
+                ),
+            ],
         ),
     ],
 )
-@pytest.mark.parametrize(
-    "category_mode", [CategoryMode.StringArray, CategoryMode.Dictionary]
-)
+@pytest.mark.parametrize("category_mode", [CategoryMode.StringArray, CategoryMode.Dictionary])
 def test_categorical_ctor(value_strategy, category_mode, data):
     # cat is drawn from CategoricalStrategy
     ordered: bool = data.draw(booleans())
-    cat: Categorical = data.draw(
-        CategoricalStrategy(
-            value_strategy, category_mode=category_mode, ordered=ordered
-        )
-    )
+    cat: Categorical = data.draw(CategoricalStrategy(value_strategy, category_mode=category_mode, ordered=ordered))
     assert _check_categorical(cat)
 
     # Validate properties on constructing a Categorical from a Categorical's values and categories.
@@ -163,7 +154,9 @@ def test_categorical_ctor(value_strategy, category_mode, data):
 # TODO remove hypothesis suppress_health_check after investigating FailedHealthCheck for test_categorical_property.test_hstack[CategoryMode_StringArray-unsigned_integer_dtype]
 # E   hypothesis.errors.FailedHealthCheck: Data generation is extremely slow: Only produced 7 valid examples in 1.06 seconds (0 invalid ones and 5 exceeded maximum size). Try decreasing size of the data you're generating (with e.g.max_size or max_leaves parameters).
 # As is, the unsigned_integer_dtype case uses min and max values for data generation.
-@pytest.mark.skip(reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds.")
+@pytest.mark.skip(
+    reason="Categorical generator needs to be rewritten for better performance before re-enabling this test to run in TeamCity builds."
+)
 @hypothesis.settings(suppress_health_check=[HealthCheck.too_slow])
 @given(data())
 @pytest.mark.parametrize(
@@ -245,9 +238,7 @@ def test_hstack(datatype, elements, category_mode, data):
     expected_counts = _get_category_to_count(categoricals)
     actual_counts = _get_category_to_count(output)
 
-    assert not set(actual_counts.elements()).symmetric_difference(
-        set(expected_counts.elements())
-    ), (
+    assert not set(actual_counts.elements()).symmetric_difference(set(expected_counts.elements())), (
         f"The hstacked categories should be equivalent to the set of aggregate categories\n"
         + msg
         + f"actual {set(actual_counts.elements())}\nexpected {set(expected_counts.elements())}"
@@ -263,9 +254,7 @@ def test_hstack(datatype, elements, category_mode, data):
 
 
 @pytest.mark.xfail(reason="RIP-375 - Categorical unsupported dtypes")
-@pytest.mark.skipif(
-    is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-)
+@pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
 @pytest.mark.parametrize(
     "data",
     [

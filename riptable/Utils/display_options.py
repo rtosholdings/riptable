@@ -1,11 +1,14 @@
 """Display options for formatting and displaying numeric values, datasets, and multisets."""
 import os
-from json import load, dump
+from json import dump, load
 from typing import Optional, Union
-from .appdirs import user_config_dir
-from ..rt_enum import TypeRegister, DisplayNumberSeparator
 
-__all__ = ['DisplayOptions',]
+from ..rt_enum import DisplayNumberSeparator, TypeRegister
+from .appdirs import user_config_dir
+
+__all__ = [
+    "DisplayOptions",
+]
 
 
 class DisplayOptions(object):
@@ -137,57 +140,57 @@ class DisplayOptions(object):
     """
     # class related options
     _CONFIG_LOADED = False  # default config file was found and loaded
-    _AUTO_SAVE = False      # if true, config file will be saved to default path each time an option changes
-    _USERNAME = None        # to distinguish between windows/linux environments
+    _AUTO_SAVE = False  # if true, config file will be saved to default path each time an option changes
+    _USERNAME = None  # to distinguish between windows/linux environments
     _RESET_OPTIONS = False  # a flag so the next session will replace custom user options with the default options
 
     # screen/environment
     # Todo alz 20191125 - revisit the implementation, couldn't find usages and doesn't behave with console buffer
-    CONSOLE_X_BUFFER = 30   # overall x buffer for console display
-    CONSOLE_X_HTML = 340    # default "console width" for html display
-    CONSOLE_X = 150         # default console width (also calculated by terminalsize.py) TODO: remove
-    CONSOLE_Y = 25          # default console height (also calculated by terminalsize.py) TODO: remove
-    HTML_DISPLAY = True     # force html display (TODO: remove)
-    X_PADDING = 4           # character buffer for each column in console
-    Y_PADDING = 3           # character buffer for each row in console
+    CONSOLE_X_BUFFER = 30  # overall x buffer for console display
+    CONSOLE_X_HTML = 340  # default "console width" for html display
+    CONSOLE_X = 150  # default console width (also calculated by terminalsize.py) TODO: remove
+    CONSOLE_Y = 25  # default console height (also calculated by terminalsize.py) TODO: remove
+    HTML_DISPLAY = True  # force html display (TODO: remove)
+    X_PADDING = 4  # character buffer for each column in console
+    Y_PADDING = 3  # character buffer for each row in console
 
     # dataset/multiset
-    ROW_ALL = False     # force all rows to display
-    COL_ALL = False     # force all columns to display
-    COL_MIN = 1         # min columns to display
-    COL_MAX = 50        # max columns to display
-    COL_T = 8           # number of transposed rows to display (which appear as columns)
-    HEAD_ROWS = 15      # for dataset head
-    TAIL_ROWS = 15      # for dataset tail
-    MAX_ROWS = 30       # max rows to display
-    NO_STYLES = False   # toggle for colors in the ipython console (sometimes hard to see with light background)
-    COLOR_MODE = None   # set a color mode
-    #NROWS_TRANSPOSE = 0 # 
-    #NCOLS_TRANSPOSE = 0 # if > 0, a specific number of
-    #BORDER     = True # add a border beneath header labels
+    ROW_ALL = False  # force all rows to display
+    COL_ALL = False  # force all columns to display
+    COL_MIN = 1  # min columns to display
+    COL_MAX = 50  # max columns to display
+    COL_T = 8  # number of transposed rows to display (which appear as columns)
+    HEAD_ROWS = 15  # for dataset head
+    TAIL_ROWS = 15  # for dataset tail
+    MAX_ROWS = 30  # max rows to display
+    NO_STYLES = False  # toggle for colors in the ipython console (sometimes hard to see with light background)
+    COLOR_MODE = None  # set a color mode
+    # NROWS_TRANSPOSE = 0 #
+    # NCOLS_TRANSPOSE = 0 # if > 0, a specific number of
+    # BORDER     = True # add a border beneath header labels
     # toggle so completion results show in alphanumeric key, attribute, then method ordering for Dataset, Multiset,
     # and Struct at any nested level
     CUSTOM_COMPLETION: bool = False
 
     # formatting for datasets/mutilsets/etc
-    MAX_HEADER_WIDTH = 15 # maximum for header strings in dataset/multiset
-    MAX_FOOTER_WIDTH = 15 # maximum for footer strings in dataset/multiset
-    MAX_STRING_WIDTH = 15 # maximum for ALL strings
+    MAX_HEADER_WIDTH = 15  # maximum for header strings in dataset/multiset
+    MAX_FOOTER_WIDTH = 15  # maximum for footer strings in dataset/multiset
+    MAX_STRING_WIDTH = 15  # maximum for ALL strings
 
     # formatting for floating point and integer
-    PRECISION = 2            # number of digits to the right of the decimal
-    E_PRECISION = 3          # number of digits to display to the right of the decimal (sci notation)
-    E_THRESHOLD = 6          # power of 10 at which the float flips to scientific notation 10**+/-
-    
-    E_MIN = None             # lower limit before going to scientific notation
-    E_MAX = None             # upper limit before going to scientific notation
-    P_THRESHOLD = None       # precision threshold for area in between - so small values don't display as zero
+    PRECISION = 2  # number of digits to the right of the decimal
+    E_PRECISION = 3  # number of digits to display to the right of the decimal (sci notation)
+    E_THRESHOLD = 6  # power of 10 at which the float flips to scientific notation 10**+/-
 
-    NUMBER_SEPARATOR = False # flag for separating thousands in floats and ints
-    NUMBER_SEPARATOR_CHAR = DisplayNumberSeparator.Comma # character for separating , . or _
+    E_MIN = None  # lower limit before going to scientific notation
+    E_MAX = None  # upper limit before going to scientific notation
+    P_THRESHOLD = None  # precision threshold for area in between - so small values don't display as zero
+
+    NUMBER_SEPARATOR = False  # flag for separating thousands in floats and ints
+    NUMBER_SEPARATOR_CHAR = DisplayNumberSeparator.Comma  # character for separating , . or _
 
     # misc
-    GB_PREFIX = "*" # prefix for column names to indicate that they are groupby keys
+    GB_PREFIX = "*"  # prefix for column names to indicate that they are groupby keys
 
     # TODO: split the json config loader to separate files so that new display formatting
     # can be added more easily for future data types
@@ -195,22 +198,22 @@ class DisplayOptions(object):
     # min/max values for each display option
     # TODO: clean up and test DisplayOptions.__setitem__ to make sure these are followed
     _BOUNDS = {
-                "HEAD_ROWS" : (4,500),
-                "TAIL_ROWS" : (4,500),
-                "MAX_ROWS"  : (4,500),
-                "COL_MIN" : (1,1000),
-                "COL_MAX" : (1,51),
-                "COL_T" : (1,200),
-                "MAX_HEADER_WIDTH" : (0,100),
-                "MAX_FOOTER_WIDTH" : (0,100),
-                "MAX_STRING_WIDTH" : (0,100),
-                "PRECISION" : (1,14),
-                "E_PRECISION" : (.00000000001,6),
-                "E_THRESHOLD" : (1,20),
-                "X_PADDING" : (1,25),
-                "Y_PADDING" : (1,15),
-                "CONSOLE_X" : (80, 500),
-                "CONSOLE_Y" : (25, 150)
+        "HEAD_ROWS": (4, 500),
+        "TAIL_ROWS": (4, 500),
+        "MAX_ROWS": (4, 500),
+        "COL_MIN": (1, 1000),
+        "COL_MAX": (1, 51),
+        "COL_T": (1, 200),
+        "MAX_HEADER_WIDTH": (0, 100),
+        "MAX_FOOTER_WIDTH": (0, 100),
+        "MAX_STRING_WIDTH": (0, 100),
+        "PRECISION": (1, 14),
+        "E_PRECISION": (0.00000000001, 6),
+        "E_THRESHOLD": (1, 20),
+        "X_PADDING": (1, 25),
+        "Y_PADDING": (1, 15),
+        "CONSOLE_X": (80, 500),
+        "CONSOLE_Y": (25, 150),
     }
 
     # test flags for display styling
@@ -230,7 +233,7 @@ class DisplayOptions(object):
 
     # test flag for reducing table printing to one pass over the data
     _TEST_ONE_PASS = False
-    
+
     def __new__(cls):
         if cls._CONFIG_LOADED is False:
             DisplayOptions._get_username()
@@ -260,22 +263,22 @@ class DisplayOptions(object):
 
     # when a new item is replaced or added ---------------------------
     def __setattr__(self, name, value):
-        if hasattr(self,name):
-            if name[0] == '_':
-                setattr(self,name,value)
+        if hasattr(self, name):
+            if name[0] == "_":
+                setattr(self, name, value)
 
             else:
                 bmin, bmax = self._BOUNDS[name]
                 # old, for restricting property values
-                #if value > bmax:
+                # if value > bmax:
                 #    pass
-                #elif value < bmin:
+                # elif value < bmin:
                 #    pass
-                #else:
+                # else:
                 #    pass
 
                 # reset precision properties
-                if name in ['PRECISION', 'E_PRECISION', 'E_THRESHOLD']:
+                if name in ["PRECISION", "E_PRECISION", "E_THRESHOLD"]:
                     self.E_MIN = None
                     self.E_MAX = None
                     self.P_THRESHOLD = None
@@ -292,7 +295,7 @@ class DisplayOptions(object):
         if "USERNAME" in os.environ:
             DisplayOptions._USERNAME = os.environ["USERNAME"]
         elif "LOGNAME" in os.environ:
-                DisplayOptions._USERNAME = os.environ["LOGNAME"]
+            DisplayOptions._USERNAME = os.environ["LOGNAME"]
         else:
             DisplayOptions._USERNAME = "riptable"
 
@@ -300,7 +303,7 @@ class DisplayOptions(object):
     def _get_default_path():
         # maybe store this to a class global?
         app_name = "riptable"
-        #app_author = DisplayOptions._USERNAME
+        # app_author = DisplayOptions._USERNAME
         config_dir = user_config_dir(app_name)
 
         return config_dir
@@ -332,13 +335,13 @@ class DisplayOptions(object):
         if path is None:
             path = DisplayOptions._get_default_path()
             if not os.path.exists(path):
-                print("Default directory",path,"doesn't exist.")
+                print("Default directory", path, "doesn't exist.")
                 print("Creating directory...")
                 # make an riptable directory if it doesn't exist
                 try:
                     os.makedirs(path)
                 except:
-                    print("Unable to create directory",path)
+                    print("Unable to create directory", path)
                     return False
                 else:
                     print("Success.")
@@ -347,32 +350,32 @@ class DisplayOptions(object):
             # fixes bug with autoreload
             if DisplayOptions._USERNAME is None:
                 DisplayOptions._get_username()
-            name = DisplayOptions._USERNAME+"_display_options.json"
-        full_path = path+os.path.sep+name
+            name = DisplayOptions._USERNAME + "_display_options.json"
+        full_path = path + os.path.sep + name
 
         if os.path.exists(full_path) is True:
             if DisplayOptions._AUTO_SAVE is False:
                 # if auto save is turned off, double check with user to make sure overwrite is okay
                 if force_overwrite is False:
-                    overwrite_prompt = "File exists at " +full_path +". Overwrite? (y/n) "
+                    overwrite_prompt = "File exists at " + full_path + ". Overwrite? (y/n) "
                     overwrite = input(overwrite_prompt)
-                    if overwrite != 'y' and overwrite != 'Y':
+                    if overwrite != "y" and overwrite != "Y":
                         return False
 
         save_dict = {}
         for var in dir(DisplayOptions):
             # don't store functions or python default variables
-            if not(callable(getattr(DisplayOptions, var))) and not var.startswith("__"):
+            if not (callable(getattr(DisplayOptions, var))) and not var.startswith("__"):
                 save_dict[var] = DisplayOptions.__getattribute__(DisplayOptions, var)
         try:
-            with open(full_path, 'w') as save_file:
+            with open(full_path, "w") as save_file:
                 dump(save_dict, save_file)
         except:
-            print("Error saving display options to",full_path)
+            print("Error saving display options to", full_path)
             return False
         else:
             if force_overwrite is False:
-                print("Saved display options as",name)
+                print("Saved display options as", name)
             return True
 
     @staticmethod
@@ -403,22 +406,22 @@ class DisplayOptions(object):
                 return False
         if name is None:
             DisplayOptions._get_username()
-            name = DisplayOptions._USERNAME+"_display_options.json"
-        full_path = path+os.path.sep+name
+            name = DisplayOptions._USERNAME + "_display_options.json"
+        full_path = path + os.path.sep + name
 
         if not os.path.exists(full_path):
-            print("No configuration file found at",full_path)
+            print("No configuration file found at", full_path)
             return False
 
         try:
-            with open(full_path,'r') as config_file:
+            with open(full_path, "r") as config_file:
                 data = load(config_file)
         except:
-            print("Error loading display options from",full_path)
+            print("Error loading display options from", full_path)
             return False
         else:
             # a new default config file will be saved after a reset
-            reset = data.get("_RESET_OPTIONS",False)
+            reset = data.get("_RESET_OPTIONS", False)
             # Todo alz 20191125 - use tuple rather than returning a value of different types
             # PEP 20 - Explicit is better than implicit and readability counts.
             if reset:
@@ -426,7 +429,7 @@ class DisplayOptions(object):
                 return -1
             # print("Loaded display options.")
             for var, value in data.items():
-                setattr(DisplayOptions,var,value)
+                setattr(DisplayOptions, var, value)
             DisplayOptions._CONFIG_LOADED = True
             return True
 
@@ -449,7 +452,7 @@ class DisplayOptions(object):
         """
         overwrite_prompt = "Are you sure you want to reset your display options? (y/n)"
         overwrite = input(overwrite_prompt)
-        if overwrite != 'y' and overwrite != 'Y':
+        if overwrite != "y" and overwrite != "Y":
             return
         print("Options marked for reset. Start new session to complete reset.")
         DisplayOptions._RESET_OPTIONS = True
@@ -481,7 +484,7 @@ class DisplayOptions(object):
             Upper limit before going to scientific notation
         """
         if cls.E_MAX is None:
-            cls.E_MAX = 10 ** TypeRegister.DisplayOptions.E_THRESHOLD
+            cls.E_MAX = 10**TypeRegister.DisplayOptions.E_THRESHOLD
         return cls.E_MAX
 
     @classmethod

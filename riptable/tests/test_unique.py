@@ -1,14 +1,14 @@
 import unittest
-import pytest
+
 import numpy as np
+import pytest
 from numpy.testing import assert_array_equal
 
 import riptable as rt
 from riptable import FastArray
 
-
 rand_nums = np.random.choice(30, 100)
-numeric_types = 'fd' + 'bB' + 'hH' + 'iIlL' + 'qQpP'  # + '?'
+numeric_types = "fd" + "bB" + "hH" + "iIlL" + "qQpP"  # + '?'
 
 
 @pytest.mark.parametrize("dt_char", list(numeric_types))
@@ -21,12 +21,8 @@ def test_numeric_accuracy(dt_char, lex):
     #      values to 0/1, but .view(bool) will not -- so it will check that
     #      lower-level logic does proper C-style bool conversion (zero=false, non-zero=true).
     nums = rand_nums.view(target_dtype)
-    np_un, np_idx, np_inv, np_cnt = np.unique(
-        nums, return_index=True, return_inverse=True, return_counts=True
-    )
-    fa_un, fa_idx, fa_inv, fa_cnt = rt.unique(
-        nums, return_index=True, return_inverse=True, return_counts=True, lex=lex
-    )
+    np_un, np_idx, np_inv, np_cnt = np.unique(nums, return_index=True, return_inverse=True, return_counts=True)
+    fa_un, fa_idx, fa_inv, fa_cnt = rt.unique(nums, return_index=True, return_inverse=True, return_counts=True, lex=lex)
 
     assert_array_equal(
         np_un,
@@ -50,19 +46,17 @@ def test_numeric_accuracy(dt_char, lex):
     )
 
 
-@pytest.mark.parametrize("dt_char", list('US'))
+@pytest.mark.parametrize("dt_char", list("US"))
 @pytest.mark.parametrize("lex", [False, True])
 def test_string_accuracy(dt_char, lex):
     target_dtype = np.dtype(dt_char)
 
     rand_strings = (
-        np.random.choice(['test_string' + str(i) for i in range(30)], 100)
+        np.random.choice(["test_string" + str(i) for i in range(30)], 100)
         .astype(target_dtype, copy=False)
         .view(FastArray)
     )
-    np_un, np_idx, np_inv, np_cnt = np.unique(
-        rand_strings, return_index=True, return_inverse=True, return_counts=True
-    )
+    np_un, np_idx, np_inv, np_cnt = np.unique(rand_strings, return_index=True, return_inverse=True, return_counts=True)
     fa_un, fa_idx, fa_inv, fa_cnt = rt.unique(
         rand_strings,
         return_index=True,
@@ -97,7 +91,7 @@ def test_string_accuracy(dt_char, lex):
 #       back to the 'numeric_types' variable above, then this test can be removed
 #       (since bools will be included in the test_numeric_accuracy test).
 @pytest.mark.xfail(reason="RIP-371: Grouping returns incorrect results for bool array")
-@pytest.mark.parametrize("dt_char", list('?'))
+@pytest.mark.parametrize("dt_char", list("?"))
 @pytest.mark.parametrize("lex", [False, True])
 def test_bool_accuracy(dt_char, lex):
     target_dtype = np.dtype(dt_char)
@@ -107,12 +101,8 @@ def test_bool_accuracy(dt_char, lex):
     #      values to 0/1, but .view(bool) will not -- so it will check that
     #      lower-level logic does proper C-style bool conversion (zero=false, non-zero=true).
     nums = rand_nums.view(target_dtype)
-    np_un, np_idx, np_inv, np_cnt = np.unique(
-        nums, return_index=True, return_inverse=True, return_counts=True
-    )
-    fa_un, fa_idx, fa_inv, fa_cnt = rt.unique(
-        nums, return_index=True, return_inverse=True, return_counts=True, lex=lex
-    )
+    np_un, np_idx, np_inv, np_cnt = np.unique(nums, return_index=True, return_inverse=True, return_counts=True)
+    fa_un, fa_idx, fa_inv, fa_cnt = rt.unique(nums, return_index=True, return_inverse=True, return_counts=True, lex=lex)
 
     assert_array_equal(
         np_un,

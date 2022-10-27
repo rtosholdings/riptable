@@ -1,16 +1,19 @@
 from typing import Optional, Union
 
-__all__ = ['Multiset', ]
+__all__ = [
+    "Multiset",
+]
 
 import warnings
+
 import numpy as np
 
-from .rt_struct import Struct
 from .rt_dataset import Dataset
-from .rt_sort_cache import SortCache
-from .rt_display import DisplayTable, DisplayDetect, DisplayString
-from .rt_enum import DS_DISPLAY_TYPES, TypeRegister, ColHeader, DisplayDetectModes
+from .rt_display import DisplayDetect, DisplayString, DisplayTable
+from .rt_enum import DS_DISPLAY_TYPES, ColHeader, DisplayDetectModes, TypeRegister
 from .rt_misc import build_header_tuples
+from .rt_sort_cache import SortCache
+from .rt_struct import Struct
 
 
 # =====================================================================================
@@ -23,16 +26,16 @@ class Multiset(Struct):
 
     The columns within contained datasets may be displayed in an interleaved way.
     Example: Assume Jan and Feb are two datasets with 3 columns each:
-    
+
     * Jan: Run1, Run2, Run3
     * Feb: Run1, Run2, Run3
 
-    A Multiset containing these datasets would display with a multi-line header:        
-    
+    A Multiset containing these datasets would display with a multi-line header:
+
     Run1        Run2        Run3
-    
+
     Jan   Feb    Jan  Feb    Jan  Feb
-    
+
     One can access the Run1 column in the Jan dataset with the syntax:
     ms.Jan.Run1
 
@@ -96,48 +99,48 @@ class Multiset(Struct):
     """
 
     # ------------------------------------------------------------
-    def __init__(self, input_value: Optional[Union[dict, 'Multiset']] = None):
+    def __init__(self, input_value: Optional[Union[dict, "Multiset"]] = None):
         if input_value is None:
             input_value = dict()
         self._pre_init()
         if isinstance(input_value, dict):
             self._init_from_dict(input_value)
         elif isinstance(input_value, Multiset):
-            raise TypeError(f'Use {self.__class__.__name__}.copy(deep=True/False) as a copy constructor.')
+            raise TypeError(f"Use {self.__class__.__name__}.copy(deep=True/False) as a copy constructor.")
         else:
-            raise TypeError(f'{self.__class__.__name__} must be initialized with a dictionary.')
+            raise TypeError(f"{self.__class__.__name__} must be initialized with a dictionary.")
         self._gbkeys = None
         self._post_init()
-        self._sorted_row_idx=None
+        self._sorted_row_idx = None
 
     # ------------------------------------------------------------
     def _init_from_dict(self, dictionary):
         # all __init__ paths funnel into this
         req_nrows = 0  # number of required rows for each contained dataset and multiset
         for k, v in dictionary.items():
-            if k[0] != '_':
+            if k[0] != "_":
                 # only allow Datasets and Multisets, if their number of rows are equal
                 if isinstance(v, (TypeRegister.Dataset, TypeRegister.Multiset)):
                     if not req_nrows:
                         req_nrows = v._nrows
                     elif req_nrows != v._nrows:
-                        raise ValueError(f'Number of rows in datasets do not match')
+                        raise ValueError(f"Number of rows in datasets do not match")
                     # add the dataset to this class
                     self.col_set_value(k, v)
                 else:
-                    raise TypeError(f'Cannot add {type(v).__name__} to a multiset')
+                    raise TypeError(f"Cannot add {type(v).__name__} to a multiset")
         # fixup _nrows
         self._nrows = None if self.col_get_len() == 0 else req_nrows
 
     # ------------------------------------------------------------
     def _check_addtype(self, name, value):
-        """ called from subclassed Struct when a new item is added"""
+        """called from subclassed Struct when a new item is added"""
         # currently only allow Datasets and Multisets
         if not isinstance(value, (TypeRegister.Dataset, TypeRegister.Multiset)):
-            raise TypeError(f'Multiset only holds Datasets and Multisets not {type(value).__name__}.')
+            raise TypeError(f"Multiset only holds Datasets and Multisets not {type(value).__name__}.")
         # number of rows must match
         if self._nrows and self._nrows != value._nrows:
-            raise ValueError(f'Number of rows do not match')
+            raise ValueError(f"Number of rows do not match")
         # passed all the checks
         return value
 
@@ -151,7 +154,7 @@ class Multiset(Struct):
         index: An index specification.
         deep: bool, False
            If set to True will make deep copies
-                  
+
         Returns
         -------
         A new Multiset.
@@ -193,9 +196,10 @@ class Multiset(Struct):
         """
         if isinstance(index, (tuple, type(None))):
             raise IndexError(
-                f'Can only index {self.__class__.__name__} as st[c], where c is colname, list of colnames or boolean mask.')
+                f"Can only index {self.__class__.__name__} as st[c], where c is colname, list of colnames or boolean mask."
+            )
 
-        #return: col_idx, row_idx, ncols, nrows, row_arg
+        # return: col_idx, row_idx, ncols, nrows, row_arg
         col_idx, _, ncols, _, _ = self._extract_indexing(index)
         if col_idx is None:
             col_idx = list(self.keys())
@@ -203,32 +207,33 @@ class Multiset(Struct):
             return
         if ncols == 1:
             if not isinstance(value, (TypeRegister.Dataset, Multiset)):
-                raise TypeError(f'Multiset can only hold Datasets or Multisets not {type(value)!r}.')
+                raise TypeError(f"Multiset can only hold Datasets or Multisets not {type(value)!r}.")
             if self._nrows and self._nrows != value._nrows:
-                raise ValueError(f'Number of rows do not match')
-            if not isinstance(col_idx, str): col_idx = col_idx[0]
+                raise ValueError(f"Number of rows do not match")
+            if not isinstance(col_idx, str):
+                col_idx = col_idx[0]
             if self.col_exists(col_idx):
                 self.__setattr__(col_idx, value)
             elif self.is_valid_colname(col_idx):
                 self.__setattr__(col_idx, value)
             else:
-                raise IndexError(f'Invalid column name: {col_idx!r}')
+                raise IndexError(f"Invalid column name: {col_idx!r}")
             self._nrows = value._nrows
         else:
             if not all([self.col_exists(_k) for _k in col_idx]):
-                raise IndexError('If creating a new column can only do one at a time.')
+                raise IndexError("If creating a new column can only do one at a time.")
             for _k1, _v2 in zip(col_idx, value):
                 if not isinstance(_v2, (TypeRegister.Dataset, Multiset)):
-                    raise TypeError(f'Multiset can only hold Datasets or Multisets.')
+                    raise TypeError(f"Multiset can only hold Datasets or Multisets.")
                 if self._nrows and self._nrows != _v2._nrows:
-                    raise ValueError(f'Number of rows do not match')
+                    raise ValueError(f"Number of rows do not match")
                 setattr(self, _k1, _v2)
                 self._nrows = _v2._nrows
         return
 
     # --------------------------------------------------------
     def _autocomplete(self) -> str:
-        return f'Multiset{self.shape}'
+        return f"Multiset{self.shape}"
 
     # --------------------------------------------------------
     def _copy(self, deep=False, rows=None, cols=None, base_index=0, cls=None):
@@ -256,18 +261,18 @@ class Multiset(Struct):
         if rows is None and cols is None:
             for dsetname, dset in self.items():
                 if deep:
-                    ms[dsetname]= dset.copy(deep=deep)
+                    ms[dsetname] = dset.copy(deep=deep)
                 else:
-                    ms[dsetname]= dset
+                    ms[dsetname] = dset
         else:
             for dsetname, dset in self.items():
-                ms[dsetname]= dset._copy(deep=deep, rows=rows, cols=cols, base_index=base_index)
+                ms[dsetname] = dset._copy(deep=deep, rows=rows, cols=cols, base_index=base_index)
         if ms_locked:
             ms._lock()
         return ms
 
     def copy(self, deep=True):
-        '''
+        """
         Returns a shallow or deep copy of the multiset
         Defaults to a deepy copy.
 
@@ -275,12 +280,12 @@ class Multiset(Struct):
         ----------
         deep: bool, default True
             Set to False for a shallow copy.
-        '''
+        """
         return self._copy(deep)
 
     @staticmethod
     def _depth_first(curobject, curdict, level, returnlist):
-        """ returns the max depth, list of dictionaries"""
+        """returns the max depth, list of dictionaries"""
         maxlevel = level
 
         if isinstance(curobject, TypeRegister.Multiset):
@@ -302,7 +307,7 @@ class Multiset(Struct):
 
     @staticmethod
     def _build_col_headers(rootobject, rootdict):
-        """ return a list of lists of ColHeaders """
+        """return a list of lists of ColHeaders"""
         tier1_list = list(rootdict.keys())
         numTier1 = len(tier1_list)
         if numTier1 == 0:
@@ -324,7 +329,7 @@ class Multiset(Struct):
             multiline_col = [build_header_tuples(cols, 1, 0), build_header_tuples(op_list, 1, 0)]
             # second line (same operation repeated)
 
-            #allArrays = [ds.__getattribute__(c) for c in cols]
+            # allArrays = [ds.__getattribute__(c) for c in cols]
             allArrays = [ds.__getattr__(c) for c in cols]
 
             # return [build_header_tuples]
@@ -432,28 +437,27 @@ class Multiset(Struct):
 
     # -------------------------------------------------------
     def _build_footers(self):
-        '''
+        """
         Still testing.
         TODO: speed up this python loop
-        '''
+        """
         footers = None
         num_ds = len(self)
         if num_ds > 0:
             try:
-                first_footers = list(getattr(self[0], '_footers').values())[0]
+                first_footers = list(getattr(self[0], "_footers").values())[0]
                 footers = []
                 for f_idx, footer in enumerate(first_footers):
-                    footers.append(footer) # insert the first
-                    for i in range(1,num_ds): # insert each for the other datasets at the same index
+                    footers.append(footer)  # insert the first
+                    for i in range(1, num_ds):  # insert each for the other datasets at the same index
                         current_footers = list(self[i]._footers.values())[0]
                         footers.append(current_footers[f_idx])
-                footers = {'Total':TypeRegister.FastArray(footers)}
-                
+                footers = {"Total": TypeRegister.FastArray(footers)}
+
             except:
                 pass
-            #for i in num_ds
+            # for i in num_ds
         return footers
-
 
     # -------------------------------------------------------
     def _last_row_stats(self):
@@ -496,13 +500,13 @@ class Multiset(Struct):
             sorted_row_idx = None
 
         if self._gbkeys is None:
-            keytups = [ColHeader("#",1,0)]
+            keytups = [ColHeader("#", 1, 0)]
         else:
-            keytups = [ColHeader(k,1,0) for k in self._gbkeys]
+            keytups = [ColHeader(k, 1, 0) for k in self._gbkeys]
             # pad the other rows
             # TODO: take the multiline padding routine out of display to stop this from happening twice
-            #padtup = [ColHeader('',len(keytups),0)]
-            #for i, header_row in enumerate(multiline_col[:-1]):
+            # padtup = [ColHeader('',len(keytups),0)]
+            # for i, header_row in enumerate(multiline_col[:-1]):
             #    multiline_col[i] = padtup + header_row
 
             # add groupby columns to main data
@@ -519,7 +523,8 @@ class Multiset(Struct):
             sortkeys=self._col_sortlist,
             from_str=from_str,
             sorted_row_idx=sorted_row_idx,
-            transpose_on=self._transpose_on)
+            transpose_on=self._transpose_on,
+        )
 
         return result + "\n\n" + self._last_row_stats()
 
@@ -562,7 +567,7 @@ class Multiset(Struct):
 
         Examples
         --------
-        >>> ds=rt.Dataset({'somenans': [0., 1., 2., nan, 4., 5.]}) 
+        >>> ds=rt.Dataset({'somenans': [0., 1., 2., nan, 4., 5.]})
         >>> ds2=rt.Dataset({'somenans': [0., 1., nan, 3., 4., 5.]})
         >>> ms=rt.Multiset({'test':ds, 'test2':ds2})
         >>> ms[2,:]
@@ -577,20 +582,21 @@ class Multiset(Struct):
             When an invalid column name is supplied.
         TypeError
         """
+
         def single_array(col_idx, row_idx):
             # will either return dataset or return an error
             try:
                 ds = self.col_get_value(col_idx)
             except Exception:
                 # search and collect all sub columns
-                ms={}
+                ms = {}
                 for dsetname, ds in self.items():
                     try:
                         # have the sub column collect the information
                         newds = ds[row_idx, col_idx] if row_idx is not None else ds[col_idx]
                         if isinstance(newds, np.ndarray):
                             # convert to a dataset
-                            ms[dsetname] = Dataset({col_idx:newds})
+                            ms[dsetname] = Dataset({col_idx: newds})
                         else:
                             ms[dsetname] = newds
                     except Exception:
@@ -602,7 +608,7 @@ class Multiset(Struct):
 
             if row_idx is not None:
                 # array indexing takes place early here
-                return ds[row_idx,:]
+                return ds[row_idx, :]
             else:
                 return ds
 
@@ -619,12 +625,12 @@ class Multiset(Struct):
         # if a single integer specified, make a list of one number for fancy column indexing
         if isinstance(row_arg, (int, np.integer)):
             row_idx = [row_arg]
-        
+
         return self._copy(deep=False, rows=row_idx, cols=col_idx)
 
     # -------------------------------------------------------
-    def flatten(self, horizontal=True, delimiter='_', dset_col_name='Column'):
-        '''
+    def flatten(self, horizontal=True, delimiter="_", dset_col_name="Column"):
+        """
         Return a single dataset constructed by concatenating all of the datasets and flattened
         multisets contained within the multiset. Horizontal flattening will concatenate the datasets
         horizontally, prepending the dataset name to each dataset's column names.
@@ -648,7 +654,7 @@ class Multiset(Struct):
         Raises
         ------
         ValueError
-        '''
+        """
         initial = True
         for name in self:
             elem = self[name]
@@ -668,8 +674,7 @@ class Multiset(Struct):
             if horizontal:
                 if initial:
                     dsr = elem[label_col_names] if label_col_names else TypeRegister.Dataset()
-                dsr = TypeRegister.Dataset.concat_columns([dsr, elem[val_col_names]],
-                                                           do_copy=False)
+                dsr = TypeRegister.Dataset.concat_columns([dsr, elem[val_col_names]], do_copy=False)
                 for col_name in val_col_names:
                     dsr.col_rename(col_name, delimiter.join([name, col_name]))
             else:
@@ -683,10 +688,8 @@ class Multiset(Struct):
                     inds[dset_col_name] = [name] * elem.shape[0]
                 else:
                     # Append multiset name to dataset name column
-                    elem[dset_col_name] = [delimiter.join([name, cn.decode()]) for cn
-                                            in elem[dset_col_name]]
-                inds = TypeRegister.Dataset.concat_columns([inds, elem[val_col_names]],
-                                                            do_copy=False)
+                    elem[dset_col_name] = [delimiter.join([name, cn.decode()]) for cn in elem[dset_col_name]]
+                inds = TypeRegister.Dataset.concat_columns([inds, elem[val_col_names]], do_copy=False)
                 dsr = inds if initial else TypeRegister.Dataset.concat_rows([dsr, inds])
                 # Move the label column(s) to front, so they are there even with label removed
                 dsr.col_move_to_front(label_col_names)
@@ -694,11 +697,10 @@ class Multiset(Struct):
         dsr.label_set_names(label_col_names)
         return dsr
 
-
     ## -------------------------------------------------------
-    #def sort_view(self, refdataset, by, ascending=True, kind='mergesort', na_position='last'):
+    # def sort_view(self, refdataset, by, ascending=True, kind='mergesort', na_position='last'):
     #    '''
-    #    Sorts all columns in all datasets only when displayed. 
+    #    Sorts all columns in all datasets only when displayed.
     #    This routine is fast and does not change data underneath.
 
     #    See also: sort_inplace and sort_copy
@@ -710,8 +712,8 @@ class Multiset(Struct):
 
     # -------------------------------------------------------
     def label_set_names(self, listnames):
-        """ Set which column names can be used as labels in display"""
-        gbkeys={}
+        """Set which column names can be used as labels in display"""
+        gbkeys = {}
         for ds in self.values():
             for colname in listnames:
                 gbkeys[colname] = ds[colname]
@@ -721,12 +723,12 @@ class Multiset(Struct):
         if len(gbkeys) == 0:
             raise ValueError(f"Could not find any columns named {listnames}")
         # tell display which columns to move to left
-        self._gbkeys=gbkeys
+        self._gbkeys = gbkeys
 
     # -------------------------------------------------------
     def label_fixup(self):
-        """ Auto scan for which column names can be used as labels in display"""
-        gbkeys={}
+        """Auto scan for which column names can be used as labels in display"""
+        gbkeys = {}
         for ds in self.values():
             listnames = ds.label_get_names()
             if len(listnames) > 0:
@@ -734,35 +736,35 @@ class Multiset(Struct):
                     gbkeys[colname] = ds[colname]
                 break
         if len(gbkeys) == 0:
-            self._gbkeys=None
+            self._gbkeys = None
         else:
-            self._gbkeys=gbkeys
+            self._gbkeys = gbkeys
         # allow chaining from this method
         return self
 
     # -------------------------------------------------------
-    def cascade(self,  funcname, *args, **kwargs):
-        '''
+    def cascade(self, funcname, *args, **kwargs):
+        """
         Depth first calling of functions, often into a Dataset.
         For each Dataset in the Multiset, the function will be called with the `args` and `kwargs`.
         The return result is expected to be a Dataset which will then be added back into a new Multiset
         and returned to the called.
-        
+
         Parameters
         ----------
         funcname: string or callable function
-        
+
         Returns
         -------
         Multiset
-        '''
+        """
         if callable(funcname):
             func = funcname
         else:
-            func=MultisetFunc.get(funcname, None)
+            func = MultisetFunc.get(funcname, None)
 
         if func is not None:
-            ms=Multiset({})
+            ms = Multiset({})
             for dsetname, dset in self.items():
                 ms[dsetname] = func(dset, *args, **kwargs)
             return ms.label_fixup()
@@ -770,37 +772,90 @@ class Multiset(Struct):
 
     # -------------------------------------------------------
     # Copied over from Dataset and then cascaded down
-    def apply(self, *args, **kwargs):        return self.cascade('apply', *args, **kwargs)
-    def apply_cols(self, *args, **kwargs):   return self.cascade('apply_cols', *args, **kwargs)
-    def apply_rows(self, *args, **kwargs):   return self.cascade('apply_rows', *args, **kwargs)
-    def sort_inplace(self, *args, **kwargs): return self.cascade('sort_inplace', *args, **kwargs)
-    def sort_copy(self, *args, **kwargs):    return self.cascade('sort_copy', *args, **kwargs)
-    def fillna(self, *args, **kwargs):       return self.cascade('fillna', *args, **kwargs)
-    def all(self, *args, **kwargs):          return self.cascade('all', *args, **kwargs)
-    def any(self, *args, **kwargs):          return self.cascade('any', *args, **kwargs)
-    def keep(self, *args, **kwargs):         return self.cascade('keep', *args, **kwargs)
-    def trim(self, *args, **kwargs):         return self.cascade('trim', *args, **kwargs)
-    def pivot(self, *args, **kwargs):        return self.cascade('pivot', *args, **kwargs)
-    def quantile(self, *args, **kwargs):     return self.cascade('quantile', *args, **kwargs)
-    def describe(self, *args, **kwargs):     return self.cascade('describe', *args, **kwargs)
-    def sum(self, *args, **kwargs):          return self.cascade('sum', *args, **kwargs)
-    def mean(self, *args, **kwargs):         return self.cascade('mean', *args, **kwargs)
-    def std(self, *args, **kwargs):          return self.cascade('std', *args, **kwargs)
-    def var(self, *args, **kwargs):          return self.cascade('var', *args, **kwargs)
-    def min(self, *args, **kwargs):          return self.cascade('min', *args, **kwargs)
-    def max(self, *args, **kwargs):          return self.cascade('max', *args, **kwargs)
-    def nansum(self, *args, **kwargs):       return self.cascade('nansum', *args, **kwargs)
-    def nanmean(self, *args, **kwargs):      return self.cascade('nanmean', *args, **kwargs)
-    def nanstd(self, *args, **kwargs):       return self.cascade('nanstd', *args, **kwargs)
-    def nanvar(self, *args, **kwargs):       return self.cascade('nanvar', *args, **kwargs)
-    def nanmin(self, *args, **kwargs):       return self.cascade('nanmin', *args, **kwargs)
-    def nanmax(self, *args, **kwargs):       return self.cascade('nanmax', *args, **kwargs)
-    def abs(self, *args, **kwargs):          return self.cascade('abs', *args, **kwargs)
-    def astype(self, *args, **kwargs):       return self.cascade('astype', *args, **kwargs)
-    
+    def apply(self, *args, **kwargs):
+        return self.cascade("apply", *args, **kwargs)
 
-MultisetFunc={}
-#-----------------------------------------------------------
+    def apply_cols(self, *args, **kwargs):
+        return self.cascade("apply_cols", *args, **kwargs)
+
+    def apply_rows(self, *args, **kwargs):
+        return self.cascade("apply_rows", *args, **kwargs)
+
+    def sort_inplace(self, *args, **kwargs):
+        return self.cascade("sort_inplace", *args, **kwargs)
+
+    def sort_copy(self, *args, **kwargs):
+        return self.cascade("sort_copy", *args, **kwargs)
+
+    def fillna(self, *args, **kwargs):
+        return self.cascade("fillna", *args, **kwargs)
+
+    def all(self, *args, **kwargs):
+        return self.cascade("all", *args, **kwargs)
+
+    def any(self, *args, **kwargs):
+        return self.cascade("any", *args, **kwargs)
+
+    def keep(self, *args, **kwargs):
+        return self.cascade("keep", *args, **kwargs)
+
+    def trim(self, *args, **kwargs):
+        return self.cascade("trim", *args, **kwargs)
+
+    def pivot(self, *args, **kwargs):
+        return self.cascade("pivot", *args, **kwargs)
+
+    def quantile(self, *args, **kwargs):
+        return self.cascade("quantile", *args, **kwargs)
+
+    def describe(self, *args, **kwargs):
+        return self.cascade("describe", *args, **kwargs)
+
+    def sum(self, *args, **kwargs):
+        return self.cascade("sum", *args, **kwargs)
+
+    def mean(self, *args, **kwargs):
+        return self.cascade("mean", *args, **kwargs)
+
+    def std(self, *args, **kwargs):
+        return self.cascade("std", *args, **kwargs)
+
+    def var(self, *args, **kwargs):
+        return self.cascade("var", *args, **kwargs)
+
+    def min(self, *args, **kwargs):
+        return self.cascade("min", *args, **kwargs)
+
+    def max(self, *args, **kwargs):
+        return self.cascade("max", *args, **kwargs)
+
+    def nansum(self, *args, **kwargs):
+        return self.cascade("nansum", *args, **kwargs)
+
+    def nanmean(self, *args, **kwargs):
+        return self.cascade("nanmean", *args, **kwargs)
+
+    def nanstd(self, *args, **kwargs):
+        return self.cascade("nanstd", *args, **kwargs)
+
+    def nanvar(self, *args, **kwargs):
+        return self.cascade("nanvar", *args, **kwargs)
+
+    def nanmin(self, *args, **kwargs):
+        return self.cascade("nanmin", *args, **kwargs)
+
+    def nanmax(self, *args, **kwargs):
+        return self.cascade("nanmax", *args, **kwargs)
+
+    def abs(self, *args, **kwargs):
+        return self.cascade("abs", *args, **kwargs)
+
+    def astype(self, *args, **kwargs):
+        return self.cascade("astype", *args, **kwargs)
+
+
+MultisetFunc = {}
+# -----------------------------------------------------------
 def _FixupDocStrings():
     """
     Load all the member function of Dataset module
@@ -808,20 +863,45 @@ def _FixupDocStrings():
     """
     import inspect
     import sys
-    mymodule=sys.modules[__name__]
-    functions_to_copy=['apply','apply_cols','apply_rows','sort_inplace','sort_copy','fillna','all','any',
-                       'keep','trim','pivot','quantile','describe',
-                       'sum','mean','std','var','min','max',
-                       'nansum','nanmean','nanstd','nanvar','nanmin','nanmax',
-                       'abs','astype']
+
+    mymodule = sys.modules[__name__]
+    functions_to_copy = [
+        "apply",
+        "apply_cols",
+        "apply_rows",
+        "sort_inplace",
+        "sort_copy",
+        "fillna",
+        "all",
+        "any",
+        "keep",
+        "trim",
+        "pivot",
+        "quantile",
+        "describe",
+        "sum",
+        "mean",
+        "std",
+        "var",
+        "min",
+        "max",
+        "nansum",
+        "nanmean",
+        "nanstd",
+        "nanvar",
+        "nanmin",
+        "nanmax",
+        "abs",
+        "astype",
+    ]
 
     all_dataset_functions = inspect.getmembers(Dataset, inspect.isfunction)
-    #print("**all", all_dataset_functions)
+    # print("**all", all_dataset_functions)
     # now for each function that has an np flavor, copy over the doc strings
     for funcs in all_dataset_functions:
         funcname = funcs[0]
         if funcname in functions_to_copy:
-            dsfunc =  getattr(Dataset, funcname)
+            dsfunc = getattr(Dataset, funcname)
             msfunc = getattr(Multiset, funcname)
 
             # copy doc string
@@ -830,7 +910,8 @@ def _FixupDocStrings():
             # add to lookup table
             MultisetFunc[funcname] = dsfunc
 
-#----------------------------------------------------------
+
+# ----------------------------------------------------------
 # this is called when the module is loaded
 _FixupDocStrings()
 

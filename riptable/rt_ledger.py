@@ -1,12 +1,13 @@
 __all__ = ["MathLedger"]
 
+from typing import List
+
 import numpy as np
 import riptide_cpp as rc
 
-from typing import List
+from .rt_enum import MATH_OPERATION, TypeRegister
 from .rt_struct import Struct
 from .rt_timers import GetNanoTime
-from .rt_enum import TypeRegister, MATH_OPERATION
 
 
 # =====================================================================================
@@ -88,9 +89,7 @@ class MathLedger(Struct):
         try:
             print("--- TOTAL DELETES ", cls.TotalDeletes)
         except:
-            print(
-                "Nothing to show.  Please turn on ledger first with FA._LON or ticf()"
-            )
+            print("Nothing to show.  Please turn on ledger first with FA._LON or ticf()")
             return
 
         print("--- TOTAL CONVERSIONS ", cls.TotalConversions)
@@ -163,7 +162,7 @@ class MathLedger(Struct):
 
     @classmethod
     def _TRACEBACK(cls, func):
-        """ print the callback stack to help with debugging """
+        """print the callback stack to help with debugging"""
         import traceback
 
         for line in traceback.format_stack():
@@ -171,7 +170,7 @@ class MathLedger(Struct):
 
     @classmethod
     def _ASTYPE(cls, func, dtype, *args, **kwargs):
-        """ use numpy astype """
+        """use numpy astype"""
         if cls.VerboseConversion > 1:
             print(f"astype ledger {func} {dtype} {args}")
             if cls.VerboseConversion > 2:
@@ -180,7 +179,7 @@ class MathLedger(Struct):
 
     @classmethod
     def _AS_FA_TYPE(cls, faself, dtypenum, *args, **kwargs):
-        """ use multithreaded conversion preserving sentinels"""
+        """use multithreaded conversion preserving sentinels"""
         if cls.VerboseConversion > 1:
             print(f"as fa type ledger {faself.dtype.num} {dtypenum}")
             if cls.VerboseConversion > 2:
@@ -189,7 +188,7 @@ class MathLedger(Struct):
 
     @classmethod
     def _AS_FA_TYPE_UNSAFE(cls, faself, dtypenum, *args, **kwargs):
-        """ use multithreaded conversion NOT preserving sentinels"""
+        """use multithreaded conversion NOT preserving sentinels"""
         if cls.VerboseConversion > 1:
             print(f"as fa type unsafe ledger {faself.dtype.num} {dtypenum}")
             if cls.VerboseConversion > 2:
@@ -247,9 +246,7 @@ class MathLedger(Struct):
                     final_num,
                 )
             elif tupleargs.dtype == bool:
-                return cls._BASICMATH_TWO_INPUTS(
-                    (tupleargs, True), MATH_OPERATION.BITWISE_XOR, final_num
-                )
+                return cls._BASICMATH_TWO_INPUTS((tupleargs, True), MATH_OPERATION.BITWISE_XOR, final_num)
 
         if cls.Verbose > 1:
             print(f"BasicMathOneInput {tupleargs} {fastfunction} {final_num}")
@@ -265,9 +262,7 @@ class MathLedger(Struct):
         # speedup
         if cls.DebugUFunc is False:
             return rc.BasicMathTwoInputs(tupleargs, fastfunction, final_num)
-        return cls._FUNNEL_ALL(
-            rc.BasicMathTwoInputs, tupleargs, fastfunction, final_num
-        )
+        return cls._FUNNEL_ALL(rc.BasicMathTwoInputs, tupleargs, fastfunction, final_num)
 
     @classmethod
     def _FUNNEL_ALL(cls, func, *args, **kwargs):

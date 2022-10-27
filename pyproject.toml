@@ -5,12 +5,10 @@
 
 [tool.black]
 line-length = 120
-skip-string-normalization = true
-target-version = ['py36', 'py37', 'py38']
-include = '\.pyi?$'
-exclude = '''
+target-version = ["py38", "py39", "py310"]
+exclude = ''' 
 /(
-    \.cache
+  \.cache
   | \.egg
   | \.git
   | \.hypothesis
@@ -27,6 +25,9 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.isort]
+profile = "black"
 
 [pytest]
 xfail_strict = true

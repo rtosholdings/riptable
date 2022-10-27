@@ -1,32 +1,36 @@
-__all__ = ['SortCache', ]
+__all__ = [
+    "SortCache",
+]
 
 import numpy as np
 
-from .rt_numpy import lexsort, crc64
 from .rt_enum import TypeRegister
+from .rt_numpy import crc64, lexsort
+
 
 class SortCache(object):
-    '''
+    """
     Global sort cache for uid - unique ids which are often generated from GetTSC (CPU time stamp counter)
 
     to ensure that the values have not changed underneath, it performs a crc check and compares via the crc of a known sorted index array
-    '''
+    """
+
     _cache = {}
     _logging = False
 
     @classmethod
     def logging_on(cls):
-        cls._logging=True
+        cls._logging = True
 
     @classmethod
     def logging_off(cls):
-        cls._logging=False
+        cls._logging = False
 
     @classmethod
     def store_sort(cls, uid, sortlist, sortidx):
-        '''
+        """
         Restore a sort index from file.
-        '''
+        """
         crcvals = []
         for c in sortlist:
             crcvals.append(crc64(c))
@@ -35,19 +39,19 @@ class SortCache(object):
     @classmethod
     def get_sorted_row_index(cls, uid, nrows, sortdict):
         if sortdict is not None and len(sortdict) > 0:
-            crcvals=[]
-            sortlist=list(sortdict.values())
+            crcvals = []
+            sortlist = list(sortdict.values())
 
             for vals in sortlist:
                 # perform a crc on known sorted values and remember the crc
                 crcvals.append(crc64(vals))
 
-            updateCache=True
+            updateCache = True
 
             sort_idx = None
 
             if uid in cls._cache:
-                checkvals, sort_idx, checkrows  = cls._cache[uid]
+                checkvals, sort_idx, checkrows = cls._cache[uid]
 
                 if len(checkvals) == len(crcvals) and checkrows == nrows:
                     updateCache = False
@@ -58,13 +62,15 @@ class SortCache(object):
                             updateCache = True
                             break
 
-            if updateCache:    
-                if cls._logging: print("performing lexsort on columns:",list(sortdict.keys()))
+            if updateCache:
+                if cls._logging:
+                    print("performing lexsort on columns:", list(sortdict.keys()))
                 sortlist.reverse()
                 sort_idx = lexsort(sortlist)
                 cls._cache[uid] = (crcvals, sort_idx, nrows)
             else:
-                if cls._logging: print("NOT performing lexsort on columns:",list(sortdict.keys()))
+                if cls._logging:
+                    print("NOT performing lexsort on columns:", list(sortdict.keys()))
 
             return sort_idx
 
@@ -72,9 +78,9 @@ class SortCache(object):
             return None
             # NOTE: arange too costly, disabling this path for now
             # TODO: if nrows under max int32, return 32 bit version to save memory
-            #if nrows is None: nrows = 0
-            #sort_idx = np.arange(nrows,dtype=np.int64)
-            #cls._cache[uid] = ([], sort_idx, nrows)
+            # if nrows is None: nrows = 0
+            # sort_idx = np.arange(nrows,dtype=np.int64)
+            # cls._cache[uid] = ([], sort_idx, nrows)
 
         return sort_idx
 
@@ -90,6 +96,4 @@ class SortCache(object):
             del cls._cache[uid]
 
 
-
 TypeRegister.SortCache = SortCache
-

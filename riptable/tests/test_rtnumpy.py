@@ -1,12 +1,10 @@
 import math
 import unittest
+
 import pytest
-from numpy.testing import (
-    assert_array_equal
-)
+from numpy.testing import assert_array_equal
 
 import riptable as rt
-
 from riptable import *
 from riptable.rt_utils import alignmk
 
@@ -17,121 +15,113 @@ class TestRTNumpy:
     def test_where(self):
         arr = FA([False, True, False])
         result = where(arr, True, False)
-        assert_array_equal(
-            result, arr,
-            err_msg=f"Results did not match for where. {arr} vs. {result}"
-        )
+        assert_array_equal(result, arr, err_msg=f"Results did not match for where. {arr} vs. {result}")
 
-        x = Categorical(['a','b','a','c','b'])
-        y = Categorical(['b','a','b','b','e'])
-        z = FastArray(['a','c','f','g','a'])
-        f = FastArray([True,False,True,False,False])
-        out1 = where(f,x,y)
-        out2 = where(f,x,z)
-        out3 = where(f,z,y)
-        assert_array_equal(out1,FastArray(['a','a','a','b','e']))
-        assert(isinstance(out1,Categorical))
-        assert_array_equal(out2,FastArray(['a','c','a','g','a']))
-        assert(not isinstance(out2,Categorical))
-        assert_array_equal(out3,FastArray(['a','a','f','b','e']))
-        assert(not isinstance(out3,Categorical))
+        x = Categorical(["a", "b", "a", "c", "b"])
+        y = Categorical(["b", "a", "b", "b", "e"])
+        z = FastArray(["a", "c", "f", "g", "a"])
+        f = FastArray([True, False, True, False, False])
+        out1 = where(f, x, y)
+        out2 = where(f, x, z)
+        out3 = where(f, z, y)
+        assert_array_equal(out1, FastArray(["a", "a", "a", "b", "e"]))
+        assert isinstance(out1, Categorical)
+        assert_array_equal(out2, FastArray(["a", "c", "a", "g", "a"]))
+        assert not isinstance(out2, Categorical)
+        assert_array_equal(out3, FastArray(["a", "a", "f", "b", "e"]))
+        assert not isinstance(out3, Categorical)
 
     def test_where_length_one(self):
-        assert_array_equal(rt.where(rt.FA([False]))[0],np.array([]))
+        assert_array_equal(rt.where(rt.FA([False]))[0], np.array([]))
 
     def test_interp(self):
         x = interp(arange(3.0).astype(float32), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
         y = interp(arange(3.0), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
         z = np.interp(arange(3.0), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
-        assert_array_equal(
-            z, y, err_msg=f"Results did not match for where. {z} vs. {y}"
-        )
+        assert_array_equal(z, y, err_msg=f"Results did not match for where. {z} vs. {y}")
 
     def test_unique(self):
         symb = FastArray(
             # Top SPX constituents by weight as of 20200414
             [
-                b'MSFT',
-                b'AAPL',
-                b'AMZN',
-                b'FB',
-                b'JNJ',
-                b'GOOG',
-                b'GOOGL',
-                b'BRK.B',
-                b'PG',
-                b'JPM',
-                b'V',
-                b'INTC',
-                b'UNH',
-                b'VZ',
-                b'MA',
-                b'T',
-                b'HD',
-                b'MRK',
-                b'PFE',
-                b'PEP',
-                b'BAC',
-                b'DIS',
-                b'KO',
-                b'WMT',
-                b'CSCO',
+                b"MSFT",
+                b"AAPL",
+                b"AMZN",
+                b"FB",
+                b"JNJ",
+                b"GOOG",
+                b"GOOGL",
+                b"BRK.B",
+                b"PG",
+                b"JPM",
+                b"V",
+                b"INTC",
+                b"UNH",
+                b"VZ",
+                b"MA",
+                b"T",
+                b"HD",
+                b"MRK",
+                b"PFE",
+                b"PEP",
+                b"BAC",
+                b"DIS",
+                b"KO",
+                b"WMT",
+                b"CSCO",
             ],
         )
 
         x1, y1, z1 = np.unique(symb, return_index=True, return_inverse=True)
         x2, y2, z2 = unique(symb, return_index=True, return_inverse=True)
+        assert_array_equal(x1, x2, err_msg=f"Results did not match for unique. {x1} vs. {x2}")
+        assert_array_equal(y1, y2, err_msg=f"Results did not match for unique index. {y1} vs. {y2}")
         assert_array_equal(
-            x1, x2, err_msg=f"Results did not match for unique. {x1} vs. {x2}"
-        )
-        assert_array_equal(
-            y1, y2, err_msg=f"Results did not match for unique index. {y1} vs. {y2}"
-        )
-        assert_array_equal(
-            z1, z2,
+            z1,
+            z2,
             err_msg=f"Results did not match for unique inverse. {z1} vs. {z2}",
         )
         x2, y2, z2 = unique(Cat(symb), return_index=True, return_inverse=True)
+        assert_array_equal(x1, x2, err_msg=f"Results did not match for cat unique. {x1} vs. {x2}")
         assert_array_equal(
-            x1, x2, err_msg=f"Results did not match for cat unique. {x1} vs. {x2}"
-        )
-        assert_array_equal(
-            y1, y2,
+            y1,
+            y2,
             err_msg=f"Results did not match for cat unique index. {y1} vs. {y2}",
         )
         assert_array_equal(
-            z1, z2,
+            z1,
+            z2,
             err_msg=f"Results did not match for cat unique inverse. {z1} vs. {z2}",
         )
 
         # round 2
         symb = FastArray(
             [
-                'NIHD',
-                'SPY',
-                'AAPL',
-                'LOCO',
-                'XLE',
-                'MRNA',
-                'JD',
-                'JD',
-                'QNST',
-                'RUSL',
-                'USO',
-                'TSLA',
-                'NVDA',
-                'GLD',
-                'GLD',
-                'ZS',
-                'WDC',
-                'AGEN',
-                'AMRS',
-                'AAPL',
-                'SMH',
-                'PYPL',
-                'AAPL',
-                'SQQQ',
-                'GLD',
+                "NIHD",
+                "SPY",
+                "AAPL",
+                "LOCO",
+                "XLE",
+                "MRNA",
+                "JD",
+                "JD",
+                "QNST",
+                "RUSL",
+                "USO",
+                "TSLA",
+                "NVDA",
+                "GLD",
+                "GLD",
+                "ZS",
+                "WDC",
+                "AGEN",
+                "AMRS",
+                "AAPL",
+                "SMH",
+                "PYPL",
+                "AAPL",
+                "SQQQ",
+                "GLD",
             ],
             unicode=True,
         )
@@ -139,75 +129,74 @@ class TestRTNumpy:
         x1, y1, z1 = np.unique(symb, return_index=True, return_inverse=True)
 
         x2, y2, z2 = unique(symb, return_index=True, return_inverse=True)
+        assert_array_equal(x1, x2, err_msg=f"Results did not match for unique. {x1} vs. {x2}")
+        assert_array_equal(y1, y2, err_msg=f"Results did not match for unique index. {y1} vs. {y2}")
         assert_array_equal(
-            x1, x2, err_msg=f"Results did not match for unique. {x1} vs. {x2}"
-        )
-        assert_array_equal(
-            y1, y2, err_msg=f"Results did not match for unique index. {y1} vs. {y2}"
-        )
-        assert_array_equal(
-            z1, z2,
+            z1,
+            z2,
             err_msg=f"Results did not match for unique inverse. {z1} vs. {z2}",
         )
 
         x2, y2, z2 = unique(Cat(symb), return_index=True, return_inverse=True)
+        assert_array_equal(x1, x2, err_msg=f"Results did not match for cat unique. {x1} vs. {x2}")
         assert_array_equal(
-            x1, x2, err_msg=f"Results did not match for cat unique. {x1} vs. {x2}"
-        )
-        assert_array_equal(
-            y1, y2,
+            y1,
+            y2,
             err_msg=f"Results did not match for cat unique index. {y1} vs. {y2}",
         )
         assert_array_equal(
-            z1, z2,
+            z1,
+            z2,
             err_msg=f"Results did not match for cat unique inverse. {z1} vs. {z2}",
         )
 
         # round 3
         x2, y2, z2 = unique(symb, return_index=True, return_inverse=True, lex=True)
+        assert_array_equal(x1, x2, err_msg=f"Results did not match for cat unique. {x1} vs. {x2}")
         assert_array_equal(
-            x1, x2, err_msg=f"Results did not match for cat unique. {x1} vs. {x2}"
-        )
-        assert_array_equal(
-            y1, y2,
+            y1,
+            y2,
             err_msg=f"Results did not match for cat unique index. {y1} vs. {y2}",
         )
         assert_array_equal(
-            z1, z2,
+            z1,
+            z2,
             err_msg=f"Results did not match for cat unique inverse. {z1} vs. {z2}",
         )
 
     def test_alignmk(self):
         ds1 = rt.Dataset()
-        ds1['Time'] = [0, 1, 4, 6, 8, 9, 11, 16, 19, 30]
-        ds1['Px'] = [10, 12, 15, 11, 10, 9, 13, 7, 9, 10]
+        ds1["Time"] = [0, 1, 4, 6, 8, 9, 11, 16, 19, 30]
+        ds1["Px"] = [10, 12, 15, 11, 10, 9, 13, 7, 9, 10]
 
         ds2 = rt.Dataset()
-        ds2['Time'] = [0, 0, 5, 7, 8, 10, 12, 15, 17, 20]
-        ds2['Vols'] = [20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+        ds2["Time"] = [0, 0, 5, 7, 8, 10, 12, 15, 17, 20]
+        ds2["Vols"] = [20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
 
         # Categorical keys
-        ds1['Ticker'] = rt.Categorical(['Test'] * 10)
-        ds2['Ticker'] = rt.Categorical(['Test', 'Blah'] * 5)
+        ds1["Ticker"] = rt.Categorical(["Test"] * 10)
+        ds2["Ticker"] = rt.Categorical(["Test", "Blah"] * 5)
         res = alignmk(ds1.Ticker, ds2.Ticker, ds1.Time, ds2.Time)
         target = rt.FastArray([0, 0, 0, 2, 4, 4, 4, 6, 8, 8])
         assert_array_equal(res, target)
 
         # char array keys
-        ds1['Ticker'] = rt.FastArray(['Test'] * 10)
-        ds2['Ticker'] = rt.FastArray(['Test', 'Blah'] * 5)
+        ds1["Ticker"] = rt.FastArray(["Test"] * 10)
+        ds2["Ticker"] = rt.FastArray(["Test", "Blah"] * 5)
         res = alignmk(ds1.Ticker, ds2.Ticker, ds1.Time, ds2.Time)
         target = rt.FastArray([0, 0, 0, 2, 4, 4, 4, 6, 8, 8])
         assert_array_equal(res, target)
 
     def test_sample(self):
         # Test Dataset.sample
-        ds = rt.Dataset({'num': [1, 2, 3, 4, 5], 'str': ['ab', 'bc', 'cd', 'de', 'ef']})
+        ds = rt.Dataset({"num": [1, 2, 3, 4, 5], "str": ["ab", "bc", "cd", "de", "ef"]})
         ds_sample = ds.sample(3, rt.FA([True, True, True, False, True]), seed=1)
-        ds_sample_expected = rt.Dataset({'num': [1, 2, 5], 'str': ['ab', 'bc', 'ef']})
+        ds_sample_expected = rt.Dataset({"num": [1, 2, 5], "str": ["ab", "bc", "ef"]})
         assert ds_sample.keys() == ds_sample_expected.keys()
         for col_name in ds_sample_expected.keys():
-            assert_array_equal(ds_sample_expected[col_name], ds_sample[col_name], err_msg=f"Column '{col_name}' differs.")
+            assert_array_equal(
+                ds_sample_expected[col_name], ds_sample[col_name], err_msg=f"Column '{col_name}' differs."
+            )
 
         # Test FastArray.sample
         fa = rt.FA([1, 2, 3, 4, 5])
@@ -238,9 +227,11 @@ class TestRTNumpy:
         array_type = rt.Date
 
         arrs = [
-            array_type(['20210108', '20210108', '20210115', '20210115', '20210115', '20210122', '20210129', '20210129']),
-            array_type(['20200102']),
-            array_type(['20190103', '20190204', '20190305'])
+            array_type(
+                ["20210108", "20210108", "20210115", "20210115", "20210115", "20210122", "20210129", "20210129"]
+            ),
+            array_type(["20200102"]),
+            array_type(["20190103", "20190204", "20190305"]),
         ]
         total_len = sum(map(lambda x: len(x), arrs))
 
@@ -249,37 +240,36 @@ class TestRTNumpy:
         assert type(result) == array_type
         assert len(result) == total_len
 
+
 class TestHStackAny:
     """Tests for the rt.hstack_any (a.k.a. rt.stack_rows) function."""
 
     _fa1 = rt.FastArray([100, 200])
     _fa2 = rt.FastArray([111, 222])
-    _dtn1 = rt.DateTimeNano('2021-10-12 01:02:03', from_tz='UTC')
-    _dtn2 = rt.DateTimeNano('1980-03-04 13:14:15', from_tz='UTC')
+    _dtn1 = rt.DateTimeNano("2021-10-12 01:02:03", from_tz="UTC")
+    _dtn2 = rt.DateTimeNano("1980-03-04 13:14:15", from_tz="UTC")
     _ts1 = _dtn1 - _dtn2
     _ts2 = _dtn2 - _dtn1
-    _ds1 = rt.Dataset({'a': 11})
-    _ds2 = rt.Dataset({'b': 22})
+    _ds1 = rt.Dataset({"a": 11})
+    _ds2 = rt.Dataset({"b": 22})
     _pds1 = rt.PDataset(_ds1)
     _pds2 = rt.PDataset(_ds2)
 
     @pytest.mark.parametrize(
         "inputs,expected",
         [
-            pytest.param([_fa1, _fa2], rt.FastArray, id='FastArray,FastArray'),
-            pytest.param([_dtn1, _dtn2], rt.DateTimeNano, id='DateTimeNano,DateTimeNano'),
-            pytest.param([_dtn1, _dtn2], rt.DateTimeNano, id='DateTimeNano,DateTimeNano'),
-            pytest.param([_ts1, _ts2], rt.TimeSpan, id='TimeSpan,TimeSpan'),
-            pytest.param([_ds1, _ds2], rt.Dataset, id='Dataset,Dataset'),
-            pytest.param([_pds1, _pds2], None, id='PDataset,PDataset'), # notyet
-
-            pytest.param([_dtn1, _ts2], None, id='DateTimeNano,TimeSpan'), # neither is base
-            pytest.param([_fa1, _dtn2], rt.FastArray, id='FastArray,DateTimeNano'),
-            pytest.param([_ts1, _fa2], rt.FastArray, id='TimeSpan,FastArray'),
-
-            pytest.param([_ds1, _pds2], rt.Dataset, id='Dataset,PDataset'),
-            pytest.param([_pds1, _ds2], rt.Dataset, id='PDataset,Dataset'),
-            pytest.param([_fa1, _ds2], None, id='FastArray,Dataset'),
+            pytest.param([_fa1, _fa2], rt.FastArray, id="FastArray,FastArray"),
+            pytest.param([_dtn1, _dtn2], rt.DateTimeNano, id="DateTimeNano,DateTimeNano"),
+            pytest.param([_dtn1, _dtn2], rt.DateTimeNano, id="DateTimeNano,DateTimeNano"),
+            pytest.param([_ts1, _ts2], rt.TimeSpan, id="TimeSpan,TimeSpan"),
+            pytest.param([_ds1, _ds2], rt.Dataset, id="Dataset,Dataset"),
+            pytest.param([_pds1, _pds2], None, id="PDataset,PDataset"),  # notyet
+            pytest.param([_dtn1, _ts2], None, id="DateTimeNano,TimeSpan"),  # neither is base
+            pytest.param([_fa1, _dtn2], rt.FastArray, id="FastArray,DateTimeNano"),
+            pytest.param([_ts1, _fa2], rt.FastArray, id="TimeSpan,FastArray"),
+            pytest.param([_ds1, _pds2], rt.Dataset, id="Dataset,PDataset"),
+            pytest.param([_pds1, _ds2], rt.Dataset, id="PDataset,Dataset"),
+            pytest.param([_fa1, _ds2], None, id="FastArray,Dataset"),
         ],
     )
     def test_hstack_any(self, inputs, expected):
@@ -289,6 +279,7 @@ class TestHStackAny:
         else:
             result = rt.hstack_any(inputs)
             assert type(result) == expected
+
 
 class TestMaximum:
     """Tests for the rt.maximum function."""
@@ -355,19 +346,20 @@ class TestMinimum:
 #   * test the above with float, integer, and string dtypes; make sure riptable invalid values (for integers; strings too?) are respected.
 #   * check that any kwargs are validated (e.g. calling with a 1D array and axis=1 is not allowed).
 
+
 class TestNanmax:
     """Tests for the rt.nanmax function."""
 
     @pytest.mark.parametrize(
         "arg",
         [
-            pytest.param(math.nan, id='scalar'),
-            pytest.param([math.nan, math.nan, math.nan, math.nan, math.nan], id='list-float'),
-            pytest.param({np.nan}, id='set-float', marks=pytest.mark.skip("Broken in both numpy and riptable.")),
-            pytest.param(np.full(100, np.nan, dtype=np.float32), id='ndarray-float'),
-            pytest.param(rt.full(100, np.nan, dtype=np.float32), id='FastArray-float')
+            pytest.param(math.nan, id="scalar"),
+            pytest.param([math.nan, math.nan, math.nan, math.nan, math.nan], id="list-float"),
+            pytest.param({np.nan}, id="set-float", marks=pytest.mark.skip("Broken in both numpy and riptable.")),
+            pytest.param(np.full(100, np.nan, dtype=np.float32), id="ndarray-float"),
+            pytest.param(rt.full(100, np.nan, dtype=np.float32), id="FastArray-float")
             # TODO: Ordered Categorical with all invalids
-        ]
+        ],
     )
     def test_allnans(self, arg):
         # Call rt.nanmax with the test input.
@@ -386,16 +378,19 @@ class TestNanmax:
     @pytest.mark.parametrize(
         "arg",
         [
-            pytest.param([], id='list-float'),
-            pytest.param({}, id='set-float', marks=pytest.mark.skip("Broken in both numpy and riptable.")),
-            pytest.param(np.array([], dtype=np.float32), id='ndarray-float'),
+            pytest.param([], id="list-float"),
+            pytest.param({}, id="set-float", marks=pytest.mark.skip("Broken in both numpy and riptable.")),
+            pytest.param(np.array([], dtype=np.float32), id="ndarray-float"),
             pytest.param(
-                rt.FastArray([], dtype=np.float32), id='FastArray-float',
+                rt.FastArray([], dtype=np.float32),
+                id="FastArray-float",
                 marks=pytest.mark.xfail(
-                    reason="RIP-417: The call to riptide_cpp via the ledger returns None, which then causes the isnan() to raise a TypeError. This needs to be fixed so we raise an error like numpy (either by checking for this and raising the exception, or fixing the way the function punts to numpy."))
+                    reason="RIP-417: The call to riptide_cpp via the ledger returns None, which then causes the isnan() to raise a TypeError. This needs to be fixed so we raise an error like numpy (either by checking for this and raising the exception, or fixing the way the function punts to numpy."
+                ),
+            )
             # TODO: Empty ordered Categorical (create with some categories but an empty backing array).
             # TODO: Empty Date array (representing a FastArray subclass)
-        ]
+        ],
     )
     def test_empty(self, arg):
         # Call rt.nanmax with an empty input -- it should raise a ValueError.
@@ -418,7 +413,8 @@ class TestNanmax:
         """
         # Create an ordered Categorical (aka 'ordinal').
         cat = rt.Categorical(
-            ["PA", "NY", "", "NY", "AL", "LA", "PA", "", "CA", "IL", "IL", "FL", "FL", "LA"], ordered=True)
+            ["PA", "NY", "", "NY", "AL", "LA", "PA", "", "CA", "IL", "IL", "FL", "FL", "LA"], ordered=True
+        )
         assert cat.ordered
 
         result = rt.nanmax(cat)
@@ -439,13 +435,13 @@ class TestNanmin:
     @pytest.mark.parametrize(
         "arg",
         [
-            pytest.param(math.nan, id='scalar'),
-            pytest.param([math.nan, math.nan, math.nan, math.nan, math.nan], id='list-float'),
-            pytest.param({np.nan}, id='set-float', marks=pytest.mark.skip("Broken in both numpy and riptable.")),
-            pytest.param(np.full(100, np.nan, dtype=np.float32), id='ndarray-float'),
-            pytest.param(rt.full(100, np.nan, dtype=np.float32), id='FastArray-float')
+            pytest.param(math.nan, id="scalar"),
+            pytest.param([math.nan, math.nan, math.nan, math.nan, math.nan], id="list-float"),
+            pytest.param({np.nan}, id="set-float", marks=pytest.mark.skip("Broken in both numpy and riptable.")),
+            pytest.param(np.full(100, np.nan, dtype=np.float32), id="ndarray-float"),
+            pytest.param(rt.full(100, np.nan, dtype=np.float32), id="FastArray-float")
             # TODO: Ordered Categorical with all invalids
-        ]
+        ],
     )
     def test_allnans(self, arg):
         # Call rt.nanmin with the test input.
@@ -464,16 +460,19 @@ class TestNanmin:
     @pytest.mark.parametrize(
         "arg",
         [
-            pytest.param([], id='list-float'),
-            pytest.param({}, id='set-float', marks=pytest.mark.skip("Broken in both numpy and riptable.")),
-            pytest.param(np.array([], dtype=np.float32), id='ndarray-float'),
+            pytest.param([], id="list-float"),
+            pytest.param({}, id="set-float", marks=pytest.mark.skip("Broken in both numpy and riptable.")),
+            pytest.param(np.array([], dtype=np.float32), id="ndarray-float"),
             pytest.param(
-                rt.FastArray([], dtype=np.float32), id='FastArray-float',
+                rt.FastArray([], dtype=np.float32),
+                id="FastArray-float",
                 marks=pytest.mark.xfail(
-                    reason="RIP-417: The call to riptide_cpp via the ledger returns None, which then causes the isnan() to raise a TypeError. This needs to be fixed so we raise an error like numpy (either by checking for this and raising the exception, or fixing the way the function punts to numpy."))
+                    reason="RIP-417: The call to riptide_cpp via the ledger returns None, which then causes the isnan() to raise a TypeError. This needs to be fixed so we raise an error like numpy (either by checking for this and raising the exception, or fixing the way the function punts to numpy."
+                ),
+            )
             # TODO: Empty ordered Categorical (create with some categories but an empty backing array).
             # TODO: Empty Date array (representing a FastArray subclass)
-        ]
+        ],
     )
     def test_empty(self, arg):
         # Call rt.nanmin with an empty input -- it should raise a ValueError.
@@ -496,7 +495,8 @@ class TestNanmin:
         """
         # Create an ordered Categorical (aka 'ordinal').
         cat = rt.Categorical(
-            ["PA", "NY", "", "NY", "AL", "LA", "PA", "", "CA", "IL", "IL", "FL", "FL", "LA"], ordered=True)
+            ["PA", "NY", "", "NY", "AL", "LA", "PA", "", "CA", "IL", "IL", "FL", "FL", "LA"], ordered=True
+        )
         assert cat.ordered
 
         result = rt.nanmin(cat)

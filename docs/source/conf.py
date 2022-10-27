@@ -12,17 +12,18 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../riptable/'))
+
+sys.path.insert(0, os.path.abspath("../../riptable/"))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'riptable'
-copyright = '2022, rtosholdings'
-author = 'rtosholdings'
+project = "riptable"
+copyright = "2022, rtosholdings"
+author = "rtosholdings"
 
 # The full version, including alpha/beta/rc tags
-release = '1.3'
+release = "1.3"
 
 
 # -- General configuration ---------------------------------------------------
@@ -40,8 +41,8 @@ extensions = [
     "sphinx.ext.ifconfig",
     "sphinx.ext.viewcode",
     "sphinx_rtd_theme",
-    'sphinx.ext.napoleon',
-    'nbsphinx',
+    "sphinx.ext.napoleon",
+    "nbsphinx",
 ]
 
 # Napoleon settings
@@ -59,7 +60,7 @@ napoleon_use_rtype = True
 napoleon_type_aliases = None
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -72,15 +73,15 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # TJD -- needed or sphinx fails near final stages
-master_doc = 'index'
+master_doc = "index"
 
 # Autoapi settings
 
@@ -92,19 +93,19 @@ tls_verify = False
 
 # --Intersphinx configuration--------------------------------------------------
 intersphinx_mapping = {
-    'pyarrow': ('https://arrow.apache.org/docs', None),
-    'numba': ('https://numba.pydata.org/numba-doc/latest', None),
-    'neps': ('https://numpy.org/neps', None),
-    'python': ('https://docs.python.org/3', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy', None),
-    'matplotlib': ('https://matplotlib.org/stable', None),
-    'imageio': ('https://imageio.readthedocs.io/en/stable', None),
-    'skimage': ('https://scikit-image.org/docs/stable', None),
-    'pandas': ('https://pandas.pydata.org/pandas-docs/stable', None),
-    'scipy-lecture-notes': ('https://scipy-lectures.org', None),
-    'pytest': ('https://docs.pytest.org/en/stable', None),
+    "pyarrow": ("https://arrow.apache.org/docs", None),
+    "numba": ("https://numba.pydata.org/numba-doc/latest", None),
+    "neps": ("https://numpy.org/neps", None),
+    "python": ("https://docs.python.org/3", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "matplotlib": ("https://matplotlib.org/stable", None),
+    "imageio": ("https://imageio.readthedocs.io/en/stable", None),
+    "skimage": ("https://scikit-image.org/docs/stable", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "scipy-lecture-notes": ("https://scipy-lectures.org", None),
+    "pytest": ("https://docs.pytest.org/en/stable", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    'numpy-tutorials': ('https://numpy.org/numpy-tutorials', None),
-    'numpydoc': ('https://numpydoc.readthedocs.io/en/latest', None),
-    'dlpack': ('https://dmlc.github.io/dlpack/latest', None)
+    "numpy-tutorials": ("https://numpy.org/numpy-tutorials", None),
+    "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
+    "dlpack": ("https://dmlc.github.io/dlpack/latest", None),
 }

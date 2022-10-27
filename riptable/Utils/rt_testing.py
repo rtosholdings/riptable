@@ -1,21 +1,21 @@
 import gc
 import sys
 import warnings
-
-import numpy as np
-import riptable as rt
-from typing import Tuple, Set, TYPE_CHECKING, Optional
 from collections import deque
 from collections.abc import Iterable
-from riptable import Categorical
-from riptable.tests.test_utils import verbose_categorical
+from typing import TYPE_CHECKING, Optional, Set, Tuple
+
+import numpy as np
 from numpy.testing import (
-    assert_array_equal,
     assert_allclose,
-    assert_equal,
     assert_almost_equal,
+    assert_array_equal,
+    assert_equal,
 )
 
+import riptable as rt
+from riptable import Categorical
+from riptable.tests.test_utils import verbose_categorical
 
 if TYPE_CHECKING:
     from ..rt_categorical import Categorical
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 name = lambda obj: obj.__class__.__name__
 
 
-def assert_equal_(actual, expected, decimal=7, err_msg='', verbose=True):
+def assert_equal_(actual, expected, decimal=7, err_msg="", verbose=True):
     """
     A wrapper around numpy testing helpers for assertions that defer to an exact or approximate assertion
     depending on the type.
@@ -63,7 +63,7 @@ def assert_equal_(actual, expected, decimal=7, err_msg='', verbose=True):
         assert_almost_equal(actual, expected, decimal, err_msg, verbose)
 
 
-def assert_array_equal_(actual, expected, decimal=6, err_msg='', verbose=True):
+def assert_array_equal_(actual, expected, decimal=6, err_msg="", verbose=True):
     """
     A wrapper around numpy testing helpers for array assertion that are aware of dtypes and dispatch
     to exact or approximate equality assertions.
@@ -138,22 +138,18 @@ def assert_categorical_equal(
     is derived from. It may be sufficient to check the underlying ``FastArray`` as well as
     the categories.
     """
-    fn = 'assert_categorical_equal'
+    fn = "assert_categorical_equal"
     try:
         # check actual and expected types
         if not isinstance(expected, Categorical):
-            raise ValueError(
-                f'{fn}: expected type Categorical, got {type(expected)} for "expected" parameter'
-            )
+            raise ValueError(f'{fn}: expected type Categorical, got {type(expected)} for "expected" parameter')
         if not isinstance(actual, Categorical):
-            raise ValueError(
-                f'{fn}: expected type Categorical, got {type(actual)} for "actual" parameter'
-            )
+            raise ValueError(f'{fn}: expected type Categorical, got {type(actual)} for "actual" parameter')
 
         # check category_mode
         assert (
             actual.category_mode == expected.category_mode
-        ), f'{fn}: category mode mismatch\nactual {repr(rt.rt_enum.CategoryMode(actual.category_mode))}\nexpected {repr(rt.rt_enum.CategoryMode(expected.category_mode))}'
+        ), f"{fn}: category mode mismatch\nactual {repr(rt.rt_enum.CategoryMode(actual.category_mode))}\nexpected {repr(rt.rt_enum.CategoryMode(expected.category_mode))}"
 
         # check category_array
         if (
@@ -168,7 +164,7 @@ def assert_categorical_equal(
             )
         else:  # TODO implement category_mode checks for MultiKey, Dict, and IntEnum.
             warnings.warn(
-                f'{fn}: category_array checks not implemented for {repr(rt.rt_enum.CategoryMode(expected.category_mode))} '
+                f"{fn}: category_array checks not implemented for {repr(rt.rt_enum.CategoryMode(expected.category_mode))} "
             )
 
         # check underlying FastArray
@@ -176,36 +172,29 @@ def assert_categorical_equal(
             expected.category_mode == rt.rt_enum.CategoryMode.StringArray
             or expected.category_mode == rt.rt_enum.CategoryMode.NumericArray
         ):
-            assert_array_equal(
-                actual._fa, expected._fa, err_msg=f'{fn}: mismatch in underlying FastArray'
-            )
+            assert_array_equal(actual._fa, expected._fa, err_msg=f"{fn}: mismatch in underlying FastArray")
 
         # check expand_array
         if check_expanded_array:
-            assert_array_equal(
-                actual.expand_array, expected.expand_array, err_msg=f'{fn}: mismatch in "expand_array"'
-            )
+            assert_array_equal(actual.expand_array, expected.expand_array, err_msg=f'{fn}: mismatch in "expand_array"')
 
         # check category_dict
         for k, fa in expected.category_dict.items():
             assert_array_equal(
-                actual.category_dict.get(k, None), fa, err_msg=f'{fn}: mismatch "category_dict" for item "{k}"\nactual keys {actual.category_dict.keys()}\nexpected keys {expected.category_dict.keys()}'
+                actual.category_dict.get(k, None),
+                fa,
+                err_msg=f'{fn}: mismatch "category_dict" for item "{k}"\nactual keys {actual.category_dict.keys()}\nexpected keys {expected.category_dict.keys()}',
             )
 
         # TODO check CategoryMode Dictionary category_mapping and category_codes
 
     except Exception:
         if verbose:
-            print(
-                f'{fn}: expected\n{verbose_categorical(expected)}\n'
-                f'{fn}: actual\n{verbose_categorical(actual)}\n'
-            )
+            print(f"{fn}: expected\n{verbose_categorical(expected)}\n" f"{fn}: actual\n{verbose_categorical(actual)}\n")
         raise
 
 
-def get_common_and_diff_members(
-    obj_a: object, obj_b: object
-) -> Tuple[Set[str], Set[str]]:
+def get_common_and_diff_members(obj_a: object, obj_b: object) -> Tuple[Set[str], Set[str]]:
     """
     Return the commonalities and differences between the two objects public API.
 
@@ -221,7 +210,7 @@ def get_common_and_diff_members(
     tuple
         A tuple of two sets of strings where the first is the commonalities and second is the differences.
     """
-    is_public = lambda name: not (name.startswith('__') or name.startswith('_'))
+    is_public = lambda name: not (name.startswith("__") or name.startswith("_"))
     obj_a_dir, obj_b_dir = (
         set(filter(is_public, dir(obj_a))),
         set(filter(is_public, dir(obj_b))),
@@ -234,9 +223,7 @@ def get_common_and_diff_members(
 # 20200304 / Riptable version 1.3.367 - Below are the common and differing members of ndarray vs FastArray:
 # common members: {'flags', 'fill', 'partition', 'transpose', 'repeat', 'real', 'itemsize', 'ctypes', 'getfield', 'itemset', 'newbyteorder', 'tobytes', 'take', 'dumps', 'conjugate', 'flatten', 'nonzero', 'setflags', 'searchsorted', 'mean', 'dump', 'dtype', 'copy', 'data', 'imag', 'max', 'byteswap', 'astype', 'std', 'argsort', 'any', 'item', 'resize', 'shape', 'dot', 'compress', 'tostring', 'min', 'tofile', 'base', 'flat', 'tolist', 'ndim', 'cumprod', 'T', 'reshape', 'trace', 'ravel', 'squeeze', 'argmin', 'sum', 'sort', 'prod', 'diagonal', 'nbytes', 'argmax', 'strides', 'conj', 'ptp', 'round', 'all', 'put', 'size', 'clip', 'var', 'swapaxes', 'argpartition', 'cumsum', 'choose', 'view', 'setfield'}
 # differing members: {'count', 'where', 'nanvar', 'WarningDict', 'clip_lower', 'str', 'isna', 'isnotnan', 'clip_upper', 'isin', 'Verbose', 'diff', 'push', 'median', 'differs', 'rolling_nanstd', 'move_mean', 'fill_backward', 'nanrankdata', 'describe', 'fill_invalid', 'MAX_DISPLAY_LEN', 'numbastring', 'SafeConversions', 'register_function', 'timewindow_sum', 'rolling_var', 'fillna', 'isfinite', 'duplicated', 'info', 'nanmean', 'ema_decay', 'nanargmax', 'save', 'rolling_nanvar', 'FasterUFunc', 'iscomputable', 'move_rank', 'tile', 'copy_invalid', 'sample', 'apply', 'move_argmax', 'get_name', 'move_median', 'cummax', 'Recycle', 'trunc', 'issorted', 'move_max', 'rolling_std', 'nunique', 'move_std', 'fill_forward', 'isnotnormal', 'replacena', 'crc', 'apply_pandas', 'notna', 'timewindow_prod', 'nanmax', 'CompressPickle', 'NoTolerance', 'abs', 'isinf', 'move_min', 'rolling_nansum', 'isnotinf', 'set_name', 'normalize_minmax', 'nansum', 'rolling_mean', 'isnan', 'isnotfinite', 'move_sum', 'argpartition2', 'inv', 'replace', 'rankdata', 'transitions', 'doc', 'normalize_zscore', 'rolling_nanmean', 'partition2', 'str_append', 'nanstd', 'display_query_properties', 'shift', 'move_var', 'unique', 'nanargmin', 'apply_schema', 'map', 'cummin', 'move_argmin', 'isnormal', 'map_old', 'nanmin', 'rolling_sum', 'WarningLevel', 'sign', 'isnanorzero', 'apply_numba'}
-_NDARRAY_FASTARRAY_COMMON_AND_DIFF = get_common_and_diff_members(
-    np.ndarray, rt.FastArray
-)
+_NDARRAY_FASTARRAY_COMMON_AND_DIFF = get_common_and_diff_members(np.ndarray, rt.FastArray)
 
 
 def get_size(obj: object) -> int:

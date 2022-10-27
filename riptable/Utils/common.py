@@ -2,8 +2,10 @@
 Logic / helper functions used throughout the riptable benchmark suite.
 """
 import numbers
-from typing import Mapping, List, Tuple, Optional
+from typing import List, Mapping, Optional, Tuple
+
 import numpy as np
+
 import riptable as rt
 
 try:
@@ -11,8 +13,9 @@ try:
 except ImportError:
     cached_property = property
 
-from threading import RLock
 import weakref
+from threading import RLock
+
 
 # Cached_weakref_property, based on functools.cached_property.
 # Stores weakrefs to values in a WeakValueDictionary to avoid cycles.
@@ -20,7 +23,7 @@ import weakref
 # unbreakable cycle in NumPy (see https://github.com/numpy/numpy/issues/6581).
 class cached_weakref_property:
     _NO_OBJECT = object()
-    _WEAKREF_CACHE_NAME = '_weakref_cache'
+    _WEAKREF_CACHE_NAME = "_weakref_cache"
 
     def __init__(self, func):
         self.func = func
@@ -49,7 +52,9 @@ class cached_weakref_property:
                         cache = weakref.WeakValueDictionary()
                         setattr(instance, cached_weakref_property._WEAKREF_CACHE_NAME, cache)
                     except AttributeError:
-                        raise TypeError(f"Cannot create f{cached_weakref_property._WEAKREF_CACHE_NAME} attribute on {type(instance)}") from None
+                        raise TypeError(
+                            f"Cannot create f{cached_weakref_property._WEAKREF_CACHE_NAME} attribute on {type(instance)}"
+                        ) from None
         # Second, obtain the unwrapped value, always under lock since WeakValueDictonary is not thread-safe.
         with self.lock:
             val = cache.get(self.attrname, cached_weakref_property._NO_OBJECT)
@@ -58,6 +63,7 @@ class cached_weakref_property:
                 val = self.func(instance)
                 cache[self.attrname] = val
         return val
+
 
 _SEED = 1234
 """
@@ -88,12 +94,8 @@ _dtypes_by_group = {k: [np.dtype(x) for x in v] for (k, v) in np.typecodes.items
 
 # Add a few additional categories to our dtypes dictionary for convenience.
 _dtypes_by_group["Boolean"] = [np.dtype("?")]
-_dtypes_by_group["StandardFloat"] = [
-    np.dtype(x) for x in np.typecodes["Float"] if np.dtype(x).itemsize > 2
-]
-_dtypes_by_group["RiptableNumeric"] = (
-    _dtypes_by_group["AllInteger"] + _dtypes_by_group["StandardFloat"]
-)
+_dtypes_by_group["StandardFloat"] = [np.dtype(x) for x in np.typecodes["Float"] if np.dtype(x).itemsize > 2]
+_dtypes_by_group["RiptableNumeric"] = _dtypes_by_group["AllInteger"] + _dtypes_by_group["StandardFloat"]
 
 dtypes_by_group: Mapping[str, List[np.dtype]] = _dtypes_by_group
 """

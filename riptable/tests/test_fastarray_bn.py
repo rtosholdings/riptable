@@ -1,16 +1,14 @@
 import unittest
-import numpy as np
-
 from io import StringIO
-from numpy import nan
-from numpy.testing import (
-    assert_equal,
-    assert_array_equal,
-)
-from riptable import FastArray as FA
-from riptable import mask_or, mask_and, mask_andnot, mask_xor
-from .utils import redirectStdoutCtx
 
+import numpy as np
+from numpy import nan
+from numpy.testing import assert_array_equal, assert_equal
+
+from riptable import FastArray as FA
+from riptable import mask_and, mask_andnot, mask_or, mask_xor
+
+from .utils import redirectStdoutCtx
 
 try:
     # bottleneck optional
@@ -18,10 +16,7 @@ try:
 
     class FastArray_BN_Test(unittest.TestCase):
         def test_masking(self):
-            np_bools = [
-                np.random.randint(low=0, high=2, size=10_000_000).astype(bool)
-                for i in range(6)
-            ]
+            np_bools = [np.random.randint(low=0, high=2, size=10_000_000).astype(bool) for i in range(6)]
 
             bool_length = len(np_bools)
             result = np_bools[0] + np_bools[1]
@@ -142,6 +137,7 @@ try:
                 del b
                 del a
                 FA._V0()
+
 except:
     pass
 

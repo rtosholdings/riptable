@@ -2,12 +2,12 @@
 Equality/comparison assertion functions for arrays, used when implementing riptable unit tests.
 """
 __all__ = [
-    'assert_array_or_cat_equal',
-    'assert_categorical_equal',
-    'assert_date_equal',
-    'assert_datespan_equal',
-    'assert_datetimenano_equal',
-    'assert_timespan_equal'
+    "assert_array_or_cat_equal",
+    "assert_categorical_equal",
+    "assert_date_equal",
+    "assert_datespan_equal",
+    "assert_datetimenano_equal",
+    "assert_timespan_equal",
 ]
 
 from typing import Optional, TypeVar, Union
@@ -15,21 +15,27 @@ from typing import Optional, TypeVar, Union
 import numpy as np
 from numpy.testing import assert_array_equal
 
+from riptable.tests.test_utils import verbose_categorical
+
 from .. import (
     Categorical,
-    Date, DateScalar,
-    DateSpan, DateSpanScalar,
-    DateTimeNano, DateTimeNanoScalar,
+    Date,
+    DateScalar,
+    DateSpan,
+    DateSpanScalar,
+    DateTimeNano,
+    DateTimeNanoScalar,
     FastArray,
-    TimeSpan, TimeSpanScalar
+    TimeSpan,
+    TimeSpanScalar,
 )
-from riptable.tests.test_utils import verbose_categorical
+
 
 def assert_categorical_equal(
     x: Categorical,
     y: Categorical,
     *,
-    err_msg: Optional[str] = '',
+    err_msg: Optional[str] = "",
     relaxed_check: bool = False,
     check_cat_names: bool = True,
     check_cat_types: bool = True,
@@ -62,7 +68,9 @@ def assert_categorical_equal(
     x_cat_dict = x.category_dict
     y_cat_dict = y.category_dict
     if len(x_cat_dict) != len(y_cat_dict):
-        raise AssertionError(f"The Categoricals have different category arities (# of category columns): {len(x_cat_dict)} vs. {len(y_cat_dict)}.\n{extra_info}")
+        raise AssertionError(
+            f"The Categoricals have different category arities (# of category columns): {len(x_cat_dict)} vs. {len(y_cat_dict)}.\n{extra_info}"
+        )
 
     # Check category names match, in the same order.
     if check_cat_names:
@@ -70,7 +78,8 @@ def assert_categorical_equal(
         y_cat_names = list(y_cat_dict.keys())
         if x_cat_names != y_cat_names:
             raise AssertionError(
-                f"The category name(s) are different between the two Categoricals:\t{x_cat_names} vs. {y_cat_names}.\n{extra_info}")
+                f"The category name(s) are different between the two Categoricals:\t{x_cat_names} vs. {y_cat_names}.\n{extra_info}"
+            )
 
     # Check the category types (Python types) match, in the same order.
     if check_cat_types:
@@ -85,7 +94,8 @@ def assert_categorical_equal(
             x_cat_names_and_types = [(k, type(v).__qualname__) for k, v in x_cat_dict.items()]
             y_cat_names_and_types = [(k, type(v).__qualname__) for k, v in y_cat_dict.items()]
             raise AssertionError(
-                f"The category array(s) have different types between the Categoricals:\t{x_cat_names_and_types} vs. {y_cat_names_and_types}.\n{extra_info}")
+                f"The category array(s) have different types between the Categoricals:\t{x_cat_names_and_types} vs. {y_cat_names_and_types}.\n{extra_info}"
+            )
 
     # If we're doing the relaxed check, just use .expand_array to expand the Categoricals to arrays
     # (or tuples of normal arrays) then check whether the pairs of arrays are equal.
@@ -93,20 +103,26 @@ def assert_categorical_equal(
         x_expanded_arrays = x.expand_dict
         y_expanded_arrays = y.expand_dict
 
-        for i, ((x_cat_name, x_exp_arr), (y_cat_name, y_exp_arr)) in enumerate(zip(x_expanded_arrays.items(), y_expanded_arrays.items())):
+        for i, ((x_cat_name, x_exp_arr), (y_cat_name, y_exp_arr)) in enumerate(
+            zip(x_expanded_arrays.items(), y_expanded_arrays.items())
+        ):
             # TODO: Use assert_array_or_cat_equal() here instead of assert_array_equal(), so that if the category arrays
             #       are a FastArray-derived array type, we'll use the type-specific equality checks which'll be stronger
             #       than generic array equality assertions.
             assert_array_equal(x_exp_arr, y_exp_arr, err_msg=err_msg + extra_info)
-            isnan_kinds = 'iuf'  # dtype 'kinds' for which FastArray supports .isnan()
+            isnan_kinds = "iuf"  # dtype 'kinds' for which FastArray supports .isnan()
             if np.dtype(x_exp_arr.dtype).kind in isnan_kinds:
                 assert_array_equal(
-                    x_exp_arr.isnan(), y_exp_arr.isnan(),
-                    err_msg=f"Different NaN/invalid values between the expanded arrays (x='{x_cat_name}', y='{y_cat_name}').\n{extra_info}")
+                    x_exp_arr.isnan(),
+                    y_exp_arr.isnan(),
+                    err_msg=f"Different NaN/invalid values between the expanded arrays (x='{x_cat_name}', y='{y_cat_name}').\n{extra_info}",
+                )
 
     else:
         # Check categories match.
-        for i, ((x_cat_name, x_cat_arr), (y_cat_name, y_cat_arr)) in enumerate(zip(x_cat_dict.items(), y_cat_dict.items())):
+        for i, ((x_cat_name, x_cat_arr), (y_cat_name, y_cat_arr)) in enumerate(
+            zip(x_cat_dict.items(), y_cat_dict.items())
+        ):
             # Check category dtypes match. If we're doing the relaxed form of this check,
             # only require that the dtypes have the same 'kind'.
             x_cat_arr_dtype = np.dtype(x_cat_arr.dtype)
@@ -129,48 +145,57 @@ def assert_categorical_equal(
             #       are a FastArray-derived array type, we'll use the type-specific equality checks which'll be stronger
             #       than generic array equality assertions.
             assert_array_equal(x_cat_arr, y_cat_arr, err_msg=err_msg + extra_info)
-            isnan_kinds = 'iuf'  # dtype 'kinds' for which FastArray supports .isnan()
+            isnan_kinds = "iuf"  # dtype 'kinds' for which FastArray supports .isnan()
             if x_cat_arr_dtype.kind in isnan_kinds:
                 assert_array_equal(
-                    x_cat_arr.isnan(), y_cat_arr.isnan(),
-                    err_msg=f"Different NaN/invalid values between the category arrays at index {i}.\n{extra_info}")
+                    x_cat_arr.isnan(),
+                    y_cat_arr.isnan(),
+                    err_msg=f"Different NaN/invalid values between the category arrays at index {i}.\n{extra_info}",
+                )
 
         # The category array(s) match, check the underlying data matches too.
         assert_array_equal(x._fa, y._fa)
 
     # Check the Categoricals consider themselves to have invalids/NA values
     # in the same locations.
-    assert_array_equal(x.isnan(), y.isnan(), err_msg="The Categorical arrays have invalid/NA values at different positions.")
+    assert_array_equal(
+        x.isnan(), y.isnan(), err_msg="The Categorical arrays have invalid/NA values at different positions."
+    )
 
-def assert_date_equal(
-    x: Union[Date, DateScalar],
-    y: Union[Date, DateScalar],
-    *,
-    err_msg: Optional[str] = ''
-) -> None:
+
+def assert_date_equal(x: Union[Date, DateScalar], y: Union[Date, DateScalar], *, err_msg: Optional[str] = "") -> None:
     """Assert two `Date` arrays (and/or scalars) are equal."""
     # Both instances must be Date or DateScalar.
     if not isinstance(x, (Date, DateScalar)):
-        raise TypeError(f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of Date/DateScalar.")
+        raise TypeError(
+            f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of Date/DateScalar."
+        )
     elif not isinstance(y, (Date, DateScalar)):
-        raise TypeError(f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of Date/DateScalar.")
+        raise TypeError(
+            f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of Date/DateScalar."
+        )
 
     # Assert the underlying array data is equal.
     assert_array_equal(x._np, y._np, err_msg=err_msg)
+
 
 def assert_datetimenano_equal(
     x: Union[DateTimeNano, DateTimeNanoScalar],
     y: Union[DateTimeNano, DateTimeNanoScalar],
     *,
-    err_msg: Optional[str] = ''
+    err_msg: Optional[str] = "",
 ) -> None:
     """Assert two `DateTimeNano` arrays (and/or scalars) are equal."""
 
     # Both instances must be DateTimeNano or DateTimeNanoScalar.
     if not isinstance(x, (DateTimeNano, DateTimeNanoScalar)):
-        raise TypeError(f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of DateTimeNano/DateTimeNanoScalar.")
+        raise TypeError(
+            f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of DateTimeNano/DateTimeNanoScalar."
+        )
     elif not isinstance(y, (DateTimeNano, DateTimeNanoScalar)):
-        raise TypeError(f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of DateTimeNano/DateTimeNanoScalar.")
+        raise TypeError(
+            f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of DateTimeNano/DateTimeNanoScalar."
+        )
 
     # Check the underlying array data is equal.
     # The ._np property works for both arrays and scalars.
@@ -178,48 +203,55 @@ def assert_datetimenano_equal(
 
     # Check the timezones match up.
     if x._timezone != y._timezone:
-        raise AssertionError(f"The timezones are different: '{x._timezone._timezone_str}' vs. '{y._timezone._timezone_str}'.")
+        raise AssertionError(
+            f"The timezones are different: '{x._timezone._timezone_str}' vs. '{y._timezone._timezone_str}'."
+        )
+
 
 def assert_datespan_equal(
-    x: Union[DateSpan, DateSpanScalar],
-    y: Union[DateSpan, DateSpanScalar],
-    *,
-    err_msg: Optional[str] = ''
+    x: Union[DateSpan, DateSpanScalar], y: Union[DateSpan, DateSpanScalar], *, err_msg: Optional[str] = ""
 ) -> None:
     """Assert two `DateSpan` arrays (and/or scalars) are equal."""
     # Both instances must be DateSpan or DateSpanScalar.
     if not isinstance(x, (DateSpan, DateSpanScalar)):
-        raise TypeError(f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of DateSpan/DateSpanScalar.")
+        raise TypeError(
+            f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of DateSpan/DateSpanScalar."
+        )
     elif not isinstance(y, (DateSpan, DateSpanScalar)):
-        raise TypeError(f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of DateSpan/DateSpanScalar.")
+        raise TypeError(
+            f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of DateSpan/DateSpanScalar."
+        )
 
     # Assert the underlying array data is equal.
     assert_array_equal(x._np, y._np, err_msg=err_msg)
 
+
 def assert_timespan_equal(
-    x: Union[TimeSpan, TimeSpanScalar],
-    y: Union[TimeSpan, TimeSpanScalar],
-    *,
-    err_msg: Optional[str] = ''
+    x: Union[TimeSpan, TimeSpanScalar], y: Union[TimeSpan, TimeSpanScalar], *, err_msg: Optional[str] = ""
 ) -> None:
     """Assert two `TimeSpan` arrays (and/or scalars) are equal."""
     # Both instances must be TimeSpan or TimeSpanScalar.
     if not isinstance(x, (TimeSpan, TimeSpanScalar)):
-        raise TypeError(f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of TimeSpan/TimeSpanScalar.")
+        raise TypeError(
+            f"The 'x' parameter has type '{type(x).__qualname__}' but must be an instance of TimeSpan/TimeSpanScalar."
+        )
     elif not isinstance(y, (TimeSpan, TimeSpanScalar)):
-        raise TypeError(f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of TimeSpan/TimeSpanScalar.")
+        raise TypeError(
+            f"The 'y' parameter has type '{type(y).__qualname__}' but must be an instance of TimeSpan/TimeSpanScalar."
+        )
 
     # Assert the underlying array data is equal.
     assert_array_equal(x._np, y._np, err_msg=err_msg)
 
 
-_A = TypeVar('_A', bound=np.ndarray)
+_A = TypeVar("_A", bound=np.ndarray)
+
 
 def assert_array_or_cat_equal(
     x: _A,
     y: _A,
     *,
-    err_msg: Optional[str] = '',
+    err_msg: Optional[str] = "",
     relaxed_cat_check: bool = False,
     check_cat_names: bool = True,
     check_cat_types: bool = True,
@@ -242,11 +274,13 @@ def assert_array_or_cat_equal(
     # it with an inf/-inf.
     if isinstance(x, Categorical):
         assert_categorical_equal(
-            x, y, err_msg=err_msg,
+            x,
+            y,
+            err_msg=err_msg,
             relaxed_check=relaxed_cat_check,
             check_cat_names=check_cat_names,
             check_cat_types=check_cat_types,
-            exact_dtype_match=exact_dtype_match
+            exact_dtype_match=exact_dtype_match,
         )
 
     elif isinstance(x, (Date, DateScalar)):
@@ -265,7 +299,7 @@ def assert_array_or_cat_equal(
         # so we pass in views of the underlying numpy arrays.
         assert_array_equal(x._np, y._np, err_msg=err_msg)
 
-        isnan_kinds = 'iuf'  # dtype 'kinds' for which FastArray supports .isnan()
+        isnan_kinds = "iuf"  # dtype 'kinds' for which FastArray supports .isnan()
         x_dtype = np.dtype(x.dtype)
         if x_dtype.kind in isnan_kinds:
             assert_array_equal(x.isnan(), y.isnan(), err_msg=f"Different NaN/invalid values between the arrays.")
@@ -275,8 +309,7 @@ def assert_array_or_cat_equal(
         # assert_allclose with equal_nan to compare NaN values
         assert_array_equal(x, y, err_msg=err_msg)
 
-        isnan_kinds = 'iuf'  # dtype 'kinds' for which FastArray supports .isnan()
+        isnan_kinds = "iuf"  # dtype 'kinds' for which FastArray supports .isnan()
         x_dtype = np.dtype(x.dtype)
         if x_dtype.kind in isnan_kinds:
             assert_array_equal(x.isnan(), y.isnan(), err_msg=f"Different NaN/invalid values between the arrays.")
-

@@ -1,16 +1,17 @@
-import unittest
-import pytest
-import warnings
-import numpy as np
-import os
 import datetime
+import os
+import unittest
+import warnings
 
+import numpy as np
+import pytest
 from dateutil import tz
+
 from riptable import *
 from riptable.rt_datetime import (
+    NANOS_PER_DAY,
     NANOS_PER_HOUR,
     NANOS_PER_SECOND,
-    NANOS_PER_DAY,
     NANOS_PER_YEAR,
 )
 from riptable.rt_sds import SDSMakeDirsOn
@@ -26,7 +27,7 @@ span_max = 300_000_000_000
 dtinv = INVALID_DICT[np.dtype(np.int64).num]
 
 
-def random_dtn(sz, to_tz='NYC', from_tz='NYC', inv_mask=None):
+def random_dtn(sz, to_tz="NYC", from_tz="NYC", inv_mask=None):
     arr = np.random.randint(NANOS_PER_YEAR, NANOS_PER_YEAR * 40, sz, dtype=np.int64)
     if inv_mask is not None:
         putmask(arr, inv_mask, 0)
@@ -45,8 +46,8 @@ class DateTime_Test(unittest.TestCase):
     def test_nano_add(self):
         a = DateTimeNano(
             FA([start + step * i for i in range(7)], dtype=np.int64),
-            from_tz='GMT',
-            to_tz='NYC',
+            from_tz="GMT",
+            to_tz="NYC",
         )
         result = a + 400
         self.assertTrue(isinstance(result, DateTimeNano))
@@ -100,8 +101,8 @@ class DateTime_Test(unittest.TestCase):
     def test_nano_sub(self):
         a = DateTimeNano(
             FA([start + step * i for i in range(7)], dtype=np.int64),
-            from_tz='GMT',
-            to_tz='NYC',
+            from_tz="GMT",
+            to_tz="NYC",
         )
         b = a - span_min
         result = a - b
@@ -132,8 +133,8 @@ class DateTime_Test(unittest.TestCase):
     def test_nano_math_errors(self):
         a = DateTimeNano(
             FA([start + step * i for i in range(7)], dtype=np.int64),
-            from_tz='GMT',
-            to_tz='NYC',
+            from_tz="GMT",
+            to_tz="NYC",
         )
 
         with self.assertRaises(TypeError):
@@ -144,21 +145,17 @@ class DateTime_Test(unittest.TestCase):
             _ = a // a
 
     def test_span_add(self):
-        b = TimeSpan(
-            np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64)
-        )
+        b = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
 
-        c = TimeSpan(
-            np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64)
-        )
+        c = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
         result = b + c
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(result.dtype == np.float64)
 
         c = DateTimeNano(
             FA([start + step * i for i in range(7)], dtype=np.int64),
-            from_tz='GMT',
-            to_tz='NYC',
+            from_tz="GMT",
+            to_tz="NYC",
         )
         result = b + c
         self.assertTrue(isinstance(result, DateTimeNano))
@@ -181,13 +178,9 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(result.dtype == np.float64)
 
     def test_span_sub(self):
-        b = TimeSpan(
-            np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64)
-        )
+        b = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
 
-        c = TimeSpan(
-            np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64)
-        )
+        c = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
         result = b - c
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(result.dtype == np.float64)
@@ -209,31 +202,20 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(result.dtype == np.float64)
 
     def test_span_unary(self):
-        b = TimeSpan(
-            np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64)
-        )
+        b = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
 
     def test_save_load(self):
-        temp_name = 'dtset' + str(np.random.randint(1, 1_000_000))
-        temp_path = (
-            os.path.dirname(os.path.abspath(__file__))
-            + os.path.sep
-            + 'temp'
-            + os.path.sep
-            + temp_name
-            + '.sds'
-        )
+        temp_name = "dtset" + str(np.random.randint(1, 1_000_000))
+        temp_path = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + "temp" + os.path.sep + temp_name + ".sds"
 
         a = DateTimeNano(
             FA([start + step * i for i in range(7)], dtype=np.int64),
-            from_tz='GMT',
-            to_tz='NYC',
+            from_tz="GMT",
+            to_tz="NYC",
         )
-        b = TimeSpan(
-            np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64)
-        )
+        b = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
 
-        ds1 = Dataset({'dt': a, 'dtspan': b})
+        ds1 = Dataset({"dt": a, "dtspan": b})
         ds1.save(temp_path)
 
         ds2 = Dataset.load(temp_path)
@@ -251,8 +233,8 @@ class DateTime_Test(unittest.TestCase):
     def test_nano_index(self):
         a = DateTimeNano(
             FA([start + step * i for i in range(7)], dtype=np.int64),
-            from_tz='GMT',
-            to_tz='NYC',
+            from_tz="GMT",
+            to_tz="NYC",
         )
 
         f = np.array([True, False, True, True, True, False, False])
@@ -282,18 +264,18 @@ class DateTime_Test(unittest.TestCase):
     def test_init_strings(self):
         result = DateTimeNano(
             [
-                '2018-11-02 09:30:00.177080',
-                '2018-11-02 09:30:00.228403',
-                '2018-11-02 09:30:00.228458',
-                '2018-11-02 09:30:00.228977',
-                '2018-11-02 09:30:00.229061',
-                '2040-12-30T16:30:00',
-                '2041-12-30T16:30:00',
-                '2050-12-30T16:30:00',
-                '2099-12-31T23:59:59',
+                "2018-11-02 09:30:00.177080",
+                "2018-11-02 09:30:00.228403",
+                "2018-11-02 09:30:00.228458",
+                "2018-11-02 09:30:00.228977",
+                "2018-11-02 09:30:00.229061",
+                "2040-12-30T16:30:00",
+                "2041-12-30T16:30:00",
+                "2050-12-30T16:30:00",
+                "2099-12-31T23:59:59",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
         correct = FastArray(
             [
@@ -315,7 +297,7 @@ class DateTime_Test(unittest.TestCase):
 
     def test_init_python_dt(self):
         pdts = [datetime.datetime(2018, 11, i) for i in range(1, 6)]
-        result = DateTimeNano(pdts, from_tz='NYC', to_tz='NYC')
+        result = DateTimeNano(pdts, from_tz="NYC", to_tz="NYC")
         correct = FastArray(
             [
                 1541044800000000000,
@@ -333,7 +315,7 @@ class DateTime_Test(unittest.TestCase):
     def test_convert_matlab(self):
         ds = Dataset(
             {
-                'dtcol': FastArray(
+                "dtcol": FastArray(
                     [
                         1541044800000000000,
                         1541131200000000000,
@@ -346,7 +328,7 @@ class DateTime_Test(unittest.TestCase):
             }
         )
 
-        ds.make_matlab_datetimes('dtcol')
+        ds.make_matlab_datetimes("dtcol")
         self.assertTrue(isinstance(ds.dtcol, DateTimeNano))
         self.assertEqual(1541044800000000000, ds.dtcol[0])
 
@@ -360,59 +342,51 @@ class DateTime_Test(unittest.TestCase):
                 1541394000000000000,
                 4102444799000000000,
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
         result = dtn.to_iso()
         correct = FastArray(
             [
-                '2018-11-01T04:00:00.000000000',
-                '2018-11-02T04:00:00.000000000',
-                '2018-11-03T04:00:00.000000000',
-                '2018-11-04T04:00:00.000000000',
-                '2018-11-05T05:00:00.000000000',
-                '2099-12-31T23:59:59.000000000',
+                "2018-11-01T04:00:00.000000000",
+                "2018-11-02T04:00:00.000000000",
+                "2018-11-03T04:00:00.000000000",
+                "2018-11-04T04:00:00.000000000",
+                "2018-11-05T05:00:00.000000000",
+                "2099-12-31T23:59:59.000000000",
             ]
         )
         self.assertTrue(bool(np.all(result == correct)))
-        self.assertEqual(result.dtype.char, 'S')
+        self.assertEqual(result.dtype.char, "S")
 
     def test_year(self):
-        dtn = DateTimeNano(
-            [1546297200000000000, 1546304400000000000, 4102462799000000000], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546297200000000000, 1546304400000000000, 4102462799000000000], from_tz="NYC", to_tz="NYC")
         correct = FastArray([2018, 2019, 2099])
         result = dtn.year()
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
 
-        dtn = DateTimeNano(
-            [1546315200000000000, 1546322400000000000, 4102444799000000000], from_tz='GMT', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546315200000000000, 1546322400000000000, 4102444799000000000], from_tz="GMT", to_tz="NYC")
         result = dtn.year()
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_month(self):
-        dtn = DateTimeNano(
-            [1546297200000000000, 1546304400000000000, 4102462799000000000], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546297200000000000, 1546304400000000000, 4102462799000000000], from_tz="NYC", to_tz="NYC")
         correct = FastArray([12, 1, 12])
         result = dtn.month()
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
 
-        dtn = DateTimeNano(
-            [1546315200000000000, 1546322400000000000, 4102444799000000000], from_tz='GMT', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546315200000000000, 1546322400000000000, 4102444799000000000], from_tz="GMT", to_tz="NYC")
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_day(self):
         dtn = DateTimeNano(
-            ['2018-12-28 06:00:00', '2018-12-28 12:00:00', '2018-12-28 18:00:00', '2099-12-28 18:00:00'],
-            from_tz='NYC',
-            to_tz='NYC',
+            ["2018-12-28 06:00:00", "2018-12-28 12:00:00", "2018-12-28 18:00:00", "2099-12-28 18:00:00"],
+            from_tz="NYC",
+            to_tz="NYC",
         )
         correct = FastArray([0.25, 0.5, 0.75, 0.75])
         result = dtn.day
@@ -420,16 +394,14 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_days(self):
-        dtn1 = DateTimeNano(['2019-01-08'], from_tz='NYC', to_tz='NYC')
-        dtn2 = DateTimeNano(['2019-01-05'], from_tz='NYC', to_tz='NYC')
+        dtn1 = DateTimeNano(["2019-01-08"], from_tz="NYC", to_tz="NYC")
+        dtn2 = DateTimeNano(["2019-01-05"], from_tz="NYC", to_tz="NYC")
         difference = dtn1 - dtn2
         self.assertTrue(isinstance(difference, TimeSpan))
         self.assertEqual(difference.days[0], 3)
 
     def test_hour(self):
-        dtn = DateTimeNano(
-            [1546305300000000000, 1546307100000000000], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546305300000000000, 1546307100000000000], from_tz="NYC", to_tz="NYC")
         correct = FastArray([1.25, 1.75])
         result = dtn.hour
         self.assertTrue(isinstance(result, FastArray))
@@ -440,9 +412,7 @@ class DateTime_Test(unittest.TestCase):
         result = result.hours
         self.assertTrue(bool(np.all(result == correct)))
 
-        dtn = DateTimeNano(
-            [1546323300000000000, 1546325100000000000], from_tz='GMT', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546323300000000000, 1546325100000000000], from_tz="GMT", to_tz="NYC")
         result = dtn.hour
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
@@ -453,9 +423,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_minute(self):
-        dtn = DateTimeNano(
-            [1546305315000000000, 1546307145000000000], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546305315000000000, 1546307145000000000], from_tz="NYC", to_tz="NYC")
         correct = FastArray([15.25, 45.75])
         result = dtn.minute
         self.assertTrue(isinstance(result, FastArray))
@@ -466,9 +434,7 @@ class DateTime_Test(unittest.TestCase):
         result = result.minutes
         self.assertTrue(bool(np.all(result == correct)))
 
-        dtn = DateTimeNano(
-            [1546323315000000000, 1546325145000000000], from_tz='GMT', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546323315000000000, 1546325145000000000], from_tz="GMT", to_tz="NYC")
         result = dtn.minute
         self.assertTrue(isinstance(result, FastArray))
         self.assertTrue(bool(np.all(result == correct)))
@@ -479,9 +445,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_second(self):
-        dtn = DateTimeNano(
-            [1546307145250000000, 1546307146750000000], from_tz='GMT', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1546307145250000000, 1546307146750000000], from_tz="GMT", to_tz="NYC")
         correct = FastArray([45.25, 46.75])
         result = dtn.second
         self.assertTrue(isinstance(result, FastArray))
@@ -493,9 +457,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_second_fraction(self):
-        dts = DateTimeNano(
-            [1546307145250000000, 1546307146750000000], from_tz='GMT', to_tz='NYC'
-        ).second_span
+        dts = DateTimeNano([1546307145250000000, 1546307146750000000], from_tz="GMT", to_tz="NYC").second_span
 
         correct_ms = FastArray([45250.0, 46750.0])
         result = dts.milliseconds
@@ -513,16 +475,12 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(result == correct_ns)))
 
     def test_dst_fall(self):
-        dtn = DateTimeNano(
-            [1541239200000000000, 1541325600000000000], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1541239200000000000, 1541325600000000000], from_tz="NYC", to_tz="NYC")
         correct = FastArray([10.0, 10.0])
         result = dtn.hour
         self.assertTrue(bool(np.all(correct == result)))
 
-        dtn = DateTimeNano(
-            [1541239200000000000, 1541325600000000000], from_tz='GMT', to_tz='NYC'
-        )
+        dtn = DateTimeNano([1541239200000000000, 1541325600000000000], from_tz="GMT", to_tz="NYC")
         correct = FastArray([6.0, 5.0])
         result = dtn.hour
         self.assertTrue(bool(np.all(correct == result)))
@@ -533,18 +491,18 @@ class DateTime_Test(unittest.TestCase):
         # 3 hours were added to the underlying array, but only two hours changed because of time change
 
         # NYC
-        correct1 = b'2018-11-03T23:59:00.000000000'
-        dtn = DateTimeNano(['2018-11-03 23:59'], from_tz='NYC', to_tz='NYC')
+        correct1 = b"2018-11-03T23:59:00.000000000"
+        dtn = DateTimeNano(["2018-11-03 23:59"], from_tz="NYC", to_tz="NYC")
         stamp1 = dtn.to_iso()[0]
         self.assertEqual(correct1, stamp1)
 
         # these strings will be the same
-        correct2 = b'2018-11-04T01:59:00.000000000'
-        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 2, from_tz='GMT', to_tz='NYC')
+        correct2 = b"2018-11-04T01:59:00.000000000"
+        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 2, from_tz="GMT", to_tz="NYC")
         stamp2 = dtn2.to_iso()[0]
         self.assertEqual(correct2, stamp2)
 
-        dtn3 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz='GMT', to_tz='NYC')
+        dtn3 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz="GMT", to_tz="NYC")
         stamp3 = dtn3.to_iso()[0]
         self.assertEqual(correct2, stamp3)
 
@@ -554,13 +512,13 @@ class DateTime_Test(unittest.TestCase):
         # fix dublin tests...
 
         # DUBLIN
-        correct1 = b'2019-10-26T23:59:00.000000000'
-        dtn = DateTimeNano(['2019-10-26 23:59'], from_tz='DUBLIN', to_tz='DUBLIN')
+        correct1 = b"2019-10-26T23:59:00.000000000"
+        dtn = DateTimeNano(["2019-10-26 23:59"], from_tz="DUBLIN", to_tz="DUBLIN")
         stamp1 = dtn.to_iso()[0]
         self.assertEqual(correct1, stamp1)
 
-        correct2 = b'2019-10-27T01:59:00.000000000'
-        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz='GMT', to_tz='DUBLIN')
+        correct2 = b"2019-10-27T01:59:00.000000000"
+        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz="GMT", to_tz="DUBLIN")
         stamp2 = dtn2.to_iso()[0]
         self.assertEqual(correct2, stamp2)
 
@@ -568,89 +526,89 @@ class DateTime_Test(unittest.TestCase):
         # 3 hours added to underlying array, 3 hour change displayed
 
         # NYC
-        correct1 = b'2018-06-06T23:59:00.000000000'
-        dtn = DateTimeNano(['2018-06-06 23:59'], from_tz='NYC')
+        correct1 = b"2018-06-06T23:59:00.000000000"
+        dtn = DateTimeNano(["2018-06-06 23:59"], from_tz="NYC")
         stamp1 = dtn.to_iso()[0]
         self.assertEqual(correct1, stamp1)
 
-        correct2 = b'2018-06-07T02:59:00.000000000'
-        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz='GMT', to_tz='NYC')
+        correct2 = b"2018-06-07T02:59:00.000000000"
+        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz="GMT", to_tz="NYC")
         stamp2 = dtn2.to_iso()[0]
         self.assertEqual(correct2, stamp2)
 
         # DUBLIN
-        dtn = DateTimeNano(['2018-06-06 23:59'], from_tz='DUBLIN', to_tz='DUBLIN')
+        dtn = DateTimeNano(["2018-06-06 23:59"], from_tz="DUBLIN", to_tz="DUBLIN")
         stamp1 = dtn.to_iso()[0]
         self.assertEqual(correct1, stamp1)
 
-        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz='GMT', to_tz='DUBLIN')
+        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz="GMT", to_tz="DUBLIN")
         stamp2 = dtn2.to_iso()[0]
         self.assertEqual(correct2, stamp2)
 
     def test_to_iso_dst_spring(self):
-        correct1 = b'2018-03-10T23:59:00.000000000'
-        dtn = DateTimeNano(['2018-03-10 23:59'], from_tz='NYC', to_tz='NYC')
+        correct1 = b"2018-03-10T23:59:00.000000000"
+        dtn = DateTimeNano(["2018-03-10 23:59"], from_tz="NYC", to_tz="NYC")
         stamp1 = dtn.to_iso()[0]
         self.assertEqual(correct1, stamp1)
 
-        correct2 = b'2018-03-11T03:59:00.000000000'
-        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz='GMT', to_tz='NYC')
+        correct2 = b"2018-03-11T03:59:00.000000000"
+        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz="GMT", to_tz="NYC")
         stamp2 = dtn2.to_iso()[0]
         self.assertEqual(correct2, stamp2)
 
-        correct1 = b'2019-03-30T23:59:00.000000000'
-        dtn = DateTimeNano(['2019-03-30 23:59'], from_tz='DUBLIN', to_tz='DUBLIN')
+        correct1 = b"2019-03-30T23:59:00.000000000"
+        dtn = DateTimeNano(["2019-03-30 23:59"], from_tz="DUBLIN", to_tz="DUBLIN")
         stamp1 = dtn.to_iso()[0]
         self.assertEqual(correct1, stamp1)
 
-        correct2 = b'2019-03-31T03:59:00.000000000'
-        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz='GMT', to_tz='DUBLIN')
+        correct2 = b"2019-03-31T03:59:00.000000000"
+        dtn2 = DateTimeNano(dtn._fa + NANOS_PER_HOUR * 3, from_tz="GMT", to_tz="DUBLIN")
         stamp2 = dtn2.to_iso()[0]
         self.assertEqual(correct2, stamp2)
 
     def set_timezone(self):
         correct_utcnano = 1546875360000000000
 
-        correct_nyc = b'2019-01-07T10:36:00.000000000'
-        dtn = DateTimeNano(['2019-01-07 10:36'], from_tz='NYC', to_tz='NYC')
+        correct_nyc = b"2019-01-07T10:36:00.000000000"
+        dtn = DateTimeNano(["2019-01-07 10:36"], from_tz="NYC", to_tz="NYC")
         stamp_nyc = dtn.to_iso()[0]
         self.assertEqual(stamp_nyc, correct_nyc)
         self.assertEqual(dtn._fa[0], correct_utcnano)
 
-        dtn.set_timezone('DUBLIN')
+        dtn.set_timezone("DUBLIN")
 
-        correct_dublin = b'2019-01-07T15:36:00.000000000'
+        correct_dublin = b"2019-01-07T15:36:00.000000000"
         stamp_dublin = dtn.to_iso()[0]
         self.assertEqual(stamp_dublin, correct_dublin)
         self.assertEqual(dtn._fa[0], correct_utcnano)
 
-        self.assertEqual(dtn._timezone._timezone_str, 'Europe/Dublin')
-        self.assertEqual(dtn._timezone._to_tz, 'DUBLIN')
+        self.assertEqual(dtn._timezone._timezone_str, "Europe/Dublin")
+        self.assertEqual(dtn._timezone._to_tz, "DUBLIN")
 
-        dtn.set_timezone('GMT')
+        dtn.set_timezone("GMT")
 
-        correct_gmt = b'2019-01-07T15:36:00.000000000'
+        correct_gmt = b"2019-01-07T15:36:00.000000000"
         stamp_gmt = dtn.to_iso()[0]
         self.assertEqual(stamp_gmt, correct_gmt)
         self.assertEqual(dtn._fa[0], correct_utcnano)
 
-        self.assertEqual(dtn._timezone._timezone_str, 'GMT')
-        self.assertEqual(dtn._timezone._to_tz, 'GMT')
+        self.assertEqual(dtn._timezone._timezone_str, "GMT")
+        self.assertEqual(dtn._timezone._to_tz, "GMT")
 
         with self.assertRaises(ValueError):
-            dtn.set_timezone('JUNK')
+            dtn.set_timezone("JUNK")
 
     def test_shift(self):
         dtn = DateTimeNano(
             [
-                '2018-11-02 09:30:00.177080',
-                '2018-11-02 09:30:00.228403',
-                '2018-11-02 09:30:00.228458',
-                '2018-11-02 09:30:00.228977',
-                '2018-11-02 09:30:00.229061',
+                "2018-11-02 09:30:00.177080",
+                "2018-11-02 09:30:00.228403",
+                "2018-11-02 09:30:00.228458",
+                "2018-11-02 09:30:00.228977",
+                "2018-11-02 09:30:00.229061",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
         dtnfa = dtn._fa
 
@@ -669,36 +627,36 @@ class DateTime_Test(unittest.TestCase):
     def test_date(self):
         dtn = DateTimeNano(
             [
-                '2018-11-02 00:30:00.177080',
-                '2018-11-02 01:30:00.228403',
-                '2018-11-02 02:30:00.228458',
-                '2018-11-02 03:30:00.228977',
-                '2018-11-02 04:30:00.229061',
-                '2018-11-02 05:30:00.177080',
-                '2018-11-02 06:30:00.228403',
-                '2018-11-02 07:30:00.228458',
-                '2018-11-02 08:30:00.228977',
-                '2018-11-02 09:30:00.229061',
-                '2018-11-02 10:30:00.177080',
-                '2018-11-02 11:30:00.228403',
-                '2018-11-02 12:30:00.228458',
-                '2018-11-02 13:30:00.228977',
-                '2018-11-02 14:30:00.229061',
-                '2018-11-02 15:30:00.177080',
-                '2018-11-02 16:30:00.228403',
-                '2018-11-02 17:30:00.228458',
-                '2018-11-02 18:30:00.228977',
-                '2018-11-02 19:30:00.229061',
-                '2018-11-02 20:30:00.177080',
-                '2018-11-02 21:30:00.228403',
-                '2018-11-02 22:30:00.228458',
-                '2018-11-02 23:30:00.228977',
-                '2099-12-31 23:59:59.123456',
+                "2018-11-02 00:30:00.177080",
+                "2018-11-02 01:30:00.228403",
+                "2018-11-02 02:30:00.228458",
+                "2018-11-02 03:30:00.228977",
+                "2018-11-02 04:30:00.229061",
+                "2018-11-02 05:30:00.177080",
+                "2018-11-02 06:30:00.228403",
+                "2018-11-02 07:30:00.228458",
+                "2018-11-02 08:30:00.228977",
+                "2018-11-02 09:30:00.229061",
+                "2018-11-02 10:30:00.177080",
+                "2018-11-02 11:30:00.228403",
+                "2018-11-02 12:30:00.228458",
+                "2018-11-02 13:30:00.228977",
+                "2018-11-02 14:30:00.229061",
+                "2018-11-02 15:30:00.177080",
+                "2018-11-02 16:30:00.228403",
+                "2018-11-02 17:30:00.228458",
+                "2018-11-02 18:30:00.228977",
+                "2018-11-02 19:30:00.229061",
+                "2018-11-02 20:30:00.177080",
+                "2018-11-02 21:30:00.228403",
+                "2018-11-02 22:30:00.228458",
+                "2018-11-02 23:30:00.228977",
+                "2099-12-31 23:59:59.123456",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
-        correct = [1541131200000000000]*24 + [4102376400000000000]
+        correct = [1541131200000000000] * 24 + [4102376400000000000]
         d = dtn.date()
         self.assertTrue(isinstance(d, DateTimeNano))
         d = d._fa
@@ -707,20 +665,20 @@ class DateTime_Test(unittest.TestCase):
     def test_days_since_epoch(self):
         dtn = DateTimeNano(
             [
-                '2018-11-01T00:00:00.000000000',
-                '2018-11-02T00:00:00.000000000',
-                '2018-11-03T00:00:00.000000000',
-                '2018-11-03T23:00:00.000000000',
-                '2018-11-05T00:00:00.000000000',
+                "2018-11-01T00:00:00.000000000",
+                "2018-11-02T00:00:00.000000000",
+                "2018-11-03T00:00:00.000000000",
+                "2018-11-03T23:00:00.000000000",
+                "2018-11-05T00:00:00.000000000",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
         result = dtn.days_since_epoch
         correct = FastArray([17836, 17837, 17838, 17838, 17840], dtype=np.int64)
         self.assertTrue(bool(np.all(result == correct)))
 
-        dtn = DateTimeNano([1, 2, 3], from_tz='GMT', to_tz='GMT')
+        dtn = DateTimeNano([1, 2, 3], from_tz="GMT", to_tz="GMT")
         result = dtn.days_since_epoch
         correct = FastArray([0, 0, 0], dtype=np.int64)
         self.assertTrue(bool(np.all(result == correct)))
@@ -728,46 +686,46 @@ class DateTime_Test(unittest.TestCase):
     def test_timestrings(self):
         ts = FastArray(
             [
-                '1:30:00',
-                '01:30:00',
-                '1:30:00.000000',
-                '01.30.00',
-                '01:30:00.0',
-                '1:30:00.00000000000',
+                "1:30:00",
+                "01:30:00",
+                "1:30:00.000000",
+                "01.30.00",
+                "01:30:00.0",
+                "1:30:00.00000000000",
             ]
         )
-        result = timestring_to_nano(ts, from_tz='NYC', to_tz='NYC')
+        result = timestring_to_nano(ts, from_tz="NYC", to_tz="NYC")
         self.assertTrue(isinstance(result, TimeSpan))
         result = result.astype(np.int64)
         self.assertTrue(bool(np.all(result == 5400000000000)))
 
-        dstring = '2018-01-01'
-        result = timestring_to_nano(ts, date=dstring, from_tz='NYC', to_tz='NYC')
+        dstring = "2018-01-01"
+        result = timestring_to_nano(ts, date=dstring, from_tz="NYC", to_tz="NYC")
         self.assertTrue(isinstance(result, DateTimeNano))
         result = result._fa
         self.assertTrue(bool(np.all(result == 1514788200000000000)))
 
         dstrings = full(6, dstring)
-        result = timestring_to_nano(ts, date=dstring, from_tz='NYC', to_tz='NYC')
+        result = timestring_to_nano(ts, date=dstring, from_tz="NYC", to_tz="NYC")
         self.assertTrue(isinstance(result, DateTimeNano))
         result = result._fa
         self.assertTrue(bool(np.all(result == 1514788200000000000)))
 
     def test_datestrings(self):
-        dates = FastArray(['2018-01-01', '20180101', '2018.01.01'])
-        result = datestring_to_nano(dates, from_tz='NYC', to_tz='NYC')
+        dates = FastArray(["2018-01-01", "20180101", "2018.01.01"])
+        result = datestring_to_nano(dates, from_tz="NYC", to_tz="NYC")
         self.assertTrue(isinstance(result, DateTimeNano))
         result = result._fa
         self.assertTrue(bool(np.all(result == 1514782800000000000)))
 
-        tstring = '1:30:00'
-        result = datestring_to_nano(dates, time=tstring, from_tz='NYC', to_tz='NYC')
+        tstring = "1:30:00"
+        result = datestring_to_nano(dates, time=tstring, from_tz="NYC", to_tz="NYC")
         self.assertTrue(isinstance(result, DateTimeNano))
         result = result._fa
         self.assertTrue(bool(np.all(result == 1514788200000000000)))
 
         tstrings = full(3, tstring)
-        result = datestring_to_nano(dates, time=tstrings, from_tz='NYC', to_tz='NYC')
+        result = datestring_to_nano(dates, time=tstrings, from_tz="NYC", to_tz="NYC")
         self.assertTrue(isinstance(result, DateTimeNano))
         result = result._fa
         self.assertTrue(bool(np.all(result == 1514788200000000000)))
@@ -775,43 +733,43 @@ class DateTime_Test(unittest.TestCase):
     def test_datetimestrings(self):
         dtstrings = FastArray(
             [
-                '2018-01-01 12:45:30.123456',
-                '2018-01-01 12:45:30.123456000',
-                '20180101 12:45:30.123456',
+                "2018-01-01 12:45:30.123456",
+                "2018-01-01 12:45:30.123456000",
+                "20180101 12:45:30.123456",
             ]
         )
-        result = datetimestring_to_nano(dtstrings, from_tz='NYC', to_tz='NYC')
+        result = datetimestring_to_nano(dtstrings, from_tz="NYC", to_tz="NYC")
         self.assertTrue(isinstance(result, DateTimeNano))
         result = result._fa
         self.assertTrue(bool(np.all(result == 1514828730123456000)))
 
     def test_timesubbug(self):
         time1 = utcnow(1)
-        time2 = DateTimeNano(time1.astype('q'))
+        time2 = DateTimeNano(time1.astype("q"))
         x = time1 - time2
         self.assertTrue(x._np[0] == 0.0)
 
     def test_timespan_unit(self):
         b = 1_000_000_000
         unit_dict = {
-            'Y': b * 365 * 24 * 60 * 60,
-            'W': b * 7 * 24 * 60 * 60,
-            'D': b * 24 * 60 * 60,
-            'h': b * 60 * 60,
-            'm': b * 60,
-            's': b,
-            'ms': b / 1000,
-            'us': b / 1_000_000,
-            'ns': 1,
-            b'Y': b * 365 * 24 * 60 * 60,
-            b'W': b * 7 * 24 * 60 * 60,
-            b'D': b * 24 * 60 * 60,
-            b'h': b * 60 * 60,
-            b'm': b * 60,
-            b's': b,
-            b'ms': b / 1000,
-            b'us': b / 1_000_000,
-            b'ns': 1,
+            "Y": b * 365 * 24 * 60 * 60,
+            "W": b * 7 * 24 * 60 * 60,
+            "D": b * 24 * 60 * 60,
+            "h": b * 60 * 60,
+            "m": b * 60,
+            "s": b,
+            "ms": b / 1000,
+            "us": b / 1_000_000,
+            "ns": 1,
+            b"Y": b * 365 * 24 * 60 * 60,
+            b"W": b * 7 * 24 * 60 * 60,
+            b"D": b * 24 * 60 * 60,
+            b"h": b * 60 * 60,
+            b"m": b * 60,
+            b"s": b,
+            b"ms": b / 1000,
+            b"us": b / 1_000_000,
+            b"ns": 1,
             None: 1,
         }
         for unit, val in unit_dict.items():
@@ -819,31 +777,31 @@ class DateTime_Test(unittest.TestCase):
             self.assertEqual(ts._fa[0], val)
 
         with self.assertRaises(ValueError):
-            ts = TimeSpan(1, unit='junk')
+            ts = TimeSpan(1, unit="junk")
 
     def test_math_with_invalid(self):
         # TODO: also add sentinels to this test?
-        dtn = DateTimeNano(arange(10), from_tz='GMT', to_tz='GMT')
+        dtn = DateTimeNano(arange(10), from_tz="GMT", to_tz="GMT")
         self.assertEqual(dtn[0], 0)
         dtn2 = dtn + 1
         self.assertTrue(isinstance(dtn2, DateTimeNano))
         self.assertEqual(dtn[0], 0)
 
     def test_constructor_with_invalid(self):
-        dtn = DateTimeNano([0, 10_000_000_000_000], from_tz='NYC', to_tz='NYC')
+        dtn = DateTimeNano([0, 10_000_000_000_000], from_tz="NYC", to_tz="NYC")
         self.assertEqual(dtn[0], 0)
 
     def test_date_tz_combos(self):
         dtn = DateTimeNano(
             [
-                '2018-11-01 22:00:00',
-                '2018-11-01 23:00:00',
-                '2018-11-02 00:00:00',
-                '2018-11-02 01:00:00',
-                '2018-11-02 02:00:00',
+                "2018-11-01 22:00:00",
+                "2018-11-01 23:00:00",
+                "2018-11-02 00:00:00",
+                "2018-11-02 01:00:00",
+                "2018-11-02 02:00:00",
             ],
-            from_tz='GMT',
-            to_tz='GMT',
+            from_tz="GMT",
+            to_tz="GMT",
         )
         date_arr = dtn.date()
         date_fa = FastArray(
@@ -862,14 +820,14 @@ class DateTime_Test(unittest.TestCase):
 
         dtn = DateTimeNano(
             [
-                '2018-11-01 22:00:00',
-                '2018-11-01 23:00:00',
-                '2018-11-02 00:00:00',
-                '2018-11-02 01:00:00',
-                '2018-11-02 02:00:00',
+                "2018-11-01 22:00:00",
+                "2018-11-01 23:00:00",
+                "2018-11-02 00:00:00",
+                "2018-11-02 01:00:00",
+                "2018-11-02 02:00:00",
             ],
-            from_tz='GMT',
-            to_tz='NYC',
+            from_tz="GMT",
+            to_tz="NYC",
         )
         date_arr = dtn.date()
         date_fa = FastArray(
@@ -891,14 +849,14 @@ class DateTime_Test(unittest.TestCase):
         # now displays in GMT (will display 4 hours AHEAD of these strings)
         dtn = DateTimeNano(
             [
-                '2018-11-01 22:00:00',
-                '2018-11-01 23:00:00',
-                '2018-11-02 00:00:00',
-                '2018-11-02 01:00:00',
-                '2018-11-02 02:00:00',
+                "2018-11-01 22:00:00",
+                "2018-11-01 23:00:00",
+                "2018-11-02 00:00:00",
+                "2018-11-02 01:00:00",
+                "2018-11-02 02:00:00",
             ],
-            from_tz='NYC',
-            to_tz='GMT',
+            from_tz="NYC",
+            to_tz="GMT",
         )
         date_arr = dtn.date()
         date_fa = FastArray(
@@ -917,14 +875,14 @@ class DateTime_Test(unittest.TestCase):
 
         dtn = DateTimeNano(
             [
-                '2018-11-01 22:00:00',
-                '2018-11-01 23:00:00',
-                '2018-11-02 00:00:00',
-                '2018-11-02 01:00:00',
-                '2018-11-02 02:00:00',
+                "2018-11-01 22:00:00",
+                "2018-11-01 23:00:00",
+                "2018-11-02 00:00:00",
+                "2018-11-02 01:00:00",
+                "2018-11-02 02:00:00",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
         date_arr = dtn.date()
         date_fa = FastArray(
@@ -943,9 +901,9 @@ class DateTime_Test(unittest.TestCase):
 
     def test_day_of_week(self):
         dtn2 = DateTimeNano(
-            ['1970-01-02 00:00:00', '1970-01-02 00:00:00', '1970-01-03 00:00:01', '2099-12-27 00:00:02'],
-            from_tz='NYC',
-            to_tz='NYC',
+            ["1970-01-02 00:00:00", "1970-01-02 00:00:00", "1970-01-03 00:00:01", "2099-12-27 00:00:02"],
+            from_tz="NYC",
+            to_tz="NYC",
         )
         dayofweek = dtn2.day_of_week
         self.assertTrue(dayofweek.dtype == np.int64)
@@ -957,47 +915,43 @@ class DateTime_Test(unittest.TestCase):
         isweekend = dtn2.is_weekend
         self.assertTrue(bool(np.all(isweekend == [False, False, True, True])))
 
-        dtn = DateTimeNano(['1970-01-01 12:00:00'], from_tz='GMT', to_tz='GMT')
+        dtn = DateTimeNano(["1970-01-01 12:00:00"], from_tz="GMT", to_tz="GMT")
         dayofweek = dtn.day_of_week
         self.assertTrue(dayofweek.dtype == np.int64)
         self.assertEqual(dayofweek[0], 3)
 
     def test_day_of_month(self):
         correct = FastArray([9, 29, 1, 31, 21])
-        dtn = DateTimeNano(
-            ['2018-01-09', '2000-02-29', '2000-03-01', '2019-12-31', '2099-12-21'], from_tz='NYC'
-        )
+        dtn = DateTimeNano(["2018-01-09", "2000-02-29", "2000-03-01", "2019-12-31", "2099-12-21"], from_tz="NYC")
         dom = dtn.day_of_month
         self.assertTrue(bool(np.all(dom == correct)))
 
     def test_timestamp_from_string(self):
         correct = 45240000000000.0
 
-        dts = TimeSpan('12:34')
+        dts = TimeSpan("12:34")
         self.assertEqual(dts[0], correct)
 
-        dts = TimeSpan(b'12:34')
+        dts = TimeSpan(b"12:34")
         self.assertEqual(dts[0], correct)
 
-        dts = TimeSpan(np.array(['12:34', '12:34']))
+        dts = TimeSpan(np.array(["12:34", "12:34"]))
         for i in dts:
             self.assertEqual(correct, i)
 
-        dts = TimeSpan(np.array([b'12:34', b'12:34']))
+        dts = TimeSpan(np.array([b"12:34", b"12:34"]))
         for i in dts:
             self.assertEqual(correct, i)
 
     def test_nanos_since_year(self):
-        dtn = DateTimeNano(['2018-01-01 00:00:00.000123456'], from_tz='NYC')
+        dtn = DateTimeNano(["2018-01-01 00:00:00.000123456"], from_tz="NYC")
         since_year = dtn.nanos_since_start_of_year()
         correct = 123456
         self.assertEqual(since_year[0], correct)
         self.assertTrue(since_year.dtype == np.int64)
         self.assertTrue(isinstance(since_year, FastArray))
 
-        dtn = DateTimeNano(
-            ['2018-01-01 00:00:00.000123456'], from_tz='GMT', to_tz='GMT'
-        )
+        dtn = DateTimeNano(["2018-01-01 00:00:00.000123456"], from_tz="GMT", to_tz="GMT")
         since_year = dtn.nanos_since_start_of_year()
         correct = 123456
         self.assertEqual(since_year[0], correct)
@@ -1005,16 +959,14 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(isinstance(since_year, FastArray))
 
     def test_nanos_since_midnight(self):
-        dtn = DateTimeNano(['2018-02-01 00:00:00.000123456'], from_tz='NYC')
+        dtn = DateTimeNano(["2018-02-01 00:00:00.000123456"], from_tz="NYC")
         since_mn = dtn.nanos_since_midnight()
         correct = 123456
         self.assertEqual(since_mn[0], correct)
         self.assertTrue(since_mn.dtype == np.int64)
         self.assertTrue(isinstance(since_mn, FastArray))
 
-        dtn = DateTimeNano(
-            ['2018-02-01 00:00:00.000123456'], from_tz='GMT', to_tz='GMT'
-        )
+        dtn = DateTimeNano(["2018-02-01 00:00:00.000123456"], from_tz="GMT", to_tz="GMT")
         since_mn = dtn.nanos_since_midnight()
         correct = 123456
         self.assertEqual(since_mn[0], correct)
@@ -1022,66 +974,62 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(isinstance(since_mn, FastArray))
 
     def test_time_since_year(self):
-        dtn = DateTimeNano(['2018-01-01 00:00:00.000123456'], from_tz='NYC')
+        dtn = DateTimeNano(["2018-01-01 00:00:00.000123456"], from_tz="NYC")
         since_year = dtn.time_since_start_of_year()
         correct = TimeSpan([123456])
         self.assertTrue(bool(np.all(since_year == correct)))
         self.assertTrue(isinstance(since_year, TimeSpan))
 
-        dtn = DateTimeNano(
-            ['2018-01-01 00:00:00.000123456'], from_tz='GMT', to_tz='GMT'
-        )
+        dtn = DateTimeNano(["2018-01-01 00:00:00.000123456"], from_tz="GMT", to_tz="GMT")
         since_year = dtn.time_since_start_of_year()
         correct = TimeSpan([123456])
         self.assertTrue(bool(np.all(since_year == correct)))
         self.assertTrue(isinstance(since_year, TimeSpan))
 
     def test_time_since_midnight(self):
-        dtn = DateTimeNano(['2018-02-01 00:00:00.000123456'], from_tz='America/New_York')
+        dtn = DateTimeNano(["2018-02-01 00:00:00.000123456"], from_tz="America/New_York")
         since_mn = dtn.time_since_midnight()
         correct = TimeSpan([123456])
         self.assertTrue(bool(np.all(since_mn == correct)))
         self.assertTrue(isinstance(since_mn, TimeSpan))
 
-        dtn = DateTimeNano(
-            ['2018-02-01 00:00:00.000123456'], from_tz='GMT', to_tz='GMT'
-        )
+        dtn = DateTimeNano(["2018-02-01 00:00:00.000123456"], from_tz="GMT", to_tz="GMT")
         since_mn = dtn.time_since_midnight()
         correct = TimeSpan([123456])
         self.assertTrue(bool(np.all(since_mn == correct)))
         self.assertTrue(isinstance(since_mn, TimeSpan))
 
     def test_save_all_tz_combos(self):
-        timestring = b'1992-02-01T19:48:30.000000000'
-        as_gmt = b'1992-02-02T00:48:30.000000000'
+        timestring = b"1992-02-01T19:48:30.000000000"
+        as_gmt = b"1992-02-02T00:48:30.000000000"
 
-        dtn_nyc_nyc = DateTimeNano(['1992-02-01 19:48:30'], from_tz='NYC', to_tz='NYC')
-        dtn_gmt_nyc = DateTimeNano(['1992-02-02 00:48:30'], from_tz='GMT', to_tz='NYC')
-        dtn_nyc_gmt = DateTimeNano(['1992-02-01 14:48:30'], from_tz='NYC', to_tz='GMT')
-        dtn_gmt_gmt = DateTimeNano(['1992-02-01 19:48:30'], from_tz='GMT', to_tz='GMT')
+        dtn_nyc_nyc = DateTimeNano(["1992-02-01 19:48:30"], from_tz="NYC", to_tz="NYC")
+        dtn_gmt_nyc = DateTimeNano(["1992-02-02 00:48:30"], from_tz="GMT", to_tz="NYC")
+        dtn_nyc_gmt = DateTimeNano(["1992-02-01 14:48:30"], from_tz="NYC", to_tz="GMT")
+        dtn_gmt_gmt = DateTimeNano(["1992-02-01 19:48:30"], from_tz="GMT", to_tz="GMT")
 
         ds1 = Dataset(
             {
-                'dtn_nyc_nyc': dtn_nyc_nyc,
-                'dtn_gmt_nyc': dtn_gmt_nyc,
-                'dtn_nyc_gmt': dtn_nyc_gmt,
-                'dtn_gmt_gmt': dtn_gmt_gmt,
+                "dtn_nyc_nyc": dtn_nyc_nyc,
+                "dtn_gmt_nyc": dtn_gmt_nyc,
+                "dtn_nyc_gmt": dtn_nyc_gmt,
+                "dtn_gmt_gmt": dtn_gmt_gmt,
             }
         )
 
         for dt in ds1.values():
             self.assertEqual(dt.to_iso()[0], timestring)
 
-        ds1.save(r'riptable/tests/temp/tempsave')
+        ds1.save(r"riptable/tests/temp/tempsave")
 
-        ds2 = Dataset.load(r'riptable/tests/temp/tempsave')
+        ds2 = Dataset.load(r"riptable/tests/temp/tempsave")
 
-        for dt, totz in zip(ds2.values(), ['NYC', 'NYC', 'GMT', 'GMT']):
-            self.assertEqual(dt._timezone._from_tz, 'GMT')
+        for dt, totz in zip(ds2.values(), ["NYC", "NYC", "GMT", "GMT"]):
+            self.assertEqual(dt._timezone._from_tz, "GMT")
             self.assertEqual(dt._timezone._to_tz, totz)
             self.assertEqual(dt.to_iso()[0], timestring)
 
-        os.remove(r'riptable/tests/temp/tempsave.sds')
+        os.remove(r"riptable/tests/temp/tempsave.sds")
 
     def test_timespan_nano_extension(self):
         # make sure previous bug with absolute value / mod was fixed
@@ -1102,13 +1050,13 @@ class DateTime_Test(unittest.TestCase):
             tz = TimeZone(from_tz=None, to_tz=None)
 
         with self.assertRaises(ValueError):
-            _ = TimeZone._init_from_tz('JUNK')
+            _ = TimeZone._init_from_tz("JUNK")
 
         with self.assertRaises(ValueError):
-            _, _, _ = TimeZone._init_to_tz('JUNK')
+            _, _, _ = TimeZone._init_to_tz("JUNK")
 
     def test_mask_no_cutoffs(self):
-        tz = TimeZone(from_tz='GMT', to_tz='GMT')
+        tz = TimeZone(from_tz="GMT", to_tz="GMT")
         mask = tz._mask_dst(arange(5))
         self.assertTrue(bool(np.all(~mask)))
         self.assertEqual(len(mask), 5)
@@ -1118,25 +1066,23 @@ class DateTime_Test(unittest.TestCase):
             c = Calendar()
 
     def test_internal_set_tz(self):
-        tz = TimeZone(from_tz='NYC', to_tz='NYC')
-        tz._set_timezone('GMT')
-        self.assertEqual(tz._to_tz, 'GMT')
-        self.assertEqual(tz._timezone_str, 'GMT')
+        tz = TimeZone(from_tz="NYC", to_tz="NYC")
+        tz._set_timezone("GMT")
+        self.assertEqual(tz._to_tz, "GMT")
+        self.assertEqual(tz._timezone_str, "GMT")
 
     def test_vs_python_dst_fall(self):
         format_str = "%Y-%m-%dT%H:%M:%S.000000000"
-        zone = tz.gettz('America/New_York')
+        zone = tz.gettz("America/New_York")
 
-        pdt_first = datetime.datetime(
-            2018, 11, 4, 5, 1, 0, tzinfo=datetime.timezone.utc
-        )
-        dtn_first = DateTimeNano(['2018-11-04 01:01'], from_tz='NYC')
+        pdt_first = datetime.datetime(2018, 11, 4, 5, 1, 0, tzinfo=datetime.timezone.utc)
+        dtn_first = DateTimeNano(["2018-11-04 01:01"], from_tz="NYC")
         pdt_utc_first = pdt_first.timestamp() * NANOS_PER_SECOND
         dtn_utc_first = dtn_first._fa[0]
         self.assertTrue(pdt_utc_first == dtn_utc_first)
 
         pdt_last = datetime.datetime(2018, 11, 4, 6, 1, 0, tzinfo=datetime.timezone.utc)
-        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz='GMT')
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz="GMT")
         pdt_utc_last = pdt_last.timestamp() * NANOS_PER_SECOND
         dtn_utc_last = dtn_last._fa[0]
         self.assertTrue(pdt_utc_last == dtn_utc_last)
@@ -1158,23 +1104,21 @@ class DateTime_Test(unittest.TestCase):
 
     def test_vs_python_dst_spring(self):
         format_str = "%Y-%m-%dT%H:%M:%S.000000000"
-        zone = tz.gettz('America/New_York')
+        zone = tz.gettz("America/New_York")
 
-        pdt_first = datetime.datetime(
-            2019, 3, 10, 6, 1, 0, tzinfo=datetime.timezone.utc
-        )
+        pdt_first = datetime.datetime(2019, 3, 10, 6, 1, 0, tzinfo=datetime.timezone.utc)
         pdt_last = datetime.datetime(2019, 3, 10, 7, 1, 0, tzinfo=datetime.timezone.utc)
 
-        dtn_first = DateTimeNano(['2019-03-10 01:01'], from_tz='NYC')
-        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz='GMT')
+        dtn_first = DateTimeNano(["2019-03-10 01:01"], from_tz="NYC")
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz="GMT")
 
-        correct_first = '2019-03-10T01:01:00.000000000'
+        correct_first = "2019-03-10T01:01:00.000000000"
         pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
         dtn_str_first = dtn_first.to_iso()[0].decode()
         self.assertEqual(pdt_str_first, dtn_str_first)
         self.assertEqual(dtn_str_first, correct_first)
 
-        correct_last = '2019-03-10T03:01:00.000000000'
+        correct_last = "2019-03-10T03:01:00.000000000"
         pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
         dtn_str_last = dtn_last.to_iso()[0].decode()
         self.assertEqual(pdt_str_last, dtn_str_last)
@@ -1182,21 +1126,17 @@ class DateTime_Test(unittest.TestCase):
 
     def test_vs_python_dst_fall_dublin(self):
         format_str = "%Y-%m-%dT%H:%M:%S.000000000"
-        zone = tz.gettz('Europe/Dublin')
+        zone = tz.gettz("Europe/Dublin")
 
-        pdt_first = datetime.datetime(
-            2018, 10, 28, 0, 1, 0, tzinfo=datetime.timezone.utc
-        )
-        pdt_last = datetime.datetime(
-            2018, 10, 28, 1, 1, 0, tzinfo=datetime.timezone.utc
-        )
+        pdt_first = datetime.datetime(2018, 10, 28, 0, 1, 0, tzinfo=datetime.timezone.utc)
+        pdt_last = datetime.datetime(2018, 10, 28, 1, 1, 0, tzinfo=datetime.timezone.utc)
         t1 = pdt_first.timestamp()
         t2 = pdt_last.timestamp()
         t1 = int(NANOS_PER_SECOND * t1)
         t2 = int(NANOS_PER_SECOND * t2)
 
-        dtn_first = DateTimeNano([t1], from_tz='GMT', to_tz='DUBLIN')
-        dtn_last = DateTimeNano([t2], from_tz='GMT', to_tz='DUBLIN')
+        dtn_first = DateTimeNano([t1], from_tz="GMT", to_tz="DUBLIN")
+        dtn_last = DateTimeNano([t2], from_tz="GMT", to_tz="DUBLIN")
 
         pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
         dtn_str_first = dtn_first.to_iso()[0].decode()
@@ -1210,25 +1150,23 @@ class DateTime_Test(unittest.TestCase):
 
     def test_vs_python_dst_spring_sydney(self):
         format_str = "%Y-%m-%dT%H:%M:%S.000000000"
-        zone = tz.gettz('Australia/Sydney')
+        zone = tz.gettz("Australia/Sydney")
 
         # N.B. Spring occurs later in the year in the southern hemisphere, so the annual transition
         #      from standard -> daylight time also happens towards the end of the year.
-        pdt_first = datetime.datetime(
-            2022, 10, 1, 15, 1, 0, tzinfo=datetime.timezone.utc
-        )
+        pdt_first = datetime.datetime(2022, 10, 1, 15, 1, 0, tzinfo=datetime.timezone.utc)
         pdt_last = datetime.datetime(2022, 10, 1, 16, 1, 0, tzinfo=datetime.timezone.utc)
 
-        dtn_first = DateTimeNano(['2022-10-02 01:01'], from_tz='Australia/Sydney', to_tz='Australia/Sydney')
-        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz='GMT', to_tz="Australia/Sydney")
+        dtn_first = DateTimeNano(["2022-10-02 01:01"], from_tz="Australia/Sydney", to_tz="Australia/Sydney")
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz="GMT", to_tz="Australia/Sydney")
 
-        correct_first = '2022-10-02T01:01:00.000000000'
+        correct_first = "2022-10-02T01:01:00.000000000"
         pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
         dtn_str_first = dtn_first.to_iso()[0].decode()
         self.assertEqual(pdt_str_first, dtn_str_first)
         self.assertEqual(dtn_str_first, correct_first)
 
-        correct_last = '2022-10-02T03:01:00.000000000'
+        correct_last = "2022-10-02T03:01:00.000000000"
         pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
         dtn_str_last = dtn_last.to_iso()[0].decode()
         self.assertEqual(pdt_str_last, dtn_str_last)
@@ -1236,21 +1174,19 @@ class DateTime_Test(unittest.TestCase):
 
     def test_vs_python_dst_fall_sydney(self):
         format_str = "%Y-%m-%dT%H:%M:%S.000000000"
-        zone = tz.gettz('Australia/Sydney')
+        zone = tz.gettz("Australia/Sydney")
 
         # N.B. Fall occurs earlier in the year in the southern hemisphere, so the annual transition
         #      from standard -> daylight time also happens towards the beginning of the year.
-        pdt_first = datetime.datetime(
-            2022, 4, 2, 15, 1, 0, tzinfo=datetime.timezone.utc
-        )
+        pdt_first = datetime.datetime(2022, 4, 2, 15, 1, 0, tzinfo=datetime.timezone.utc)
         pdt_last = datetime.datetime(2022, 4, 2, 16, 1, 0, tzinfo=datetime.timezone.utc)
         t1 = pdt_first.timestamp()
         t2 = pdt_last.timestamp()
         t1 = int(NANOS_PER_SECOND * t1)
         t2 = int(NANOS_PER_SECOND * t2)
 
-        dtn_first = DateTimeNano([t1], from_tz='GMT', to_tz='Australia/Sydney')
-        dtn_last = DateTimeNano([t2], from_tz='GMT', to_tz='Australia/Sydney')
+        dtn_first = DateTimeNano([t1], from_tz="GMT", to_tz="Australia/Sydney")
+        dtn_last = DateTimeNano([t2], from_tz="GMT", to_tz="Australia/Sydney")
 
         pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
         dtn_str_first = dtn_first.to_iso()[0].decode()
@@ -1263,21 +1199,21 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(pdt_str_first, dtn_str_last)
 
     def test_dst_fall_hour(self):
-        '''
+        """
         When daylight savings time ends, clocks go back one hour. However, UTC is
         does not change. Initializing times in different hours in UTC on the changing hour
         will yield the same result in a specific timezone.
-        '''
+        """
 
-        zone = tz.gettz('Europe/Dublin')
+        zone = tz.gettz("Europe/Dublin")
 
         pdt1 = datetime.datetime(2018, 10, 28, 0, 1, 0, tzinfo=datetime.timezone.utc)
         pdt2 = datetime.datetime(2018, 10, 28, 1, 1, 0, tzinfo=datetime.timezone.utc)
         pdt1_dub = pdt1.astimezone(zone)
         pdt2_dub = pdt2.astimezone(zone)
 
-        dtn1 = DateTimeNano(['2018-10-28 00:01'], from_tz='GMT', to_tz='DUBLIN')
-        dtn2 = DateTimeNano(['2018-10-28 01:01'], from_tz='GMT', to_tz='DUBLIN')
+        dtn1 = DateTimeNano(["2018-10-28 00:01"], from_tz="GMT", to_tz="DUBLIN")
+        dtn2 = DateTimeNano(["2018-10-28 01:01"], from_tz="GMT", to_tz="DUBLIN")
 
         dtn1_hour = int(dtn1.hour[0])
         dtn2_hour = int(dtn2.hour[0])
@@ -1286,15 +1222,15 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(pdt2_dub.hour, dtn2_hour)
         self.assertEqual(pdt1_dub.hour, dtn2_hour)
 
-        zone = tz.gettz('America/New_York')
+        zone = tz.gettz("America/New_York")
 
         pdt1 = datetime.datetime(2018, 11, 4, 5, 1, 0, tzinfo=datetime.timezone.utc)
         pdt2 = datetime.datetime(2018, 11, 4, 6, 1, 0, tzinfo=datetime.timezone.utc)
         pdt1_nyc = pdt1.astimezone(zone)
         pdt2_nyc = pdt2.astimezone(zone)
 
-        dtn1 = DateTimeNano(['2018-11-04 05:01'], from_tz='GMT', to_tz='NYC')
-        dtn2 = DateTimeNano(['2018-11-04 06:01'], from_tz='GMT', to_tz='NYC')
+        dtn1 = DateTimeNano(["2018-11-04 05:01"], from_tz="GMT", to_tz="NYC")
+        dtn2 = DateTimeNano(["2018-11-04 06:01"], from_tz="GMT", to_tz="NYC")
 
         dtn1_hour = int(dtn1.hour[0])
         dtn2_hour = int(dtn2.hour[0])
@@ -1304,37 +1240,33 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(pdt1_nyc.hour, dtn2_hour)
 
     def test_dst_spring_hour(self):
-        '''
+        """
         When daylight savings time begins, an hour is skipped.
         NYC changes over at 2am local time
         DUBLIN changes over at 1am local time
-        '''
-        zone = tz.gettz('Europe/Dublin')
+        """
+        zone = tz.gettz("Europe/Dublin")
 
         pdt0 = datetime.datetime(2018, 3, 25, 0, 59, 0, tzinfo=datetime.timezone.utc)
         pdt1 = datetime.datetime(2018, 3, 25, 1, 59, 0, tzinfo=datetime.timezone.utc)
         pdt0_dub = pdt0.astimezone(zone)
         pdt1_dub = pdt1.astimezone(zone)
 
-        dtn = DateTimeNano(
-            ['2018-03-25 00:59', '2018-03-25 01:59'], from_tz='GMT', to_tz='Europe/Dublin'
-        )
+        dtn = DateTimeNano(["2018-03-25 00:59", "2018-03-25 01:59"], from_tz="GMT", to_tz="Europe/Dublin")
         dtn_hour = dtn.hour.astype(np.int32)
 
         self.assertEqual(pdt0_dub.hour, dtn_hour[0])
         self.assertEqual(pdt1_dub.hour, dtn_hour[1])
         self.assertEqual(dtn_hour[1] - dtn_hour[0], 2)
 
-        zone = tz.gettz('America/New_York')
+        zone = tz.gettz("America/New_York")
 
         pdt0 = datetime.datetime(2019, 3, 10, 6, 1, 0, tzinfo=datetime.timezone.utc)
         pdt1 = datetime.datetime(2019, 3, 10, 7, 1, 0, tzinfo=datetime.timezone.utc)
         pdt0_nyc = pdt0.astimezone(zone)
         pdt1_nyc = pdt1.astimezone(zone)
 
-        dtn = DateTimeNano(
-            ['2019-03-10 06:01', '2019-03-10 07:01'], from_tz='GMT', to_tz='America/New_York'
-        )
+        dtn = DateTimeNano(["2019-03-10 06:01", "2019-03-10 07:01"], from_tz="GMT", to_tz="America/New_York")
         dtn_hour = dtn.hour.astype(np.int32)
 
         self.assertEqual(pdt0_nyc.hour, dtn_hour[0])
@@ -1342,10 +1274,10 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(dtn_hour[1] - dtn_hour[0], 2)
 
     def test_dst_spring_constructor(self):
-        '''
+        """
         Ensures that DateTimeNano is correctly converting timezone specific stamps to UTC.
-        '''
-        zone = tz.gettz('Europe/Dublin')
+        """
+        zone = tz.gettz("Europe/Dublin")
 
         pdt0 = datetime.datetime(2018, 3, 25, 0, 59, 0, tzinfo=zone)
         pdt1 = datetime.datetime(2018, 3, 25, 2, 59, 0, tzinfo=zone)
@@ -1353,12 +1285,10 @@ class DateTime_Test(unittest.TestCase):
         pdt0_utc = pdt0.astimezone(datetime.timezone.utc)
         pdt1_utc = pdt1.astimezone(datetime.timezone.utc)
 
-        dtn = DateTimeNano(
-            ['2018-03-25 00:59', '2018-03-25 02:59'], from_tz='DUBLIN', to_tz='DUBLIN'
-        )
+        dtn = DateTimeNano(["2018-03-25 00:59", "2018-03-25 02:59"], from_tz="DUBLIN", to_tz="DUBLIN")
         dtn_dublin_hour = dtn.hour.astype(np.int32)
         dtn_dublin_diff = dtn_dublin_hour[1] - dtn_dublin_hour[0]
-        dtn.set_timezone('GMT')  # view as UTC
+        dtn.set_timezone("GMT")  # view as UTC
         dtn_hour = dtn.hour.astype(np.int32)
 
         self.assertEqual(pdt_dublin_diff, dtn_dublin_diff)
@@ -1366,7 +1296,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(pdt1_utc.hour, dtn_hour[1])
         self.assertEqual(dtn_hour[1] - dtn_hour[0], 1)
 
-        zone = tz.gettz('America/New_York')
+        zone = tz.gettz("America/New_York")
 
         pdt0 = datetime.datetime(2019, 3, 10, 1, 59, 0, tzinfo=zone)
         pdt1 = datetime.datetime(2019, 3, 10, 3, 59, 0, tzinfo=zone)
@@ -1374,12 +1304,10 @@ class DateTime_Test(unittest.TestCase):
         pdt0_utc = pdt0.astimezone(datetime.timezone.utc)
         pdt1_utc = pdt1.astimezone(datetime.timezone.utc)
 
-        dtn = DateTimeNano(
-            ['2019-03-10 01:59', '2019-03-10 03:59'], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano(["2019-03-10 01:59", "2019-03-10 03:59"], from_tz="NYC", to_tz="NYC")
         dtn_nyc_hour = dtn.hour.astype(np.int32)
         dtn_nyc_diff = dtn_nyc_hour[1] - dtn_nyc_hour[0]
-        dtn.set_timezone('GMT')  # view as UTC
+        dtn.set_timezone("GMT")  # view as UTC
         dtn_hour = dtn.hour.astype(np.int32)
 
         self.assertEqual(pdt_nyc_diff, dtn_nyc_diff)
@@ -1388,19 +1316,17 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(dtn_hour[1] - dtn_hour[0], 1)
 
     def test_dst_fall_constructor(self):
-        zone = tz.gettz('America/New_York')
+        zone = tz.gettz("America/New_York")
         pdt0 = datetime.datetime(2018, 11, 4, 1, 59, 0, tzinfo=zone)
         pdt1 = datetime.datetime(2018, 11, 4, 2, 59, 0, tzinfo=zone)
         pdt_nyc_diff = pdt1.hour - pdt0.hour
         pdt0_utc = pdt0.astimezone(datetime.timezone.utc)
         pdt1_utc = pdt1.astimezone(datetime.timezone.utc)
 
-        dtn = DateTimeNano(
-            ['2018-11-04 01:59', '2018-11-04 02:59'], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano(["2018-11-04 01:59", "2018-11-04 02:59"], from_tz="NYC", to_tz="NYC")
         dtn_nyc_hour = dtn.hour.astype(np.int32)
         dtn_nyc_diff = dtn_nyc_hour[1] - dtn_nyc_hour[0]
-        dtn.set_timezone('GMT')  # view as UTC
+        dtn.set_timezone("GMT")  # view as UTC
         dtn_hour = dtn.hour.astype(np.int32)
 
         self.assertEqual(pdt_nyc_diff, dtn_nyc_diff)
@@ -1410,39 +1336,39 @@ class DateTime_Test(unittest.TestCase):
 
     def test_constructor_errors(self):
         with self.assertRaises(TypeError):
-            dtn = DateTimeNano({1, 2, 3}, from_tz='NYC')
+            dtn = DateTimeNano({1, 2, 3}, from_tz="NYC")
         with self.assertRaises(TypeError):
-            dtn = DateTimeNano(zeros(5, dtype=bool), from_tz='NYC')
+            dtn = DateTimeNano(zeros(5, dtype=bool), from_tz="NYC")
 
     def test_classname(self):
-        dtn = DateTimeNano(['2000-01-01 00:00:00'], from_tz='NYC')
+        dtn = DateTimeNano(["2000-01-01 00:00:00"], from_tz="NYC")
         self.assertEqual(dtn.get_classname(), dtn.__class__.__name__)
 
-        ts = TimeSpan(100, unit='s')
+        ts = TimeSpan(100, unit="s")
         self.assertEqual(ts.get_classname(), ts.__class__.__name__)
 
     def test_matlab_datenum(self):
         d = FA([730545.00])
-        dtn = DateTimeNano(d, from_matlab=True, from_tz='NYC')
-        self.assertEqual(dtn.to_iso()[0], b'2000-02-29T00:00:00.000000000')
+        dtn = DateTimeNano(d, from_matlab=True, from_tz="NYC")
+        self.assertEqual(dtn.to_iso()[0], b"2000-02-29T00:00:00.000000000")
 
         # test precision too
         d = FA([730545.00], dtype=np.float32)
-        dtn = DateTimeNano(d, from_matlab=True, from_tz='NYC')
-        self.assertEqual(dtn.to_iso()[0], b'2000-02-29T00:00:00.000000000')
+        dtn = DateTimeNano(d, from_matlab=True, from_tz="NYC")
+        self.assertEqual(dtn.to_iso()[0], b"2000-02-29T00:00:00.000000000")
 
     def test_hstack_errors(self):
-        c = Categorical(['a', 'a', 'b', 'c'])
-        dtn = DateTimeNano(['2000-01-01 00:00:00'], from_tz='NYC')
+        c = Categorical(["a", "a", "b", "c"])
+        dtn = DateTimeNano(["2000-01-01 00:00:00"], from_tz="NYC")
         with self.assertRaises(TypeError):
             _ = DateTimeNano.hstack([dtn, c])
 
-        dtn2 = DateTimeNano(['2000-01-01 00:00:00'], from_tz='NYC', to_tz='GMT')
+        dtn2 = DateTimeNano(["2000-01-01 00:00:00"], from_tz="NYC", to_tz="GMT")
         with self.assertRaises(NotImplementedError):
             _ = DateTimeNano.hstack([dtn, dtn2])
 
     def test_inplace_subtract(self):
-        dtn = DateTimeNano(['2000-01-01'], from_tz='NYC', to_tz='GMT')
+        dtn = DateTimeNano(["2000-01-01"], from_tz="NYC", to_tz="GMT")
         start = dtn.days_since_epoch[0]
         dtn -= NANOS_PER_DAY
         end = dtn.days_since_epoch[0]
@@ -1451,14 +1377,14 @@ class DateTime_Test(unittest.TestCase):
     def test_diff(self):
         dtn = DateTimeNano(
             [
-                '2018-11-01 22:00:00',
-                '2018-11-01 23:00:00',
-                '2018-11-02 00:00:00',
-                '2018-11-02 01:00:00',
-                '2018-11-02 02:00:00',
+                "2018-11-01 22:00:00",
+                "2018-11-01 23:00:00",
+                "2018-11-02 00:00:00",
+                "2018-11-02 01:00:00",
+                "2018-11-02 02:00:00",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
 
         dtndiff = dtn.diff()
@@ -1469,7 +1395,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(hour_diff == 1)))
 
     def test_math_errors(self):
-        dtn = DateTimeNano(['2000-01-01 00:00:00'], from_tz='NYC')
+        dtn = DateTimeNano(["2000-01-01 00:00:00"], from_tz="NYC")
         with self.assertRaises(TypeError):
             a = dtn.__abs__()
 
@@ -1478,19 +1404,19 @@ class DateTime_Test(unittest.TestCase):
         #    a = dtn % 7
 
     def test_timespan_true_divide(self):
-        ts = TimeSpan(3, unit='m')
+        ts = TimeSpan(3, unit="m")
         ts2 = ts / 3
         self.assertTrue(isinstance(ts2, TimeSpan))
         self.assertEqual(ts2.minutes[0], 1)
 
-        ts = TimeSpan(3, unit='m')
-        ts2 = ts / TimeSpan(3, unit='m')
+        ts = TimeSpan(3, unit="m")
+        ts2 = ts / TimeSpan(3, unit="m")
         self.assertFalse(isinstance(ts2, TimeSpan))
         self.assertEqual(ts2[0], 1)
 
     def test_timespan_floor_divide(self):
-        ts = TimeSpan(5.5, unit='m')
-        ts2 = ts // TimeSpan(1, unit='m')
+        ts = TimeSpan(5.5, unit="m")
+        ts2 = ts // TimeSpan(1, unit="m")
         self.assertFalse(isinstance(ts2, TimeSpan))
         self.assertEqual(ts2[0], 5)
 
@@ -1498,32 +1424,47 @@ class DateTime_Test(unittest.TestCase):
             ts2 = ts // 3
 
     def test_timespan_unit_display(self):
-        d = {'ns': 1, 'us': 1000, 'ms': 1_000_000, 's': 2_000_000_000}
+        d = {"ns": 1, "us": 1000, "ms": 1_000_000, "s": 2_000_000_000}
         for k, v in d.items():
             result = TimeSpan.display_item_unit(v)
             self.assertTrue(result.endswith(k))
 
     def test_timespan_hhhhmmss(self):
-        timespan = TimeSpan([
-            '09:30:17.557593707',
-            '15:31:32.216792000',
-            '11:28:23.519020994',
-            '19:46:10.838007105',
-            '09:30:29.999999999',
-            '10:40:00.000000000',
-            '00:00:00.999999999',
-            '23:59:59.999999999',
-        ])
+        timespan = TimeSpan(
+            [
+                "09:30:17.557593707",
+                "15:31:32.216792000",
+                "11:28:23.519020994",
+                "19:46:10.838007105",
+                "09:30:29.999999999",
+                "10:40:00.000000000",
+                "00:00:00.999999999",
+                "23:59:59.999999999",
+            ]
+        )
         expected = FastArray([93017, 153132, 112823, 194610, 93029, 104000, 0, 235959])
         actual = timespan.hhmmss
         self.assertTrue(np.all(expected == actual))
 
+    def test_display_clock_short(self):
+        test_cases = [
+            ["09:00:00", "09:00"],
+            ["09:01:00", "09:01"],
+            ["09:00:01", "09:00:01"],
+            ["09:00:00.000009", "09:00:00.000009"],
+            [["09:00:00", "09:00:01"], ["09:00:00", "09:00:01"]],
+        ]
+        for str_time, expected in test_cases:
+            timespan = TimeSpan(str_time)
+            short_display = timespan.display_clock_short()
+            self.assertTrue((short_display == expected).all())
+
     def test_round_nano_time(self):
         correct_str = "'20181231 23:59:59.999999999'"
-        correct_iso = b'2018-12-31T23:59:59.999999999'
+        correct_iso = b"2018-12-31T23:59:59.999999999"
 
         # ensures that previous python rounding error was fixed
-        dtn = DateTimeNano(['2018-12-31 23:59:59.999999999'], from_tz='NYC')
+        dtn = DateTimeNano(["2018-12-31 23:59:59.999999999"], from_tz="NYC")
         repr_str = dtn._build_string()
         iso = dtn.to_iso()[0]
 
@@ -1532,8 +1473,8 @@ class DateTime_Test(unittest.TestCase):
 
     def test_day_of_year(self):
         dtn = DateTimeNano(
-            ['2019-01-01', '2019-02-01', '2019-12-31 23:59', '2000-12-31 23:59'],
-            from_tz='NYC',
+            ["2019-01-01", "2019-02-01", "2019-12-31 23:59", "2000-12-31 23:59"],
+            from_tz="NYC",
         )
         dayofyear = dtn.day_of_year
         correct = FastArray([1, 32, 365, 366])
@@ -1541,46 +1482,44 @@ class DateTime_Test(unittest.TestCase):
 
     def test_month_edge(self):
         # ensure that searchsorted goes to the right for matching value
-        dtn = DateTimeNano(['2000-02-01', '2019-02-01'], from_tz='NYC')
+        dtn = DateTimeNano(["2000-02-01", "2019-02-01"], from_tz="NYC")
         m = dtn.month()
         self.assertTrue(bool(np.all(m == 2)))
 
     def test_datetime_string_invalid(self):
         # 1 nanosecond from epoch
-        dtn = DateTimeNano(
-            ['1970-01-01 00:00:00.000000001'], from_tz='GMT', to_tz='GMT'
-        )
+        dtn = DateTimeNano(["1970-01-01 00:00:00.000000001"], from_tz="GMT", to_tz="GMT")
         self.assertEqual(dtn._fa[0], 1)
 
         # before epoch time (invalid)
-        dtn = DateTimeNano(['1969-12-31'], from_tz='NYC')
+        dtn = DateTimeNano(["1969-12-31"], from_tz="NYC")
         self.assertEqual(dtn._fa[0], 0)
 
-        dtn = DateTimeNano(['2000-13-01'], from_tz='NYC')
+        dtn = DateTimeNano(["2000-13-01"], from_tz="NYC")
         self.assertEqual(dtn._fa[0], 0)
 
-        dtn = DateTimeNano(['2000-12-40'], from_tz='NYC')
+        dtn = DateTimeNano(["2000-12-40"], from_tz="NYC")
         self.assertEqual(dtn._fa[0], 0)
 
     def test_yyyymmdd(self):
         correct = FastArray([20180109, 20000229, 20000301, 20191231])
         dtn = DateTimeNano(
-            ['2018-01-09 23:59:59.999999999', '2000-02-29', '2000-03-01', '2019-12-31'],
-            from_tz='NYC',
+            ["2018-01-09 23:59:59.999999999", "2000-02-29", "2000-03-01", "2019-12-31"],
+            from_tz="NYC",
         )
         ymd = dtn.yyyymmdd
         self.assertTrue(bool(np.all(correct == ymd)))
 
     def test_seconds_since_epoch(self):
         seconds_per_day = 86400
-        dtn = DateTimeNano(['1970-01-02'], from_tz='NYC')
+        dtn = DateTimeNano(["1970-01-02"], from_tz="NYC")
         result = dtn.seconds_since_epoch
 
         self.assertTrue(result.dtype == np.int64)
         self.assertEqual(seconds_per_day, result[0])
 
     def test_millisecond(self):
-        dtn = DateTimeNano(['1992-02-01 12:00:01.123000000'], from_tz='NYC')
+        dtn = DateTimeNano(["1992-02-01 12:00:01.123000000"], from_tz="NYC")
 
         f = dtn.millisecond
         self.assertTrue(f.dtype == np.float64)
@@ -1591,7 +1530,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(s._fa[0], 123000000.0)
 
     def test_microsecond(self):
-        dtn = DateTimeNano(['1992-02-01 12:00:01.000123000'], from_tz='NYC')
+        dtn = DateTimeNano(["1992-02-01 12:00:01.000123000"], from_tz="NYC")
 
         f = dtn.microsecond
         self.assertTrue(f.dtype == np.float64)
@@ -1602,7 +1541,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(s._fa[0], 123000.0)
 
     def test_nanosecond(self):
-        dtn = DateTimeNano(['1992-02-01 12:00:01.000000123'], from_tz='NYC')
+        dtn = DateTimeNano(["1992-02-01 12:00:01.000000123"], from_tz="NYC")
 
         f = dtn.nanosecond
         self.assertTrue(f.dtype == np.float64)
@@ -1613,7 +1552,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(s._fa[0], 123.0)
 
     def test_millis_since_midnight(self):
-        dtn = DateTimeNano(['1992-02-01 00:00:01.002003004'], from_tz='NYC')
+        dtn = DateTimeNano(["1992-02-01 00:00:01.002003004"], from_tz="NYC")
         result = dtn.millis_since_midnight()
 
         self.assertTrue(result.dtype == np.float64)
@@ -1623,58 +1562,50 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(result[0], dtn[0].millis_since_midnight())
 
     def test_is_dst_nyc(self):
-        dtn = DateTimeNano(
-            ['2018-11-03 12:34', '2018-11-04 12:34'], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano(["2018-11-03 12:34", "2018-11-04 12:34"], from_tz="NYC", to_tz="NYC")
         result = dtn.is_dst
         correct = FastArray([True, False])
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_dst_dublin(self):
-        dtn = DateTimeNano(
-            ['2019-03-30 12:34', '2019-03-31 12:34'], from_tz='DUBLIN', to_tz='DUBLIN'
-        )
+        dtn = DateTimeNano(["2019-03-30 12:34", "2019-03-31 12:34"], from_tz="DUBLIN", to_tz="DUBLIN")
         result = dtn.is_dst
         correct = FastArray([False, True])
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_dst_gmt(self):
-        dtn = DateTimeNano(['2019-01-01'], from_tz='GMT', to_tz='GMT')
+        dtn = DateTimeNano(["2019-01-01"], from_tz="GMT", to_tz="GMT")
         start = dtn._fa[0]
         daystamps = arange(start, start + NANOS_PER_YEAR, NANOS_PER_DAY)
-        dtn = DateTimeNano(daystamps, from_tz='GMT', to_tz='GMT')
+        dtn = DateTimeNano(daystamps, from_tz="GMT", to_tz="GMT")
         result = dtn.is_dst
         self.assertFalse(bool(np.any(result)))
 
     def test_tz_offset_nyc(self):
-        dtn = DateTimeNano(
-            ['2018-11-03 12:34', '2018-11-04 12:34'], from_tz='NYC', to_tz='NYC'
-        )
+        dtn = DateTimeNano(["2018-11-03 12:34", "2018-11-04 12:34"], from_tz="NYC", to_tz="NYC")
         result = dtn.tz_offset
         correct = FastArray([-4, -5])
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_offset_dublin(self):
-        dtn = DateTimeNano(
-            ['2019-03-30 12:34', '2019-03-31 12:34'], from_tz='DUBLIN', to_tz='DUBLIN'
-        )
+        dtn = DateTimeNano(["2019-03-30 12:34", "2019-03-31 12:34"], from_tz="DUBLIN", to_tz="DUBLIN")
         result = dtn.tz_offset
         correct = FastArray([0, 1])
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_offset_gmt(self):
-        dtn = DateTimeNano(['2019-01-01'], from_tz='GMT', to_tz='GMT')
+        dtn = DateTimeNano(["2019-01-01"], from_tz="GMT", to_tz="GMT")
         start = dtn._fa[0]
         daystamps = arange(start, start + NANOS_PER_YEAR, NANOS_PER_DAY)
-        dtn = DateTimeNano(daystamps, from_tz='GMT', to_tz='GMT')
+        dtn = DateTimeNano(daystamps, from_tz="GMT", to_tz="GMT")
         result = dtn.tz_offset
         self.assertFalse(bool(np.any(result)))
 
     def test_strptime_date(self):
-        fmt = '%m/%d/%Y'
-        t_strings = ['02/01/1992', '2/1/1992', '2/29/2000']
+        fmt = "%m/%d/%Y"
+        t_strings = ["02/01/1992", "2/1/1992", "2/29/2000"]
         dtn = FA(t_strings)
-        dtn = strptime_to_nano(dtn, fmt, from_tz='NYC')
+        dtn = strptime_to_nano(dtn, fmt, from_tz="NYC")
         pdt = [datetime.datetime.strptime(t, fmt) for t in t_strings]
 
         rt_year = dtn.year()
@@ -1690,7 +1621,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(rt_day == py_day)))
 
         # also test with constructor
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         rt_year = dtn.year()
         rt_month = dtn.month()
         rt_day = dtn.day_of_month
@@ -1700,10 +1631,10 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(rt_day == py_day)))
 
     def test_strptime_time(self):
-        fmt = '%m/%d/%Y %H:%M:%S'
-        t_strings = ['02/01/1992 12:15:11', '2/1/1992 5:01:09', '2/29/2000 12:39:59']
+        fmt = "%m/%d/%Y %H:%M:%S"
+        t_strings = ["02/01/1992 12:15:11", "2/1/1992 5:01:09", "2/29/2000 12:39:59"]
         dtn = FA(t_strings)
-        dtn = strptime_to_nano(dtn, fmt, from_tz='NYC')
+        dtn = strptime_to_nano(dtn, fmt, from_tz="NYC")
         pdt = [datetime.datetime.strptime(t, fmt) for t in t_strings]
 
         rt_year = dtn.year()
@@ -1731,7 +1662,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(rt_sec == py_sec)))
 
         # also test with constructor
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         rt_year = dtn.year()
         rt_month = dtn.month()
         rt_day = dtn.day_of_month
@@ -1747,14 +1678,14 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(rt_sec == py_sec)))
 
     def test_strptime_ampm(self):
-        fmt = '%m/%d/%Y %I:%M:%S %p'
+        fmt = "%m/%d/%Y %I:%M:%S %p"
         t_strings = [
-            '02/01/1992 7:15:11 AM',
-            '2/1/1992 5:01:09 PM',
-            '2/29/2000 6:39:59 AM',
+            "02/01/1992 7:15:11 AM",
+            "2/1/1992 5:01:09 PM",
+            "2/29/2000 6:39:59 AM",
         ]
         dtn = FA(t_strings)
-        dtn = strptime_to_nano(dtn, fmt, from_tz='NYC')
+        dtn = strptime_to_nano(dtn, fmt, from_tz="NYC")
         pdt = [datetime.datetime.strptime(t, fmt) for t in t_strings]
 
         rt_year = dtn.year()
@@ -1782,7 +1713,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(rt_sec == py_sec)))
 
         # also test with constructor
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         rt_year = dtn.year()
         rt_month = dtn.month()
         rt_day = dtn.day_of_month
@@ -1799,107 +1730,99 @@ class DateTime_Test(unittest.TestCase):
 
     def test_strptime_monthname(self):
         names = [
-            'January',
-            'February',
-            'March',
-            'April',
-            'May',
-            'June',
-            'July',
-            'August',
-            'September',
-            'October',
-            'November',
-            'December',
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
         ]
-        t_strings = [f'10 {n} 2018' for n in names]
-        fmt = '%d %B %Y'
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        t_strings = [f"10 {n} 2018" for n in names]
+        fmt = "%d %B %Y"
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         self.assertTrue(bool(np.all(dtn.month() == arange(1, 13))))
 
     def test_strptime_monthname_short(self):
         names = [
-            'Jan',
-            'Feb',
-            'Mar',
-            'Apr',
-            'May',
-            'Jun',
-            'Jul',
-            'Aug',
-            'Sep',
-            'Oct',
-            'Nov',
-            'Dec',
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
         ]
-        t_strings = [f'10 {n} 2018' for n in names]
-        fmt = '%d %b %Y'
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        t_strings = [f"10 {n} 2018" for n in names]
+        fmt = "%d %b %Y"
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         self.assertTrue(bool(np.all(dtn.month() == arange(1, 13))))
 
     def test_strptime_frac(self):
-        fmt = '%m/%d/%Y %H:%M:%S'
+        fmt = "%m/%d/%Y %H:%M:%S"
         t_strings = [
-            '02/01/1992 12:15:11.123567',
-            '2/1/1992 05:01:09.888777',
-            '2/29/2000 12:39:59.999999',
+            "02/01/1992 12:15:11.123567",
+            "2/1/1992 05:01:09.888777",
+            "2/29/2000 12:39:59.999999",
         ]
         correct = [123.567, 888.777, 999.999]
         dtn = FA(t_strings)
-        dtn = strptime_to_nano(dtn, fmt, from_tz='NYC')
+        dtn = strptime_to_nano(dtn, fmt, from_tz="NYC")
         result = dtn.millisecond
         self.assertTrue(bool(np.all(correct == result)))
 
     def test_strptime_invalid(self):
         # no date in format
-        fmt = '%H:%M'
-        t_strings = ['12:34', '15:59']
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        fmt = "%H:%M"
+        t_strings = ["12:34", "15:59"]
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         self.assertTrue(bool(np.all(dtn.isnan())))
 
         # invalid date
-        fmt = '%Y/%m/%d'
-        t_strings = ['2010/00/30', '2010/13/31']
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        fmt = "%Y/%m/%d"
+        t_strings = ["2010/00/30", "2010/13/31"]
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         self.assertTrue(bool(np.all(dtn.isnan())))
 
     def test_strptime_scrambled(self):
-        fmt = '%H %Y/%m/%d'
-        t_strings = ['12 1992/02/01', '13 1992/02/01']
-        dtn = DateTimeNano(t_strings, from_tz='NYC', format=fmt)
+        fmt = "%H %Y/%m/%d"
+        t_strings = ["12 1992/02/01", "13 1992/02/01"]
+        dtn = DateTimeNano(t_strings, from_tz="NYC", format=fmt)
         correct = [12, 13]
         result = dtn.hour
         self.assertTrue(bool(np.all(correct == result)))
 
     def test_invalid_constructor_str(self):
-        dtn = DateTimeNano(
-            ['2018-02-01 12:34', 'inv'], from_tz='NYC', format='%Y-%m-%d %H:%M'
-        )
+        dtn = DateTimeNano(["2018-02-01 12:34", "inv"], from_tz="NYC", format="%Y-%m-%d %H:%M")
         self.assertEqual(dtn[1], DateTimeNano.NAN_TIME)
-        dtn = DateTimeNano(
-            ['2018-02-01 12:34', 'inv'], from_tz='GMT', format='%Y-%m-%d %H:%M'
-        )
+        dtn = DateTimeNano(["2018-02-01 12:34", "inv"], from_tz="GMT", format="%Y-%m-%d %H:%M")
         self.assertEqual(dtn[1], DateTimeNano.NAN_TIME)
 
     def test_invalid_constructor_matlab(self):
         d = FA([730545.00, np.nan])
-        dtn = DateTimeNano(d, from_matlab=True, from_tz='NYC')
+        dtn = DateTimeNano(d, from_matlab=True, from_tz="NYC")
         self.assertEqual(dtn._fa[1], 0)
 
     def test_invalid_to_iso(self):
         d = FA([730545.00, np.nan])
-        dtn = DateTimeNano(d, from_matlab=True, from_tz='NYC')
+        dtn = DateTimeNano(d, from_matlab=True, from_tz="NYC")
         result = dtn.to_iso()
-        self.assertEqual(result[1], b'NaT')
+        self.assertEqual(result[1], b"NaT")
 
     def test_invalid_date(self):
-        dtn = DateTimeNano(
-            ['2018-02-01 12:34', 'inv'], from_tz='NYC', format='%Y-%m-%d %H:%M'
-        ).date()
+        dtn = DateTimeNano(["2018-02-01 12:34", "inv"], from_tz="NYC", format="%Y-%m-%d %H:%M").date()
         self.assertEqual(dtn[1], DateTimeNano.NAN_TIME)
-        dtn = DateTimeNano(
-            ['2018-02-01 12:34', 'inv'], from_tz='GMT', format='%Y-%m-%d %H:%M'
-        ).date()
+        dtn = DateTimeNano(["2018-02-01 12:34", "inv"], from_tz="GMT", format="%Y-%m-%d %H:%M").date()
         self.assertEqual(dtn[1], DateTimeNano.NAN_TIME)
 
     def test_invalid_day(self):
@@ -1908,7 +1831,7 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.day
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
     def test_invalid_hour(self):
@@ -1917,14 +1840,14 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.hour
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
         result = dtn.hour_span
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
     def test_invalid_minute(self):
@@ -1933,14 +1856,14 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.minute
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
         result = dtn.minute_span
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
     def test_invalid_second(self):
@@ -1949,14 +1872,14 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.second
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
         result = dtn.second_span
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
     def test_invalid_millisecond(self):
@@ -1965,14 +1888,14 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.millisecond
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
         result = dtn.millisecond_span
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
     def test_invalid_microsecond(self):
@@ -1981,14 +1904,14 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.microsecond
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
         result = dtn.microsecond_span
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
     def test_invalid_nanosecond(self):
@@ -1997,30 +1920,30 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.nanosecond
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
         result = dtn.nanosecond_span
         self.assertTrue(isinstance(result, TimeSpan))
         self.assertTrue(
             bool(np.all(mask == result.isnan())),
-            f'Did not match at time: \n{dtn[mask!=result.isnan()]}',
+            f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
     def test_groupby_restore(self):
         dtn = DateTimeNano(
             [
-                '2000-01-01',
-                '2000-01-02',
-                '2000-01-03',
-                '2000-01-01',
-                '2000-01-02',
-                '2000-01-03',
+                "2000-01-01",
+                "2000-01-02",
+                "2000-01-03",
+                "2000-01-01",
+                "2000-01-02",
+                "2000-01-03",
             ],
-            from_tz='NYC',
+            from_tz="NYC",
         )
-        ds = Dataset({'dtn': dtn, 'data': arange(6)})
-        result = ds.gb('dtn').sum()
+        ds = Dataset({"dtn": dtn, "data": arange(6)})
+        result = ds.gb("dtn").sum()
         self.assertTrue(isinstance(result.dtn, DateTimeNano))
 
     def test_subtract(self):
@@ -2045,11 +1968,11 @@ class DateTime_Test(unittest.TestCase):
         # result = d - val
         # self.assertTrue(isinstance(result, DateTimeNano))
 
-        val = DateTimeNano(['1970-01-10'], from_tz='GMT')
+        val = DateTimeNano(["1970-01-10"], from_tz="GMT")
         result = d - val
         self.assertTrue(isinstance(result, TimeSpan))
 
-        val = TimeSpan(1, unit='h')
+        val = TimeSpan(1, unit="h")
         result = d - val
         self.assertTrue(isinstance(result, DateTimeNano))
 
@@ -2079,7 +2002,7 @@ class DateTime_Test(unittest.TestCase):
         result = d + val
         self.assertTrue(isinstance(result, DateTimeNano))
 
-        val = TimeSpan(1, unit='h')
+        val = TimeSpan(1, unit="h")
         result = d + val
         self.assertTrue(isinstance(result, DateTimeNano))
 
@@ -2104,38 +2027,36 @@ class DateTime_Test(unittest.TestCase):
 
         dtn = DateTimeNano(
             NANOS_PER_HOUR * arange(5),
-            from_tz='NYC',
-            to_tz='NYC',
-            start_date='20190201',
+            from_tz="NYC",
+            to_tz="NYC",
+            start_date="20190201",
         )
         self.assertTrue(bool(np.all(dtn.hour == arange(5))))
         self.assertTrue(bool(np.all(dtn.yyyymmdd == 20190201)))
 
         dtn = DateTimeNano(
             TimeSpan(NANOS_PER_HOUR * arange(5)),
-            from_tz='NYC',
-            to_tz='NYC',
-            start_date='20190201',
+            from_tz="NYC",
+            to_tz="NYC",
+            start_date="20190201",
         )
         self.assertTrue(bool(np.all(dtn.hour == arange(5))))
         self.assertTrue(bool(np.all(dtn.yyyymmdd == 20190201)))
 
         dtn = DateTimeNano(
-            ['00:00', '01:00', '02:00', '03:00', '04:00'],
-            from_tz='NYC',
-            to_tz='NYC',
-            start_date='20190201',
+            ["00:00", "01:00", "02:00", "03:00", "04:00"],
+            from_tz="NYC",
+            to_tz="NYC",
+            start_date="20190201",
         )
         self.assertTrue(bool(np.all(dtn.hour == arange(5))))
         self.assertTrue(bool(np.all(dtn.yyyymmdd == 20190201)))
 
         with self.assertRaises(TypeError):
-            dtn = DateTimeNano(arange(5), start_date=1234, to_tz='NYC', from_tz='NYC')
+            dtn = DateTimeNano(arange(5), start_date=1234, to_tz="NYC", from_tz="NYC")
 
         with self.assertRaises(TypeError):
-            dtn = DateTimeNano(
-                TimeSpan(NANOS_PER_HOUR * arange(5)), from_tz='NYC', to_tz='NYC'
-            )
+            dtn = DateTimeNano(TimeSpan(NANOS_PER_HOUR * arange(5)), from_tz="NYC", to_tz="NYC")
 
         # dates
         now = utcnow(50)
@@ -2145,7 +2066,7 @@ class DateTime_Test(unittest.TestCase):
         today += arange(50)
 
         # create future timestamps from start dates
-        future = DateTimeNano(arange(50), start_date=today, from_tz='NYC', to_tz='NYC')
+        future = DateTimeNano(arange(50), start_date=today, from_tz="NYC", to_tz="NYC")
         future = Date(future)
         self.assertTrue(np.all(today == future))
 
@@ -2169,10 +2090,10 @@ class DateTime_Test(unittest.TestCase):
 
     def test_string_from_tz_error(self):
         with self.assertRaises(ValueError):
-            dtn = DateTimeNano(['20190201', '20190202'])
+            dtn = DateTimeNano(["20190201", "20190202"])
 
         dtn = DateTimeNano([1, 2, 3])
-        self.assertEqual(dtn._timezone._from_tz, 'UTC')
+        self.assertEqual(dtn._timezone._from_tz, "UTC")
 
     def test_fill_invalid(self):
         dtn = DateTimeNano.random(5)
@@ -2213,140 +2134,140 @@ class DateTime_Test(unittest.TestCase):
 
         dtn = DateTimeNano(
             [
-                '2015-04-15 14:26:54.735321368',
-                '2015-04-20 07:30:00.858219615',
-                '2015-04-23 13:15:24.526871083',
-                '2015-04-21 02:25:11.768548100',
-                '2015-04-24 07:47:54.737776979',
-                '2015-04-10 23:59:59.376589955',
+                "2015-04-15 14:26:54.735321368",
+                "2015-04-20 07:30:00.858219615",
+                "2015-04-23 13:15:24.526871083",
+                "2015-04-21 02:25:11.768548100",
+                "2015-04-24 07:47:54.737776979",
+                "2015-04-10 23:59:59.376589955",
             ],
-            from_tz='UTC',
-            to_tz='UTC',
+            from_tz="UTC",
+            to_tz="UTC",
         )
         pdt = pd.DatetimeIndex(dtn._fa)
         self.assertTrue(bool(np.all(dtn._fa == pdt.values.view(np.int64))))
 
-        df = pd.DataFrame({'pdt': pdt})
-        df = df.set_index('pdt')
+        df = pd.DataFrame({"pdt": pdt})
+        df = df.set_index("pdt")
 
-        rule = '1H'
+        rule = "1H"
         pd_result = df.resample(rule).count().index.values.view(np.int64)
         rt_result = dtn.resample(rule)
         self.assertTrue(
             bool(np.all(pd_result == rt_result)),
-            msg=f'Failed to resample with rule {rule}',
+            msg=f"Failed to resample with rule {rule}",
         )
 
-        rule = '30T'
+        rule = "30T"
         pd_result = df.resample(rule).count().index.values.view(np.int64)
         rt_result = dtn.resample(rule)
         self.assertTrue(
             bool(np.all(pd_result == rt_result)),
-            msg=f'Failed to resample with rule {rule}',
+            msg=f"Failed to resample with rule {rule}",
         )
 
-        rule = 'S'
+        rule = "S"
         pd_result = df.resample(rule).count().index.values.view(np.int64)
         rt_result = dtn.resample(rule)
         self.assertTrue(
             bool(np.all(pd_result == rt_result)),
-            msg=f'Failed to resample with rule {rule}',
+            msg=f"Failed to resample with rule {rule}",
         )
 
-        rule = '1H'
+        rule = "1H"
         pd_result = df.resample(rule).count().index.values.view(np.int64)
         rt_result = dtn.resample(rule)
         self.assertTrue(
             bool(np.all(pd_result == rt_result)),
-            msg=f'Failed to resample with rule {rule}',
+            msg=f"Failed to resample with rule {rule}",
         )
 
     def test_resample_mod(self):
         dtn = DateTimeNano(
             [
-                '2015-04-15 14:26:54.735321368',
-                '2015-04-20 07:30:00.858219615',
-                '2015-04-23 13:15:24.526871083',
-                '2015-04-21 02:25:11.768548100',
-                '2015-04-24 07:47:54.737776979',
-                '2015-04-10 23:59:59.376589955',
+                "2015-04-15 14:26:54.735321368",
+                "2015-04-20 07:30:00.858219615",
+                "2015-04-23 13:15:24.526871083",
+                "2015-04-21 02:25:11.768548100",
+                "2015-04-24 07:47:54.737776979",
+                "2015-04-10 23:59:59.376589955",
             ],
-            from_tz='UTC',
-            to_tz='UTC',
+            from_tz="UTC",
+            to_tz="UTC",
         )
         correct_hour = DateTimeNano(
             [
-                '2015-04-15 14:00:00',
-                '2015-04-20 07:00:00',
-                '2015-04-23 13:00:00',
-                '2015-04-21 02:00:00',
-                '2015-04-24 07:00:00',
-                '2015-04-10 23:00:00',
+                "2015-04-15 14:00:00",
+                "2015-04-20 07:00:00",
+                "2015-04-23 13:00:00",
+                "2015-04-21 02:00:00",
+                "2015-04-24 07:00:00",
+                "2015-04-10 23:00:00",
             ],
-            from_tz='UTC',
-            to_tz='UTC',
+            from_tz="UTC",
+            to_tz="UTC",
         )
-        h_result = dtn.resample('H', dropna=True)
+        h_result = dtn.resample("H", dropna=True)
         self.assertTrue(arr_eq(correct_hour, h_result))
 
         correct_minute = DateTimeNano(
             [
-                '2015-04-15 14:26:00',
-                '2015-04-20 07:30:00',
-                '2015-04-23 13:15:00',
-                '2015-04-21 02:25:00',
-                '2015-04-24 07:47:00',
-                '2015-04-10 23:59:00',
+                "2015-04-15 14:26:00",
+                "2015-04-20 07:30:00",
+                "2015-04-23 13:15:00",
+                "2015-04-21 02:25:00",
+                "2015-04-24 07:47:00",
+                "2015-04-10 23:59:00",
             ],
-            from_tz='UTC',
-            to_tz='UTC',
+            from_tz="UTC",
+            to_tz="UTC",
         )
-        m_result = dtn.resample('T', dropna=True)
+        m_result = dtn.resample("T", dropna=True)
         self.assertTrue(arr_eq(correct_minute, m_result))
 
         correct_second = DateTimeNano(
             [
-                '2015-04-15 14:26:54',
-                '2015-04-20 07:30:00',
-                '2015-04-23 13:15:24',
-                '2015-04-21 02:25:11',
-                '2015-04-24 07:47:54',
-                '2015-04-10 23:59:59',
+                "2015-04-15 14:26:54",
+                "2015-04-20 07:30:00",
+                "2015-04-23 13:15:24",
+                "2015-04-21 02:25:11",
+                "2015-04-24 07:47:54",
+                "2015-04-10 23:59:59",
             ],
-            from_tz='UTC',
-            to_tz='UTC',
+            from_tz="UTC",
+            to_tz="UTC",
         )
-        s_result = dtn.resample('S', dropna=True)
+        s_result = dtn.resample("S", dropna=True)
         self.assertTrue(arr_eq(correct_second, s_result))
 
         correct_ms = DateTimeNano(
             [
-                '2015-04-15 14:26:54.735',
-                '2015-04-20 07:30:00.858',
-                '2015-04-23 13:15:24.526',
-                '2015-04-21 02:25:11.768',
-                '2015-04-24 07:47:54.737',
-                '2015-04-10 23:59:59.376',
+                "2015-04-15 14:26:54.735",
+                "2015-04-20 07:30:00.858",
+                "2015-04-23 13:15:24.526",
+                "2015-04-21 02:25:11.768",
+                "2015-04-24 07:47:54.737",
+                "2015-04-10 23:59:59.376",
             ],
-            from_tz='UTC',
-            to_tz='UTC',
+            from_tz="UTC",
+            to_tz="UTC",
         )
-        ms_result = dtn.resample('L', dropna=True)
+        ms_result = dtn.resample("L", dropna=True)
         self.assertTrue(arr_eq(correct_ms, ms_result))
 
         correct_us = DateTimeNano(
             [
-                '2015-04-15 14:26:54.735321',
-                '2015-04-20 07:30:00.858219',
-                '2015-04-23 13:15:24.526871',
-                '2015-04-21 02:25:11.768548',
-                '2015-04-24 07:47:54.737776',
-                '2015-04-10 23:59:59.376589',
+                "2015-04-15 14:26:54.735321",
+                "2015-04-20 07:30:00.858219",
+                "2015-04-23 13:15:24.526871",
+                "2015-04-21 02:25:11.768548",
+                "2015-04-24 07:47:54.737776",
+                "2015-04-10 23:59:59.376589",
             ],
-            from_tz='UTC',
-            to_tz='UTC',
+            from_tz="UTC",
+            to_tz="UTC",
         )
-        us_result = dtn.resample('U', dropna=True)
+        us_result = dtn.resample("U", dropna=True)
         self.assertTrue(arr_eq(correct_us, us_result))
 
     # def test_resample_float(self):
@@ -2364,18 +2285,18 @@ class DateTime_Test(unittest.TestCase):
 
         # bad float
         with self.assertRaises(ValueError):
-            dtn.resample('123..T')
+            dtn.resample("123..T")
 
         # no freq string
         with self.assertRaises(ValueError):
-            dtn.resample('123')
+            dtn.resample("123")
 
         # invalid freq string
         with self.assertRaises(ValueError):
-            dtn.resample('2BAD')
+            dtn.resample("2BAD")
 
     def test_copy_to_tz(self):
-        dtn = DateTimeNano.random(5, from_tz='GMT', to_tz='NYC')
+        dtn = DateTimeNano.random(5, from_tz="GMT", to_tz="NYC")
         dtn2 = dtn.copy()
         self.assertEqual(dtn2._timezone._timezone_str, dtn._timezone._timezone_str)
         self.assertEqual(dtn2._timezone._to_tz, dtn._timezone._to_tz)
@@ -2388,42 +2309,43 @@ class DateTime_Test(unittest.TestCase):
 
     def test_start_of_week(self):
         x = DateTimeNano(
-            ['2019-11-05', '2019-11-04', '2019-11-10 23:00:00', '2019-11-11'],
-            from_tz='NYC',
+            ["2019-11-05", "2019-11-04", "2019-11-10 23:00:00", "2019-11-11"],
+            from_tz="NYC",
         )
         y = x.start_of_week
-        z = Date(['2019-11-04', '2019-11-04', '2019-11-04', '2019-11-11'])
+        z = Date(["2019-11-04", "2019-11-04", "2019-11-04", "2019-11-11"])
         self.assertTrue(arr_eq(z, y))
 
     def test_cat_expansion(self):
-        x = DateTimeNano(['20191126', '20191125', '20191126'], from_tz='NYC')
+        x = DateTimeNano(["20191126", "20191125", "20191126"], from_tz="NYC")
         c = Cat(x)
         y = DateTimeNano(c)
         self.assertTrue(arr_eq(x, y))
 
-        c1 = Cat(['20191126', '20191125', '20191126'])
-        z = DateTimeNano(c1, format='%Y%m%d', from_tz="NYC")
+        c1 = Cat(["20191126", "20191125", "20191126"])
+        z = DateTimeNano(c1, format="%Y%m%d", from_tz="NYC")
         self.assertTrue(arr_eq(z, y))
 
     def test_cut_time(self):
-        import riptable as rt
         import numpy as np
+
+        import riptable as rt
 
         arr1 = DateTimeNano(
             [
-                '20191119 09:30:17.557593707',
-                '20191119 15:31:32.216792000',
-                '20191121 11:28:23.519020994',
-                '20191121 11:28:56.822878000',
-                '20191121 14:01:39.112893000',
-                '20191121 15:46:10.838007105',
-                '20191122 11:53:05.974525000',
-                '20191125 10:40:32.079135847',
-                '20191126 10:00:43.232329062',
-                '20191126 14:04:31.421071000',
+                "20191119 09:30:17.557593707",
+                "20191119 15:31:32.216792000",
+                "20191121 11:28:23.519020994",
+                "20191121 11:28:56.822878000",
+                "20191121 14:01:39.112893000",
+                "20191121 15:46:10.838007105",
+                "20191122 11:53:05.974525000",
+                "20191125 10:40:32.079135847",
+                "20191126 10:00:43.232329062",
+                "20191126 14:04:31.421071000",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
 
         assert_cat_true = lambda left, right: self.assertTrue(arr_eq(left, right))
@@ -2433,54 +2355,50 @@ class DateTime_Test(unittest.TestCase):
         test_expect = rt.Categorical(
             np.array([1, 7, 2, 2, 5, 7, 3, 2, 1, 5]),
             rt.FastArray(
-                [b'09:30', b'10:30', b'11:30', b'12:30', b'13:30', b'14:30', b'15:30'],
-                dtype='|S5',
+                [b"09:30", b"10:30", b"11:30", b"12:30", b"13:30", b"14:30", b"15:30"],
+                dtype="|S5",
             ),
             base_index=1,
         )
         assert_cat_true(test_result, test_expect)
 
         # test 2, start_time overridden
-        test_result = arr1.cut_time(
-            rt.TimeSpan(1, "h"), start_time=(9, 0), label="left", nyc=True
-        )
+        test_result = arr1.cut_time(rt.TimeSpan(1, "h"), start_time=(9, 0), label="left", nyc=True)
         test_expect = rt.Categorical(
             np.array([1, 7, 3, 3, 6, 7, 3, 2, 2, 6]),
             rt.FastArray(
                 [
-                    b'09:00',
-                    b'10:00',
-                    b'11:00',
-                    b'12:00',
-                    b'13:00',
-                    b'14:00',
-                    b'15:00',
-                    b'16:00',
+                    b"09:00",
+                    b"10:00",
+                    b"11:00",
+                    b"12:00",
+                    b"13:00",
+                    b"14:00",
+                    b"15:00",
+                    b"16:00",
                 ],
-                dtype='|S5',
+                dtype="|S5",
             ),
             base_index=1,
         )
         assert_cat_true(test_result, test_expect)
 
         # test 3, right end point labeling
-        test_result = arr1.cut_time(
-            rt.TimeSpan(1, "h"), start_time=(9, 0), label="right", nyc=True
-        )
+        test_result = arr1.cut_time(rt.TimeSpan(1, "h"), start_time=(9, 0), label="right", nyc=True)
         test_expect = rt.Categorical(
             np.array([1, 7, 3, 3, 6, 7, 3, 2, 2, 6]),
             rt.FastArray(
                 [
-                    b'10:00',
-                    b'11:00',
-                    b'12:00',
-                    b'13:00',
-                    b'14:00',
-                    b'15:00',
-                    b'16:00',
-                    b'16:15',
+                    b"10:00",
+                    b"11:00",
+                    b"12:00",
+                    b"13:00",
+                    b"14:00",
+                    b"15:00",
+                    b"16:00",
+                    b"16:15",
                 ],
-                dtype='|S5',
+                dtype="|S5",
             ),
             base_index=1,
         )
@@ -2499,16 +2417,16 @@ class DateTime_Test(unittest.TestCase):
             np.array([1, 8, 8, 8, 8, 8, 8, 6, 2, 8]),
             rt.FastArray(
                 [
-                    b'pre',
-                    b'10:00',
-                    b'10:10',
-                    b'10:20',
-                    b'10:30',
-                    b'10:40',
-                    b'10:50',
-                    b'post',
+                    b"pre",
+                    b"10:00",
+                    b"10:10",
+                    b"10:20",
+                    b"10:30",
+                    b"10:40",
+                    b"10:50",
+                    b"post",
                 ],
-                dtype='|S5',
+                dtype="|S5",
             ),
             base_index=1,
         )
@@ -2524,58 +2442,67 @@ class DateTime_Test(unittest.TestCase):
         test_expect = rt.Categorical(
             np.array([1, 5, 4, 4, 5, 5, 4, 3, 3, 5]),
             rt.FastArray(
-                [b'to 09:45', b'to 10:00', b'to 11:00', b'to 12:00', b'to 16:00'],
-                dtype='|S8',
+                [b"to 09:45", b"to 10:00", b"to 11:00", b"to 12:00", b"to 16:00"],
+                dtype="|S8",
             ),
             base_index=1,
         )
         assert_cat_true(test_result, test_expect)
 
         # test 6, same as 1 but without nyc=True
-        test_result = arr1.cut_time(
-            rt.TimeSpan(1, "h"), label="left", start_time=(9, 30), end_time=(16, 15)
-        )
+        test_result = arr1.cut_time(rt.TimeSpan(1, "h"), label="left", start_time=(9, 30), end_time=(16, 15))
         test_expect = rt.Categorical(
             np.array([1, 7, 2, 2, 5, 7, 3, 2, 1, 5]),
             rt.FastArray(
-                [b'09:30', b'10:30', b'11:30', b'12:30', b'13:30', b'14:30', b'15:30'],
-                dtype='|S5',
+                [b"09:30", b"10:30", b"11:30", b"12:30", b"13:30", b"14:30", b"15:30"],
+                dtype="|S5",
             ),
             base_index=1,
         )
         assert_cat_true(test_result, test_expect)
 
+        # Test the short label format
+        arr1[0] = DateTimeNano("20191119 09:40:00.000000000", from_tz="NYC", to_tz="NYC")[0]
+        test_result = arr1.cut_time(rt.TimeSpan(1, "s"), label="left", nyc=True)
+        short_labels_expected = [
+            "09:39:59",
+            "15:31:32",
+            "11:28:23",
+            "11:28:56",
+        ]
+        self.assertTrue((test_result[:4] == short_labels_expected).all())
+
     def test_ravel(self):
         z = Date(arange(1, 1000, 10)).ravel()[0]
 
     def test_timespanscalar(self):
-        self.assertTrue(TimeSpan([100], unit='s')[0].seconds == 100)
+        self.assertTrue(TimeSpan([100], unit="s")[0].seconds == 100)
 
     def test_datescalar_strftime(self):
-        ret = Date(utcnow(4))[0].strftime('%D')
+        ret = Date(utcnow(4))[0].strftime("%D")
         # make sure a string was returned
         self.assertTrue(isinstance(ret, str))
-        ret = Date('2038-01-19')[0].strftime('%Y%m%d')
-        self.assertEquals('20380119', ret)
-        ret = Date('2038-01-20')[0].strftime('%Y%m%d')
-        self.assertEquals('20380120', ret)
-        ret = Date('2099-12-31')[0].strftime('%Y%m%d')
-        self.assertEquals('20991231', ret)
+        ret = Date("2038-01-19")[0].strftime("%Y%m%d")
+        self.assertEquals("20380119", ret)
+        ret = Date("2038-01-20")[0].strftime("%Y%m%d")
+        self.assertEquals("20380120", ret)
+        ret = Date("2099-12-31")[0].strftime("%Y%m%d")
+        self.assertEquals("20991231", ret)
 
     def test_datescalars_strftime(self):
-        ret = Date('2038-01-19').strftime('%Y%m%d')
-        self.assertTrue(('20380119' == ret).all())
-        ret = Date('2038-01-20').strftime('%Y%m%d')
-        self.assertTrue(('20380120' == ret).all())
-        ret = Date('2099-12-31').strftime('%Y%m%d')
-        self.assertTrue(('20991231' == ret).all())
+        ret = Date("2038-01-19").strftime("%Y%m%d")
+        self.assertTrue(("20380119" == ret).all())
+        ret = Date("2038-01-20").strftime("%Y%m%d")
+        self.assertTrue(("20380120" == ret).all())
+        ret = Date("2099-12-31").strftime("%Y%m%d")
+        self.assertTrue(("20991231" == ret).all())
 
     def test_timespandivision(self):
-        x = TimeSpan('00:30:00')[0] / TimeSpan('01:00:00')[0]
+        x = TimeSpan("00:30:00")[0] / TimeSpan("01:00:00")[0]
         self.assertTrue(x == 0.5)
-        x = TimeSpan('00:30:00') / TimeSpan('01:00:00')
+        x = TimeSpan("00:30:00") / TimeSpan("01:00:00")
         self.assertTrue(x[0] == 0.5)
-        x = TimeSpanScalar('00:30:00') / TimeSpan('01:00:00')[0]
+        x = TimeSpanScalar("00:30:00") / TimeSpan("01:00:00")[0]
         self.assertTrue(x == 0.5)
 
     def test_maximumdatetime(self):
@@ -2587,26 +2514,26 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(isinstance(x, DateTimeNano))
 
     def test_timespan_string_cmp(self):
-        self.assertTrue( (TimeSpan(['12:00:00']) == '12:00:00').all() )
-        self.assertTrue((TimeSpan(['12:00:00'])[0] == '12:00:00').all())
+        self.assertTrue((TimeSpan(["12:00:00"]) == "12:00:00").all())
+        self.assertTrue((TimeSpan(["12:00:00"])[0] == "12:00:00").all())
 
     def test_datetimenano_view_unspecified_type(self) -> None:
         """Test how DateTimeNano.view() behaves when an output type is not explicitly specified."""
         arr = DateTimeNano(
             [
-                '20191119 09:30:17.557593707',
-                '20191119 15:31:32.216792000',
-                '20191121 11:28:23.519020994',
-                '20191121 11:28:56.822878000',
-                '20191121 14:01:39.112893000',
-                '20191121 15:46:10.838007105',
-                '20191122 11:53:05.974525000',
-                '20191125 10:40:32.079135847',
-                '20191126 10:00:43.232329062',
-                '20191126 14:04:31.421071000',
+                "20191119 09:30:17.557593707",
+                "20191119 15:31:32.216792000",
+                "20191121 11:28:23.519020994",
+                "20191121 11:28:56.822878000",
+                "20191121 14:01:39.112893000",
+                "20191121 15:46:10.838007105",
+                "20191122 11:53:05.974525000",
+                "20191125 10:40:32.079135847",
+                "20191126 10:00:43.232329062",
+                "20191126 14:04:31.421071000",
             ],
-            from_tz='NYC',
-            to_tz='NYC',
+            from_tz="NYC",
+            to_tz="NYC",
         )
         arr.set_name(f"my_test_{type(arr).__name__}")
         arr_view = arr.view()
@@ -2620,7 +2547,7 @@ class DateTime_Test(unittest.TestCase):
 
     def test_date_view_unspecified_type(self) -> None:
         """Test how Date.view() behaves when an output type is not explicitly specified."""
-        arr = Date(['2019-11-04', '2019-11-04', '2019-11-04', '2019-11-11'])
+        arr = Date(["2019-11-04", "2019-11-04", "2019-11-04", "2019-11-11"])
         arr.set_name(f"my_test_{type(arr).__name__}")
         arr_view = arr.view()
         self.assertEqual(type(arr), type(arr_view))
@@ -2633,16 +2560,18 @@ class DateTime_Test(unittest.TestCase):
 
     def test_timespan_view_unspecified_type(self) -> None:
         """Test how Date.view() behaves when an output type is not explicitly specified."""
-        arr = TimeSpan([
-            '09:30:17.557593707',
-            '15:31:32.216792000',
-            '11:28:23.519020994',
-            '19:46:10.838007105',
-            '09:30:29.999999999',
-            '10:40:00.000000000',
-            '00:00:00.999999999',
-            '23:59:59.999999999',
-        ])
+        arr = TimeSpan(
+            [
+                "09:30:17.557593707",
+                "15:31:32.216792000",
+                "11:28:23.519020994",
+                "19:46:10.838007105",
+                "09:30:29.999999999",
+                "10:40:00.000000000",
+                "00:00:00.999999999",
+                "23:59:59.999999999",
+            ]
+        )
         arr.set_name(f"my_test_{type(arr).__name__}")
         arr_view = arr.view()
         self.assertEqual(type(arr), type(arr_view))
@@ -2653,39 +2582,39 @@ class DateTime_Test(unittest.TestCase):
         # TimeSpan-specific checks
         # (None)
 
+
 class TestTimeZone(unittest.TestCase):
     def test_equal_positive(self) -> None:
-        tz1 = TimeZone(from_tz='NYC', to_tz='GMT')
-        tz2 = TimeZone(from_tz='NYC', to_tz='GMT')
+        tz1 = TimeZone(from_tz="NYC", to_tz="GMT")
+        tz2 = TimeZone(from_tz="NYC", to_tz="GMT")
 
         # The two instances should be considered equal since they have
         # equal `from_tz` and `to_tz` inputs.
         self.assertEqual(tz1, tz2)
 
     def test_equal_negative_diff_fromtz(self) -> None:
-        tz1 = TimeZone(from_tz='GMT', to_tz='NYC')
-        tz2 = TimeZone(from_tz='NYC', to_tz='NYC')
+        tz1 = TimeZone(from_tz="GMT", to_tz="NYC")
+        tz2 = TimeZone(from_tz="NYC", to_tz="NYC")
 
         # The two instances should be considered unequal since they have
         # unequal `from_tz` inputs.
         self.assertNotEqual(tz1, tz2)
 
     def test_equal_negative_diff_totz(self) -> None:
-        tz1 = TimeZone(from_tz='NYC', to_tz='NYC')
-        tz2 = TimeZone(from_tz='NYC', to_tz='GMT')
+        tz1 = TimeZone(from_tz="NYC", to_tz="NYC")
+        tz2 = TimeZone(from_tz="NYC", to_tz="GMT")
 
         # The two instances should be considered unequal since they have
         # unequal `to_tz` inputs.
         self.assertNotEqual(tz1, tz2)
 
     def test_repr(self) -> None:
-        test_tz = TimeZone(from_tz='NYC', to_tz='GMT')
+        test_tz = TimeZone(from_tz="NYC", to_tz="GMT")
 
         # Quick check that we can call repr() on the object (without some kind of
         # exception being raised) and that it returns a reasonable result.
         test_tz_repr = repr(test_tz)
         self.assertEqual(test_tz_repr, "TimeZone(from_tz='NYC', to_tz='GMT')")
-
 
 
 # TODO RIP-486 add tests for other date types from rt_datetime
@@ -2694,58 +2623,85 @@ class TestTimeZone(unittest.TestCase):
     [
         pytest.param(
             DateTimeNano,
+            (DateTimeNano([], from_tz="NYC", to_tz="NYC"),),
+        ),
+        (
+            DateTimeNano,
             (
-                    DateTimeNano([], from_tz='NYC', to_tz='NYC'),
+                DateTimeNano([], from_tz="NYC", to_tz="NYC"),
+                DateTimeNano(["20191126 10:00:43.232329062"], from_tz="NYC", to_tz="NYC"),
             ),
         ),
         (
             DateTimeNano,
             (
-                    DateTimeNano([], from_tz='NYC', to_tz='NYC'),
-                    DateTimeNano(['20191126 10:00:43.232329062'], from_tz='NYC', to_tz='NYC')
-            )
+                DateTimeNano(
+                    [
+                        "20191126 14:04:31.421071000",
+                    ],
+                    from_tz="NYC",
+                    to_tz="NYC",
+                ),
+                DateTimeNano([], from_tz="NYC", to_tz="NYC"),
+            ),
         ),
         (
             DateTimeNano,
             (
-                    DateTimeNano(['20191126 14:04:31.421071000',], from_tz='NYC', to_tz='NYC'),
-                    DateTimeNano([], from_tz='NYC', to_tz='NYC')
-            )
+                DateTimeNano(
+                    ["20191119 09:30:17.557593707", "20191119 15:31:32.216792000", "20191121 11:28:23.519020994"],
+                    from_tz="NYC",
+                    to_tz="NYC",
+                ),
+                DateTimeNano(
+                    ["20191119 09:30:17.557593707", "20191119 15:31:32.216792000", "20191121 11:28:23.519020994"],
+                    from_tz="NYC",
+                    to_tz="NYC",
+                ),
+                DateTimeNano(
+                    [
+                        "20191126 10:00:43.232329062",
+                        "20191126 14:04:31.421071000",
+                    ],
+                    from_tz="NYC",
+                    to_tz="NYC",
+                ),
+                DateTimeNano(
+                    [
+                        "20191126 10:00:43.232329062",
+                        "20191126 14:04:31.421071000",
+                    ],
+                    from_tz="NYC",
+                    to_tz="NYC",
+                ),
+            ),
         ),
-        (
-            DateTimeNano,
-            (
-                    DateTimeNano(['20191119 09:30:17.557593707', '20191119 15:31:32.216792000', '20191121 11:28:23.519020994'], from_tz='NYC', to_tz='NYC'),
-                    DateTimeNano(['20191119 09:30:17.557593707', '20191119 15:31:32.216792000', '20191121 11:28:23.519020994'], from_tz='NYC', to_tz='NYC'),
-                    DateTimeNano(['20191126 10:00:43.232329062', '20191126 14:04:31.421071000',], from_tz='NYC', to_tz='NYC'),
-                    DateTimeNano(['20191126 10:00:43.232329062', '20191126 14:04:31.421071000',], from_tz='NYC', to_tz='NYC'),
-            )
-        ),
-    ]
+    ],
 )
 def test_concatenate_preserves_datetime_type_regression(typ, arrays):
-    fn = 'test_concatenate_preserves_datetime_type_regression'
+    fn = "test_concatenate_preserves_datetime_type_regression"
     # assumption - tuple of arrays are same type; catch tester errors
     # TODO test scenarios where this assumption does not hold
-    assert all([isinstance(a, typ) for a in arrays]), f'{fn}: expected tuple of arrays to be the same type'
+    assert all([isinstance(a, typ) for a in arrays]), f"{fn}: expected tuple of arrays to be the same type"
 
     result = concatenate(arrays)
     assert isinstance(result, typ)
 
+
 @pytest.mark.parametrize(
     "obj",
     [
-        pytest.param(Date(['2018-02-01']), id='Date'),
-        pytest.param(DateSpan([123]), id='DateSpan'),
-        pytest.param(DateTimeNano(['19900401 02:00:00'], from_tz='NYC'), id='DateTimeNano_NYC'),
-        pytest.param(DateTimeNano(['20210921 02:21:21'], from_tz='GMT'), id='DateTimeNano_GMT'),
-        pytest.param(TimeSpan(['12.34']), id='TimeSpan'),
+        pytest.param(Date(["2018-02-01"]), id="Date"),
+        pytest.param(DateSpan([123]), id="DateSpan"),
+        pytest.param(DateTimeNano(["19900401 02:00:00"], from_tz="NYC"), id="DateTimeNano_NYC"),
+        pytest.param(DateTimeNano(["20210921 02:21:21"], from_tz="GMT"), id="DateTimeNano_GMT"),
+        pytest.param(TimeSpan(["12.34"]), id="TimeSpan"),
         # the following don't return the same type from self.view()
-        #pytest.param(DateScalar(34567), id='DateScalar'),
-        #pytest.param(DateSpanScalar(12345), id='DateSpanScalar'),
-        #pytest.param(DateTimeNanoScalar(87654321), id='DateTimeNanoScalar'),
-        #pytest.param(TimeSpanScalar(8.76543), id='TimeSpanScalar'),
-    ]
+        # pytest.param(DateScalar(34567), id='DateScalar'),
+        # pytest.param(DateSpanScalar(12345), id='DateSpanScalar'),
+        # pytest.param(DateTimeNanoScalar(87654321), id='DateTimeNanoScalar'),
+        # pytest.param(TimeSpanScalar(8.76543), id='TimeSpanScalar'),
+    ],
 )
 def test_new_from_template(obj):
     objView = obj.view()
@@ -2755,14 +2711,15 @@ def test_new_from_template(obj):
     missing = [m for m in members if m not in viewMembers]
     assert len(missing) == 0, f"Not found: {missing}"
 
+
 @pytest.mark.parametrize(
     "cls,arr",
     [
-        pytest.param(Date, np.array(['2018-02-01']), id='Date'),
-        pytest.param(DateSpan, np.array([123]), id='DateSpan'),
-        pytest.param(DateTimeNano, np.array([1632164888]), id='DateTimeNano'),
-        pytest.param(TimeSpan, np.array(['12.34']), id='TimeSpan'),
-    ]
+        pytest.param(Date, np.array(["2018-02-01"]), id="Date"),
+        pytest.param(DateSpan, np.array([123]), id="DateSpan"),
+        pytest.param(DateTimeNano, np.array([1632164888]), id="DateTimeNano"),
+        pytest.param(TimeSpan, np.array(["12.34"]), id="TimeSpan"),
+    ],
 )
 def test_view_casting(cls, arr):
     obj = cls(arr)
@@ -2773,5 +2730,6 @@ def test_view_casting(cls, arr):
     missing = [m for m in members if m not in viewMembers]
     assert len(missing) == 0, f"Not found: {missing}"
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     tester = unittest.main()

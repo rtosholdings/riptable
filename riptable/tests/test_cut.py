@@ -1,14 +1,15 @@
 import unittest
+
 import numpy as np
 
-from riptable import cut, qcut, FA, Categorical, FastArray, arange
+from riptable import FA, Categorical, FastArray, arange, cut, qcut
 
 
 class Cut_Test(unittest.TestCase):
-    '''
+    """
     TODO: add more tests for different types
     also include string types
-    '''
+    """
 
     def test_cut(self):
         c = cut(arange(10), 3)
@@ -26,12 +27,12 @@ class Cut_Test(unittest.TestCase):
         c = cut(
             FA([2, 4, 6, 8, 10]),
             FA([0, 2, 4, 6, 8, 10]),
-            labels=['a', 'b', 'c', 'd', 'e'],
+            labels=["a", "b", "c", "d", "e"],
         )
         self.assertTrue(sum(c._np - FA([1, 2, 3, 4, 5])) == 0)
 
         a = np.array([1, 7, 5, 4, 6, 3])
-        l = FA([b'1.0->3.0', b'3.0->5.0', b'5.0->7.0'])
+        l = FA([b"1.0->3.0", b"3.0->5.0", b"5.0->7.0"])
 
         c = cut(a, 3)
         self.assertIsInstance(c, Categorical)
@@ -69,14 +70,14 @@ class Cut_Test(unittest.TestCase):
         x = arange(4).reshape(2, 2)
         knots = [-0.5, 0.5, 1.5, 2.5, 3.5]
         c = cut(x[:, 1], knots)
-        l = FastArray([b'-0.5->0.5', b'0.5->1.5', b'1.5->2.5', b'2.5->3.5'])
+        l = FastArray([b"-0.5->0.5", b"0.5->1.5", b"1.5->2.5", b"2.5->3.5"])
         self.assertTrue((c.category_array == l).all())
 
         # inf upcast test
         x = np.array([0, 1, 10, 100, 5])
         knots = [-np.inf, 2, 11, 50, np.inf]
         c = cut(x, knots)
-        self.assertTrue((c._fa == FA([1,1,2,4,2])).all())
+        self.assertTrue((c._fa == FA([1, 1, 2, 4, 2])).all())
 
     def test_qcut(self):
         c = qcut(arange(10), 3)
@@ -103,32 +104,17 @@ class Cut_Test(unittest.TestCase):
         c = qcut(range(5), 4)
         self.assertIsInstance(c, Categorical)
         self.assertTrue(sum(c._np - FA([2, 2, 3, 4, 5])) == 0)
-        self.assertTrue(
-            (
-                c.category_array
-                == [b'Clipped', b'0.0->1.0', b'1.0->2.0', b'2.0->3.0', b'3.0->4.0']
-            ).all()
-        )
+        self.assertTrue((c.category_array == [b"Clipped", b"0.0->1.0", b"1.0->2.0", b"2.0->3.0", b"3.0->4.0"]).all())
 
         c = qcut(range(5), 4, labels=True)
         self.assertIsInstance(c, Categorical)
         self.assertTrue(sum(c._np - FA([2, 2, 3, 4, 5])) == 0)
-        self.assertTrue(
-            (
-                c.category_array
-                == [b'Clipped', b'0.0->1.0', b'1.0->2.0', b'2.0->3.0', b'3.0->4.0']
-            ).all()
-        )
+        self.assertTrue((c.category_array == [b"Clipped", b"0.0->1.0", b"1.0->2.0", b"2.0->3.0", b"3.0->4.0"]).all())
 
         c = qcut(range(5), 4, labels=None)
         self.assertIsInstance(c, Categorical)
         self.assertTrue(sum(c._np - FA([2, 2, 3, 4, 5])) == 0)
-        self.assertTrue(
-            (
-                c.category_array
-                == [b'Clipped', b'0.0->1.0', b'1.0->2.0', b'2.0->3.0', b'3.0->4.0']
-            ).all()
-        )
+        self.assertTrue((c.category_array == [b"Clipped", b"0.0->1.0", b"1.0->2.0", b"2.0->3.0", b"3.0->4.0"]).all())
 
         c = qcut(range(5), 3, labels=["good", "medium", "bad"])
         self.assertIsInstance(c, Categorical)
@@ -138,15 +124,13 @@ class Cut_Test(unittest.TestCase):
                 [
                     (h == t)
                     for (h, t) in zip(
-                        c.expand_array.astype('U'),
-                        ['good', 'good', 'medium', 'bad', 'bad'],
+                        c.expand_array.astype("U"),
+                        ["good", "good", "medium", "bad", "bad"],
                     )
                 ]
             ).all()
         )
-        self.assertTrue(
-            (c.category_array == [[b'Clipped', b'good', b'medium', b'bad']]).all()
-        )
+        self.assertTrue((c.category_array == [[b"Clipped", b"good", b"medium", b"bad"]]).all())
 
         c = qcut(range(5), 4, labels=False)
         self.assertIsInstance(c, FastArray)
@@ -157,14 +141,15 @@ class Cut_Test(unittest.TestCase):
             c = cut(
                 FA([2, 4, 6, 8, 10]),
                 FA([0, 2, 4, 6, 8, 10]),
-                labels=['a', 'b', 'c', 'd', 'e', 'f'],
+                labels=["a", "b", "c", "d", "e", "f"],
             )
 
     def test_qcut_drop_dups(self):
-        c = qcut([1,1,1,1,1,1,1,2,2,2,11,12,13], 4, duplicates = 'drop')
+        c = qcut([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 11, 12, 13], 4, duplicates="drop")
         self.assertIsInstance(c, Categorical)
-        self.assertTrue(sum(c._np - FA([2,2,2,2,2,2,2,2,2,2,3,3,3])) == 0)
-        self.assertTrue((c.category_array == [b'Clipped', b'1.0->2.0', b'2.0->13.0']).all())
+        self.assertTrue(sum(c._np - FA([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3])) == 0)
+        self.assertTrue((c.category_array == [b"Clipped", b"1.0->2.0", b"2.0->13.0"]).all())
+
 
 if __name__ == "__main__":
     tester = unittest.main()

@@ -1,17 +1,17 @@
 #! /usr/bin/env python
 
-import sys, os
+import os
+import sys
 from contextlib import contextmanager
 from enum import IntEnum
 
-
 __all__ = [
-    'LikertDecision',
-    'redirectStderr2StdoutCtx',
+    "LikertDecision",
+    "redirectStderr2StdoutCtx",
     "redirectStdoutCtx",
     "redirectStdoutAndErrorCtx",
-    'chdirCtx',
-    'new_array_function',
+    "chdirCtx",
+    "new_array_function",
 ]
 
 
@@ -44,7 +44,7 @@ def redirectStderr2StdoutCtx():
 
 
 @contextmanager
-def redirectStdoutCtx(filenameOrStream, mode='w'):
+def redirectStdoutCtx(filenameOrStream, mode="w"):
     if filenameOrStream is None:
         yield sys.stdout
         return
@@ -68,7 +68,7 @@ def redirectStdoutCtx(filenameOrStream, mode='w'):
 
 
 @contextmanager
-def redirectStdoutAndErrorCtx(filenameOrStream, mode='w'):
+def redirectStdoutAndErrorCtx(filenameOrStream, mode="w"):
     if filenameOrStream is None:
         yield sys.stdout
         return

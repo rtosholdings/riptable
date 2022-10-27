@@ -1,8 +1,9 @@
 # $Id$
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 
 def run_all(extra_args=None):
@@ -16,7 +17,7 @@ def run_all(extra_args=None):
     """
     if extra_args is None:
         extra_args = []
-    return pytest.main(extra_args + ['-k', 'test_', os.path.dirname(__file__)])
+    return pytest.main(extra_args + ["-k", "test_", os.path.dirname(__file__)])
 
 
 # Usage: "ipython -m riptable.test_tooling_integration.run"

@@ -11,23 +11,23 @@ __all__ = [
 ]
 
 
-import riptide_cpp as rc
-import numpy as np
 import inspect
-
 from collections import namedtuple
 from contextlib import contextmanager
 from functools import wraps
 from itertools import product
-from typing import List, Mapping, Optional, Union, Callable
-from .benchmark import timestamper
-from ..rt_enum import INVALID_SHORT_NAME
+from typing import Callable, List, Mapping, Optional, Union
+
+import numpy as np
+import riptide_cpp as rc
+
 from ..rt_categorical import Categorical
 from ..rt_dataset import Dataset
+from ..rt_enum import INVALID_SHORT_NAME
 from ..rt_fastarray import FastArray
 from ..rt_multiset import Multiset
 from ..rt_numpy import arange, full
-
+from .benchmark import timestamper
 
 elapsed_ns_colname: str = "elapsed_ns"
 """
@@ -98,9 +98,7 @@ def get_settings_setter_func(key: str) -> Optional[Callable]:
     return None
 
 
-def create_comparison_dataset(
-    bench_datasets: Mapping[str, Dataset], destroy: bool = False
-) -> Dataset:
+def create_comparison_dataset(bench_datasets: Mapping[str, Dataset], destroy: bool = False) -> Dataset:
     """
     TODO
 
@@ -118,9 +116,7 @@ def create_comparison_dataset(
     impl_datasets: List[Dataset] = []
     for impl_name, impl_bench_data in bench_datasets.items():
         data_copy = impl_bench_data if destroy else impl_bench_data.copy(deep=False)
-        data_copy[implementation_colname] = Categorical([impl_name]).tile(
-            len(data_copy)
-        )
+        data_copy[implementation_colname] = Categorical([impl_name]).tile(len(data_copy))
         data_copy.col_move_to_front([implementation_colname])
         impl_datasets.append(data_copy)
 
@@ -238,9 +234,7 @@ def benchmark(*_benchmark_arguments, **_benchmark_kwargs):
         # validate function arguments
         if inspect.isclass(func):
             # @benchmark assumes it's decorating a function
-            raise ValueError(
-                f"'@benchmark' cannot be applied to a class {func.__name__}"
-            )
+            raise ValueError(f"'@benchmark' cannot be applied to a class {func.__name__}")
 
         # TODO handle benchmark functions that are instance or static methods
         # 'cls' and 'self' will appear in the argspec
@@ -261,9 +255,7 @@ def benchmark(*_benchmark_arguments, **_benchmark_kwargs):
         # Benchmark parameter and setting checks.
         func_params = set(argspec_args)
         setting_params = benchmark_params.keys() - func_params
-        param_symmetric_diff = func_params.union(setting_params).symmetric_difference(
-            benchmark_params.keys()
-        )
+        param_symmetric_diff = func_params.union(setting_params).symmetric_difference(benchmark_params.keys())
         if param_symmetric_diff:
             raise ValueError(
                 f"'@benchmark', when benchmarking function {func.__name__}, got param and / or settings that are not in benchmark_params.\nBenchmark parameters {benchmark_params}.\nBenchmark function parameters {func_params}\nBenchmark settings {setting_params}\nSymmetric difference between {param_symmetric_diff}"
@@ -273,18 +265,11 @@ def benchmark(*_benchmark_arguments, **_benchmark_kwargs):
         def wrapper(*args, **kwargs) -> Optional[Dataset]:
             benchmark_results: List[Dataset] = []
             # param_product contains a product sweep of all the parameters parameter values.
-            param_product = product(
-                *[
-                    benchmark_params[param_name]
-                    for param_name in benchmark_params.keys()
-                ]
-            )
+            param_product = product(*[benchmark_params[param_name] for param_name in benchmark_params.keys()])
             for i, param_values in enumerate(param_product):
                 # Maintain two dictionaries for this trials parameters and settings values.
                 setting_param_to_value = {}
-                trial_param_to_value = dict.fromkeys(
-                    benchmark_params, INVALID_SHORT_NAME
-                )
+                trial_param_to_value = dict.fromkeys(benchmark_params, INVALID_SHORT_NAME)
                 for k, v in zip(benchmark_params.keys(), param_values):
                     if k in setting_params:
                         setting_param_to_value[k] = v

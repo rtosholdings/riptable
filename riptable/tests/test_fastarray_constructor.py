@@ -1,6 +1,8 @@
-import numpy as np
-import riptable as rt
 import unittest
+
+import numpy as np
+
+import riptable as rt
 
 
 class FastArrayConstructionTest(unittest.TestCase):
@@ -18,7 +20,7 @@ class FastArrayConstructionTest(unittest.TestCase):
 
             assert (l == r) or (isNaN(l) and isNaN(r))
 
-        if hasattr(lv, '__len__'):
+        if hasattr(lv, "__len__"):
             assert len(lv) == len(rv)
             length = len(lv)
             for i in range(0, length):

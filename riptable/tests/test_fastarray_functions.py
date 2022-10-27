@@ -1,40 +1,41 @@
 import numpy as np
+
 import riptable as rt
 
 arithmetic_functions = [
-    '__add__',
-    '__iadd__',
-    '__sub__',
-    '__isub__',
-    '__mul__',
-    '__imul__',
-    '__floordiv__',
-    '__ifloordiv__',
-    '__truediv__',
-    '__itruediv__',
-    '__mod__',
-    '__imod__',
-    '__pow__',
-    '__ipow__',
+    "__add__",
+    "__iadd__",
+    "__sub__",
+    "__isub__",
+    "__mul__",
+    "__imul__",
+    "__floordiv__",
+    "__ifloordiv__",
+    "__truediv__",
+    "__itruediv__",
+    "__mod__",
+    "__imod__",
+    "__pow__",
+    "__ipow__",
 ]
 
-comparison_functions = ['__lt__', '__gt__', '__ge__', '__le__', '__eq__', '__ne__']
+comparison_functions = ["__lt__", "__gt__", "__ge__", "__le__", "__eq__", "__ne__"]
 
 ##accepts array as param
 trig_functions = [
-    'sin',
-    'cos',
-    'tan',
-    'arcsin',
-    'arccos',
-    'arctan',
-    'hypot',
-    'arctan2',
-    'degrees',
-    'radians',
-    'unwrap' 'sinh',
-    'deg2rad',
-    'deg2deg',
+    "sin",
+    "cos",
+    "tan",
+    "arcsin",
+    "arccos",
+    "arctan",
+    "hypot",
+    "arctan2",
+    "degrees",
+    "radians",
+    "unwrap" "sinh",
+    "deg2rad",
+    "deg2deg",
 ]
 
 ##accepts array as param
@@ -49,28 +50,28 @@ trig_functions = [
 #
 
 reduction_functions = [
-    'prod',
-    'sum',
-    'nanprod',
-    'nansum',
-    'cumprod',
-    'cumsum',
-    'nancumprod',
-    'diff',
-    'ediff1d',
-    'gradient',
+    "prod",
+    "sum",
+    "nanprod",
+    "nansum",
+    "cumprod",
+    "cumsum",
+    "nancumprod",
+    "diff",
+    "ediff1d",
+    "gradient",
     # 'cross',
     # 'trapz'
 ]
 
 exponent_log_functions = [
-    'exp',
-    'expm1',
-    'exp2',
-    'log',
-    'log10',
-    'log2',
-    'log1p',
+    "exp",
+    "expm1",
+    "exp2",
+    "log",
+    "log10",
+    "log2",
+    "log1p",
     # 'logaddexp',
     # 'logaddexp2'
 ]
@@ -96,16 +97,17 @@ TEST_SIZE = 100
 binary_functions = [arithmetic_functions, comparison_functions]
 unary_functions = [exponent_log_functions, reduction_functions]
 
-from numpy.testing import (
-    assert_array_equal,
-    assert_array_almost_equal,
-    assert_equal,
-    assert_allclose,
-)
-import unittest
-import pytest
 import copy
+import unittest
 from decimal import Decimal
+
+import pytest
+from numpy.testing import (
+    assert_allclose,
+    assert_array_almost_equal,
+    assert_array_equal,
+    assert_equal,
+)
 
 
 @pytest.mark.parametrize(
@@ -185,7 +187,7 @@ def test_duplicated_keep(keep, expected):
             0.5,
             None,
             None,
-            'float64',
+            "float64",
             rt.FA(
                 [
                     1.0,
@@ -256,9 +258,7 @@ def test_ema_decay(decay_rate, filter, reset, dtype_override, expected):
     if dtype_override is None:
         result = data.ema_decay(times, decay_rate, filter=filter, reset=reset)
     else:
-        result = data.ema_decay(
-            times, decay_rate, filter=filter, reset=reset, dtype=dtype_override
-        )
+        result = data.ema_decay(times, decay_rate, filter=filter, reset=reset, dtype=dtype_override)
 
     # Check the result against the expected values.
     assert_array_almost_equal(result, expected)
@@ -332,24 +332,25 @@ def test_ema_decay_requires_matching_reset_len():
     with pytest.raises(ValueError):
         data.ema_decay(times, 1.0, filter=filt, reset=larger_reset)
 
+
 @pytest.mark.parametrize(
     "input,bools,expected",
     [
         (
-            [[10,1],[11,2],[13,3]],
+            [[10, 1], [11, 2], [13, 3]],
             True,
-            [[[10,1],[11,2],[13,3]]],
+            [[[10, 1], [11, 2], [13, 3]]],
         ),
         (
-            [[10,1],[11,2],[13,3]],
+            [[10, 1], [11, 2], [13, 3]],
             [True, False, True],
-            [[10,1],[13,3]],
+            [[10, 1], [13, 3]],
         ),
         (
-            [[10,1],[11,2],[13,3]],
-            [[True,False],[False,True],[True,False]],
-            [10,2,13],
-        )
+            [[10, 1], [11, 2], [13, 3]],
+            [[True, False], [False, True], [True, False]],
+            [10, 2, 13],
+        ),
     ],
 )
 def test_boolean_indexing(input, bools, expected):
@@ -357,16 +358,17 @@ def test_boolean_indexing(input, bools, expected):
     f = np.array(bools)
     if not f.flags.f_contiguous:
         f = np.asfortranarray(bools)
-    assert(f.flags.f_contiguous)
+    assert f.flags.f_contiguous
 
     na = np.asfortranarray(input)
-    assert(na.flags.f_contiguous)
+    assert na.flags.f_contiguous
     assert_array_equal(na[f], expected)
 
     fa = rt.FA(na)
-    assert(fa.flags.f_contiguous)
+    assert fa.flags.f_contiguous
     fr = fa[f]
-    assert_array_equal(super(rt.FA,fr), expected) # use ndarray element indexing for assertion
+    assert_array_equal(super(rt.FA, fr), expected)  # use ndarray element indexing for assertion
+
 
 class test_numpy_functions(unittest.TestCase):
     def assert_equal(self, lv, rv):
@@ -384,7 +386,7 @@ class test_numpy_functions(unittest.TestCase):
             else:
                 assert l == r
 
-        if hasattr(lv, '__len__'):
+        if hasattr(lv, "__len__"):
             assert len(lv) == len(rv)
             length = len(lv)
             for i in range(0, length):
@@ -407,10 +409,7 @@ class test_numpy_functions(unittest.TestCase):
                 for function in function_set:
 
                     # print('function - ', function)
-                    if (
-                        not np.issubdtype(a.dtype, np.integer)
-                        and function == '__truediv__'
-                    ):
+                    if not np.issubdtype(a.dtype, np.integer) and function == "__truediv__":
                         np_out = getattr(a, function)(b)
                         sf_out = getattr(x, function)(y)
 
@@ -473,8 +472,7 @@ class test_numpy_functions(unittest.TestCase):
         for type_ in type_list:
 
             A_array = np.array(
-                np.random.randint(100, size=TEST_SIZE)
-                + np.array(np.random.rand(TEST_SIZE)),
+                np.random.randint(100, size=TEST_SIZE) + np.array(np.random.rand(TEST_SIZE)),
                 dtype=type_,
             )
             B_array = np.copy(A_array)
@@ -510,20 +508,19 @@ class test_numpy_functions(unittest.TestCase):
 
             def rand_ary():
                 return np.array(
-                    np.random.randint(0, 100, size=TEST_SIZE)
-                    + np.random.rand(TEST_SIZE),
+                    np.random.randint(0, 100, size=TEST_SIZE) + np.random.rand(TEST_SIZE),
                     dtype=type_,
                 )
 
             rounding_fuctions = [
-                '__abs__',
-                'around',
-                'round_',
-                'rint',
-                'fix',
-                'floor',
-                'ceil',
-                'trunc',
+                "__abs__",
+                "around",
+                "round_",
+                "rint",
+                "fix",
+                "floor",
+                "ceil",
+                "trunc",
             ]
 
             a = rand_ary()

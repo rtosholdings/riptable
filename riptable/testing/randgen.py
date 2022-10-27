@@ -1,9 +1,7 @@
 """
 Helper functions for generating random data for use in implementing unit tests for riptable.
 """
-__all__ = [
-    'create_test_dataset'
-]
+__all__ = ["create_test_dataset"]
 
 import datetime as dt
 
@@ -20,7 +18,7 @@ def create_test_dataset(
     include_dict_cat: bool = False,
     include_date: bool = False,
     include_datetime_nano: bool = True,
-    include_timespan: bool = True
+    include_timespan: bool = True,
 ) -> Dataset:
     test_ds = Dataset()
 
@@ -29,7 +27,7 @@ def create_test_dataset(
     # TODO: Add more symbols to this list for better testing; the symbols themselves don't matter,
     #       it's more of a set theory thing -- we want to get coverage around cases where there's
     #       (no, partial, complete) overlap in symbols between sections, etc.
-    deliv_symbols = np.array(['CBO', 'CBX', 'ZBZX', 'ZJZZT', 'ZTEST', 'ZVV', 'ZVZZT', 'ZWZZT', 'ZXZZT'])
+    deliv_symbols = np.array(["CBO", "CBX", "ZBZX", "ZJZZT", "ZTEST", "ZVV", "ZVZZT", "ZWZZT", "ZXZZT"])
     symbol_count = 3
     # Choose N unique symbols
     attempts = 100
@@ -57,7 +55,7 @@ def create_test_dataset(
     # TODO: This won't be correct if we have any zero-weighted buckets, it could mean we draw from a zero-weighted bucket
     #       instead of an adjacent non-zero-weighted bucket.
     samples = rng.integers(0, total_bucket_weight, endpoint=False, size=rowcount)
-    sampled_buckets = np.searchsorted(cum_bucket_weights, samples, side='right')
+    sampled_buckets = np.searchsorted(cum_bucket_weights, samples, side="right")
 
     # Get the set of unique symbols then create the Categorical column.
     # N.B. If desired, it'd be a fairly simple change to randomly include more of the symbols
@@ -68,8 +66,16 @@ def create_test_dataset(
     # Create a dictionary-mode Categorical (from ISO3166 data).
     if include_dict_cat:
         category_dict = {
-            'IRL': 372, 'USA': 840, 'AUS': 36, 'HKG': 344, 'JPN': 392,
-            'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
+            "IRL": 372,
+            "USA": 840,
+            "AUS": 36,
+            "HKG": 344,
+            "JPN": 392,
+            "MEX": 484,
+            "KHM": 116,
+            "THA": 764,
+            "JAM": 388,
+            "ARM": 51,
         }
         # The values for the Categorical's backing array.
         # This includes some value(s) not in the dictionary and not all values in the dictionary are used here.
@@ -85,8 +91,8 @@ def create_test_dataset(
     start_date = dt.date.today() + dt.timedelta(days=int(offset_days - rowcount))
     end_date = start_date + dt.timedelta(days=rowcount)
 
-    np_date = np.arange(start_date, end_date, dt.timedelta(days=1)).astype('<M8[D]')
-    dtns = DateTimeNano(np_date, from_tz='GMT')  # TODO: exercise other timezones
+    np_date = np.arange(start_date, end_date, dt.timedelta(days=1)).astype("<M8[D]")
+    dtns = DateTimeNano(np_date, from_tz="GMT")  # TODO: exercise other timezones
 
     if include_datetime_nano:
         test_ds.datetime_nano = dtns
@@ -109,13 +115,9 @@ def create_test_dataset(
     test_ds.open_price = rng.uniform(10.0, 1000.0, size=rowcount)
 
     # Add closing price; draw from lognormal distribution then multiply with opening price (and max(..., 0)).
-    test_ds.close_price = np.maximum(
-        0.0,
-        test_ds.open_price * rng.lognormal(sigma=0.04, size=rowcount)
-    )
+    test_ds.close_price = np.maximum(0.0, test_ds.open_price * rng.lognormal(sigma=0.04, size=rowcount))
 
     # Add a volume column as uint32
     test_ds.volume = rng.integers(0, 10_000_000, size=rowcount, dtype=np.uint32)
 
     return test_ds
-

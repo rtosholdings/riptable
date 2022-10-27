@@ -5,10 +5,7 @@ This module provides a class encapsulating riptable settings and
 feature flags, along with functions for retrieving a top-level,
 process-wide instance of the class.
 """
-__all__ = [
-    'Settings',
-    'get_global_settings'
-]
+__all__ = ["Settings", "get_global_settings"]
 
 from typing import NamedTuple
 

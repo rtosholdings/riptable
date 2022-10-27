@@ -1,17 +1,18 @@
 __all__ = [
-    'dataset_as_matrix',
-    'numpy2d_to_dict',
-    'dset_dict_to_list',
-    'append_dataset_dict',
-    'numpy_array_to_dict',
-    'numpy_array_to_dataset',
+    "dataset_as_matrix",
+    "numpy2d_to_dict",
+    "dset_dict_to_list",
+    "append_dataset_dict",
+    "numpy_array_to_dict",
+    "numpy_array_to_dataset",
 ]
 
 from typing import TYPE_CHECKING
 
 import numpy
-from riptable.rt_datetime import UTC_1970_SPLITS, DateTimeNano
+
 import riptable as rt
+from riptable.rt_datetime import UTC_1970_SPLITS, DateTimeNano
 
 # TODO: Add more thorough type checking support, e.g, what to do with int64, uint64, datetime
 # TODO: Should we convert to multiple columns for 64 bits, e.g, date, time-of-day for datetime?
@@ -45,7 +46,7 @@ def _normalize_column(x, field_key):
     return vals, original_type, is_categorical, category_values
 
 
-def dataset_as_matrix(ds: 'Dataset', save_metadata: bool = True, column_data={}):
+def dataset_as_matrix(ds: "Dataset", save_metadata: bool = True, column_data={}):
     columns = list(ds.keys())
     nrows = ds.shape[0]
     ncols = ds.shape[1]  # TODO: may expand this for 64-bit columns
@@ -60,9 +61,9 @@ def dataset_as_matrix(ds: 'Dataset', save_metadata: bool = True, column_data={})
             category_values,
         ) = _normalize_column(ds[columns[col]], field_key)
         column_info[columns[col]] = {
-            'dtype': original_type,
-            'category_values': category_values,
-            'is_categorical': is_categorical,
+            "dtype": original_type,
+            "category_values": category_values,
+            "is_categorical": is_categorical,
         }
 
     if save_metadata:
@@ -76,7 +77,7 @@ def numpy_array_to_dict(inarray: numpy.ndarray, columns=None):
     #       that does some of this conversion in C++ and can take advantage of multi-threading.
 
     if len(inarray.shape) > 2:
-        raise TypeError('Only 1 and 2-dimensional arrays are supported')
+        raise TypeError("Only 1 and 2-dimensional arrays are supported")
     out = dict()
     if inarray.dtype.fields is None:
         if len(inarray.shape) == 1:
@@ -90,22 +91,20 @@ def numpy_array_to_dict(inarray: numpy.ndarray, columns=None):
                         raise TypeError("Unexpected columns type")
                     out[columns] = inarray
             else:
-                out['Var'] = inarray
+                out["Var"] = inarray
             return out
         else:
             if columns is not None:
                 if len(columns) != inarray.shape[1]:
                     raise ValueError("Incompatible arrayShape")
             else:
-                columns = [
-                    'Var' + '_' + str(col_num) for col_num in range(inarray.shape[1])
-                ]
+                columns = ["Var" + "_" + str(col_num) for col_num in range(inarray.shape[1])]
             for col_num in range(inarray.shape[1]):
                 out[columns[col_num]] = inarray[:, col_num].copy()
             return out
     else:
         if len(inarray.shape) > 1:
-            raise TypeError('Only 1-dimensional structured arrays are supported')
+            raise TypeError("Only 1-dimensional structured arrays are supported")
         if columns is not None:
             if len(inarray.dtype.fields) != len(columns):
                 raise ValueError("Incompatible arrayShape")
@@ -142,11 +141,7 @@ def numpy2d_to_dict(arr, columns):
     print(dset)
     """
     if len(columns) != arr.shape[1]:
-        raise ValueError(
-            "Incompatible arrayShape={} and len(columns)={:d}".format(
-                arr.shape, len(columns)
-            )
-        )
+        raise ValueError("Incompatible arrayShape={} and len(columns)={:d}".format(arr.shape, len(columns)))
     return dict(zip(columns, arr.T))
 
 
@@ -168,20 +163,18 @@ def dset_dict_to_list(ds_dict, key_field_name, allow_overwrite=False):
         for _d in ds_dict.values():
             if key_field_name in _d:
                 raise ValueError(
-                    'dset_dict_to_list(): key_field_name cannot be column name in any Dataset unless allow_overwrite=True.'
+                    "dset_dict_to_list(): key_field_name cannot be column name in any Dataset unless allow_overwrite=True."
                 )
     max_length = 1
     for key in ds_dict:
         if type(key) is not bytes:
             try:
-                _ = key.encode('ascii')
+                _ = key.encode("ascii")
             except (AttributeError, UnicodeEncodeError):
-                raise ValueError(
-                    'dset_dict_to_list(): all keys must be ascii strings or bytes.'
-                )
+                raise ValueError("dset_dict_to_list(): all keys must be ascii strings or bytes.")
         max_length = max(max_length, len(key))
     out = []
-    typestr = f'|S{max_length}'
+    typestr = f"|S{max_length}"
     for key, val in ds_dict.items():
         col_val = numpy.empty(shape=val.shape[0], dtype=typestr)
         col_val[:] = key
@@ -236,6 +229,6 @@ def possibly_convert_to_nanotime(vec):
     # if sampled data falls within 2015 - 2019 time window
     if vmin > mintime and vmax < maxtime:
         # print("**detected nano")
-        return DateTimeNano(vec, from_tz='GMT', to_tz='NYC'), True
+        return DateTimeNano(vec, from_tz="GMT", to_tz="NYC"), True
     # print("**failed nano")
     return vec, False

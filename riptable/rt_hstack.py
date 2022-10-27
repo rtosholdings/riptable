@@ -1,18 +1,25 @@
-__all__ = ['hstack_any', 'stack_rows']
+__all__ = ["hstack_any", "stack_rows"]
 
 import warnings
 from collections import defaultdict
-from typing import List, Union, Optional, Mapping
+from typing import List, Mapping, Optional, Union
 
 import numpy as np
 import riptide_cpp as rc
-from .rt_enum import TypeRegister, NumpyCharTypes, CategoryMode, int_dtype_from_len
-from .rt_numpy import arange, hstack, empty
+
+from .rt_enum import CategoryMode, NumpyCharTypes, TypeRegister, int_dtype_from_len
 from .rt_grouping import hstack_groupings, merge_cats
+from .rt_numpy import arange, empty, hstack
 
 
-def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type]=None, baseclass:Optional[type]=None, destroy:bool=False, **kwargs):
-    '''
+def hstack_any(
+    itemlist: Union[list, Mapping[str, np.ndarray]],
+    cls: Optional[type] = None,
+    baseclass: Optional[type] = None,
+    destroy: bool = False,
+    **kwargs,
+):
+    """
     stack_rows or hstack_any is the main routine to row stack riptable classes.
     It stacks categoricals, datasets, time objects, structs.
     It can now stack a dictionary of numpy arrays to return a single array and a categorical.
@@ -57,8 +64,8 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
     np.hstack
     rt.Categorical.align
     rt.Dataset.concat_rows
-    '''
-    #------------------------------
+    """
+    # ------------------------------
     def hstack_containers(itemlist, fill_inv=True, destroy=False):
         # assembles all columns into lists for final hstack call
         # keeps running count for gap, creates invalid fill array
@@ -73,10 +80,10 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
         id = len(itemlist[0])
         allkeys = dict(zip(itemlist[0], arange(id)))
         alldicts = {
-            'Array':defaultdict(list),
-            'Struct':defaultdict(list),
-            'Dataset':defaultdict(list),
-            'PDataset':defaultdict(list)
+            "Array": defaultdict(list),
+            "Struct": defaultdict(list),
+            "Dataset": defaultdict(list),
+            "PDataset": defaultdict(list),
         }
 
         newitems = []
@@ -92,13 +99,13 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
                     item = TypeRegister.FastArray(item)
 
                 if isinstance(item, np.ndarray):
-                    dname = 'Array'
+                    dname = "Array"
 
                 elif issubclass(type(item), TypeRegister.Struct):
                     dname = type(item).__name__
 
                 else:
-                    raise TypeError(f'Unsupported type {type(item)} in container hstack.')
+                    raise TypeError(f"Unsupported type {type(item)} in container hstack.")
 
                 # check for different types in different containers
                 for dkey, d in alldicts.items():
@@ -106,7 +113,7 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
                         continue
                     if key in d:
                         # maybe raise a value error?
-                        warnings.warn(f'Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.')
+                        warnings.warn(f"Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.")
 
                 # add to list of items for that type
                 alldicts[dname][key].append(item)
@@ -116,18 +123,18 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
             warnings.warn(f"These items were not found in every container: {newitems}")
 
         # array will fix subclass
-        for k,v in alldicts['Array'].items():
-            alldicts['Array'][k] = hstack_arrays(v)
+        for k, v in alldicts["Array"].items():
+            alldicts["Array"][k] = hstack_arrays(v)
 
         # for all container types (possibly allow these to get stacked together?)
-        for k,v in alldicts['Struct'].items():
-            alldicts['Struct'][k] = hstack_containers(v)
+        for k, v in alldicts["Struct"].items():
+            alldicts["Struct"][k] = hstack_containers(v)
 
-        for k,v in alldicts['Dataset'].items():
-            alldicts['Dataset'][k] = hstack_containers(v, destroy=destroy)
+        for k, v in alldicts["Dataset"].items():
+            alldicts["Dataset"][k] = hstack_containers(v, destroy=destroy)
 
-        for k,v in alldicts['PDataset'].items():
-            alldicts['PDataset'][k] = hstack_containers(v)
+        for k, v in alldicts["PDataset"].items():
+            alldicts["PDataset"][k] = hstack_containers(v)
 
         # combine dicts, allkeys is final sort order
         result = {}
@@ -135,7 +142,7 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
             result.update(d)
         return result, list(allkeys)
 
-    #------------------------------
+    # ------------------------------
     def hstack_arrays(itemlist):
         # maybe pass cutoffs to hstack arrays for invalid fill?
 
@@ -150,8 +157,7 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
         # cannot stack FA subclass with regular FA
         return hstack(itemlist)
 
-
-    #------------------------------
+    # ------------------------------
     def hstack_dict(itemdict, **kwargs):
         r"""
         Will create a Categorical from the keys in the dictionary.
@@ -168,24 +174,26 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
         >>> z.mycat
         """
         dictlen = len(itemdict)
-        if dictlen ==0:
-            raise ValueError(f'List of dictionary items to stack was empty.')
+        if dictlen == 0:
+            raise ValueError(f"List of dictionary items to stack was empty.")
 
         # create an array of cutoffs for slicing later
         lengths = TypeRegister.FastArray([z.shape[0] for z in itemdict.values()], dtype=np.int64).cumsum()
         keynames = [*itemdict.keys()]
 
-        return_arr= hstack([*itemdict.values()])
+        return_arr = hstack([*itemdict.values()])
 
         # choose proper ikey size
         total_len = return_arr.shape[0]
 
         if total_len != lengths[-1]:
-            raise ValueError(f'Final lengths do not match.  The hstack resulted in length {total_len} but counted a total length of {lengths[-1]}.')
+            raise ValueError(
+                f"Final lengths do not match.  The hstack resulted in length {total_len} but counted a total length of {lengths[-1]}."
+            )
 
         ikey = empty((total_len,), dtype=int_dtype_from_len(total_len))
 
-        startpos =0
+        startpos = 0
         for i in range(len(lengths)):
             endpos = lengths[i]
             ikey[startpos:endpos] = i + 1
@@ -195,16 +203,16 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
         return return_arr, return_cat
 
     # start of hstack_any ---------
-    #------------------------------
+    # ------------------------------
     # map each riptable type to a custom hstack function
     hstack_funcs = {
-        TypeRegister.Date : _hstack_date,
-        TypeRegister.DateSpan : _hstack_datespan,
-        TypeRegister.DateTimeNano : _hstack_datetimenano,
-        TypeRegister.TimeSpan : _hstack_timespan,
-        TypeRegister.Categorical : _hstack_categorical,
-        TypeRegister.Dataset : _hstack_dataset,
-        TypeRegister.Struct : _hstack_struct
+        TypeRegister.Date: _hstack_date,
+        TypeRegister.DateSpan: _hstack_datespan,
+        TypeRegister.DateTimeNano: _hstack_datetimenano,
+        TypeRegister.TimeSpan: _hstack_timespan,
+        TypeRegister.Categorical: _hstack_categorical,
+        TypeRegister.Dataset: _hstack_dataset,
+        TypeRegister.Struct: _hstack_struct,
     }
 
     # items need to come in a tuple or list or dict
@@ -217,7 +225,7 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
     if len(itemlist) == 1:
         return itemlist[0]
     elif len(itemlist) == 0:
-        raise ValueError(f'List of items to stack was empty.')
+        raise ValueError(f"List of items to stack was empty.")
 
     sameclass = {type(o) for o in itemlist}
     if len(sameclass) != 1:
@@ -257,9 +265,9 @@ def hstack_any(itemlist:Union[list, Mapping[str, np.ndarray]], cls:Optional[type
     return hstack_arrays(itemlist)
 
 
-#--------------------------------------------------------------------------
-def _hstack_struct(struct_list, destroy:bool=False):
-    '''
+# --------------------------------------------------------------------------
+def _hstack_struct(struct_list, destroy: bool = False):
+    """
     Merges data from multiple structs.
 
     A struct utility for merging data from multiple structs (useful for multiday loading).
@@ -279,7 +287,7 @@ def _hstack_struct(struct_list, destroy:bool=False):
     See Also
     --------
     riptable.hstack
-    '''
+    """
     # items will be sorted into lists by type for final hstack call
     alldicts = defaultdict(dict)
 
@@ -287,7 +295,7 @@ def _hstack_struct(struct_list, destroy:bool=False):
         return struct_list[0]
     elif len(struct_list) > 0:
         # assumes that all keys are in the first struct
-        #model_keys = struct_list[0].keys()
+        # model_keys = struct_list[0].keys()
         # initialize keys with those from the first struct
         id = len(struct_list[0])
         all_keys = dict(zip(struct_list[0].keys(), arange(id)))
@@ -315,7 +323,7 @@ def _hstack_struct(struct_list, destroy:bool=False):
 
             # for all regular numpy / fastarray
             elif isinstance(item, np.ndarray):
-                dname = 'Array'
+                dname = "Array"
 
             else:
                 raise TypeError(f"Unsupported type {type(item)} in Struct append.")
@@ -325,12 +333,12 @@ def _hstack_struct(struct_list, destroy:bool=False):
                 if dkey == dname:
                     continue
                 if key in d:
-                    warnings.warn(f'Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.')
+                    warnings.warn(f"Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.")
 
             data_dict = alldicts[dname]
 
             # use a get() to account for first struct
-            data_list = data_dict.get(key,[])
+            data_list = data_dict.get(key, [])
             data_list.append(item)
             data_dict[key] = data_list
 
@@ -338,7 +346,7 @@ def _hstack_struct(struct_list, destroy:bool=False):
         warnings.warn(f"These items were not found in every struct: {new_items}")
 
     final_dict = {}
-    for name, fa_list in alldicts['Array'].items():
+    for name, fa_list in alldicts["Array"].items():
         # make sure all dimensions are the same, possibly perform an hstack
         dims = list({f.ndim for f in fa_list})
         if len(dims) == 1:
@@ -354,7 +362,9 @@ def _hstack_struct(struct_list, destroy:bool=False):
         try:
             final_dict[name] = stack_func(fa_list)
         except Exception:
-            raise TypeError(f"Could not perform {stack_func} on arrays for column {name}. Arrays had shapes {[f.shape for f in fa_list]}")
+            raise TypeError(
+                f"Could not perform {stack_func} on arrays for column {name}. Arrays had shapes {[f.shape for f in fa_list]}"
+            )
 
     # hstack lists of the same type - rt.hstack will route these to the correct routine
     for typename, typedict in alldicts.items():
@@ -368,9 +378,9 @@ def _hstack_struct(struct_list, destroy:bool=False):
     return result
 
 
-#--------------------------------------------------------------------------
-def _hstack_dataset(ds_list: Union[list, tuple], destroy:bool=False):
-    '''
+# --------------------------------------------------------------------------
+def _hstack_dataset(ds_list: Union[list, tuple], destroy: bool = False):
+    """
     Stacks columns from multiple datasets.
 
     If a dataset is missing a column that appears in others, it will fill the gap with the invalid for that column's dtype.
@@ -387,7 +397,7 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy:bool=False):
     destroy: bool, False
         Set to True to destroy the contents of the dataset to save on memory.
         !! This is dangerous so make sure you do not want the data anymore in the original datasets.
-    '''
+    """
 
     if not isinstance(ds_list, (list, tuple)):
         raise TypeError(f"Input must be a list or tuple of datasets. Got {type(ds_list)}")
@@ -432,16 +442,18 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy:bool=False):
         if len(types[name]) > 1:
             try:
                 # possibly all numeric
-                safe = all( [ t.char in NumpyCharTypes.AllInteger+NumpyCharTypes.AllFloat for t in types[name] ] )
+                safe = all([t.char in NumpyCharTypes.AllInteger + NumpyCharTypes.AllFloat for t in types[name]])
                 if not safe:
                     # possibly all string
-                    safe = all( [t.char in 'US' for t in types[name] ] )
+                    safe = all([t.char in "US" for t in types[name]])
                 # if conflicting warn the user
                 if not safe:
                     warnings.warn(f"Mixing numeric with string types in column {name}. Unexpected results may occur.")
             # possibly a binned class
             except Exception:
-                raise TypeError(f"Custom class type was mixed with regular dtype in {name} column.  Types are {types[name]}.")
+                raise TypeError(
+                    f"Custom class type was mixed with regular dtype in {name} column.  Types are {types[name]}."
+                )
 
         # matching number of dimensions
         ndims[name] = list(set(ndims[name]))
@@ -477,7 +489,7 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy:bool=False):
             inv_count = 0
         else:
             inv_count = (0, shapes[name])
-        #is_binned = t[0] in binned_types
+        # is_binned = t[0] in binned_types
         for ds in ds_list:
             nrows = ds._nrows
             # column was found in current dataset
@@ -493,9 +505,9 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy:bool=False):
             # reserve room for the gap column, just add to gap length to minimize invalid array generation
             else:
                 if coldim == 1:
-                    inv_count+=nrows
+                    inv_count += nrows
                 else:
-                    inv_count = (inv_count[0]+nrows, inv_count[1])
+                    inv_count = (inv_count[0] + nrows, inv_count[1])
 
         # check to make sure there's not a leftover invalid column to be added
         # note: col is the last col value from the loop above
@@ -525,13 +537,15 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy:bool=False):
 
     if destroy:
         # turn recycling mode back to what it was
-        if recycle_mode: TypeRegister.FastArray._RON(quiet=True)
+        if recycle_mode:
+            TypeRegister.FastArray._RON(quiet=True)
 
     return returnds
 
-#--------------------------------------------------------------------------
-def _possibly_add_concat_gap(coldim:int, inv_count, col, column_list, types):
-    '''
+
+# --------------------------------------------------------------------------
+def _possibly_add_concat_gap(coldim: int, inv_count, col, column_list, types):
+    """
     Called by _hstack_dataset
     Column existed in calling loop's current dataset, might need to create/add an invalid column
     before adding an existing column. If invalid was added, reset the invalid count.
@@ -544,28 +558,29 @@ def _possibly_add_concat_gap(coldim:int, inv_count, col, column_list, types):
     column_list : running list of all columns existing/invalid for final stack
     types       : dtypes of arrays - 2dim may need to generate invalid differently, 1dim will be fixed in hstack
 
-    '''
+    """
     if coldim == 1:
         if inv_count > 0:
-            column_list.append( col.fill_invalid(shape=inv_count, inplace=False) )
+            column_list.append(col.fill_invalid(shape=inv_count, inplace=False))
             inv_count = 0
     else:
         if inv_count[0] > 0:
-            dtype=None
+            dtype = None
             if len(types) > 1:
-                common = np.find_common_type(types,[])
+                common = np.find_common_type(types, [])
                 # numeric, supported, ensure final vstack result dtype - strings will be automatic
                 if common.num <= 13:
                     # future optimization: store this for performance, reduce types list to final type
                     dtype = common
-            column_list.append( col.fill_invalid(shape=inv_count, inplace=False, dtype=dtype) )
+            column_list.append(col.fill_invalid(shape=inv_count, inplace=False, dtype=dtype))
             inv_count = (0, inv_count[1])
 
     return inv_count, column_list
 
+
 # ------------------------------------------------------------
-def _hstack_categorical(cats:list, verbose:bool=False, destroy:bool=False):
-    '''
+def _hstack_categorical(cats: list, verbose: bool = False, destroy: bool = False):
+    """
     HStack Categoricals.
 
     The unique categories will be merged into a new unique list.
@@ -594,12 +609,15 @@ def _hstack_categorical(cats:list, verbose:bool=False, destroy:bool=False):
     Categorical([a, b, c, d, e, f]) Length: 6
         FastArray([1, 2, 3, 4, 5, 6]) Base Index: 1
         FastArray([b'a', b'b', b'c', b'd', b'e', b'f'], dtype='|S1') Unique count: 6
-    '''
+    """
+
     def attrs_match(attrlist, name):
         # ensure certain attributes are the same for all categoricals being stacked
         attrs = set(attrlist)
         if len(attrs) != 1:
-            raise TypeError(f"hstack found {len(attrlist)} different values of the '{name}' attribute in provided Categoricals. Must all be the same.")
+            raise TypeError(
+                f"hstack found {len(attrlist)} different values of the '{name}' attribute in provided Categoricals. Must all be the same."
+            )
         return list(attrs)[0]
 
     # collect all the categorical modes and all the base indexes
@@ -608,28 +626,27 @@ def _hstack_categorical(cats:list, verbose:bool=False, destroy:bool=False):
     for cat in cats:
         if not isinstance(cat, TypeRegister.Categorical):
             raise TypeError(f"Categorical hstack is for categoricals, not {type(cat)}")
-        #if cat.base_index not in (1, None):
+        # if cat.base_index not in (1, None):
         #    raise TypeError(f"only categoricals with base index 1 can be merged (to preserve invalid values).")
         modes.append(cat.category_mode)
         bases.append(cat.base_index)
 
     # all categoricals must be in same mode and have same base index
-    mode = attrs_match(modes, 'mode')
-    base_index = attrs_match(bases, 'base index')
+    mode = attrs_match(modes, "mode")
+    base_index = attrs_match(bases, "base index")
 
     # the first categorical determines the ordered kwarg
     ordered = cats[0].ordered
     sort_display = cats[0].sort_gb
 
-
-    #==========================
+    # ==========================
     # todo: see _multistack_categoricals int rt_sds.py
     # stack indices
     # this will stack the fastarrays
     indices = rc.HStack(cats)
     idx_cutoffs = TypeRegister.FastArray([len(c._fa) for c in cats], dtype=np.int64).cumsum()
 
-    #------------------------- start rebuild here
+    # ------------------------- start rebuild here
     if mode in (CategoryMode.Dictionary, CategoryMode.IntEnum):
 
         # -----------------------
@@ -642,17 +659,19 @@ def _hstack_categorical(cats:list, verbose:bool=False, destroy:bool=False):
 
         # collect, measure, stack integer arrays
         listcodes = [g._enum.code_array for g in glist]
-        unique_cutoffs = [ TypeRegister.FastArray([len(c) for c in listcodes], dtype=np.int64).cumsum() ]
+        unique_cutoffs = [TypeRegister.FastArray([len(c) for c in listcodes], dtype=np.int64).cumsum()]
         listcodes = hstack(listcodes)
 
         # send in as two arrays
-        listcats = [ listcodes, listnames ]
+        listcats = [listcodes, listnames]
 
         # -----------------------
         base_index = None
-        indices, listcats = merge_cats(indices, listcats, unique_cutoffs=unique_cutoffs, from_mapping=True, ordered=ordered, verbose=verbose)
+        indices, listcats = merge_cats(
+            indices, listcats, unique_cutoffs=unique_cutoffs, from_mapping=True, ordered=ordered, verbose=verbose
+        )
         # TJD added check
-        code=listcats[0][0]
+        code = listcats[0][0]
         if isinstance(code, (int, np.integer)):
             # EXCEPT first value is string, and second is int
             newcats = dict(zip(listcats[1], listcats[0]))
@@ -681,19 +700,30 @@ def _hstack_categorical(cats:list, verbose:bool=False, destroy:bool=False):
 
         unique_cutoffs = [TypeRegister.FastArray([len(v) for v in lastv], dtype=np.int64).cumsum()]
 
-        indices, newcats = merge_cats(indices, listcats, idx_cutoffs=idx_cutoffs, unique_cutoffs=unique_cutoffs, verbose=verbose, base_index=base_index, ordered=ordered)
+        indices, newcats = merge_cats(
+            indices,
+            listcats,
+            idx_cutoffs=idx_cutoffs,
+            unique_cutoffs=unique_cutoffs,
+            verbose=verbose,
+            base_index=base_index,
+            ordered=ordered,
+        )
 
-    newcats = TypeRegister.Grouping(indices, categories=newcats, _trusted=True, base_index=base_index, ordered=ordered, sort_display=sort_display)
+    newcats = TypeRegister.Grouping(
+        indices, categories=newcats, _trusted=True, base_index=base_index, ordered=ordered, sort_display=sort_display
+    )
     result = TypeRegister.Categorical(newcats)
     return result
 
+
 # ------------------------------------------------------------
 def _hstack_datetimenano(dtlist, destroy=False):
-    '''
+    """
     Performs an hstack on a list of DateTimeNano objects.
     All items in list must have their display set to the same timezone.
     NOTE: destroy ignored
-    '''
+    """
     # make sure all of the date time nano objects are set to be displayed relative to the same timezone
     timezone = dtlist[0]._timezone._timezone_str
     for dt in dtlist:
@@ -710,33 +740,37 @@ def _hstack_datetimenano(dtlist, destroy=False):
     # reconstruct with first item
     return TypeRegister.DateTimeNano.newclassfrominstance(arr, dtlist[0])
 
-#------------------------------------------------------------
+
+# ------------------------------------------------------------
 def _hstack_timespan(tspans, destroy=False):
-    '''
+    """
     TODO: maybe add type checking?
     This is a very simple class, rewrap the hstack result in class.
     NOTE: destroy ignored
-    '''
+    """
     ts = rc.HStack(tspans)
     return TypeRegister.TimeSpan(ts)
 
-#------------------------------------------------------------
+
+# ------------------------------------------------------------
 def _hstack_date(dates, destroy=False):
-    '''
+    """
     NOTE: destroy ignored
-    '''
+    """
     return _hstack_date_internal(dates, subclass=TypeRegister.Date)
 
-#------------------------------------------------------------
+
+# ------------------------------------------------------------
 def _hstack_datespan(dates, destroy=False):
-    '''
+    """
     NOTE: destroy ignored
-    '''
+    """
     return _hstack_date_internal(dates, subclass=TypeRegister.DateSpan)
 
-#------------------------------------------------------------
+
+# ------------------------------------------------------------
 def _hstack_date_internal(dates, subclass=TypeRegister.Date):
-    '''
+    """
     hstacks Date / DateSpan objects and returns a new Date / DateSpan object.
 
     Will be called by riptable.hstack() if the first item in the sequence is a Date object.
@@ -751,18 +785,19 @@ def _hstack_date_internal(dates, subclass=TypeRegister.Date):
     >>> d2 = Date(['2016-02-01', '2017-02-01', '2018-02-01'])
     >>> hstack([d1, d2])
     Date([2015-02-01, 2016-02-01, 2017-02-01, 2018-02-01])
-    '''
+    """
     if len(dates) == 0:
         return subclass([])
     for d in dates:
         if not isinstance(d, subclass):
             # maybe extend this to support stacking with regular DateTimeNano objects?
-            raise TypeError(f'Could not perform Date.hstack() on item of type {type(d)}')
+            raise TypeError(f"Could not perform Date.hstack() on item of type {type(d)}")
     if len(dates) == 1:
         return dates
 
     stacked = rc.HStack(dates)
     return subclass.newclassfrominstance(stacked, dates[0])
+
 
 # create a stack_rows alias for now
 stack_rows = hstack_any

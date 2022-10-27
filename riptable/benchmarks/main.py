@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import argparse
-from datetime import datetime
 import enum
 import logging
-import pkg_resources
 import sys
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
+
+import pkg_resources
+
 from ..rt_enum import TypeRegister
 
 if TYPE_CHECKING:
@@ -38,8 +40,7 @@ class UsageFailure(Exception):
 
 
 def collect_benchmarks(
-    benchmark_names: Optional[List[str]] = None,
-    collect_comparisons: bool = False
+    benchmark_names: Optional[List[str]] = None, collect_comparisons: bool = False
 ) -> Mapping[str, callable]:
     """Returns the list of benchmark functions for invocation."""
     # HACK HACK HACK - Run the benchmarks via globals()
@@ -81,12 +82,13 @@ def _get_package_version(package_name: str) -> Optional[str]:
     # https://stackoverflow.com/questions/3524168/how-do-i-get-a-python-modules-version-number-through-code
     try:
         package_version = pkg_resources.get_distribution(package_name).version
-    except: pass
+    except:
+        pass
 
     # Attempt #2: get it from the module's __version__ attribute.
     if package_version is None:
         package_module = sys.modules.get(package_name, None)
-        if package_module is not None and hasattr(package_module, '__version__'):
+        if package_module is not None and hasattr(package_module, "__version__"):
             package_version = package_module.__version__
 
     return package_version
@@ -100,32 +102,33 @@ def _get_package_versions() -> Mapping[str, Any]:
     #             removing the check pulls in a ton of other junk though too (and causes a noticeable slowdown).
     #             Refine the check so we get the modules we want (like riptide_cpp) without all the other stuff.
     # package_versions = {name: get_package_version(name) for name, m in sys.modules.items() if hasattr(m, '__version__') and '.' not in name and not name.startswith('_')}
-    package_names = ['riptable', 'riptide_cpp', 'numpy', 'pandas', 'numba', 'tbb']
+    package_names = ["riptable", "riptide_cpp", "numpy", "pandas", "numba", "tbb"]
     package_versions = {pkg_name: _get_package_version(pkg_name) for pkg_name in package_names}
     return _sort_dictionary(package_versions)
 
 
-def _capture_benchmark_metadata() -> 'Struct':
+def _capture_benchmark_metadata() -> "Struct":
     """Capture contextual metadata for a benchmark run e.g. the current date/time, riptable version, and machine information."""
     import platform
 
     benchmark_metadata = TypeRegister.Struct()
-    benchmark_metadata['timestamp_utc_start'] = datetime.utcnow().isoformat()
+    benchmark_metadata["timestamp_utc_start"] = datetime.utcnow().isoformat()
 
-    benchmark_metadata['python_version'] = platform.python_version_tuple()
-    benchmark_metadata['python_implementation'] = platform.python_implementation()
+    benchmark_metadata["python_version"] = platform.python_version_tuple()
+    benchmark_metadata["python_implementation"] = platform.python_implementation()
 
-    benchmark_metadata['sysname'] = platform.system()
-    benchmark_metadata['nodename'] = platform.node()
-    benchmark_metadata['platform'] = platform.platform()
-    benchmark_metadata['platform_release'] = platform.release()
-    benchmark_metadata['platform_version'] = platform.version()
-    benchmark_metadata['platform_machine'] = platform.machine()
-    benchmark_metadata['platform_processor'] = platform.processor()
+    benchmark_metadata["sysname"] = platform.system()
+    benchmark_metadata["nodename"] = platform.node()
+    benchmark_metadata["platform"] = platform.platform()
+    benchmark_metadata["platform_release"] = platform.release()
+    benchmark_metadata["platform_version"] = platform.version()
+    benchmark_metadata["platform_machine"] = platform.machine()
+    benchmark_metadata["platform_processor"] = platform.processor()
 
     try:
         from cpuinfo import get_cpu_info
-        benchmark_metadata['cpuinfo'] = TypeRegister.Struct(get_cpu_info())
+
+        benchmark_metadata["cpuinfo"] = TypeRegister.Struct(get_cpu_info())
     except:
         _logger.warning("Unable to import 'cpuinfo' package and/or read CPU information.")
 
@@ -147,7 +150,8 @@ def _set_win_process_priority() -> Optional[bool]:
         Indication of whether (or not) setting the process priority class succeeded.
         If the priority did not need to be elevated (because it was already), None is returned.
     """
-    import win32api, win32process
+    import win32api
+    import win32process
 
     # Psuedo-handle for the current process.
     # Because this is a psuedo-handle (i.e. isn't a real handle), it doesn't need to be cleaned up.
@@ -184,18 +188,21 @@ def _setup(cli_args: argparse.Namespace) -> None:
     # Set process priority to cut down on noise from other processes.
     # TODO: Implement this for Linux and macOS/Darwin too.
     #       https://linux.die.net/man/3/setpriority
-    if sys.platform.startswith('win'):
+    if sys.platform.startswith("win"):
         priority_was_elevated = _set_win_process_priority()
-        if priority_was_elevated is None: pass
+        if priority_was_elevated is None:
+            pass
         elif priority_was_elevated:
             _logger.debug("Increased process priority level to reduce measurement noise.")
         else:
             _logger.warning("Unable to set the process priority class. Benchmark results may be noisier as a result.")
 
     else:
-        _logger.warning(f"Setting the process priority class is not yet supported for platform '{sys.platform}'. "
-                        f"Benchmark results may be noisier as a result.",
-                        extra={'platform': sys.platform})
+        _logger.warning(
+            f"Setting the process priority class is not yet supported for platform '{sys.platform}'. "
+            f"Benchmark results may be noisier as a result.",
+            extra={"platform": sys.platform},
+        )
 
 
 def make_argparser() -> argparse.ArgumentParser:
@@ -216,16 +223,11 @@ def make_argparser() -> argparse.ArgumentParser:
     arg_parser.add_argument(
         "-c", dest="comparison", action="store_true", help="additionally collect and run comparison benchmarks"
     )
+    arg_parser.add_argument("--debug", dest="debug", action="store_true", help="debug level logging")
+    arg_parser.add_argument("--d", dest="debug", action="store_true", help="debug level logging")
     arg_parser.add_argument(
-        "--debug", dest="debug", action="store_true", help="debug level logging"
+        "--out-file", dest="output_filename", help="The filename where benchmark results will be saved in SDS format."
     )
-    arg_parser.add_argument(
-        "--d", dest="debug", action="store_true", help="debug level logging"
-    )
-    arg_parser.add_argument(
-        '--out-file',
-        dest='output_filename',
-        help='The filename where benchmark results will be saved in SDS format.')
 
     # Should there be a verbose flag? does that log INFO level logging which is the current default?
     # arg_parser.add_argument('--verbose', dest='verbose', action='store_true', help='verbose mode with INFO level logging')
@@ -246,9 +248,7 @@ def main() -> ExitCode:
     # Table of logging levels: https://docs.python.org/3.9/library/logging.html#levels
     log_format = "%(asctime)s - %(levelname)s - %(message)s"
     # set up root logger which writes all logs
-    logging.basicConfig(
-        filename="benchmarks.log", level=logging.INFO, format=log_format
-    )
+    logging.basicConfig(filename="benchmarks.log", level=logging.INFO, format=log_format)
     formatter = logging.Formatter(log_format)
 
     # set up module logger that only writes benchmark related logs
@@ -279,26 +279,22 @@ def main() -> ExitCode:
     run_comparisons = args.comparison
     runnable_benchmarks: Optional[List[str]] = args.benchmarks if args.benchmarks else None
 
-    bench_map = collect_benchmarks(
-        benchmark_names=runnable_benchmarks, collect_comparisons=run_comparisons
-    )
+    bench_map = collect_benchmarks(benchmark_names=runnable_benchmarks, collect_comparisons=run_comparisons)
     if bench_map is None:
         raise UsageFailure(f"No benchmarks found with arguments {args}.")
     if not all(bench_map.values()):
-        raise UsageFailure(
-            f"Error collecting benchmarks.\nPassed arguments {args}\nCollected {bench_map}"
-        )
+        raise UsageFailure(f"Error collecting benchmarks.\nPassed arguments {args}\nCollected {bench_map}")
 
     # Struct to hold benchmark results if the option has been specified
     # to save the data.
-    benchmark_results: Optional['Struct'] = TypeRegister.Struct() if args.output_filename else None
+    benchmark_results: Optional["Struct"] = TypeRegister.Struct() if args.output_filename else None
 
     # If saving out benchmark results, capture some additional metadata about the benchmark run,
     # e.g. the current date/time, riptable version, and machine information.
-    benchmark_metadata: Optional['Struct'] = None
+    benchmark_metadata: Optional["Struct"] = None
     if benchmark_results is not None:
         benchmark_metadata = _capture_benchmark_metadata()
-        benchmark_results['meta'] = benchmark_metadata
+        benchmark_results["meta"] = benchmark_metadata
 
     for name, func in bench_map.items():
         _logger.info(f"Running {name}")
@@ -319,7 +315,9 @@ def main() -> ExitCode:
         # it's typically because there were no parameters for the benchmark and
         # therefore it didn't run. Log a warning about it and continue.
         if benchmark_results is None:
-            _logger.warning(f"No results for benchmark '{name}'. This may be due to a misconfiguration of the benchmark function.")
+            _logger.warning(
+                f"No results for benchmark '{name}'. This may be due to a misconfiguration of the benchmark function."
+            )
             continue
 
         # If saving the results to SDS, save the raw/complete data for analysis --
@@ -338,14 +336,14 @@ def main() -> ExitCode:
     # do that now.
     if args.output_filename:
         # Capture some additional metadata about the benchmark run before saving.
-        benchmark_metadata['timestamp_utc_end'] = datetime.utcnow().isoformat()
-        benchmark_metadata['packages'] = _get_package_versions()
+        benchmark_metadata["timestamp_utc_end"] = datetime.utcnow().isoformat()
+        benchmark_metadata["packages"] = _get_package_versions()
 
         # TODO: Capture additional metadata
         #   * numba threading engine (only available once we've executed at least one parallel numba function)
         #   * peak memory usage for this process?
 
-        _logger.info("Writing results to: %s", args.output_filename, extra={'output_filename': args.output_filename})
+        _logger.info("Writing results to: %s", args.output_filename, extra={"output_filename": args.output_filename})
         benchmark_results.save(args.output_filename, overwrite=True)
         _logger.info("Finished writing results to disk.")
 

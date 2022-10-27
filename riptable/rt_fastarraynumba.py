@@ -1,24 +1,23 @@
-__all__ = [
-    'fill_forward', 'fill_backward'
-]
+__all__ = ["fill_forward", "fill_backward"]
 
-#---------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # This file is for numba routines that work on numpy arrays
 # It is different from CPP routines in the riptide_cpp module
 # Others are encouraged to add
 #
-from typing import Optional, Union
 import warnings
+from typing import Optional, Union
 
-import numpy as np
 import numba as nb
+import numpy as np
 
 from .config import get_global_settings
 from .rt_enum import INVALID_DICT
 from .rt_fastarray import FastArray
 from .rt_numpy import empty_like
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_forward_float(arr, fill_val, limit):
     lastgood = fill_val
@@ -35,13 +34,14 @@ def fill_forward_float(arr, fill_val, limit):
                 # leave the value if counter <= 0
                 if counter > 0:
                     arr[idx] = lastgood
-                    counter -=1
+                    counter -= 1
             else:
                 # reset counter
                 counter = limit
                 lastgood = arr[idx]
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_forward_int(arr, inv, fill_val, limit):
     lastgood = fill_val
@@ -58,66 +58,69 @@ def fill_forward_int(arr, inv, fill_val, limit):
                 # leave the value if counter <= 0
                 if counter > 0:
                     arr[idx] = lastgood
-                    counter -=1
+                    counter -= 1
             else:
                 # reset counter
                 counter = limit
                 lastgood = arr[idx]
 
 
-#-----------------------------------------------------
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_backward_float(arr, fill_val, limit):
     lastgood = fill_val
     if limit <= 0:
-        for idx in range(arr.shape[0]-1, -1, -1):
+        for idx in range(arr.shape[0] - 1, -1, -1):
             if np.isnan(arr[idx]):
                 arr[idx] = lastgood
             else:
                 lastgood = arr[idx]
     else:
         counter = limit
-        for idx in range(arr.shape[0]-1, -1, -1):
+        for idx in range(arr.shape[0] - 1, -1, -1):
             if np.isnan(arr[idx]):
                 # leave the value if counter <= 0
                 if counter > 0:
                     arr[idx] = lastgood
-                    counter -=1
+                    counter -= 1
             else:
                 # reset counter
                 counter = limit
                 lastgood = arr[idx]
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def fill_backward_int(arr, inv, fill_val, limit):
     lastgood = fill_val
     if limit <= 0:
-        for idx in range(arr.shape[0]-1, -1, -1):
+        for idx in range(arr.shape[0] - 1, -1, -1):
             if arr[idx] == inv:
                 arr[idx] = lastgood
             else:
                 lastgood = arr[idx]
     else:
         counter = limit
-        for idx in range(arr.shape[0]-1, -1, -1):
+        for idx in range(arr.shape[0] - 1, -1, -1):
             if arr[idx] == inv:
                 # leave the value if counter <= 0
                 if counter > 0:
                     arr[idx] = lastgood
-                    counter -=1
+                    counter -= 1
             else:
                 # reset counter
                 counter = limit
                 lastgood = arr[idx]
 
-#-----------------------------------------------------
-def _check_fill_values(arr, fill_val, inplace:bool, limit:int):
+
+# -----------------------------------------------------
+def _check_fill_values(arr, fill_val, inplace: bool, limit: int):
     if arr.dtype.num > 13 or arr.dtype.num == 0:
         # fill string, boolean, other?
         raise TypeError(f"Filling for type {type(arr)} is currently not supported.")
 
-    if limit is None: limit =0
+    if limit is None:
+        limit = 0
 
     limit = np.int64(limit)
 
@@ -125,7 +128,7 @@ def _check_fill_values(arr, fill_val, inplace:bool, limit:int):
         raise TypeError(f"The limit kwarg cannot be less than 0.")
 
     if not inplace:
-        arr= arr.copy()
+        arr = arr.copy()
 
     dtype = arr.dtype
     inv = INVALID_DICT[dtype.num]
@@ -133,7 +136,7 @@ def _check_fill_values(arr, fill_val, inplace:bool, limit:int):
 
     if fill_val is None:
         # optionally could raise error
-        fill_val =inv
+        fill_val = inv
 
     # force into np scalar with dtype
     # TODO there is a better way to do this
@@ -141,70 +144,71 @@ def _check_fill_values(arr, fill_val, inplace:bool, limit:int):
 
     return arr, fill_val, inv, dtype, limit
 
-#-----------------------------------------------------
-def fill_forward(arr: np.ndarray, fill_val=None, inplace:bool=False, limit:int=0):
+
+# -----------------------------------------------------
+def fill_forward(arr: np.ndarray, fill_val=None, inplace: bool = False, limit: int = 0):
     """
     Replace NaN and invalid array values by propagating the last encountered valid value
     forward.
-    
-    Note that this method can be called either as a `FastArray` method 
-    (:meth:`riptable.rt_fastarraynumba.fill_forward`) or a function 
-    (:meth:`riptable.fill_forward()`) that takes an array or `FastArray` as input. The 
+
+    Note that this method can be called either as a `FastArray` method
+    (:meth:`riptable.rt_fastarraynumba.fill_forward`) or a function
+    (:meth:`riptable.fill_forward()`) that takes an array or `FastArray` as input. The
     function returns either an array or a `FastArray`, depending on the original input.
-    
+
     Parameters
     ----------
     fill_val : scalar, default None
-        The value to use where there is no valid value to propagate forward. If 
-        `fill_val` is not specified, NaN and invalid values aren't replaced where there 
-        is no valid value to propagate forward.        
+        The value to use where there is no valid value to propagate forward. If
+        `fill_val` is not specified, NaN and invalid values aren't replaced where there
+        is no valid value to propagate forward.
     inplace : bool, default False
-        If False, return a copy of the array. If True, modify original data. This will 
+        If False, return a copy of the array. If True, modify original data. This will
         modify any other views on this object.
     limit : int, default 0
-        The maximium number of consecutive NaN or invalid values to fill. If there is a 
-        gap with more than this number of consecutive NaN or invalid values, the gap 
+        The maximium number of consecutive NaN or invalid values to fill. If there is a
+        gap with more than this number of consecutive NaN or invalid values, the gap
         will be only partially filled. If no `limit` is specified, all consecutive NaN
         and invalid values are replaced.
 
     Returns
     -------
     `FastArray`
-        The `FastArray` will be the same size and have the same dtype as the original 
+        The `FastArray` will be the same size and have the same dtype as the original
         input.
 
     See Also
     --------
-    riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with the 
+    riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with the
         next valid value.
-    riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with the 
+    riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with the
         last valid value.
     riptable.fill_forward : Replace NaN and invalid values with the last valid value.
-    FastArray.fillna : Replace NaN and invalid values with a specified value or nearby 
+    FastArray.fillna : Replace NaN and invalid values with a specified value or nearby
         data.
     FastArray.replacena : Replace NaN and invalid values with a specified value.
-    Dataset.fillna : Replace NaN and invalid values with a specified value or nearby 
+    Dataset.fillna : Replace NaN and invalid values with a specified value or nearby
         data.
-    Categorical.fill_forward : Replace NaN and invalid values with the last valid 
+    Categorical.fill_forward : Replace NaN and invalid values with the last valid
         group value.
-    GroupBy.fill_forward : Replace NaN and invalid values with the last valid group 
+    GroupBy.fill_forward : Replace NaN and invalid values with the last valid group
         value.
-      
+
     Examples
     --------
     Use a `fill_val` to replace values where there's no valid value to propagate
     forward:
-    
+
     >>> a = rt.FastArray([rt.nan, 1.0, rt.nan, rt.nan, rt.nan, 5.0])
     >>> a.fill_forward(fill_val = 0)
     FastArray([0., 1., 1., 1., 1., 5.])
-    
+
     Using :meth:`riptable.fill_forward`:
-    
+
     >>> a = rt.FastArray([0.0, rt.nan, rt.nan, rt.nan, 4.0, rt.nan])
     >>> rt.fill_forward(a, fill_val = 0)
     FastArray([0., 0., 0., 0., 4., 4.])
-    
+
     Replace only the first NaN or invalid value in any consecutive series of NaN or
     invalid values:
 
@@ -215,191 +219,196 @@ def fill_forward(arr: np.ndarray, fill_val=None, inplace:bool=False, limit:int=0
     arr, fill_val, inv, dtype, limit = _check_fill_values(arr, fill_val, inplace, limit)
 
     if dtype.num <= 10:
-       # fill integers or boolean
-       fill_forward_int(arr, inv, fill_val, limit)
+        # fill integers or boolean
+        fill_forward_int(arr, inv, fill_val, limit)
     else:
-       # fill float
-       fill_forward_float(arr, fill_val, limit)
+        # fill float
+        fill_forward_float(arr, fill_val, limit)
 
     return arr
 
-#-----------------------------------------------------
-def fill_backward(arr: np.ndarray, fill_val=None, inplace:bool=False, limit:int=0):
+
+# -----------------------------------------------------
+def fill_backward(arr: np.ndarray, fill_val=None, inplace: bool = False, limit: int = 0):
     """
     Replace NaN and invalid array values by propagating the next encountered valid value
     backward.
-    
-    Note that this method can be called either as a `FastArray` method 
-    (:meth:`riptable.rt_fastarraynumba.fill_backward`) or a function 
-    (:meth:`riptable.fill_backward`) that takes an array or `FastArray` as input. The 
+
+    Note that this method can be called either as a `FastArray` method
+    (:meth:`riptable.rt_fastarraynumba.fill_backward`) or a function
+    (:meth:`riptable.fill_backward`) that takes an array or `FastArray` as input. The
     function returns either an array or a `FastArray`, depending on the original input.
-    
+
     Parameters
     ----------
     fill_val : scalar, default None
-        The value to use where there is no valid value to propagate backward. If 
-        `fill_val` is not specified, NaN and invalid values aren't replaced where there 
-        is no valid value to propagate backward.        
+        The value to use where there is no valid value to propagate backward. If
+        `fill_val` is not specified, NaN and invalid values aren't replaced where there
+        is no valid value to propagate backward.
     inplace : bool, default False
-        If False, return a copy of the array. If True, modify original data. This will 
+        If False, return a copy of the array. If True, modify original data. This will
         modify any other views on this object.
     limit : int, default 0
-        The maximium number of consecutive NaN or invalid values to fill. If there is a 
-        gap with more than this number of consecutive NaN or invalid values, the gap 
+        The maximium number of consecutive NaN or invalid values to fill. If there is a
+        gap with more than this number of consecutive NaN or invalid values, the gap
         will be only partially filled. If no `limit` is specified, all consecutive NaN
         and invalid values are replaced.
 
     Returns
     -------
     `FastArray`
-        The `FastArray` will be the same size and have the same dtype as the original 
+        The `FastArray` will be the same size and have the same dtype as the original
         input.
 
     See Also
     --------
-    riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with the 
+    riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with the
         last valid value.
-    riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with the 
+    riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with the
         next valid value.
     riptable.fill_backward : Replace NaN and invalid values with the next valid value.
-    FastArray.fillna : Replace NaN and invalid values with a specified value or nearby 
+    FastArray.fillna : Replace NaN and invalid values with a specified value or nearby
         data.
     FastArray.replacena : Replace NaN and invalid values with a specified value.
-    Dataset.fillna : Replace NaN and invalid values with a specified value or nearby 
+    Dataset.fillna : Replace NaN and invalid values with a specified value or nearby
         data.
-    Categorical.fill_backward : Replace NaN and invalid values with the next valid 
+    Categorical.fill_backward : Replace NaN and invalid values with the next valid
         group value.
-    GroupBy.fill_backward : Replace NaN and invalid values with the next valid group 
+    GroupBy.fill_backward : Replace NaN and invalid values with the next valid group
         value.
-       
+
     Examples
     --------
     Use a `fill_val` to replace values where there's no valid value to propagate
     backward:
-    
+
     >>> a = rt.FastArray([0.0, rt.nan, rt.nan, rt.nan, 4.0, rt.nan])
     >>> a.fill_backward(fill_val = 0)
     FastArray([0., 4., 4., 4., 4., 0.])
-    
+
     Using :meth:`riptable.fill_backward`:
-    
+
     >>> a = rt.FastArray([0.0, rt.nan, rt.nan, rt.nan, 4.0, rt.nan])
     >>> rt.fill_backward(a, fill_val = 0)
     FastArray([0., 4., 4., 4., 4., 0.])
-    
+
     Replace only the first NaN or invalid value in any consecutive series of NaN or
     invalid values:
 
     >>> a.fill_backward(limit = 1)
     FastArray([ 0., nan, nan,  4.,  4., nan])
     """
-    #TODO: handle axis
+    # TODO: handle axis
     arr, fill_val, inv, dtype, limit = _check_fill_values(arr, fill_val, inplace, limit)
 
     if dtype.num <= 10:
-       # fill integers or boolean
-       fill_backward_int(arr, inv, fill_val, limit)
+        # fill integers or boolean
+        fill_backward_int(arr, inv, fill_val, limit)
     else:
-       # fill float
-       fill_backward_float(arr, fill_val, limit)
+        # fill float
+        fill_backward_float(arr, fill_val, limit)
 
     return arr
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummin_int(arr: np.ndarray, ret: np.ndarray, inv, skipna):
     if skipna:
         for j in range(len(arr)):
             running_min = arr[j]
-            ret[j]=running_min
+            ret[j] = running_min
             if running_min != inv:
                 break
 
         for i in range(j, len(arr)):
             val = arr[i]
             if val != inv and val < running_min:
-                running_min=val
-            ret[i]=running_min
+                running_min = val
+            ret[i] = running_min
     else:
         running_min = arr[0]
         for i in range(len(arr)):
             val = arr[i]
             if val == inv or val < running_min:
-                running_min=val
-            ret[i]=running_min
+                running_min = val
+            ret[i] = running_min
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummin_float(arr: np.ndarray, ret: np.ndarray, skipna):
     if skipna:
         for j in range(len(arr)):
             running_min = arr[j]
-            ret[j]=running_min
+            ret[j] = running_min
             if running_min == running_min:
                 break
 
         for i in range(j, len(arr)):
             val = arr[i]
             if val == val and val < running_min:
-                running_min=val
-            ret[i]=running_min
+                running_min = val
+            ret[i] = running_min
     else:
         running_min = arr[0]
         for i in range(len(arr)):
             val = arr[i]
             if val != val or val < running_min:
-                running_min=val
-            ret[i]=running_min
+                running_min = val
+            ret[i] = running_min
 
 
-#-----------------------------------------------------
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummax_int(arr: np.ndarray, ret: np.ndarray, inv, skipna):
     if skipna:
         for j in range(len(arr)):
             running_max = arr[j]
-            ret[j]=running_max
+            ret[j] = running_max
             if running_max != inv:
                 break
 
         for i in range(j, len(arr)):
             val = arr[i]
             if val != inv and val > running_max:
-                running_max=val
-            ret[i]=running_max
+                running_max = val
+            ret[i] = running_max
     else:
         running_max = arr[0]
         for i in range(len(arr)):
             val = arr[i]
             if val == inv or val > running_max:
-                running_max=val
-            ret[i]=running_max
+                running_max = val
+            ret[i] = running_max
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_cummax_float(arr: np.ndarray, ret: np.ndarray, skipna):
     if skipna:
         for j in range(len(arr)):
             running_max = arr[j]
-            ret[j]=running_max
+            ret[j] = running_max
             if running_max == running_max:
                 break
 
         for i in range(j, len(arr)):
             val = arr[i]
             if val == val and val > running_max:
-                running_max=val
-            ret[i]=running_max
+                running_max = val
+            ret[i] = running_max
     else:
         running_max = arr[0]
         for i in range(len(arr)):
             val = arr[i]
             if val != val or val > running_max:
-                running_max=val
-            ret[i]=running_max
+                running_max = val
+            ret[i] = running_max
+
 
 def cummax(arr: np.ndarray, skipna=True):
-    '''
+    """
     Return the running maximum over an array.
 
     Parameters
@@ -425,7 +434,7 @@ def cummax(arr: np.ndarray, skipna=True):
     See Also
     --------
     cummin, cumprod, cumsum
-    '''
+    """
     ret = empty_like(arr)
     if len(arr) > 0:
         dtype = arr.dtype
@@ -440,8 +449,9 @@ def cummax(arr: np.ndarray, skipna=True):
 
     return ret
 
+
 def cummin(arr: np.ndarray, skipna=True):
-    '''
+    """
     Return the running minimum over an array.
 
     Parameters
@@ -460,7 +470,7 @@ def cummin(arr: np.ndarray, skipna=True):
     See Also
     --------
     cummax, cumprod, cumsum
-    '''
+    """
     ret = empty_like(arr)
     if len(arr) > 0:
         dtype = arr.dtype
@@ -476,9 +486,9 @@ def cummin(arr: np.ndarray, skipna=True):
     return ret
 
 
-#-----------------------------------------------------
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
-def nb_ema_decay_with_filter_and_reset(arr, dest, time, decayRate,  filter, resetmask):
+def nb_ema_decay_with_filter_and_reset(arr, dest, time, decayRate, filter, resetmask):
     lastEma = 0
     lastTime = 0
     for i in range(len(arr)):
@@ -496,7 +506,8 @@ def nb_ema_decay_with_filter_and_reset(arr, dest, time, decayRate,  filter, rese
         lastTime = time[i]
         dest[i] = lastEma
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_ema_decay_with_filter(arr, dest, time, decayRate, filter):
     lastEma = 0
@@ -512,7 +523,8 @@ def nb_ema_decay_with_filter(arr, dest, time, decayRate, filter):
         lastTime = time[i]
         dest[i] = lastEma
 
-#-----------------------------------------------------
+
+# -----------------------------------------------------
 @nb.njit(parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
 def nb_ema_decay(arr, dest, time, decayRate):
     lastEma = 0.0
@@ -528,9 +540,16 @@ def nb_ema_decay(arr, dest, time, decayRate):
         lastTime = time[i]
         dest[i] = lastEma
 
-#-----------------------------------------------------
-def ema_decay(arr: np.ndarray, time:np.ndarray, decay_rate:float, filter:Optional[np.ndarray]=None,
-        reset:Optional[np.ndarray]=None, dtype=np.float32):
+
+# -----------------------------------------------------
+def ema_decay(
+    arr: np.ndarray,
+    time: np.ndarray,
+    decay_rate: float,
+    filter: Optional[np.ndarray] = None,
+    reset: Optional[np.ndarray] = None,
+    dtype=np.float32,
+):
     """
     Calculate the EMA using a fixed decay rate.
 
@@ -613,30 +632,34 @@ def ema_decay(arr: np.ndarray, time:np.ndarray, decay_rate:float, filter:Optiona
         raise ValueError('ema_decay function requires a time array.  Use the "time" kwarg')
 
     if not isinstance(time, np.ndarray):
-        raise ValueError('ema_decay function requires a time numpy array.')
+        raise ValueError("ema_decay function requires a time numpy array.")
 
     # require: len(arr) == len(time)
     if arr.shape != time.shape:
-        raise ValueError('ema_decay requires the `time` array to be the same shape as the `arr` array.')
+        raise ValueError("ema_decay requires the `time` array to be the same shape as the `arr` array.")
 
     # Allocate the output array
     output = empty_like(arr, dtype=dtype)
 
     if filter is not None:
         if not isinstance(filter, np.ndarray):
-            raise ValueError('ema_decay function requires a filter numpy array.')
+            raise ValueError("ema_decay function requires a filter numpy array.")
 
         # require: len(arr) == len(filter)
         if arr.shape != filter.shape:
-            raise ValueError('ema_decay requires the `filter` array, when supplied, to be the same shape as the `arr` array.')
+            raise ValueError(
+                "ema_decay requires the `filter` array, when supplied, to be the same shape as the `arr` array."
+            )
 
         if reset is not None:
             if not isinstance(reset, np.ndarray):
-                raise ValueError('ema_decay function requires a reset numpy array.')
+                raise ValueError("ema_decay function requires a reset numpy array.")
 
             # require: len(arr) == len(reset)
             if arr.shape != reset.shape:
-                raise ValueError('ema_decay requires the `reset` array, when supplied, to be the same shape as the `arr` array.')
+                raise ValueError(
+                    "ema_decay requires the `reset` array, when supplied, to be the same shape as the `arr` array."
+                )
 
             nb_ema_decay_with_filter_and_reset(arr, output, time, decay_rate, filter, reset)
         else:
@@ -644,15 +667,18 @@ def ema_decay(arr: np.ndarray, time:np.ndarray, decay_rate:float, filter:Optiona
     else:
         # If a 'reset' was supplied by the user, raise a warning to notify the user the reset won't be applied since they didn't provide a filter.
         if reset is not None:
-            raise UserWarning('ema_decay will not apply the `reset` array to the calculation because a filter was not specified.')
+            raise UserWarning(
+                "ema_decay will not apply the `reset` array to the calculation because a filter was not specified."
+            )
 
         nb_ema_decay(arr, output, time, decay_rate)
     return output
 
-#-------------------------------------------------------
+
+# -------------------------------------------------------
 # Keep at bottom of this file
-FastArray.register_function('fill_forward', fill_forward)
-FastArray.register_function('fill_backward', fill_backward)
-FastArray.register_function('ema_decay', ema_decay)
-FastArray.register_function('cummax', cummax)
-FastArray.register_function('cummin', cummin)
+FastArray.register_function("fill_forward", fill_forward)
+FastArray.register_function("fill_backward", fill_backward)
+FastArray.register_function("ema_decay", ema_decay)
+FastArray.register_function("cummax", cummax)
+FastArray.register_function("cummin", cummin)

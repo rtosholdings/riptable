@@ -1,15 +1,16 @@
-import numpy as np
 import random as rand
+
+import numpy as np
 
 functions_str = [
     # 'count',
-    'sum',
-    'mean',
-    'median',
-    'min',
-    'max',
+    "sum",
+    "mean",
+    "median",
+    "min",
+    "max",
     # 'prod',
-    'var',
+    "var",
     # 'quantile',
     # 'cumsum',
     # 'cumprod',
@@ -17,8 +18,8 @@ functions_str = [
     # 'cummin'
 ]
 
-KEY_COLUMN_NAMES = 'a b c d e g h i j k l m n o p r s t u v w x y z'.split(' ')
-VAL_COLUMN_NAMES = ['val' + char.upper() for char in KEY_COLUMN_NAMES]
+KEY_COLUMN_NAMES = "a b c d e g h i j k l m n o p r s t u v w x y z".split(" ")
+VAL_COLUMN_NAMES = ["val" + char.upper() for char in KEY_COLUMN_NAMES]
 
 VAL_COLUMNS_MAX = 8
 VAL_COLUMNS_MIN = 1
@@ -68,9 +69,7 @@ class groupby_parameters:
         self.key_cols = KEY_COLUMNS_MIN
         self.symbol_ratio = SYMBOL_RATIO_MIN
         self.aggs = AGGREGATION_MIN
-        self.agg_list = self.random_agg_list(
-            self.aggs
-        )  ##itertools.combinations(functions_str, PARAMETERS.aggs).
+        self.agg_list = self.random_agg_list(self.aggs)  ##itertools.combinations(functions_str, PARAMETERS.aggs).
 
     def update(self, parameter=None):
         def update_aggs(self):
@@ -96,18 +95,14 @@ class groupby_parameters:
             self.val_cols += VAL_COLUMNS_INC
             value = self.val_cols
             self.val_cols %= VAL_COLUMNS_MAX
-            self.val_cols = (
-                self.val_cols if self.val_cols > VAL_COLUMNS_MIN else VAL_COLUMNS_MIN
-            )
+            self.val_cols = self.val_cols if self.val_cols > VAL_COLUMNS_MIN else VAL_COLUMNS_MIN
             return value != self.val_cols
 
         def update_key_cols(self):
             self.key_cols += KEY_COLUMNS_INC
             value = self.key_cols
             self.key_cols %= KEY_COLUMNS_MAX
-            self.key_cols = (
-                self.key_cols if self.key_cols > KEY_COLUMNS_MIN else KEY_COLUMNS_MIN
-            )
+            self.key_cols = self.key_cols if self.key_cols > KEY_COLUMNS_MIN else KEY_COLUMNS_MIN
             return value != self.key_cols
 
         if parameter is None:
@@ -117,10 +112,10 @@ class groupby_parameters:
                         update_aggs(self)
         else:
             switch = {
-                'aggs': update_aggs,
-                'syms': update_symbs,
-                'vals': update_val_cols,
-                'keys': update_key_cols,
+                "aggs": update_aggs,
+                "syms": update_symbs,
+                "vals": update_val_cols,
+                "keys": update_key_cols,
             }
 
             switch[parameter]()
@@ -150,12 +145,17 @@ class groupby_everything:
 
         for i in range(0, self.key_columns):
             self.data[KEY_COLUMN_NAMES[i]] = [
-                'k' + str(rand.randint(0, self.symbol_ratio_count))
+                "k" + str(rand.randint(0, self.symbol_ratio_count))
                 for i in np.random.randint(self.size, size=self.size)
             ]
 
     def __init__(
-        self, val_cols, key_cols, symbs, agg_list, sz=SIZE_DEFAULT,
+        self,
+        val_cols,
+        key_cols,
+        symbs,
+        agg_list,
+        sz=SIZE_DEFAULT,
     ):
         self.val_columns = val_cols  ##integer number of value columns
         self.key_columns = key_cols  ##integer number of key   columns

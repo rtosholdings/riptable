@@ -1,11 +1,13 @@
 # $Id: //Depot/Source/SFW/riptable/Python/core/riptable/tests/test_csv.py#8 $
+import os
+import sys
 import unittest
-import sys, os
+
 import numpy as np
+
 from riptable import rt_csv
 
-
-testdir = os.getenv('TEST_DIR', os.path.join(os.path.dirname(__file__), 'test_files'))
+testdir = os.getenv("TEST_DIR", os.path.join(os.path.dirname(__file__), "test_files"))
 
 
 def sfloat(x):
@@ -24,41 +26,37 @@ def sint(x):
 
 def scfloat(x):
     if type(x) is str:
-        x = x.replace(',', '')
+        x = x.replace(",", "")
     return sfloat(x)
 
 
 def scint(x):
     if type(x) is str:
-        x = x.replace(',', '')
+        x = x.replace(",", "")
     return sint(x)
 
 
 class Utility_Test(unittest.TestCase):
     def test_00(self, fname=None):
         if fname is None:
-            fname = os.path.join(testdir, 'unicode_ex3.csv')
+            fname = os.path.join(testdir, "unicode_ex3.csv")
 
-        with open(fname, encoding='utf-8') as infile:
-            headers = [_tok.strip('"') for _tok in infile.readline().strip().split(',')]
+        with open(fname, encoding="utf-8") as infile:
+            headers = [_tok.strip('"') for _tok in infile.readline().strip().split(",")]
         ident = lambda x: x
         conv0 = {_k: ident for _k in headers}
         # conv1 = {_k: str for _k in headers}
         dsets = {}
         for ii in range(4):
-            dsets[f'v{ii}'] = rt_csv.load_csv_as_dataset(
-                fname, headers, conv0, version=ii, skip_rows=1
-            )
+            dsets[f"v{ii}"] = rt_csv.load_csv_as_dataset(fname, headers, conv0, version=ii, skip_rows=1)
         for _k in dsets:
-            self.assertTrue((dsets['v0'] == dsets[_k]).all(axis=None))
+            self.assertTrue((dsets["v0"] == dsets[_k]).all(axis=None))
             self.assertEqual(dsets[_k].shape, (35, 5))
 
         for ii in range(4):
-            dsets[f'v{ii}'] = rt_csv.load_csv_as_dataset(
-                fname, headers, conv0, version=ii, skip_rows=6
-            )
+            dsets[f"v{ii}"] = rt_csv.load_csv_as_dataset(fname, headers, conv0, version=ii, skip_rows=6)
         for _k in dsets:
-            self.assertTrue((dsets['v0'] == dsets[_k]).all(axis=None))
+            self.assertTrue((dsets["v0"] == dsets[_k]).all(axis=None))
             self.assertEqual(dsets[_k].shape, (30, 5))
 
     # BUG in this test. calling pd.read_csv corrupts memory and changes tests that follow
