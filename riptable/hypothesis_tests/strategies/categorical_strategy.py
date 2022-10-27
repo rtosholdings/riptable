@@ -1,21 +1,21 @@
 from typing import Dict, List, Optional, Tuple, Union
 
-import numpy as np
-import riptable as rt
-from riptable import Categorical
-from riptable.rt_enum import CategoryMode
-
-from hypothesis import event
 import hypothesis.strategies as st
+import numpy as np
+from hypothesis import event
 from hypothesis.extra.numpy import (
-    arrays,
     array_shapes,
+    arrays,
     byte_string_dtypes,
     integer_array_indices,
     integer_dtypes,
     unicode_string_dtypes,
-    unsigned_integer_dtypes
+    unsigned_integer_dtypes,
 )
+
+import riptable as rt
+from riptable import Categorical
+from riptable.rt_enum import CategoryMode
 
 # TODO
 #   * Implement a way to generate Categoricals of derived FastArray classes, such as rt.Date.
@@ -35,17 +35,12 @@ from hypothesis.extra.numpy import (
 #     while (probably) also improving performance.
 
 
-def category_labels(
-    min_str_len: int,
-    max_str_len: int,
-    unicode: bool
-) -> st.SearchStrategy:
+def category_labels(min_str_len: int, max_str_len: int, unicode: bool) -> st.SearchStrategy:
     """Creates a `hypothesis.strategies.SearchStrategy` instance for generating category labels."""
-    category_label_chars = \
-        st.characters(
-            whitelist_categories=('L', 'Nd', 'Nl', 'Pc', 'Pd', 'Zs'),
-            max_codepoint=None if unicode else 127  # Max codepoint of 127 limits to ASCII codepoints.
-        )
+    category_label_chars = st.characters(
+        whitelist_categories=("L", "Nd", "Nl", "Pc", "Pd", "Zs"),
+        max_codepoint=None if unicode else 127,  # Max codepoint of 127 limits to ASCII codepoints.
+    )
     return st.text(alphabet=category_label_chars, min_size=min_str_len, max_size=max_str_len)
 
 
@@ -55,7 +50,7 @@ def categorical_stringarray(
     max_length: int,
     max_categories: int,
     *,
-    endianness: str = '=',
+    endianness: str = "=",
     min_str_len: int = 1,
     max_str_len: int = 16,
     unicode: Optional[bool] = None,
@@ -114,9 +109,9 @@ def categorical_stringarray(
     # and shrinking (in some cases) works better when such values are drawn earlier in strategy.
     explicit_categories: bool = draw(st.booleans())
     if explicit_categories:
-        event('Categorical created from unique category array and fancy index.')
+        event("Categorical created from unique category array and fancy index.")
     else:
-        event('Categorical created from non-unique array of strings.')
+        event("Categorical created from non-unique array of strings.")
 
     # Draw the string dtype based on whether we want a byte (ascii) string or Unicode.
     is_unicode: bool = draw(st.booleans()) if unicode is None else unicode
@@ -152,21 +147,12 @@ def categorical_stringarray(
 
 
 def bimap(
-    keys: st.SearchStrategy,
-    values: st.SearchStrategy,
-    *,
-    min_size: int = 0,
-    max_size: Optional[int] = None
+    keys: st.SearchStrategy, values: st.SearchStrategy, *, min_size: int = 0, max_size: Optional[int] = None
 ) -> st.SearchStrategy:
     """
     Strategy similar to the hypothesis 'dictionaries' strategy, but which ensures both keys and values are unique.
     """
-    return st.lists(
-        st.tuples(keys, values),
-        min_size=min_size,
-        max_size=max_size,
-        unique=True
-    ).map(dict)
+    return st.lists(st.tuples(keys, values), min_size=min_size, max_size=max_size, unique=True).map(dict)
 
 
 @st.composite
@@ -175,7 +161,7 @@ def categorical_dictmode(
     max_length: int,
     max_categories: int,
     *,
-    endianness: str = '=',
+    endianness: str = "=",
     min_str_len: int = 1,
     max_str_len: int = 16,
     unicode: Optional[bool] = None,
@@ -240,9 +226,9 @@ def categorical_dictmode(
     allow_negative_category_values: bool = draw(st.booleans()) if use_signed_integer_dtype else False
     if use_signed_integer_dtype:
         if allow_negative_category_values:
-            event('Categorical may have a mix of negative, zero, and positive category values.')
+            event("Categorical may have a mix of negative, zero, and positive category values.")
         else:
-            event('Categorical has only non-negative category values.')
+            event("Categorical has only non-negative category values.")
 
     # If the 'unicode' flag is not set, draw a boolean to fill it in.
     is_unicode: bool = draw(st.booleans()) if unicode is None else unicode
@@ -251,7 +237,7 @@ def categorical_dictmode(
     # If the 'ordered' flag is not set, draw a boolean for it now so we have a concrete value
     # to use when creating the categorical.
     is_ordered = draw(st.booleans()) if ordered is None else ordered
-    event(f'ordered = {is_ordered}')
+    event(f"ordered = {is_ordered}")
 
     # Draw the dtype for the category values.
     # TODO: Draw a signed or unsigned integer dtype here which is at least as large as needed, but perhaps larger
@@ -263,10 +249,9 @@ def categorical_dictmode(
 
     # Create the strategy for the category values (integer values representing the categories).
     values_dtype_info = np.iinfo(values_dtype)
-    values_strat =\
-        st.integers(
-            min_value=(values_dtype_info.min if allow_negative_category_values else 0),
-            max_value=values_dtype_info.max)
+    values_strat = st.integers(
+        min_value=(values_dtype_info.min if allow_negative_category_values else 0), max_value=values_dtype_info.max
+    )
 
     # Create an array of unique category values/codes.
     cats_shapes = array_shapes(max_dims=1, max_side=max_categories)
@@ -281,8 +266,9 @@ def categorical_dictmode(
 
     # Create an array of unique category labels; this must be the same shape as the unique category values array.
     category_label_strat = category_labels(min_str_len, max_str_len, unicode=is_unicode)
-    unique_labels =\
-        draw(arrays(dtype=labels_dtype, shape=unique_cat_values.shape, elements=category_label_strat, unique=True))
+    unique_labels = draw(
+        arrays(dtype=labels_dtype, shape=unique_cat_values.shape, elements=category_label_strat, unique=True)
+    )
 
     # TODO: Draw a slice (or None) that we'll apply to both arrays of uniques (the labels and values)
     #   before using them to create the category dictionary.
@@ -303,17 +289,13 @@ def categorical_dictmode(
 
 
 @st.composite
-def categorical_intenum(
-    draw
-) -> Categorical:
+def categorical_intenum(draw) -> Categorical:
     """Strategy for creating IntEnum-mode Categoricals."""
     raise NotImplementedError()
 
 
 @st.composite
-def categorical_numericarray(
-    draw
-) -> Categorical:
+def categorical_numericarray(draw) -> Categorical:
     """Strategy for creating NumericArray-mode Categoricals."""
     raise NotImplementedError()
 
@@ -388,9 +370,7 @@ class CategoricalStrategy(st.SearchStrategy):
             category_dict = self._construct_dict(data, values)
             cat = Categorical(values, categories=category_dict, ordered=self.ordered)
         else:
-            raise ValueError(
-                f"{self._CN}.do_draw: unhandled category mode {self.category_mode}\n\t{self}"
-            )
+            raise ValueError(f"{self._CN}.do_draw: unhandled category mode {self.category_mode}\n\t{self}")
         return cat
 
     def __str__(self):
@@ -409,9 +389,7 @@ if __name__ == "__main__":
             f"\nc._fa\n{repr(c._fa)}\n\nc.category_array\n{repr(c.category_array)}\n\nc.category_dict\n{c.category_dict}\n\n"
         )
         if c.category_mode == rt.rt_enum.CategoryMode.Dictionary:
-            print(
-                f"*c.category_mapping*\n{c.category_mapping}\n\n*c.category_codes*\n{c.category_codes}"
-            )
+            print(f"*c.category_mapping*\n{c.category_mapping}\n\n*c.category_codes*\n{c.category_codes}")
 
     cat_strat = categorical_dictmode(10_000, 1_000, max_str_len=20)
     print(f"cat_strat {cat_strat}\n")

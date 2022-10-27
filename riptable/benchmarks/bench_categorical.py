@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
+from ..rt_categorical import Categorical
 from .bench_numpy import gen_farange
 from .runner import benchmark as bench
-
-from ..rt_categorical import Categorical
 
 
 def gen_singlekey_cat():

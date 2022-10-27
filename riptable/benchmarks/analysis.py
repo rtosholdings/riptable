@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import numbers
+from typing import Any, Callable, Generator, Mapping, Tuple, Union
+
 import numpy as np
 
-from typing import Any, Callable, Mapping, Tuple, Union, Generator
-from .results import RunResult
 from ..rt_fastarray import FastArray
-
+from .results import RunResult
 
 enable_bench_estimators: bool = False
 """
@@ -91,9 +91,7 @@ def _bootstrap_resample(
     rng: Generator,
     samples: np.ndarray,
     resample_count: int,
-    agg_funcs: Mapping[
-        str, Union[Callable[[np.ndarray], int], Callable[[np.ndarray], float]]
-    ],
+    agg_funcs: Mapping[str, Union[Callable[[np.ndarray], int], Callable[[np.ndarray], float]]],
 ) -> Mapping[str, np.ndarray]:
     """
     Bootstrap resampling of timing samples.
@@ -151,9 +149,7 @@ def _bootstrap_resample(
             # If the array for this aggregate hasn't been created yet, create it.
             # Otherwise, fetch the existing array.
             if i == 0:
-                dtype = (
-                    np.int64 if isinstance(agg_val, numbers.Integral) else np.float64
-                )
+                dtype = np.int64 if isinstance(agg_val, numbers.Integral) else np.float64
                 agg_arr = np.empty(resample_iters, dtype=dtype)
                 resampled_aggs[key] = agg_arr
             else:
@@ -193,7 +189,7 @@ def _analyze_results(run_nano_times: np.ndarray) -> RunResult:
 
     # TEMP: While developing the estimator code for benchmarking, make it easy to enable/disable
 
-    #if enable_bench_estimators:
+    # if enable_bench_estimators:
     #    # Calculate the cumulative sums of the timing samples, then perform
     #    # a linear regression to fit a line to the cumsums. The more stable
     #    # the timing results, the higher (closer to 1) the R^2 value will be.

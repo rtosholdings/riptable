@@ -4,12 +4,14 @@ Functions for generating random data for use in benchmarking.
 __all__ = ["rand_array", "rand_dataset", "rand_fancyindex", "rand_keyarray"]
 
 from typing import List, Optional, Union
+
 import numpy as np
 
 from ..rt_categorical import Categorical
 from ..rt_dataset import Dataset
 from ..rt_fastarray import FastArray
 from ..rt_numpy import arange, putmask
+
 
 def check_params(dtype, invalid_ratio):
     if not isinstance(dtype, np.dtype):
@@ -20,9 +22,9 @@ def check_params(dtype, invalid_ratio):
         if 0.0 <= invalid_ratio <= 1.0:
             pass
         else:
-            raise ValueError(
-                f"Invalid value specified for `invalid_ratio`: {invalid_ratio}"
-            )
+            raise ValueError(f"Invalid value specified for `invalid_ratio`: {invalid_ratio}")
+
+
 def rand_fancyindex(
     rng: np.random.Generator,
     index_length: int,
@@ -33,14 +35,10 @@ def rand_fancyindex(
     """Create a random fancy index with the specified length and dtype."""
     check_params(dtype, invalid_ratio)
     if dtype.kind not in "iu":  # TODO: Also support floats, since mbget allows that
-        raise ValueError(
-            f"Only integer dtypes are currently supported by this method. dtype={dtype.name}"
-        )
+        raise ValueError(f"Only integer dtypes are currently supported by this method. dtype={dtype.name}")
 
     # Generate the fancy index from the uniform integer distribution.
-    fancyindex = FastArray(
-        rng.integers(0, source_arr_len, size=index_length, dtype=dtype)
-    )
+    fancyindex = FastArray(rng.integers(0, source_arr_len, size=index_length, dtype=dtype))
 
     # If the fancy index should have some invalids/NA values, add those in now.
     if invalid_ratio is not None and invalid_ratio > 0.0:
@@ -51,7 +49,9 @@ def rand_fancyindex(
     return fancyindex
 
 
-def rand_array(rng: np.random.Generator, length: int, dtype: np.dtype, invalid_ratio: Optional[float] = None) -> np.ndarray:
+def rand_array(
+    rng: np.random.Generator, length: int, dtype: np.dtype, invalid_ratio: Optional[float] = None
+) -> np.ndarray:
     # TODO: Implement a flag that controls whether invalid values are included in the array? Or (instead) an invalid_ratio parameter like our other functions?
     check_params(dtype, invalid_ratio)
 
@@ -67,30 +67,27 @@ def rand_array(rng: np.random.Generator, length: int, dtype: np.dtype, invalid_r
         # Generate integers in the upper ASCII range, then use a view to expose those
         # values as fixed-length ASCII strings.
         # TODO: Support other character ranges (lower-range ASCII 0-127, full ASCII 0-255, lowercase+uppercase+digits).
-        arr = FastArray(rng.integers(
-            65, 90, size=length * dtype.itemsize, dtype=np.int8, endpoint=True
-        ).view(dtype))
+        arr = FastArray(rng.integers(65, 90, size=length * dtype.itemsize, dtype=np.int8, endpoint=True).view(dtype))
 
     elif dtype.kind == "U":
         # Generate integers in the upper ASCII range.
         # TODO: Support other character ranges (lower-range ASCII 0-127, full ASCII 0-255, lowercase+uppercase+digits, Unicode chars >255).
-        arr = FastArray(rng.integers(
-            65, 90, size=length * (dtype.itemsize // 4), dtype=np.int32, endpoint=True
-        ).view(dtype))
+        arr = FastArray(
+            rng.integers(65, 90, size=length * (dtype.itemsize // 4), dtype=np.int32, endpoint=True).view(dtype)
+        )
 
     else:
         # TODO: Handle other dtypes
-        raise NotImplementedError(
-            f"The dtype {dtype} is not yet supported by this function."
-        )
+        raise NotImplementedError(f"The dtype {dtype} is not yet supported by this function.")
 
-     # If the fancy index should have some invalids/NA values, add those in now.
+    # If the fancy index should have some invalids/NA values, add those in now.
     if invalid_ratio is not None and invalid_ratio > 0.0:
         # TODO: Also add in some out-of-bounds accesses (and not just invalid/NA values) here?
         invalid_outcomes = FastArray(rng.random(size=length))
         putmask(arr, invalid_outcomes < invalid_ratio, arr.inv)
 
     return arr
+
 
 def rand_keyarray(
     rng: np.random.Generator,
@@ -142,9 +139,9 @@ def rand_keyarray(
         # values as fixed-length ASCII strings.
         # TODO: Support other character ranges (lower-range ASCII 0-127, full ASCII 0-255, lowercase+uppercase+digits).
         # TODO: Use uniques() or similar to make sure all of the values generated here are actually unique.
-        unique_values = rng.integers(
-            65, 90, size=unique_count * dtype.itemsize, dtype=np.int8, endpoint=True
-        ).view(dtype)
+        unique_values = rng.integers(65, 90, size=unique_count * dtype.itemsize, dtype=np.int8, endpoint=True).view(
+            dtype
+        )
 
     elif dtype.kind == "U":
         # Generate integers in the upper ASCII range.
@@ -175,9 +172,7 @@ def rand_keyarray(
     return unique_values[fancyindex]
 
 
-def rand_multikeyarray(
-    rng: np.random.Generator, length: int, dtypes: List[np.dtype]
-) -> List[np.ndarray]:
+def rand_multikeyarray(rng: np.random.Generator, length: int, dtypes: List[np.dtype]) -> List[np.ndarray]:
     # TODO: Implement a function similar to rand_keyarray but which produces a multikey (a tuple or list of arrays)
     raise NotImplementedError()
 

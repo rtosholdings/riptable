@@ -2,8 +2,10 @@ import os
 
 import pytest
 
+from riptable import Dataset, Multiset, Struct
+
 from .vnu_checker import VNUChecker
-from riptable import Dataset, Struct, Multiset
+
 
 @pytest.mark.xfail(reason="Requires the VNU.jar HTML validator")
 @pytest.mark.parametrize(
@@ -36,7 +38,6 @@ def test_simple_html_repr(rt_obj, tmp_path):
     # validate the dumped HTML files are valid HTML
     errors = checker.validate()
 
-    assert not len(errors), (
-        f"Checker failed.\nChecker command: {checker}\nGot the following errors:\n"
-        + "\n".join(errors)
+    assert not len(errors), f"Checker failed.\nChecker command: {checker}\nGot the following errors:\n" + "\n".join(
+        errors
     )

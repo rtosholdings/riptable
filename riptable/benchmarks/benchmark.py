@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+from typing import Callable
+
 import numpy as np
 import riptide_cpp as rc
 
-from typing import Callable
-from .analysis import enable_bench_estimators, _analyze_results
 from ..rt_dataset import Dataset
 from ..rt_fastarray import FastArray
 from ..rt_fastarray import FastArray as FA
 from ..rt_multiset import Multiset
 from ..rt_numpy import empty
-
+from .analysis import _analyze_results, enable_bench_estimators
 
 # TODO:  When running in Py37+, add time.perf_counter_ns() (and maybe time.time_ns()).
 _timestamp_funcs = {"get_nano_time": rc.GetNanoTime, "tsc": rc.GetTSC}
@@ -41,9 +41,7 @@ def _makename(dtype, asize):
     return nm + "_" + number
 
 
-def _time_run(
-    timerfunc: Callable[[], int], func, *args, loops: int, **kwargs
-) -> np.ndarray:
+def _time_run(timerfunc: Callable[[], int], func, *args, loops: int, **kwargs) -> np.ndarray:
     """
     Invoke a function to be benchmarked repeatedly with the specified arguments to capture timing information.
 
@@ -197,19 +195,13 @@ def benchmark(
                             # subtract since this is worker threads and we are counting main thread
                             rc.SetThreadWakeUp(thread - 1)
                         if funcargs == 1:
-                            raw_timings = _time_run(
-                                timestamp_func, func, array, loops=loops
-                            )
+                            raw_timings = _time_run(timestamp_func, func, array, loops=loops)
                         else:
                             if scalar:
                                 # use a scalar as second input
-                                raw_timings = _time_run(
-                                    timestamp_func, func, array, array[0], loops=loops
-                                )
+                                raw_timings = _time_run(timestamp_func, func, array, array[0], loops=loops)
                             else:
-                                raw_timings = _time_run(
-                                    timestamp_func, func, array, array, loops=loops
-                                )
+                                raw_timings = _time_run(timestamp_func, func, array, array, loops=loops)
 
                         # Analyze the raw result data.
                         analysis = _analyze_results(raw_timings)

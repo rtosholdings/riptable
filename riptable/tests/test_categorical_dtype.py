@@ -1,8 +1,7 @@
-import pytest
 import pandas as pd
+import pytest
 
 from riptable import *
-
 
 sorted_codes = FastArray(
     [
@@ -40,40 +39,40 @@ sorted_codes = FastArray(
 )
 str_fa = FastArray(
     [
-        'c',
-        'e',
-        'e',
-        'd',
-        'c',
-        'b',
-        'd',
-        'c',
-        'a',
-        'b',
-        'd',
-        'e',
-        'c',
-        'a',
-        'e',
-        'd',
-        'b',
-        'a',
-        'b',
-        'c',
-        'd',
-        'b',
-        'e',
-        'c',
-        'c',
-        'd',
-        'e',
-        'c',
-        'a',
-        'c',
+        "c",
+        "e",
+        "e",
+        "d",
+        "c",
+        "b",
+        "d",
+        "c",
+        "a",
+        "b",
+        "d",
+        "e",
+        "c",
+        "a",
+        "e",
+        "d",
+        "b",
+        "a",
+        "b",
+        "c",
+        "d",
+        "b",
+        "e",
+        "c",
+        "c",
+        "d",
+        "e",
+        "c",
+        "a",
+        "c",
     ]
 )
-complete_unique_cats = FastArray(['a', 'b', 'c', 'd', 'e'])
-big_cats = FastArray(['string' + str(i) for i in range(2000)])
+complete_unique_cats = FastArray(["a", "b", "c", "d", "e"])
+big_cats = FastArray(["string" + str(i) for i in range(2000)])
 matlab_codes = (sorted_codes + 1).astype(np.float32)
 
 
@@ -96,9 +95,7 @@ class TestCategoricalDtype:
         c = Categorical(matlab_codes, complete_unique_cats, from_matlab=True)
         assert c._fa.dtype == np.int8
 
-        c = Categorical(
-            matlab_codes, complete_unique_cats, from_matlab=True, dtype=np.int64
-        )
+        c = Categorical(matlab_codes, complete_unique_cats, from_matlab=True, dtype=np.int64)
         assert c._fa.dtype == np.int64
 
     def test_strings(self):

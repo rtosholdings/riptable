@@ -11,20 +11,19 @@ __all__ = [
 
 import itertools
 import logging
-import numpy as np
-
-from numpy.random import default_rng
 from itertools import product
 from typing import List, Tuple
 
-from .benchmark import timestamper
-from .rand_data import rand_dataset
-from .runner import create_comparison_dataset, create_trial_dataset, benchmark
+import numpy as np
+from numpy.random import default_rng
+
 from ..rt_categorical import Categorical
 from ..rt_dataset import Dataset
 from ..rt_merge import merge, merge2
 from ..rt_numpy import empty
-
+from .benchmark import timestamper
+from .rand_data import rand_dataset
+from .runner import benchmark, create_comparison_dataset, create_trial_dataset
 
 logger = logging.getLogger(__name__)
 """The logger for this module."""
@@ -73,20 +72,14 @@ def generate_merge_datasets(
     left_step = int(left_dataset_max_rowcount / 4)
     left_rowcounts = list(range(left_step, left_dataset_max_rowcount + 1, left_step))
     right_step = int(right_dataset_max_rowcount / 4)
-    right_rowcounts = list(
-        range(right_step, right_dataset_max_rowcount + 1, right_step)
-    )
+    right_rowcounts = list(range(right_step, right_dataset_max_rowcount + 1, right_step))
 
     left_datasets, right_datasets = list(), list()
     for left_rowcount in left_rowcounts:
         for right_rowcount in right_rowcounts:
             rng = default_rng(rng_seed)
-            left_datasets.append(
-                rand_dataset(left_rowcount, rng, left_key_unique_count)
-            )
-            right_datasets.append(
-                rand_dataset(right_rowcount, rng, right_key_unique_count)
-            )
+            left_datasets.append(rand_dataset(left_rowcount, rng, left_key_unique_count))
+            right_datasets.append(rand_dataset(right_rowcount, rng, right_key_unique_count))
     return left_datasets, right_datasets
 
 
@@ -411,12 +404,8 @@ def bench_merge_pandas(**kwargs) -> Dataset:
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        left_df = rand_dataset(left_rowcount, rng, left_key_unique_count).to_pandas(
-            use_nullable=True
-        )
-        right_df = rand_dataset(right_rowcount, rng, right_key_unique_count).to_pandas(
-            use_nullable=True
-        )
+        left_df = rand_dataset(left_rowcount, rng, left_key_unique_count).to_pandas(use_nullable=True)
+        right_df = rand_dataset(right_rowcount, rng, right_key_unique_count).to_pandas(use_nullable=True)
 
         # Sweep over trial parameters; all trials sharing the same setup parameters
         # share the same data created from those setup parameters.
@@ -437,9 +426,7 @@ def bench_merge_pandas(**kwargs) -> Dataset:
                     if keep_left is not None:
                         left_df = left_df.drop_duplicates(subset="key", keep=keep_left)
                     if keep_right is not None:
-                        right_df = right_df.drop_duplicates(
-                            subset="key", keep=keep_right
-                        )
+                        right_df = right_df.drop_duplicates(subset="key", keep=keep_right)
 
                     left_df.merge(right_df, on="key", how=how)
                     ### Actual function invocation ends here ###
@@ -485,14 +472,10 @@ def compare_merge(**kwargs) -> Dataset:
     #       benchmark parameters, since we can pass these in to the benchmark
     #       and have them recorded in the usual way.
     rtmerge_bench_data["keep_left"] = Categorical(
-        rtmerge_bench_data["how"].map(
-            {"right": "last", "inner": "last", "outer": "last"}, invalid=""
-        )
+        rtmerge_bench_data["how"].map({"right": "last", "inner": "last", "outer": "last"}, invalid="")
     )
     rtmerge_bench_data["keep_right"] = Categorical(
-        rtmerge_bench_data["how"].map(
-            {"left": "last", "inner": "last", "outer": "last"}, invalid=""
-        )
+        rtmerge_bench_data["how"].map({"left": "last", "inner": "last", "outer": "last"}, invalid="")
     )
 
     # Run the benchmark for rt.merge2.

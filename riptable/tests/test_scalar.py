@@ -1,9 +1,9 @@
 """Test around scalar constructors and scalar methods."""
-import riptable as rt
 import numpy as np
 import pytest
-
 from numpy.testing import assert_almost_equal, assert_warns
+
+import riptable as rt
 
 
 class TestScalarConstructor(object):
@@ -31,7 +31,10 @@ class TestScalarConstructor(object):
 
     @pytest.mark.parametrize(
         "scalar_ctor, numeric_string",
-        [("longdouble", "1e10000"), ("longdouble", "-1e10000"),],
+        [
+            ("longdouble", "1e10000"),
+            ("longdouble", "-1e10000"),
+        ],
     )
     def test_overflow_warning(self, scalar_ctor, numeric_string):
         assert_warns(RuntimeWarning, getattr(np, scalar_ctor), numeric_string)

@@ -1,9 +1,11 @@
 """Unittests for riptable module level functions such as any, all, average, percentile, quantile, etc."""
-import pytest
-import numpy as np
-import riptable as rt
 import itertools
-from numpy.testing import assert_array_equal, assert_almost_equal
+
+import numpy as np
+import pytest
+from numpy.testing import assert_almost_equal, assert_array_equal
+
+import riptable as rt
 from riptable.Utils.teamcity_helper import is_running_in_teamcity
 
 
@@ -11,9 +13,9 @@ class TestCat2Keys:
     @pytest.mark.parametrize(
         "key1,key2",
         [
-            (list('abc'), list('xyz')),
-            (np.array(list('abc')), np.array(list('xyz'))),
-            (np.array(list('abc')), list('xyz')),
+            (list("abc"), list("xyz")),
+            (np.array(list("abc")), np.array(list("xyz"))),
+            (np.array(list("abc")), list("xyz")),
             # add the following test cases for nested list of arrays and categoricals
             # ([FA(list('abc')), FA(list('def'))], [FA(list('uvw')), FA(list('xyz'))])
             # ([FA('a'), FA('b'), FA('c')], [FA('x'), FA('y'), FA('z')]),
@@ -39,9 +41,7 @@ class TestCat2Keys:
         # Taking the entries one by one of expected_key1 and expected_key2 should produce the
         # cartesian product of key1 and key2.
         expected_product = [k1 + k2 for k1, k2 in itertools.product(key1, key2)]
-        actual_product = np.array(
-            sorted([k1 + k2 for k1, k2 in zip(actual_key1, actual_key2)]), dtype="U2"
-        )
+        actual_product = np.array(sorted([k1 + k2 for k1, k2 in zip(actual_key1, actual_key2)]), dtype="U2")
         assert_array_equal(sorted(expected_product), actual_product)
 
 
@@ -50,20 +50,18 @@ class TestQuantile:
         # Related Jira issue: https://jira/browse/RIP-341
         arr = np.zeros(shape=(2,), dtype=np.float16)
         with pytest.raises(SystemError):
-            rt.quantile(arr, 0, 'lower')
+            rt.quantile(arr, 0, "lower")
 
     def test_one_darray(self):
         arr = np.zeros(shape=(2,), dtype=np.float32)
-        result, _, _ = rt.quantile(arr, 0, 'lower')
+        result, _, _ = rt.quantile(arr, 0, "lower")
         assert result == 0.0
 
     @pytest.mark.xfail(reason="RIP-341: supports shapes (x,), but not (x,0)")
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_one_darray_xfail(self):
         arr = np.zeros(shape=(2, 0), dtype=np.float32)
-        result, _, _ = rt.quantile(arr, 0, 'lower')
+        result, _, _ = rt.quantile(arr, 0, "lower")
         assert result == 0.0
 
 
@@ -72,7 +70,7 @@ class TestSearchSorted:
         return arr % 2 == 0
 
     def test_simple(self):
-        sides = {'left', 'right'}
+        sides = {"left", "right"}
 
         arr = np.arange(10)
         v = arr[self._mask(arr)]
@@ -87,7 +85,7 @@ class TestSearchSorted:
             )
 
     def test_simple_left(self):
-        side = 'left'
+        side = "left"
 
         arr = np.array([0, 0, 0, 1])
         v = arr[self._mask(arr)]
@@ -100,14 +98,10 @@ class TestSearchSorted:
             err_msg=f"using array {arr}\nvalues to insert {v}\nside {side}",
         )
 
-    @pytest.mark.xfail(
-        reason="RIP-345 - expected insertion points at position 3, got 2"
-    )
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.xfail(reason="RIP-345 - expected insertion points at position 3, got 2")
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_simple_right_xfail(self):
-        side = 'right'
+        side = "right"
 
         arr = np.array([0, 0, 0, 1])
         v = arr[self._mask(arr)]
@@ -121,7 +115,7 @@ class TestSearchSorted:
         )
 
     def test_simple_right2(self):
-        side = 'right'
+        side = "right"
 
         arr = np.array([0, 2, 2, 2, 2])
         v = arr[self._mask(arr)]
@@ -135,11 +129,9 @@ class TestSearchSorted:
         )
 
     @pytest.mark.xfail(reason="RIP-345: expected insertion points at position 1, got 2")
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_simple_left2_xfail(self):
-        side = 'left'
+        side = "left"
 
         arr = np.array([0, 2, 2, 2, 2])
         v = arr[self._mask(arr)]
@@ -160,21 +152,19 @@ class TestSearchSorted:
         b[5] = np.nan
         b[2] = 100
         b[1] = -100
-        x1 = np.searchsorted(a, b, side='left')
-        x2 = rt.searchsorted(a, b, side='left')
+        x1 = np.searchsorted(a, b, side="left")
+        x2 = rt.searchsorted(a, b, side="left")
         assert sum(x1 - x2) == 0
 
-        x1 = rt.searchsorted(a, b, side='right')
-        x2 = rt.searchsorted(a, b, side='right')
+        x1 = rt.searchsorted(a, b, side="right")
+        x2 = rt.searchsorted(a, b, side="right")
         assert sum(x1 - x2) == 0
 
         b = b.astype(np.int32)
 
 
 class TestStd:
-    @pytest.mark.xfail(
-        reason="RIP-350 - std not returning the correct result for some inputs"
-    )
+    @pytest.mark.xfail(reason="RIP-350 - std not returning the correct result for some inputs")
     @pytest.mark.parametrize(
         "a",
         # ACTUAL:  0.5345224838248488
@@ -229,9 +219,7 @@ class TestSum:
 
 
 class TestWhere:
-    @pytest.mark.xfail(
-        reason="rt.where returns FastArray([None]), should be FastArray([])"
-    )
+    @pytest.mark.xfail(reason="rt.where returns FastArray([None]), should be FastArray([])")
     def test_where(self):
         arr = np.array([0], dtype=np.int64)
         min = arr.min()

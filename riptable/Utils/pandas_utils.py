@@ -5,15 +5,16 @@ _NOT_ be imported in __init__.py or any other such core (like rt_appconfig.py).
 """
 
 __all__ = [
-    'dataset_as_pandas_df',
-    'dataset_from_pandas_df',
+    "dataset_as_pandas_df",
+    "dataset_from_pandas_df",
 ]
 
 import warnings
+
 from ..rt_dataset import Dataset
 
 
-def dataset_from_pandas_df(df, tz='UTC'):
+def dataset_from_pandas_df(df, tz="UTC"):
     """
     This function is deprecated, please use riptable.Dataset.from_pandas.
 
@@ -43,8 +44,8 @@ def dataset_from_pandas_df(df, tz='UTC'):
     riptable.Dataset.to_pandas
     """
     warnings.warn(
-        'dataset_from_pandas_df is deprecated and will be removed in future release, '
-        'please use riptable.Dataset.from_pandas method',
+        "dataset_from_pandas_df is deprecated and will be removed in future release, "
+        "please use riptable.Dataset.from_pandas method",
         FutureWarning,
         stacklevel=2,
     )
@@ -73,8 +74,8 @@ def dataset_as_pandas_df(ds):
     riptable.Dataset.to_pandas
     """
     warnings.warn(
-        'dataset_as_pandas_df is deprecated and will be removed in future release, '
-        'please use riptable.Dataset.to_pandas method',
+        "dataset_as_pandas_df is deprecated and will be removed in future release, "
+        "please use riptable.Dataset.to_pandas method",
         FutureWarning,
         stacklevel=2,
     )

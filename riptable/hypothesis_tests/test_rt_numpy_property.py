@@ -1,22 +1,11 @@
+import unittest
 from math import nan
 from typing import List
 
-import numpy as np
-import riptable as rt
-from riptable import FastArray, FA
-
-import pytest
-import unittest
-from numpy.testing import (
-    assert_array_equal,
-    assert_array_almost_equal,
-    assert_equal,
-    assert_allclose,
-    assert_almost_equal,
-)
-
 import hypothesis
-from hypothesis import assume, event, example, given, HealthCheck
+import numpy as np
+import pytest
+from hypothesis import HealthCheck, assume, event, example, given
 from hypothesis.extra.numpy import (
     arrays,
     boolean_dtypes,
@@ -25,6 +14,17 @@ from hypothesis.extra.numpy import (
     unsigned_integer_dtypes,
 )
 from hypothesis.strategies import one_of
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_almost_equal,
+    assert_array_equal,
+    assert_equal,
+)
+
+import riptable as rt
+from riptable import FA, FastArray
+from riptable.Utils.teamcity_helper import is_running_in_teamcity
 
 # riptable custom Hypothesis strategies
 from .strategies.helper_strategies import (
@@ -35,22 +35,16 @@ from .strategies.helper_strategies import (
     one_darray_shape_strategy,
 )
 
-from riptable.Utils.teamcity_helper import is_running_in_teamcity
-
 
 class TestCat2Keys:
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Hypothesis generation taking too long."
-    )
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Hypothesis generation taking too long.")
     @given(keys=generate_list_ndarrays())
     def test_cat2keys_nested_array(self, keys):
         key1, key2 = keys
         multi_cat = rt.cat2keys(key1, key2)
         print(f"key1 {repr(key1)}\nkey2: {repr(key2)}")
 
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Hypothesis generation taking too long."
-    )
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Hypothesis generation taking too long.")
     @given(keys=one_of(generate_lists(), generate_ndarrays()))
     def test_cat2keys(self, keys):
         key1, key2 = keys

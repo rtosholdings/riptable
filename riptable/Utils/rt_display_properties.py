@@ -1,28 +1,29 @@
 import numpy as np
+
 from ..rt_enum import (
-    TypeRegister,
-    DisplayJustification,
-    DisplayLength,
+    INVALID_DICT,
+    INVALID_LONG_NAME,
+    INVALID_SHORT_NAME,
     DisplayArrayTypes,
     DisplayColumnColors,
+    DisplayJustification,
+    DisplayLength,
+    DisplayNumberSeparator,
     DisplayTextDecoration,
     NumpyCharTypes,
-    DisplayNumberSeparator,
-    INVALID_DICT,
-    INVALID_SHORT_NAME,
-    INVALID_LONG_NAME,
+    TypeRegister,
 )
 
 
 # ---------------------------------------------------------------------
 # ---------------------------------------------------------------------
 class ItemFormat:
-    '''
+    """
     A container for display options for different data types in FastArray and numpy arrays.
     Basic numpy types have defaults. (see below)
     New types (subclassed from FastArray) will be queried to get formatting options.
     New types have the option of overwriting display_query_properties to set their own defaults.
-    '''
+    """
 
     def __init__(
         self,
@@ -149,10 +150,10 @@ default_item_formats = {
 # ---------------------------------------------------------------------
 # ---------------------------------------------------------------------
 class DisplayConvert:
-    '''
+    """
     Will analyze an array of a default type and return the appropriate conversion function.
     Anything that subclasses from FastArray will always fall back on the dtype of its underlying array.
-    '''
+    """
 
     convert_func_dict = {}
 
@@ -168,7 +169,7 @@ class DisplayConvert:
 
     @staticmethod
     def get_display_convert(arr):
-        if hasattr(arr, 'dtype'):
+        if hasattr(arr, "dtype"):
             # check to see if the conversion function has been cached
             if arr.dtype in DisplayConvert.ConvertTypeCache:
                 if DisplayConvert.Verbose > 1:
@@ -177,9 +178,7 @@ class DisplayConvert:
                 convert_func = DisplayConvert.ConvertFuncCache[arr.dtype.char]
             else:
                 arr_type = DisplayConvert.get_display_array_type(arr.dtype)
-                convert_func = DisplayConvert.convert_func_dict.get(
-                    arr_type, DisplayConvert.convertDefault
-                )
+                convert_func = DisplayConvert.convert_func_dict.get(arr_type, DisplayConvert.convertDefault)
                 # store the array type and conversion function into a cache so the lookup only happens once
                 if DisplayConvert.Verbose > 1:
                     print("adding new conversion function to cache")
@@ -194,11 +193,11 @@ class DisplayConvert:
     # ---------------------------------------------------------------------
     @staticmethod
     def get_display_array_type(dtype):
-        '''
+        """
         For FastArray and numpy array of basic type (not for objects that are subclasses of FastArray)
-        '''
+        """
         dtype_char = dtype.char
-        if dtype_char == '?':
+        if dtype_char == "?":
             return DisplayArrayTypes.Bool
 
         elif dtype_char in NumpyCharTypes.AllInteger:
@@ -207,13 +206,13 @@ class DisplayConvert:
         elif dtype_char in NumpyCharTypes.AllFloat:
             return DisplayArrayTypes.Float
 
-        elif dtype_char == 'S':
+        elif dtype_char == "S":
             return DisplayArrayTypes.Bytes
 
-        elif dtype_char == 'U':
+        elif dtype_char == "U":
             return DisplayArrayTypes.String
 
-        elif dtype_char == 'V':
+        elif dtype_char == "V":
             return DisplayArrayTypes.Record
 
         # will use overall defaults
@@ -246,9 +245,7 @@ class DisplayConvert:
                 else:
                     return INVALID_LONG_NAME
         if TypeRegister.DisplayOptions.NUMBER_SEPARATOR:
-            separator_string = (
-                '{:' + TypeRegister.DisplayOptions.NUMBER_SEPARATOR_CHAR + '}'
-            )
+            separator_string = "{:" + TypeRegister.DisplayOptions.NUMBER_SEPARATOR_CHAR + "}"
             return separator_string.format(i)
         else:
             return str(i)
@@ -278,13 +275,7 @@ class DisplayConvert:
                 elif f_test < TypeRegister.DisplayOptions.p_threshold():
                     use_sci = True
         if use_sci:
-            precision_str = (
-                "{:"
-                + separator
-                + "."
-                + str(TypeRegister.DisplayOptions.E_PRECISION)
-                + "e}"
-            )
+            precision_str = "{:" + separator + "." + str(TypeRegister.DisplayOptions.E_PRECISION) + "e}"
         else:
             precision_str = "{:" + separator + "." + str(reg_precision) + "f}"
 
@@ -299,7 +290,7 @@ class DisplayConvert:
         # need to know long or short format
         # possibly enforce global maximum string
         if len(i) > 0:
-            i = bytes.decode(i, errors='ignore')
+            i = bytes.decode(i, errors="ignore")
             return trim_string(i, itemformat)
         else:
             return ""
@@ -322,10 +313,10 @@ class DisplayConvert:
     # ---------------------------------------------------------------------
     @staticmethod
     def convertMultiDims(i, itemformat: ItemFormat):
-        '''
+        """
         For displaying multi-dimensional arrays (currently only supports 2-dims).
         ItemFormat object contains a convert function for the dtype of the multidimensional array.
-        '''
+        """
         # for lots of dims, add lots of brackets
         final_list = []
         dims = i.ndim - 1
@@ -334,7 +325,7 @@ class DisplayConvert:
             i = i[0]
         for item in i:
             final_list.append(itemformat.convert(item, itemformat))
-        final_str = '[' * dims + str(final_list).replace("'", "")
+        final_str = "[" * dims + str(final_list).replace("'", "")
         return final_str[: TypeRegister.DisplayOptions.MAX_STRING_WIDTH]
 
     # ---------------------------------------------------------------------
@@ -344,14 +335,11 @@ class DisplayConvert:
 
 
 def trim_string(i, itemformat: ItemFormat):
-    '''
+    """
     If maxwidth was specified and is larger than the global default, it will be used instead.
     See also ColumnStyle()
-    '''
-    if (
-        itemformat.maxwidth is not None
-        and itemformat.maxwidth > TypeRegister.DisplayOptions.MAX_STRING_WIDTH
-    ):
+    """
+    if itemformat.maxwidth is not None and itemformat.maxwidth > TypeRegister.DisplayOptions.MAX_STRING_WIDTH:
         return i[: itemformat.maxwidth]
     if itemformat.length == DisplayLength.Short:
         i = i[: TypeRegister.DisplayOptions.MAX_STRING_WIDTH]
@@ -369,12 +357,12 @@ DisplayConvert.convert_func_dict = {
 
 
 def get_array_formatter(arr):
-    '''
+    """
     FastArray/subclasses have display_query_properties defined for custom string formatting.
     Numpy arrays have defaults in DisplayConvert.
     Returns ItemFormat object and display function for items in array based on type.
-    '''
-    if hasattr(arr, 'display_query_properties'):
+    """
+    if hasattr(arr, "display_query_properties"):
         display_format, func = arr.display_query_properties()
     else:
         arr_type, func = DisplayConvert.get_display_convert(arr)

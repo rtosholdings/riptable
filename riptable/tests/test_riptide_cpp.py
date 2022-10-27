@@ -1,12 +1,12 @@
 import sys
-import pytest
+
 import numpy as np
+import pytest
+import riptide_cpp as rc
 from numpy.random import default_rng
 from numpy.testing import assert_array_equal
 
-import riptide_cpp as rc
 import riptable as rt
-
 
 # TODO: Implement tests for sorting, binning, ismember, hstack, etc.
 
@@ -39,13 +39,28 @@ class TestIndexing:
         pytest.skip("Test not yet implemented.")
 
     @pytest.mark.skipif(
-        sys.platform != 'win32',
-        reason="This test fails on Linux, perhaps due to int/long/longlong mismatch -- need to investigate.")
+        sys.platform != "win32",
+        reason="This test fails on Linux, perhaps due to int/long/longlong mismatch -- need to investigate.",
+    )
     def test_mbget_int32_int64(self) -> None:
         arg0 = rt.FA([1, 2, 3, 4, 5, 6], dtype=np.int32)
         arg1 = rt.FA(
-            [-9223372036854775808, -9223372036854775808, -9223372036854775808, 0, 3, -9223372036854775808, 1, 4,
-             -9223372036854775808, 2, 5, -9223372036854775808], dtype=np.int64)
+            [
+                -9223372036854775808,
+                -9223372036854775808,
+                -9223372036854775808,
+                0,
+                3,
+                -9223372036854775808,
+                1,
+                4,
+                -9223372036854775808,
+                2,
+                5,
+                -9223372036854775808,
+            ],
+            dtype=np.int64,
+        )
 
         # Try the operation
         result = rc.MBGet(arg0, arg1)
@@ -54,19 +69,20 @@ class TestIndexing:
         assert_array_equal(result, expected)
 
     @pytest.mark.skipif(
-        sys.platform != 'win32',
-        reason="This test fails on Linux, perhaps due to int/long/longlong mismatch -- need to investigate.")
+        sys.platform != "win32",
+        reason="This test fails on Linux, perhaps due to int/long/longlong mismatch -- need to investigate.",
+    )
     def test_mbget_bytes_int64(self) -> None:
-        arg0 = rt.FA(['x', 'y', 'z', 'q', 'w', 't'])
+        arg0 = rt.FA(["x", "y", "z", "q", "w", "t"])
         arg1 = rt.FA(
-            [rt.int64.inv, rt.int64.inv, rt.int64.inv, 0, 3, rt.int64.inv, 1, 4,
-             rt.int64.inv, 2, 5, rt.int64.inv], dtype=np.int64)
+            [rt.int64.inv, rt.int64.inv, rt.int64.inv, 0, 3, rt.int64.inv, 1, 4, rt.int64.inv, 2, 5, rt.int64.inv],
+            dtype=np.int64,
+        )
 
         # Try the operation
         result = rc.MBGet(arg0, arg1)
         arr_inv = arg0.inv
-        expected = rt.FA([arr_inv, arr_inv, arr_inv, b'x', b'q', arr_inv, b'y', b'w',
-                          arr_inv, b'z', b't', arr_inv])
+        expected = rt.FA([arr_inv, arr_inv, arr_inv, b"x", b"q", arr_inv, b"y", b"w", arr_inv, b"z", b"t", arr_inv])
         assert_array_equal(result, expected)
 
 
@@ -103,7 +119,7 @@ class TestCRC:
 
     def test_raises_on_bad_arg_type(self) -> None:
         """Test that rc.CalculateCRC raises an error when called with the wrong argument type."""
-        bytes = b'abcdefghi'
+        bytes = b"abcdefghi"
         with pytest.raises(TypeError):
             rc.CalculateCRC(bytes)
 
@@ -128,7 +144,9 @@ class TestCRC:
         # We'll use these values to check if we're seeing hash-like cascading behavior;
         # this also allows us to avoid test breakage if the RNG algorithm changes
         # or otherwise has differences between numpy versions or systems.
-        results = np.empty(shape=500, dtype=np.uint64)  # NOTE: dtype needs to be set based on the expected output type of the CRC
+        results = np.empty(
+            shape=500, dtype=np.uint64
+        )  # NOTE: dtype needs to be set based on the expected output type of the CRC
         for i in range(len(results)):
             # Calculate the CRC32C or CRC64 of the array.
             crc_result = rc.CalculateCRC(bytes[i:])
@@ -136,14 +154,17 @@ class TestCRC:
 
         # What's the average hash value? It should be roughly half the range of a uint32.
         avg_hash = results.mean()
-        uniform_mean = float(np.iinfo(results.dtype).max) / 2.0  # Mean of a discrete uniform distribution over [0, results.dtype.max]
+        uniform_mean = (
+            float(np.iinfo(results.dtype).max) / 2.0
+        )  # Mean of a discrete uniform distribution over [0, results.dtype.max]
         avg_hash_accuracy = avg_hash / uniform_mean
 
         # How far off is the hash avg from the midpoint of uint32?
         # It should only be by a few % (which should be lower / closer to the midpoint as the sample count increases).
         hash_avg_error = abs(1.0 - avg_hash_accuracy)
-        assert hash_avg_error < 0.05,\
-            f'The mean of the calculated hash values differs from the expected mean {np.dtype(results.dtype).name}.max/2.0 by {hash_avg_error * 100}%.'
+        assert (
+            hash_avg_error < 0.05
+        ), f"The mean of the calculated hash values differs from the expected mean {np.dtype(results.dtype).name}.max/2.0 by {hash_avg_error * 100}%."
 
         # Check the variance too to see if it's reasonably close to
         # what we'd expect from a uniform distribution.
@@ -153,5 +174,6 @@ class TestCRC:
         hash_var_accuracy = hash_var / uniform_variance
 
         hash_var_error = abs(1.0 - hash_var_accuracy)
-        assert hash_var_error < 0.10,\
-            f'The variance of the calculated hash values differs from the expected variance by {hash_var_error * 100}%.'
+        assert (
+            hash_var_error < 0.10
+        ), f"The variance of the calculated hash values differs from the expected variance by {hash_var_error * 100}%."

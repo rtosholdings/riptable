@@ -1,22 +1,24 @@
+from enum import IntEnum
+
 import numpy as np
-import riptable as rt
 import pytest
 from numpy.testing import assert_array_equal
+
+import riptable as rt
 from riptable import (
-    FastArray,
     FA,
-    Categorical,
-    Dataset,
-    logical,
-    arange,
-    mask_or,
-    CatZero,
     Cat,
+    Categorical,
+    CatZero,
+    Dataset,
+    FastArray,
+    arange,
     isnan,
     isnotnan,
+    logical,
+    mask_or,
 )
 from riptable.rt_enum import GROUPBY_KEY_PREFIX
-from enum import IntEnum
 
 #%load_ext autoreload
 #%autoreload 2
@@ -24,36 +26,36 @@ from enum import IntEnum
 # from enum import IntEnum
 str_fa = FastArray(
     [
-        'c',
-        'e',
-        'e',
-        'd',
-        'c',
-        'b',
-        'd',
-        'c',
-        'a',
-        'b',
-        'd',
-        'e',
-        'c',
-        'a',
-        'e',
-        'd',
-        'b',
-        'a',
-        'b',
-        'c',
-        'd',
-        'b',
-        'e',
-        'c',
-        'c',
-        'd',
-        'e',
-        'c',
-        'a',
-        'c',
+        "c",
+        "e",
+        "e",
+        "d",
+        "c",
+        "b",
+        "d",
+        "c",
+        "a",
+        "b",
+        "d",
+        "e",
+        "c",
+        "a",
+        "e",
+        "d",
+        "b",
+        "a",
+        "b",
+        "c",
+        "d",
+        "b",
+        "e",
+        "c",
+        "c",
+        "d",
+        "e",
+        "c",
+        "a",
+        "c",
     ]
 )
 int_fa = FastArray(
@@ -125,32 +127,32 @@ flt_fa = FastArray(
     ]
 )
 tens = FastArray([10] * 30)
-ds = Dataset({'strings': str_fa.copy(), 'ints': int_fa, 'floats': flt_fa, 'tens': tens})
-gb = ds.gb('strings')
-ds_nums = Dataset({'ints': int_fa, 'floats': flt_fa, 'tens': tens})
-data_to_compare = ['ints', 'floats', 'tens']
-gbu = ds.gbu('strings')
+ds = Dataset({"strings": str_fa.copy(), "ints": int_fa, "floats": flt_fa, "tens": tens})
+gb = ds.gb("strings")
+ds_nums = Dataset({"ints": int_fa, "floats": flt_fa, "tens": tens})
+data_to_compare = ["ints", "floats", "tens"]
+gbu = ds.gbu("strings")
 
 gb_funcs_L1 = [
-    'sum',
-    'mean',
-    'min',
-    'max',
-    'var',
-    'std',
-    'nansum',
-    'nanmean',
-    'nanmin',
-    'nanmax',
-    'nanvar',
-    'nanstd',
+    "sum",
+    "mean",
+    "min",
+    "max",
+    "var",
+    "std",
+    "nansum",
+    "nanmean",
+    "nanmin",
+    "nanmax",
+    "nanvar",
+    "nanstd",
 ]
-gb_funcs_L2 = ['first', 'last', 'median', 'mode', 'nanmedian']
-gb_funcs_L3 = ['cumsum', 'cumprod']
+gb_funcs_L2 = ["first", "last", "median", "mode", "nanmedian"]
+gb_funcs_L3 = ["cumsum", "cumprod"]
 all_gb_ops = gb_funcs_L1 + gb_funcs_L2 + gb_funcs_L3
 
 even_filter = logical(arange(30) % 2)
-d_filter = str_fa != b'd'
+d_filter = str_fa != b"d"
 
 d_filter_results = [
     0,
@@ -168,8 +170,8 @@ d_filter_results = [
 ]
 
 
-complete_unique_cats = FastArray(['a', 'b', 'c', 'd', 'e'])
-unsorted_unique_cats = FastArray(['b', 'c', 'e', 'a', 'd'])
+complete_unique_cats = FastArray(["a", "b", "c", "d", "e"])
+unsorted_unique_cats = FastArray(["b", "c", "e", "a", "d"])
 complete_unique_ints = FastArray([10, 20, 30, 40, 50])
 unsorted_unique_ints = FastArray([20, 30, 50, 10, 40])
 complete_unique_flts = FastArray([10.0, 20.0, 30.0, 40.0, 50.0])
@@ -244,106 +246,106 @@ sorted_codes_matlab = FastArray(
 )
 str_fa_with_invalid = FastArray(
     [
-        'g',
-        'e',
-        'e',
-        'd',
-        'g',
-        'b',
-        'd',
-        'g',
-        'a',
-        'b',
-        'd',
-        'e',
-        'g',
-        'a',
-        'e',
-        'd',
-        'b',
-        'a',
-        'b',
-        'g',
-        'd',
-        'b',
-        'e',
-        'g',
-        'g',
-        'd',
-        'e',
-        'g',
-        'a',
-        'g',
+        "g",
+        "e",
+        "e",
+        "d",
+        "g",
+        "b",
+        "d",
+        "g",
+        "a",
+        "b",
+        "d",
+        "e",
+        "g",
+        "a",
+        "e",
+        "d",
+        "b",
+        "a",
+        "b",
+        "g",
+        "d",
+        "b",
+        "e",
+        "g",
+        "g",
+        "d",
+        "e",
+        "g",
+        "a",
+        "g",
     ]
 )
 
 last_array = FastArray(
     [
-        b'Bryant',
-        b'Copeland',
-        b'Copeland',
-        b'Hill',
-        b'Bryant',
-        b'Smith',
-        b'Hill',
-        b'Bryant',
-        b'Jones',
-        b'Smith',
-        b'Hill',
-        b'Copeland',
-        b'Bryant',
-        b'Jones',
-        b'Copeland',
-        b'Hill',
-        b'Smith',
-        b'Jones',
-        b'Smith',
-        b'Bryant',
-        b'Hill',
-        b'Smith',
-        b'Copeland',
-        b'Bryant',
-        b'Bryant',
-        b'Hill',
-        b'Copeland',
-        b'Bryant',
-        b'Jones',
-        b'Bryant',
+        b"Bryant",
+        b"Copeland",
+        b"Copeland",
+        b"Hill",
+        b"Bryant",
+        b"Smith",
+        b"Hill",
+        b"Bryant",
+        b"Jones",
+        b"Smith",
+        b"Hill",
+        b"Copeland",
+        b"Bryant",
+        b"Jones",
+        b"Copeland",
+        b"Hill",
+        b"Smith",
+        b"Jones",
+        b"Smith",
+        b"Bryant",
+        b"Hill",
+        b"Smith",
+        b"Copeland",
+        b"Bryant",
+        b"Bryant",
+        b"Hill",
+        b"Copeland",
+        b"Bryant",
+        b"Jones",
+        b"Bryant",
     ]
 )
 
 first_array = FastArray(
     [
-        b'David',
-        b'Susan',
-        b'Susan',
-        b'Paul',
-        b'David',
-        b'Charlie',
-        b'Paul',
-        b'David',
-        b'Sam',
-        b'Charlie',
-        b'Paul',
-        b'Susan',
-        b'David',
-        b'Sam',
-        b'Susan',
-        b'Paul',
-        b'Charlie',
-        b'Sam',
-        b'Charlie',
-        b'David',
-        b'Paul',
-        b'Charlie',
-        b'Susan',
-        b'David',
-        b'David',
-        b'Paul',
-        b'Susan',
-        b'David',
-        b'Sam',
-        b'David',
+        b"David",
+        b"Susan",
+        b"Susan",
+        b"Paul",
+        b"David",
+        b"Charlie",
+        b"Paul",
+        b"David",
+        b"Sam",
+        b"Charlie",
+        b"Paul",
+        b"Susan",
+        b"David",
+        b"Sam",
+        b"Susan",
+        b"Paul",
+        b"Charlie",
+        b"Sam",
+        b"Charlie",
+        b"David",
+        b"Paul",
+        b"Charlie",
+        b"Susan",
+        b"David",
+        b"David",
+        b"Paul",
+        b"Susan",
+        b"David",
+        b"Sam",
+        b"David",
     ]
 )
 
@@ -372,9 +374,7 @@ class TestCategoricalGroupby:
             match = bool(np.all(gb_result[col] == gb_cat_result[col]))
         return match
 
-    def get_filtered_bin_results(
-        self, op_name, c, c_data, col_name, filter, bin_idx, correct
-    ):
+    def get_filtered_bin_results(self, op_name, c, c_data, col_name, filter, bin_idx, correct):
         match = False
         func = getattr(c, op_name)
         # print('flt_fa',flt_fa.get_name())
@@ -394,8 +394,9 @@ class TestCategoricalGroupby:
         for op_name in all_gb_ops:
             # print('OP NAME WAS',op_name)
             match = self.get_gb_results(op_name, ds_gb, c, ds_nums, data_to_compare)
-            assert match,\
-                f"Categorical {c} constructed from: {constructor_name} Results did not match for {op_name} operation."
+            assert (
+                match
+            ), f"Categorical {c} constructed from: {constructor_name} Results did not match for {op_name} operation."
 
         # post filter
         if sorted is True:
@@ -404,98 +405,92 @@ class TestCategoricalGroupby:
             bin_idx = 2
 
         for op_name, correct in zip(gb_funcs_L1, d_filter_results):
-            match = self.get_filtered_bin_results(
-                op_name, c, flt_fa, 'floats', d_filter, bin_idx, correct
-            )
-            assert match,\
-                f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}"\
+            match = self.get_filtered_bin_results(op_name, c, flt_fa, "floats", d_filter, bin_idx, correct)
+            assert (
+                match
+            ), f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}"
 
     def construction_with_invalid(self, c, constructor_name):
         for op_name, correct in zip(gb_funcs_L1, d_filter_results):
-            match = self.get_filtered_bin_results(
-                op_name, c, flt_fa, 'floats', None, 2, correct
-            )
-            assert match,\
-                f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}"
+            match = self.get_filtered_bin_results(op_name, c, flt_fa, "floats", None, 2, correct)
+            assert (
+                match
+            ), f"Categorical constructed from: {constructor_name} Incorrect result for filtered bin during {op_name} operation. Expected {correct}"
 
     def simple_string_set_item(self, *args, **kwargs):
-        '''
+        """
         This test needs to be updated with different data that reflects the new comparison behavior.
         SJK: 9/24/2018
 
-        '''
+        """
 
-        source = kwargs['constructor_name']
-        del kwargs['constructor_name']
+        source = kwargs["constructor_name"]
+        del kwargs["constructor_name"]
 
-        if 'categories' in kwargs:
-            kwargs['categories'] = kwargs['categories'].copy()
+        if "categories" in kwargs:
+            kwargs["categories"] = kwargs["categories"].copy()
 
         c = Categorical(*args, **kwargs)
         set_items = [
             # index by string
-            (b'b', b'a'),
-            (b'b', 'a'),
+            (b"b", b"a"),
+            (b"b", "a"),
             # (b'b', 1),
-            ('b', b'a'),
-            ('b', 'a'),
+            ("b", b"a"),
+            ("b", "a"),
             # ('b', 1),
             # index by bool array
             # boolean arrays can no longer be generated with these comparisons SJK 9/24/2018
-            (c == b'b', b'a'),
-            (c == b'b', 'a'),
+            (c == b"b", b"a"),
+            (c == b"b", "a"),
             # (c == b'b', 1),
-            (c == 'b', b'a'),
-            (c == 'b', 'a'),
+            (c == "b", b"a"),
+            (c == "b", "a"),
             # (c == 'b', 1),
             # (c == 2, b'a'),
             # (c == 2, 'a'),
             # (c == 2, 1),
             # integer index
-            ([5, 9, 16, 18, 21], b'a'),
-            ([5, 9, 16, 18, 21], 'a'),
+            ([5, 9, 16, 18, 21], b"a"),
+            ([5, 9, 16, 18, 21], "a"),
             # ([ 5,  9, 16, 18, 21], 1),
-            ([5, 9, 16, 18, 21], b'a'),
-            ([5, 9, 16, 18, 21], 'a'),
+            ([5, 9, 16, 18, 21], b"a"),
+            ([5, 9, 16, 18, 21], "a"),
             # ([ 5,  9, 16, 18, 21], 1),
-            ([5, 9, 16, 18, 21], b'a'),
-            ([5, 9, 16, 18, 21], 'a'),
+            ([5, 9, 16, 18, 21], b"a"),
+            ([5, 9, 16, 18, 21], "a"),
             # ([ 5,  9, 16, 18, 21], 1),
         ]
         # this test needs to get reworked
         # no longer produces the correct result for all types of categoricals because of == comparison behavior
         for items in set_items:
             c = Categorical(*args, **kwargs)
-            goal = c == ['a', 'b']
+            goal = c == ["a", "b"]
             c[items[0]] = items[1]
             result = c == items[1]
             all_set = np.sum(goal == result)
-            assert all_set ==\
-                30,\
-                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
+            assert all_set == 30, f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
-            none_left = np.sum(c == 'b')
-            assert none_left ==\
-                0,\
-                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
+            none_left = np.sum(c == "b")
+            assert none_left == 0, f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
     def mk_set_item(self, *args, **kwargs):
-        source = kwargs['constructor_name']
-        del kwargs['constructor_name']
+        source = kwargs["constructor_name"]
+        del kwargs["constructor_name"]
 
-        if 'categories' in kwargs:
-            print('copying categories')
-            kwargs['categories'] = kwargs['categories'].copy()
+        if "categories" in kwargs:
+            print("copying categories")
+            kwargs["categories"] = kwargs["categories"].copy()
 
         c = Categorical(*args, **kwargs)
         set_items = [
             # index by string
-            ((b'b', b'b'), (b'a', b'a')),
-            ((b'b', b'b'), ('a', 'a')),
-            ((b'b', b'b'), 5),
-            (('b', 'b'), (b'a', b'a')),
-            (('b', 'b'), ('a', 'a')),
-            (('b', 'b'), 5),
+            ((b"b", b"b"), (b"a", b"a")),
+            ((b"b", b"b"), ("a", "a")),
+            ((b"b", b"b"), 5),
+            (("b", "b"), (b"a", b"a")),
+            (("b", "b"), ("a", "a")),
+            (("b", "b"), 5),
             # index by bool array
             # (c == (b'b', b'b'), (b'a', b'a')),
             # (c == (b'b', b'b'), ('a', 'a')),
@@ -507,31 +502,27 @@ class TestCategoricalGroupby:
             # (c == 4, ('a', 'a')),
             # (c == 4, 5),
             # integer index
-            ([5, 9, 16, 18, 21], (b'a', b'a')),
-            ([5, 9, 16, 18, 21], ('a', 'a')),
+            ([5, 9, 16, 18, 21], (b"a", b"a")),
+            ([5, 9, 16, 18, 21], ("a", "a")),
             ([5, 9, 16, 18, 21], 5),
-            ([5, 9, 16, 18, 21], (b'a', b'a')),
-            ([5, 9, 16, 18, 21], ('a', 'a')),
+            ([5, 9, 16, 18, 21], (b"a", b"a")),
+            ([5, 9, 16, 18, 21], ("a", "a")),
             ([5, 9, 16, 18, 21], 5),
-            ([5, 9, 16, 18, 21], (b'a', b'a')),
-            ([5, 9, 16, 18, 21], ('a', 'a')),
+            ([5, 9, 16, 18, 21], (b"a", b"a")),
+            ([5, 9, 16, 18, 21], ("a", "a")),
             ([5, 9, 16, 18, 21], 5),
         ]
 
         for items in set_items:
             c = Categorical(*args, **kwargs)
-            goal = mask_or([c == ('a', 'a'), c == ('b', 'b')])
+            goal = mask_or([c == ("a", "a"), c == ("b", "b")])
             c[items[0]] = items[1]
             result = c == items[1]
             all_set = np.sum(goal == result)
-            assert all_set ==\
-                30,\
-                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
+            assert all_set == 30, f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
-            none_left = np.sum(c == ('b', 'b'))
-            assert none_left ==\
-                0,\
-                f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
+            none_left = np.sum(c == ("b", "b"))
+            assert none_left == 0, f"did not set c[{items[0]}] to {items[1]} for categorical from {source}"
 
     # TODO pytest parameterize funnel_all_tests
     # --STRINGS-------------------------------------------------------------------------------
@@ -558,9 +549,7 @@ class TestCategoricalGroupby:
 
     # --INDEX + CATEGORIES + BASE 0-----------------------------------------------------------
     def test_groupby_ops_user_codes_base_0(self):
-        c = Categorical(
-            sorted_codes.copy(), categories=complete_unique_cats, base_index=0
-        )
+        c = Categorical(sorted_codes.copy(), categories=complete_unique_cats, base_index=0)
         self.funnel_all_tests(c, gb, "index + categories + base_index 0")
 
         c = CatZero(sorted_codes.copy(), categories=complete_unique_cats)
@@ -642,16 +631,16 @@ class TestCategoricalGroupby:
 
     # --MULTIKEY DICTIONARY---------------------------------------------------------------------
     def test_groupby_ops_multikey_dict(self):
-        mk_dict = {'string1': str_fa, 'string2': str_fa}
+        mk_dict = {"string1": str_fa, "string2": str_fa}
         mk_gb = Dataset(
             {
-                'string1': str_fa.copy(),
-                'string2': str_fa.copy(),
-                'ints': int_fa,
-                'floats': flt_fa,
-                'tens': tens,
+                "string1": str_fa.copy(),
+                "string2": str_fa.copy(),
+                "ints": int_fa,
+                "floats": flt_fa,
+                "tens": tens,
             }
-        ).gbu(['string1', 'string2'])
+        ).gbu(["string1", "string2"])
         c = Categorical(mk_dict)
         self.funnel_all_tests(c, mk_gb, "multikey dictionary", sorted=False)
 
@@ -662,30 +651,32 @@ class TestCategoricalGroupby:
         x = str_fa.copy()
         y = str_fa.copy()
         z = str_fa.copy()
-        x.set_name('strings')
-        y.set_name('strings')
-        z.set_name('strings1')
+        x.set_name("strings")
+        y.set_name("strings")
+        z.set_name("strings1")
         c = Categorical([x, y, z])
-        assert c._categories_wrap.ncols ==\
-            3,\
-            f"incorrect number of columns for multikey from list. {c._categories_wrap.ncols} vs. 3"
+        assert (
+            c._categories_wrap.ncols == 3
+        ), f"incorrect number of columns for multikey from list. {c._categories_wrap.ncols} vs. 3"
         # 04/25/2019 all default column names now happen in grouping object
-        assert list(c.categories().keys())\
-            == ['strings', GROUPBY_KEY_PREFIX + '_c1', 'strings1'],\
-            f"column names did not match for multikey from list. {list(c.categories().keys())} vs. ['strings','strings2','strings1']"
+        assert list(c.categories().keys()) == [
+            "strings",
+            GROUPBY_KEY_PREFIX + "_c1",
+            "strings1",
+        ], f"column names did not match for multikey from list. {list(c.categories().keys())} vs. ['strings','strings2','strings1']"
 
     # --MULTIKEY LIST---------------------------------------------------------------------------
     def test_groupby_ops_multikey_list(self):
         mk_list = [str_fa.copy(), str_fa.copy()]
         mk_gb = Dataset(
             {
-                'string1': str_fa.copy(),
-                'string2': str_fa.copy(),
-                'ints': int_fa,
-                'floats': flt_fa,
-                'tens': tens,
+                "string1": str_fa.copy(),
+                "string2": str_fa.copy(),
+                "ints": int_fa,
+                "floats": flt_fa,
+                "tens": tens,
             }
-        ).gbu(['string1', 'string2'])
+        ).gbu(["string1", "string2"])
         c = Categorical(mk_list)
         self.funnel_all_tests(c, mk_gb, "multikey list", sorted=False)
 
@@ -699,8 +690,7 @@ class TestCategoricalGroupby:
         result_counts = c_multi.count().Count
         correct_counts = FastArray([6, 5, 1, 2, 3, 2, 2, 4, 2, 2, 1])
         all_correct = bool(np.all(result_counts == correct_counts))
-        assert all_correct,\
-            f"Incorrect result for multikey count for 4 keys. {result_counts} vs. {correct_counts}"
+        assert all_correct, f"Incorrect result for multikey count for 4 keys. {result_counts} vs. {correct_counts}"
 
     # --STRING-LIKE SINGLE KEY COUNT------------------------------------------------------------
     def test_single_key_string_count(self):
@@ -717,9 +707,7 @@ class TestCategoricalGroupby:
         match = bool(np.all(result_counts == correct_counts))
         assert match
 
-        c_from_codes_unsorted = Categorical(
-            sorted_codes, unsorted_unique_cats, base_index=0
-        )
+        c_from_codes_unsorted = Categorical(sorted_codes, unsorted_unique_cats, base_index=0)
         result_counts = c_from_codes_unsorted.count().Count
         match = bool(np.all(result_counts == correct_counts))
         assert match
@@ -730,9 +718,9 @@ class TestCategoricalGroupby:
         assert match, f"Result: {result_keys} Expected: {unsorted_unique_cats}"
 
     def test_cumcount_vs_gb(self):
-        arr = np.random.choice(['a', 'b', 'c', 'd', 'e'], 50)
-        ds = Dataset({'keycol': arr, 'col1': arange(50), 'col2': arange(50)})
-        gb_result = ds.gb('keycol').cumcount()
+        arr = np.random.choice(["a", "b", "c", "d", "e"], 50)
+        ds = Dataset({"keycol": arr, "col1": arange(50), "col2": arange(50)})
+        gb_result = ds.gb("keycol").cumcount()
 
         c = Categorical(ds.keycol)
         c_result = c.cumcount()
@@ -747,12 +735,12 @@ class TestCategoricalGroupby:
 
     # --MULTIKEY SINGLE STRING KEY--------------------------------------------------------------
     def test_groupby_ops_multikey_single_string(self):
-        c = Categorical({'string_col': str_fa.copy()})
+        c = Categorical({"string_col": str_fa.copy()})
         self.funnel_all_tests(c, gb, "multikey single string key")
 
     # --MULTIKEY SINGLE NUMERIC KEY-------------------------------------------------------------
     def test_groupby_ops_multikey_single_numeric(self):
-        c = Categorical({'codes': sorted_codes}, ordered=False, sort_gb=False)
+        c = Categorical({"codes": sorted_codes}, ordered=False, sort_gb=False)
         self.funnel_all_tests(c, gbu, "multikey single numeric key", sorted=False)
 
     # TODO pytest parameterize empty_results table
@@ -760,22 +748,20 @@ class TestCategoricalGroupby:
         # 5/16/2019 invalid category must be in uniques
         # c = Categorical(str_fa_with_invalid, complete_unique_cats, invalid='invalid')
         # can test empty bin like this, the third result will be empty
-        c = Categorical(
-            np.random.choice(['a', 'b', 'd', 'e'], 30), ['a', 'b', 'c', 'd', 'e']
-        )
+        c = Categorical(np.random.choice(["a", "b", "d", "e"], 30), ["a", "b", "c", "d", "e"])
         empty_result = [
-            ('sum', 0.0),
-            ('mean', np.nan),
-            ('min', np.nan),
-            ('max', np.nan),
-            ('var', np.nan),
-            ('std', np.nan),
-            ('nansum', 0.0),
-            ('nanmean', np.nan),
-            ('nanmin', np.nan),
-            ('nanmax', np.nan),
-            ('nanvar', np.nan),
-            ('nanstd', np.nan),
+            ("sum", 0.0),
+            ("mean", np.nan),
+            ("min", np.nan),
+            ("max", np.nan),
+            ("var", np.nan),
+            ("std", np.nan),
+            ("nansum", 0.0),
+            ("nanmean", np.nan),
+            ("nanmin", np.nan),
+            ("nanmax", np.nan),
+            ("nanvar", np.nan),
+            ("nanstd", np.nan),
         ]
 
         for correct_tup in empty_result:
@@ -784,21 +770,21 @@ class TestCategoricalGroupby:
             a = np.isnan(correct_tup[1])
 
             if np.isnan(correct_tup[1]):
-                assert result !=\
-                    result,\
-                    f"Did not product correct result for empty category after {correct_tup[0]} operation."
+                assert (
+                    result != result
+                ), f"Did not product correct result for empty category after {correct_tup[0]} operation."
             else:
-                assert result ==\
-                    correct_tup[1],\
-                    f"Did not product correct result for empty category after {correct_tup[0]} operation."
+                assert (
+                    result == correct_tup[1]
+                ), f"Did not product correct result for empty category after {correct_tup[0]} operation."
 
     def test_igroup_dtype(self):
-        '''
+        """
         The categorical only has 3 categories, so its index array will be int8
         after pack_by_group() is called in a grouping operation, it generates iGroup - which
         needs to be large enough to hold an integer equal to the length of the categorical
-        '''
-        c = Categorical(np.random.choice([b'a', b'b', b'c'], 1_000_000))
+        """
+        c = Categorical(np.random.choice([b"a", b"b", b"c"], 1_000_000))
         c_was_int8 = np.int8 == c.dtype
         assert c_was_int8
 
@@ -816,14 +802,12 @@ class TestCategoricalGroupby:
         assert one_fifty == 150
 
     def test_specify_gb_data(self):
-        str_col = ['a', 'a', 'b', 'c', 'a']
+        str_col = ["a", "a", "b", "c", "a"]
         num_col = [10, 10, 20, 30, 10]
         col1 = np.arange(5)
         col2 = np.arange(5)
-        small_ds = Dataset(
-            {'str_col': str_col, 'num_col': num_col, 'col1': col1, 'col2': col2}
-        )
-        ds_to_operate_on = small_ds[['col1', 'col2']]
+        small_ds = Dataset({"str_col": str_col, "num_col": num_col, "col1": col1, "col2": col2})
+        ds_to_operate_on = small_ds[["col1", "col2"]]
 
         c = Categorical(str_col)
 
@@ -838,7 +822,7 @@ class TestCategoricalGroupby:
         d = c.sum((col1, col2))
 
         # dict
-        d = c.sum({'a': col1, 'b': col2})
+        d = c.sum({"a": col1, "b": col2})
 
         # multiple
         d = c.sum(col1, col2)
@@ -846,13 +830,13 @@ class TestCategoricalGroupby:
     def test_as_categorical(self):
         ds = Dataset(
             {
-                'keycol1': np.random.choice(['a', 'b', 'c'], 30),
-                'keycol2': np.random.choice(['a', 'b', 'c'], 30),
-                'data': np.random.rand(30),
+                "keycol1": np.random.choice(["a", "b", "c"], 30),
+                "keycol2": np.random.choice(["a", "b", "c"], 30),
+                "data": np.random.rand(30),
             }
         )
 
-        gbu = ds.gbu('keycol1')
+        gbu = ds.gbu("keycol1")
         c = Categorical(ds.keycol1, ordered=False, sort_gb=False)
         cgbu = gbu.as_categorical()
 
@@ -866,14 +850,12 @@ class TestCategoricalGroupby:
 
     def test_gb_labels_enum(self):
         # make sure enum groupby keys are displayed as string,  not integer code
-        c = Categorical(
-            [10, 10, 10, 20, 30, 20, 10, 20, 20], {'a': 30, 'b': 20, 'c': 10}
-        )
+        c = Categorical([10, 10, 10, 20, 30, 20, 10, 20, 20], {"a": 30, "b": 20, "c": 10})
         c_result = c.count()
         c_labels = c_result[c_result.label_get_names()][0]
 
-        ds = Dataset({'catcol': c, 'data': arange(9)})
-        ds_result = ds.gbu('catcol').count()
+        ds = Dataset({"catcol": c, "data": arange(9)})
+        ds_result = ds.gbu("catcol").count()
         ds_labels = ds_result[ds_result.label_get_names()][0]
 
         assert c_labels.dtype.char == ds_labels.dtype.char
@@ -884,7 +866,7 @@ class TestCategoricalGroupby:
         Test that groupby on a categorical sorts the dataset correctly
         """
         ds = rt.Dataset()
-        cats = ['z', 'y', 'x', 'w', 'a', 'b', 'c', 'd']
+        cats = ["z", "y", "x", "w", "a", "b", "c", "d"]
         vals = [0, 1, 2, 3, 4, 5, 6, 7]
         expected = dict(zip(cats, vals))
 
@@ -895,7 +877,7 @@ class TestCategoricalGroupby:
         ds["Value2"] = [vals[xx % len(cats)] for xx in range(100)]
 
         grp = ds.groupby("Cat").mean()
-        grp["Expected"] = [expected[xx] for xx in grp.Cat.astype('U')]
+        grp["Expected"] = [expected[xx] for xx in grp.Cat.astype("U")]
 
         diff = rt.sum(rt.abs(grp.Expected - grp.Value1))
         diff += rt.sum(rt.abs(grp.Expected - grp.Value2))
@@ -919,7 +901,7 @@ class TestCategoricalGroupby:
         Test that Categorical.fill_backward fills values backward *per group*.
         """
         data = rt.FA([1.0, 4.0, np.nan, np.nan, 9.0, 16.0])
-        cat = rt.Categorical(['A', 'B', 'A', 'B', 'A', 'B'])
+        cat = rt.Categorical(["A", "B", "A", "B", "A", "B"])
 
         result = cat.fill_backward(data)
 
@@ -945,7 +927,7 @@ class TestCategoricalGroupby:
         Test that Categorical.fill_forward fills values forward *per group*.
         """
         data = rt.FA([1.0, 4.0, 9.0, 16.0, np.nan, np.nan])
-        cat = rt.Categorical(['A', 'B', 'A', 'B', 'A', 'B'])
+        cat = rt.Categorical(["A", "B", "A", "B", "A", "B"])
 
         result = cat.fill_forward(data)
 
@@ -976,7 +958,7 @@ class TestCategoricalGroupby:
         data = Dataset()
         data.Group = np.random.randint(0, 10, 100_000)
         data.Values = np.random.randint(0, 10, 100_000)
-        x = data.cat('Group', filter=data.Group < 0)
+        x = data.cat("Group", filter=data.Group < 0)
         x.median(data.Values)
 
     def test_count(self):
@@ -989,19 +971,21 @@ class TestCategoricalGroupby:
         assert_array_equal(y, FA([4, 3, 3, 4, 3, 3, 4, 3, 3, 4]))
 
     def test_count_filter_transform(self):
-        x = rt.Cat(rt.arange(100)%10)
-        f = rt.arange(100)%4!=0
-        assert_array_equal(x.count(filter=f,transform=True).Count,x.nansum(f,transform=True).col_0)
+        x = rt.Cat(rt.arange(100) % 10)
+        f = rt.arange(100) % 4 != 0
+        assert_array_equal(x.count(filter=f, transform=True).Count, x.nansum(f, transform=True).col_0)
 
         x = rt.Cat(str_fa)
         f = rt.arange(len(x)) % 3 != 0
-        assert_array_equal(x.count(filter=f,transform=True).Count,x.nansum(f,transform=True).col_0)
-        soln = rt.FA([5, 6, 6, 3, 5, 2, 3, 5, 4, 2, 3, 6, 5, 4, 6, 3, 2, 4, 2, 5, 3,
-           2, 6, 5, 5, 3, 6, 5, 4, 5])
-        assert_array_equal(x.count(filter=f,transform=True).Count,soln)
+        assert_array_equal(x.count(filter=f, transform=True).Count, x.nansum(f, transform=True).col_0)
+        soln = rt.FA([5, 6, 6, 3, 5, 2, 3, 5, 4, 2, 3, 6, 5, 4, 6, 3, 2, 4, 2, 5, 3, 2, 6, 5, 5, 3, 6, 5, 4, 5])
+        assert_array_equal(x.count(filter=f, transform=True).Count, soln)
 
     def test_length_error(self):
         x = rt.Cat(rt.arange(5))
         y = rt.arange(4)
-        with pytest.raises(ValueError, match='Tried to perform a groupby operation where the length of the input was not equal to the length of the categorical.'):
+        with pytest.raises(
+            ValueError,
+            match="Tried to perform a groupby operation where the length of the input was not equal to the length of the categorical.",
+        ):
             _ = x.median(y)

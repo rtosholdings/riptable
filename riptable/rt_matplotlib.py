@@ -1,22 +1,23 @@
-from typing import List, Optional
 import abc
 import datetime
-import pytz
+from typing import List, Optional
+
 import dateutil.rrule
-from matplotlib import units, ticker, dates
+import pytz
+from matplotlib import dates, ticker, units
 
 import riptable as rt
 
 __all__ = []
 
 sizes_ns = {
-    'MICROSECONDLY': 1_000,
-    'SECONDLY': 1_000_000_000,
-    'MINUTELY': 60 * 1_000_000_000,
-    'HOURLY': 60 * 60 * 1_000_000_000,
-    'DAILY': 24 * 60 * 60 * 1_000_000_000,
-    'MONTHLY': 30 * 24 * 60 * 60 * 1_000_000_000,
-    'YEARLY': 365 * 24 * 60 * 60 * 1_000_000_000,
+    "MICROSECONDLY": 1_000,
+    "SECONDLY": 1_000_000_000,
+    "MINUTELY": 60 * 1_000_000_000,
+    "HOURLY": 60 * 60 * 1_000_000_000,
+    "DAILY": 24 * 60 * 60 * 1_000_000_000,
+    "MONTHLY": 30 * 24 * 60 * 60 * 1_000_000_000,
+    "YEARLY": 365 * 24 * 60 * 60 * 1_000_000_000,
 }
 
 NANOS_PER_SECOND = 1_000_000_000
@@ -28,7 +29,7 @@ def dts_to_ns(dts):
 
 
 def td_to_ns(td):
-    ns = td.days * sizes_ns['DAILY'] + td.seconds * sizes_ns['SECONDLY'] + td.microseconds * 1_000
+    ns = td.days * sizes_ns["DAILY"] + td.seconds * sizes_ns["SECONDLY"] + td.microseconds * 1_000
     return ns
 
 
@@ -144,19 +145,19 @@ class MicrosecondTicker(LinTicker):
         if len(self.second_aligned_ticks) == 0:
             first_tick = self.ticks_local[0]
             self.offset_local = first_tick.replace(second=0, microsecond=0)
-            self.tick_format = '%fus'
-            self.offset_format = '%Y-%m-%d %H:%M:%S'
+            self.tick_format = "%fus"
+            self.offset_format = "%Y-%m-%d %H:%M:%S"
 
         elif len(self.second_aligned_ticks) == 1:
             self.offset_local = self.second_aligned_ticks[0]
-            self.tick_format = '%fus'
-            self.offset_format = '%Y-%m-%d %H:%M:%S'
+            self.tick_format = "%fus"
+            self.offset_format = "%Y-%m-%d %H:%M:%S"
 
         else:
             first_tick = self.ticks_local[0]
             self.offset_local = first_tick.replace(hour=0, minute=0, second=0, microsecond=0)
-            self.tick_format = '%H:%M:%S.%f'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S.%f"
+            self.offset_format = "%Y-%m-%d"
         return
 
 
@@ -188,16 +189,16 @@ class SecondTicker(RRTicker):
         if len(self.day_aligned_ticks) == 0:
             first_tick = self.ticks_local[0]
             self.offset_local = first_tick.replace(hour=0, minute=0, second=0, microsecond=0)
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         elif len(self.day_aligned_ticks) == 1:
             self.offset_local = self.day_aligned_ticks[0]
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         else:
             self.offset_local = None
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         return
 
 
@@ -212,16 +213,16 @@ class MinuteTicker(RRTicker):
         if len(self.day_aligned_ticks) == 0:
             first_tick = self.ticks_local[0]
             self.offset_local = first_tick.replace(hour=0, minute=0, second=0, microsecond=0)
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         elif len(self.day_aligned_ticks) == 1:
             self.offset_local = self.day_aligned_ticks[0]
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         else:
             self.offset_local = None
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         return
 
 
@@ -236,16 +237,16 @@ class HourTicker(RRTicker):
         if len(self.day_aligned_ticks) == 0:
             first_tick = self.ticks_local[0]
             self.offset_local = first_tick.replace(hour=0, minute=0, second=0, microsecond=0)
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         elif len(self.day_aligned_ticks) == 1:
             self.offset_local = self.day_aligned_ticks[0]
-            self.tick_format = '%H:%M:%S'
-            self.offset_format = '%Y-%m-%d'
+            self.tick_format = "%H:%M:%S"
+            self.offset_format = "%Y-%m-%d"
         else:
             self.offset_local = None
-            self.tick_format = '%Y-%m-%d %H:%M:%S'
-            self.offset_format = ''
+            self.tick_format = "%Y-%m-%d %H:%M:%S"
+            self.offset_format = ""
         return
 
 
@@ -260,8 +261,8 @@ class DayTicker(RRTicker):
 
     def make_formats(self):
         self.offset_local = None
-        self.tick_format = '%Y-%m-%d'
-        self.offset_format = ''
+        self.tick_format = "%Y-%m-%d"
+        self.offset_format = ""
         return
 
 
@@ -276,8 +277,8 @@ class MonthTicker(RRTicker):
 
     def make_formats(self):
         self.offset_local = None
-        self.tick_format = '%Y-%m'
-        self.offset_format = ''
+        self.tick_format = "%Y-%m"
+        self.offset_format = ""
         return
 
 
@@ -292,8 +293,8 @@ class YearTicker(RRTicker):
 
     def make_formats(self):
         self.offset_local = None
-        self.tick_format = '%Y'
-        self.offset_format = ''
+        self.tick_format = "%Y"
+        self.offset_format = ""
         return
 
 
@@ -310,12 +311,12 @@ class TickFormatter(ticker.Formatter):
         tick_local = tick_utc.astimezone(self.locator.ticker.tz)
         name = tick_local.strftime(self.locator.ticker.tick_format)
         if tick_local == self.locator.ticker.offset_local:
-            name = '*' + name
+            name = "*" + name
         return name
 
     def format_offset(self):
         if self.locator.ticker.offset_local is None:
-            name = ''
+            name = ""
         else:
             name = self.locator.ticker.offset_local.strftime(self.locator.ticker.offset_format)
         self.offset_str = name
@@ -331,23 +332,23 @@ class DateTimeNanoLocator(ticker.Locator):
     """
 
     intervals = {
-        'MICROSECONDLY': [1, 2, 5, 10, 25, 50, 100, 250, 1_000, 2_000, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000],
-        'SECONDLY': [1, 2, 5, 10, 15, 30],
-        'MINUTELY': [1, 2, 5, 10, 15, 30],
-        'HOURLY': [1, 3, 4, 6, 12],
-        'DAILY': [1, 2, 3, 7, 14, 21],
-        'MONTHLY': [1, 2, 3, 4, 6],
-        'YEARLY': [1, 2, 4, 5, 10, 20, 40, 50],
+        "MICROSECONDLY": [1, 2, 5, 10, 25, 50, 100, 250, 1_000, 2_000, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000],
+        "SECONDLY": [1, 2, 5, 10, 15, 30],
+        "MINUTELY": [1, 2, 5, 10, 15, 30],
+        "HOURLY": [1, 3, 4, 6, 12],
+        "DAILY": [1, 2, 3, 7, 14, 21],
+        "MONTHLY": [1, 2, 3, 4, 6],
+        "YEARLY": [1, 2, 4, 5, 10, 20, 40, 50],
     }
 
     max_ticks = {
-        'MICROSECONDLY': 10,
-        'SECONDLY': 10,
-        'MINUTELY': 10,
-        'HOURLY': 10,
-        'DAILY': 10,
-        'MONTHLY': 10,
-        'YEARLY': 10,
+        "MICROSECONDLY": 10,
+        "SECONDLY": 10,
+        "MINUTELY": 10,
+        "HOURLY": 10,
+        "DAILY": 10,
+        "MONTHLY": 10,
+        "YEARLY": 10,
     }
 
     def __init__(self, tz):
@@ -381,22 +382,22 @@ class DateTimeNanoLocator(ticker.Locator):
     def get_ticks(self, start, end):
         start = int(start)
         end = int(end)
-        if self.scale == 'MICROSECONDLY':
+        if self.scale == "MICROSECONDLY":
             self.ticker = MicrosecondTicker(self.tz, self.interval, start, end)
-        elif self.scale == 'SECONDLY':
+        elif self.scale == "SECONDLY":
             self.ticker = SecondTicker(self.tz, self.interval, start, end)
-        elif self.scale == 'MINUTELY':
+        elif self.scale == "MINUTELY":
             self.ticker = MinuteTicker(self.tz, self.interval, start, end)
-        elif self.scale == 'HOURLY':
+        elif self.scale == "HOURLY":
             self.ticker = HourTicker(self.tz, self.interval, start, end)
-        elif self.scale == 'DAILY':
+        elif self.scale == "DAILY":
             self.ticker = DayTicker(self.tz, self.interval, start, end)
-        elif self.scale == 'MONTHLY':
+        elif self.scale == "MONTHLY":
             self.ticker = MonthTicker(self.tz, self.interval, start, end)
-        elif self.scale == 'YEARLY':
+        elif self.scale == "YEARLY":
             self.ticker = YearTicker(self.tz, self.interval, start, end)
         else:
-            raise ValueError('Scale not recognized.')
+            raise ValueError("Scale not recognized.")
 
         return self.ticker.ticks_ns
 
@@ -404,13 +405,13 @@ class DateTimeNanoLocator(ticker.Locator):
 class DateTimeNanoScalarConverter(units.ConversionInterface):
     @staticmethod
     def default_units(x, axis):
-        return ('ns', x._timezone._to_tz)
+        return ("ns", x._timezone._to_tz)
 
     @staticmethod
     def axisinfo(unit, axis):
         (u, rt_tz) = unit
-        if rt_tz == 'NYC':
-            tz = pytz.timezone('America/New_York')
+        if rt_tz == "NYC":
+            tz = pytz.timezone("America/New_York")
         else:
             tz = pytz.utc
 
@@ -419,7 +420,7 @@ class DateTimeNanoScalarConverter(units.ConversionInterface):
         info = units.AxisInfo(
             majloc=majloc,
             majfmt=majfmt,
-            label='DateTime',
+            label="DateTime",
         )
         return info
 
@@ -427,7 +428,7 @@ class DateTimeNanoScalarConverter(units.ConversionInterface):
 class DateTimeScalarConverter(units.ConversionInterface):
     @staticmethod
     def default_units(x, axis):
-        return 'date'
+        return "date"
 
     @staticmethod
     def axisinfo(unit, axis):
@@ -436,7 +437,7 @@ class DateTimeScalarConverter(units.ConversionInterface):
         info = units.AxisInfo(
             majloc=majloc,
             majfmt=majfmt,
-            label='Date',
+            label="Date",
         )
         return info
 
@@ -507,18 +508,18 @@ class MicrosecondTSTicker(TSTicker):
         if len(self.day_aligned_ticks) == 0:
             first_tick = self.ticks_td[0]
             self.offset = first_tick - datetime.timedelta(microseconds=first_tick.microseconds)
-            self.tick_format = '{F:06}us'
-            self.offset_format = '{D} days, {H:02}:{M:02}:{S:02}'
+            self.tick_format = "{F:06}us"
+            self.offset_format = "{D} days, {H:02}:{M:02}:{S:02}"
 
         elif len(self.day_aligned_ticks) == 1:
             self.offset = self.day_aligned_ticks[0]
-            self.tick_format = '{F:06}us'
-            self.offset_format = '{D} days, {H:02}:{M:02}:{S:02}'
+            self.tick_format = "{F:06}us"
+            self.offset_format = "{D} days, {H:02}:{M:02}:{S:02}"
 
         else:
             self.offset = None
-            self.tick_format = '{D} days, {H:02}:{M:02}:{S:02}'
-            self.offset_format = ''
+            self.tick_format = "{D} days, {H:02}:{M:02}:{S:02}"
+            self.offset_format = ""
         return
 
 
@@ -535,18 +536,18 @@ class SecondTSTicker(TSTicker):
         if len(self.day_aligned_ticks) == 0:
             first_tick = self.ticks_td[0]
             self.offset = first_tick - datetime.timedelta(first_tick.seconds)
-            self.tick_format = '{H:02}:{M:02}:{S:02}'
-            self.offset_format = '{D} days'
+            self.tick_format = "{H:02}:{M:02}:{S:02}"
+            self.offset_format = "{D} days"
 
         elif len(self.day_aligned_ticks) == 1:
             self.offset = self.day_aligned_ticks[0]
-            self.tick_format = '{H:02}:{M:02}:{S:02}'
-            self.offset_format = '{D} days'
+            self.tick_format = "{H:02}:{M:02}:{S:02}"
+            self.offset_format = "{D} days"
 
         else:
             self.offset = None
-            self.tick_format = '{D} days, {H:02}:{M:02}:{S:02}'
-            self.offset_format = ''
+            self.tick_format = "{D} days, {H:02}:{M:02}:{S:02}"
+            self.offset_format = ""
         return
 
 
@@ -565,18 +566,18 @@ class MinuteTSTicker(TSTicker):
             self.offset = first_tick - datetime.timedelta(
                 seconds=first_tick.seconds, microseconds=first_tick.microseconds
             )
-            self.tick_format = '{H:02}:{M:02}:{S:02}'
-            self.offset_format = '{D} days'
+            self.tick_format = "{H:02}:{M:02}:{S:02}"
+            self.offset_format = "{D} days"
 
         elif len(self.day_aligned_ticks) == 1:
             self.offset = self.day_aligned_ticks[0]
-            self.tick_format = '{H:02}:{M:02}:{S:02}'
-            self.offset_format = '{D} days'
+            self.tick_format = "{H:02}:{M:02}:{S:02}"
+            self.offset_format = "{D} days"
 
         else:
             self.offset = None
-            self.tick_format = '{D} days, {H:02}:{M:02}:{S:02}'
-            self.offset_format = ''
+            self.tick_format = "{D} days, {H:02}:{M:02}:{S:02}"
+            self.offset_format = ""
         return
 
 
@@ -595,18 +596,18 @@ class HourTSTicker(TSTicker):
             self.offset = first_tick - datetime.timedelta(
                 seconds=first_tick.seconds, microseconds=first_tick.microseconds
             )
-            self.tick_format = '{H:02}:{M:02}:{S:02}'
-            self.offset_format = '{D} days'
+            self.tick_format = "{H:02}:{M:02}:{S:02}"
+            self.offset_format = "{D} days"
 
         elif len(self.day_aligned_ticks) == 1:
             self.offset = self.day_aligned_ticks[0]
-            self.tick_format = '{H:02}:{M:02}:{S:02}'
-            self.offset_format = '{D} days'
+            self.tick_format = "{H:02}:{M:02}:{S:02}"
+            self.offset_format = "{D} days"
 
         else:
             self.offset = None
-            self.tick_format = '{D} days, {H:02}:{M:02}:{S:02}'
-            self.offset_format = ''
+            self.tick_format = "{D} days, {H:02}:{M:02}:{S:02}"
+            self.offset_format = ""
         return
 
 
@@ -621,26 +622,26 @@ class DayTSTicker(TSTicker):
 
     def make_formats(self):
         self.offset = None
-        self.tick_format = '{D} days'
-        self.offset_format = ''
+        self.tick_format = "{D} days"
+        self.offset_format = ""
         return
 
 
 class TimeSpanLocator(ticker.Locator):
     intervals = {
-        'MICROSECONDLY': [1, 2, 5, 10, 25, 50, 100, 250, 1_000, 2_000, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000],
-        'SECONDLY': [1, 2, 5, 10, 15, 30],
-        'MINUTELY': [1, 2, 5, 10, 15, 30],
-        'HOURLY': [1, 3, 4, 6, 12],
-        'DAILY': [1, 2, 3, 7, 14, 21, 30, 60, 90, 180, 365, 730, 3650],
+        "MICROSECONDLY": [1, 2, 5, 10, 25, 50, 100, 250, 1_000, 2_000, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000],
+        "SECONDLY": [1, 2, 5, 10, 15, 30],
+        "MINUTELY": [1, 2, 5, 10, 15, 30],
+        "HOURLY": [1, 3, 4, 6, 12],
+        "DAILY": [1, 2, 3, 7, 14, 21, 30, 60, 90, 180, 365, 730, 3650],
     }
 
     max_ticks = {
-        'MICROSECONDLY': 10,
-        'SECONDLY': 10,
-        'MINUTELY': 10,
-        'HOURLY': 10,
-        'DAILY': 10,
+        "MICROSECONDLY": 10,
+        "SECONDLY": 10,
+        "MINUTELY": 10,
+        "HOURLY": 10,
+        "DAILY": 10,
     }
 
     def __init__(self):
@@ -673,18 +674,18 @@ class TimeSpanLocator(ticker.Locator):
     def get_ticks(self, start, end):
         start = int(start)
         end = int(end)
-        if self.scale == 'MICROSECONDLY':
+        if self.scale == "MICROSECONDLY":
             self.ticker = MicrosecondTSTicker(self.interval, start, end)
-        elif self.scale == 'SECONDLY':
+        elif self.scale == "SECONDLY":
             self.ticker = SecondTSTicker(self.interval, start, end)
-        elif self.scale == 'MINUTELY':
+        elif self.scale == "MINUTELY":
             self.ticker = MinuteTSTicker(self.interval, start, end)
-        elif self.scale == 'HOURLY':
+        elif self.scale == "HOURLY":
             self.ticker = HourTSTicker(self.interval, start, end)
-        elif self.scale == 'DAILY':
+        elif self.scale == "DAILY":
             self.ticker = DayTSTicker(self.interval, start, end)
         else:
-            raise ValueError('Scale not recognized.')
+            raise ValueError("Scale not recognized.")
 
         return self.ticker.ticks_ns
 
@@ -717,12 +718,12 @@ class TimeSpanFormatter(ticker.Formatter):
             F=microseconds,
         )
         if tick_td == self.locator.ticker.offset:
-            name = '*' + name
+            name = "*" + name
         return name
 
     def format_offset(self):
         if self.locator.ticker.offset is None:
-            name = ''
+            name = ""
         else:
             offset = self.locator.ticker.offset
             (days, hours, minutes, seconds, microseconds) = td_to_dhmsf(offset)
@@ -743,7 +744,7 @@ class TimeSpanFormatter(ticker.Formatter):
 class TimeSpanConverter(units.ConversionInterface):
     @staticmethod
     def default_units(x, axis):
-        return 'ns'
+        return "ns"
 
     @staticmethod
     def axisinfo(unit, axis):
@@ -752,7 +753,7 @@ class TimeSpanConverter(units.ConversionInterface):
         info = units.AxisInfo(
             majloc=majloc,
             majfmt=majfmt,
-            label='TimeSpan',
+            label="TimeSpan",
         )
         return info
 

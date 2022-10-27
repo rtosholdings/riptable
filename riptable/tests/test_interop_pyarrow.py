@@ -1,41 +1,47 @@
 """Unit tests for conversions of arrays and Dataset/tables between riptable and pyarrow."""
 
 import numpy as np
-import riptable as rt
-
 import pytest
+
+import riptable as rt
 from riptable.testing.array_assert import assert_array_equal, assert_array_or_cat_equal
 
 # pyarrow is still an optional dependency;
 # use the functionality of pytest to skip all tests in this module if pyarrow can't be imported.
 # https://docs.pytest.org/en/latest/how-to/skipping.html#skipping-on-a-missing-import-dependency
-_ = pytest.importorskip('pyarrow', minversion='4.0.0')
+_ = pytest.importorskip("pyarrow", minversion="4.0.0")
 import pyarrow as pa
-import pyarrow.types as pat
 import pyarrow.compute as pc
+import pyarrow.types as pat
 
 
 class TestPyarrowConvertFastArray:
-    @pytest.mark.parametrize(('rt_farr',), [
-        pytest.param(rt.FA([], dtype=np.int8), id='empty(int8)'),
-        pytest.param(rt.FA([-120, rt.int8.inv, -1, 0, 1, 101, 127], dtype=np.int8), id='int8'),
-        pytest.param(rt.FA([0.01, -0.0, np.nan, 1e10, -1e10, np.inf, np.pi], dtype=np.float32), id='float32'),
-        # bool
-        pytest.param(rt.FA([b'ABC', b'abcde'], dtype='S'), id='ascii'),
-        #FAILS# pytest.param(rt.FA(['ABC', 'abcde'], unicode=True), id='unicode'),
-        pytest.param(rt.FA(['A\u1F600C', 'abcde'], unicode=True), id='unicode 2'),
-    ])
+    @pytest.mark.parametrize(
+        ("rt_farr",),
+        [
+            pytest.param(rt.FA([], dtype=np.int8), id="empty(int8)"),
+            pytest.param(rt.FA([-120, rt.int8.inv, -1, 0, 1, 101, 127], dtype=np.int8), id="int8"),
+            pytest.param(rt.FA([0.01, -0.0, np.nan, 1e10, -1e10, np.inf, np.pi], dtype=np.float32), id="float32"),
+            # bool
+            pytest.param(rt.FA([b"ABC", b"abcde"], dtype="S"), id="ascii"),
+            # FAILS# pytest.param(rt.FA(['ABC', 'abcde'], unicode=True), id='unicode'),
+            pytest.param(rt.FA(["A\u1F600C", "abcde"], unicode=True), id="unicode 2"),
+        ],
+    )
     def test_roundtrip_rt_pa_rt(self, rt_farr: rt.FastArray) -> None:
         """Test round-tripping from rt.FastArray to pyarrow.Array and back."""
         result_pa_arr = rt_farr.to_arrow()
         result_farr = rt.FastArray.from_arrow(result_pa_arr, zero_copy_only=False)
         assert_array_equal(rt_farr, result_farr)
 
-    @pytest.mark.parametrize(('rt_farr',), [
-        pytest.param(rt.FA([b'ABC', b'abcde'], dtype='S'), id='ascii'),
-        pytest.param(rt.FA(['ABC', 'abcde'], unicode=True), id='unicode'),
-        pytest.param(rt.FA(['A\u1F600C', 'abcde'], unicode=True), id='unicode 2'),
-    ])
+    @pytest.mark.parametrize(
+        ("rt_farr",),
+        [
+            pytest.param(rt.FA([b"ABC", b"abcde"], dtype="S"), id="ascii"),
+            pytest.param(rt.FA(["ABC", "abcde"], unicode=True), id="unicode"),
+            pytest.param(rt.FA(["A\u1F600C", "abcde"], unicode=True), id="unicode 2"),
+        ],
+    )
     def test_rt_pa_str(self, rt_farr: rt.FastArray) -> None:
         """Test round-tripping from rt.FastArray to pyarrow.Array and back."""
         result_pa_arr = rt_farr.to_arrow()
@@ -45,13 +51,17 @@ class TestPyarrowConvertFastArray:
             str_farr = rt_farr[i]
             str_result = result_list[i]
             assert len(str_farr) == len(str_result)
-            #TODO: add contents check; frustratingly difficult to do this generically
+            # TODO: add contents check; frustratingly difficult to do this generically
+
 
 class TestPyarrowConvertDate:
-    @pytest.mark.parametrize(('rt_date_arr',), [
-        pytest.param(rt.Date([]), id='empty'),
-        # TODO: Add test cases
-    ])
+    @pytest.mark.parametrize(
+        ("rt_date_arr",),
+        [
+            pytest.param(rt.Date([]), id="empty"),
+            # TODO: Add test cases
+        ],
+    )
     def test_roundtrip_rt_pa_rt(self, rt_date_arr: rt.Date) -> None:
         """Test round-tripping from rt.Date to pyarrow.Array and back."""
         result_pa_arr = rt_date_arr.to_arrow()
@@ -60,10 +70,13 @@ class TestPyarrowConvertDate:
 
 
 class TestPyarrowConvertDateTimeNano:
-    @pytest.mark.parametrize(('rt_dtn_arr',), [
-        pytest.param(rt.DateTimeNano([]), id='empty'),
-        # TODO: Add test cases -- including various timezones
-    ])
+    @pytest.mark.parametrize(
+        ("rt_dtn_arr",),
+        [
+            pytest.param(rt.DateTimeNano([]), id="empty"),
+            # TODO: Add test cases -- including various timezones
+        ],
+    )
     def test_roundtrip_rt_pa_rt(self, rt_dtn_arr: rt.Date) -> None:
         """Test round-tripping from rt.Date to pyarrow.Array and back."""
         result_pa_arr = rt_dtn_arr.to_arrow()
@@ -72,10 +85,13 @@ class TestPyarrowConvertDateTimeNano:
 
 
 class TestPyarrowConvertTimeSpan:
-    @pytest.mark.parametrize(('rt_tsp_arr',), [
-        pytest.param(rt.TimeSpan([]), id='empty'),
-        # TODO: Add test cases
-    ])
+    @pytest.mark.parametrize(
+        ("rt_tsp_arr",),
+        [
+            pytest.param(rt.TimeSpan([]), id="empty"),
+            # TODO: Add test cases
+        ],
+    )
     def test_roundtrip_rt_pa_rt(self, rt_tsp_arr: rt.Date) -> None:
         """Test round-tripping from rt.Date to pyarrow.Array and back."""
         result_pa_arr = rt_tsp_arr.to_arrow()
@@ -84,71 +100,174 @@ class TestPyarrowConvertTimeSpan:
 
 
 class TestPyarrowConvertCategorical:
-    @pytest.mark.parametrize(('rt_cat',), [
-        # TODO: Add test cases for CategoryMode.IntEnum; at present, it appears IntEnum support is broken, can't seem to create a Categorical in that mode.
-        # pytest.param(rt.Categorical([]), id='empty', marks=pytest.mark.skip(reason="rt.Categorical does not support creation from an empty list/array.")),
-        pytest.param(rt.Categorical(['red', 'red', 'green', 'blue', 'green', 'red', 'blue'], ordered=False), id='CategoryMode.StringArray'),
-        pytest.param(rt.Categorical(['red', 'red', 'green', 'blue', 'green', 'red', 'blue'], ordered=True), id='CategoryMode.StringArray--ordered'),
-        pytest.param(rt.Categorical(['red', 'red', 'green', 'blue', 'green', 'red', 'blue'], dtype=np.int8, ordered=False), id='CategoryMode.StringArray;int8;ordered=False'),
-        pytest.param(rt.Categorical(['red', 'red', 'green', 'blue', 'green', 'red', 'blue'], dtype=np.int8, ordered=True), id='CategoryMode.StringArray;int8;ordered=True'),
-        pytest.param(rt.Categorical([f"x{i}" for i in range(0, 127)], dtype=np.int8), id="max number of categories for a signed int backing array without causing overflow"),
-        # N.B. The test cases below for Categorical[Date] require pyarrow 5.0.0 or higher; dictionary-encoded date32() arrays didn't work before then.
-        pytest.param(
-            rt.Categorical(
-                rt.Date(['2019-06-19', '2019-06-19', '2020-01-15', '2020-05-22', '2020-02-10', '2020-02-10', '2020-03-17', '2020-03-17']),
-                ordered=False),
-            id="Categorical[Date];ordered=False"),
-        pytest.param(
-            rt.Categorical(
-                rt.Date(['2019-06-19', '2019-06-19', '2020-01-15', '2020-05-22', '2020-02-10', '2020-02-10', '2020-03-17', '2020-03-17']),
-                ordered=True),
-            id="Categorical[Date];ordered=True"
-        ),
-        pytest.param(rt.Categorical(
-            # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
-            [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
-            {
-                'IRL': 372, 'USA': 840, 'AUS': 36, 'HKG': 344, 'JPN': 392,
-                'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
-            },
-            ordered=False
-        ), id="CategoryMode.Dictionary;ordered=False;Unicode"),
-        pytest.param(rt.Categorical(
-            # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
-            [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
-            {
-                'IRL': 372, 'USA': 840, 'AUS': 36, 'HKG': 344, 'JPN': 392,
-                'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
-            },
-            ordered=True
-        ), id="CategoryMode.Dictionary;ordered=True;Unicode"),
-        pytest.param(rt.Categorical(
-            # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
-            [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
-            {
-                b'IRL': 372, b'USA': 840, b'AUS': 36, b'HKG': 344, b'JPN': 392,
-                b'MEX': 484, b'KHM': 116, b'THA': 764, b'JAM': 388, b'ARM': 51
-            },
-            ordered=False
-        ), id="CategoryMode.Dictionary;ordered=False;ASCII"),
-        pytest.param(rt.Categorical(
-            # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
-            [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
-            {
-                b'IRL': 372, b'USA': 840, b'AUS': 36, b'HKG': 344, b'JPN': 392,
-                b'MEX': 484, b'KHM': 116, b'THA': 764, b'JAM': 388, b'ARM': 51
-            },
-            ordered=True
-        ), id="CategoryMode.Dictionary;ordered=True;ASCII"),
-        pytest.param(rt.Categorical(
-            [
-                rt.FastArray(['Cyan', 'Magenta', 'Yellow', 'Black', 'Magenta', 'Cyan', 'Black', 'Yellow']).set_name('InkColor'),
-                rt.Date(['2019-06-19', '2019-06-19', '2020-01-15', '2020-05-22', '2020-02-10', '2020-02-10', '2020-03-17', '2020-03-17']).set_name('CartridgeInstallDate')
-            ]
-        ), id="CategoryMode.MultiKey")
-    ])
-    @pytest.mark.parametrize('output_writable', [False, True])
-    @pytest.mark.parametrize('have_nulls', [False, True])
+    @pytest.mark.parametrize(
+        ("rt_cat",),
+        [
+            # TODO: Add test cases for CategoryMode.IntEnum; at present, it appears IntEnum support is broken, can't seem to create a Categorical in that mode.
+            # pytest.param(rt.Categorical([]), id='empty', marks=pytest.mark.skip(reason="rt.Categorical does not support creation from an empty list/array.")),
+            pytest.param(
+                rt.Categorical(["red", "red", "green", "blue", "green", "red", "blue"], ordered=False),
+                id="CategoryMode.StringArray",
+            ),
+            pytest.param(
+                rt.Categorical(["red", "red", "green", "blue", "green", "red", "blue"], ordered=True),
+                id="CategoryMode.StringArray--ordered",
+            ),
+            pytest.param(
+                rt.Categorical(["red", "red", "green", "blue", "green", "red", "blue"], dtype=np.int8, ordered=False),
+                id="CategoryMode.StringArray;int8;ordered=False",
+            ),
+            pytest.param(
+                rt.Categorical(["red", "red", "green", "blue", "green", "red", "blue"], dtype=np.int8, ordered=True),
+                id="CategoryMode.StringArray;int8;ordered=True",
+            ),
+            pytest.param(
+                rt.Categorical([f"x{i}" for i in range(0, 127)], dtype=np.int8),
+                id="max number of categories for a signed int backing array without causing overflow",
+            ),
+            # N.B. The test cases below for Categorical[Date] require pyarrow 5.0.0 or higher; dictionary-encoded date32() arrays didn't work before then.
+            pytest.param(
+                rt.Categorical(
+                    rt.Date(
+                        [
+                            "2019-06-19",
+                            "2019-06-19",
+                            "2020-01-15",
+                            "2020-05-22",
+                            "2020-02-10",
+                            "2020-02-10",
+                            "2020-03-17",
+                            "2020-03-17",
+                        ]
+                    ),
+                    ordered=False,
+                ),
+                id="Categorical[Date];ordered=False",
+            ),
+            pytest.param(
+                rt.Categorical(
+                    rt.Date(
+                        [
+                            "2019-06-19",
+                            "2019-06-19",
+                            "2020-01-15",
+                            "2020-05-22",
+                            "2020-02-10",
+                            "2020-02-10",
+                            "2020-03-17",
+                            "2020-03-17",
+                        ]
+                    ),
+                    ordered=True,
+                ),
+                id="Categorical[Date];ordered=True",
+            ),
+            pytest.param(
+                rt.Categorical(
+                    # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+                    [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
+                    {
+                        "IRL": 372,
+                        "USA": 840,
+                        "AUS": 36,
+                        "HKG": 344,
+                        "JPN": 392,
+                        "MEX": 484,
+                        "KHM": 116,
+                        "THA": 764,
+                        "JAM": 388,
+                        "ARM": 51,
+                    },
+                    ordered=False,
+                ),
+                id="CategoryMode.Dictionary;ordered=False;Unicode",
+            ),
+            pytest.param(
+                rt.Categorical(
+                    # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+                    [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
+                    {
+                        "IRL": 372,
+                        "USA": 840,
+                        "AUS": 36,
+                        "HKG": 344,
+                        "JPN": 392,
+                        "MEX": 484,
+                        "KHM": 116,
+                        "THA": 764,
+                        "JAM": 388,
+                        "ARM": 51,
+                    },
+                    ordered=True,
+                ),
+                id="CategoryMode.Dictionary;ordered=True;Unicode",
+            ),
+            pytest.param(
+                rt.Categorical(
+                    # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+                    [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
+                    {
+                        b"IRL": 372,
+                        b"USA": 840,
+                        b"AUS": 36,
+                        b"HKG": 344,
+                        b"JPN": 392,
+                        b"MEX": 484,
+                        b"KHM": 116,
+                        b"THA": 764,
+                        b"JAM": 388,
+                        b"ARM": 51,
+                    },
+                    ordered=False,
+                ),
+                id="CategoryMode.Dictionary;ordered=False;ASCII",
+            ),
+            pytest.param(
+                rt.Categorical(
+                    # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+                    [36, 36, 344, 840, 840, 372, 840, 372, 840, 124, 840, 124, 36, 484],
+                    {
+                        b"IRL": 372,
+                        b"USA": 840,
+                        b"AUS": 36,
+                        b"HKG": 344,
+                        b"JPN": 392,
+                        b"MEX": 484,
+                        b"KHM": 116,
+                        b"THA": 764,
+                        b"JAM": 388,
+                        b"ARM": 51,
+                    },
+                    ordered=True,
+                ),
+                id="CategoryMode.Dictionary;ordered=True;ASCII",
+            ),
+            pytest.param(
+                rt.Categorical(
+                    [
+                        rt.FastArray(
+                            ["Cyan", "Magenta", "Yellow", "Black", "Magenta", "Cyan", "Black", "Yellow"]
+                        ).set_name("InkColor"),
+                        rt.Date(
+                            [
+                                "2019-06-19",
+                                "2019-06-19",
+                                "2020-01-15",
+                                "2020-05-22",
+                                "2020-02-10",
+                                "2020-02-10",
+                                "2020-03-17",
+                                "2020-03-17",
+                            ]
+                        ).set_name("CartridgeInstallDate"),
+                    ]
+                ),
+                id="CategoryMode.MultiKey",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("output_writable", [False, True])
+    @pytest.mark.parametrize("have_nulls", [False, True])
     def test_roundtrip_rt_pa_rt(self, rt_cat: rt.Categorical, output_writable: bool, have_nulls: bool) -> None:
         """Test round-tripping from rt.Categorical to pyarrow.Array/pyarrow.Table and back."""
         orig_cat_shape = rt_cat.shape
@@ -160,7 +279,11 @@ class TestPyarrowConvertCategorical:
             assert rt_cat.shape == orig_cat_shape
 
             # isfiltered() doesn't work as expected for Dictionary/IntEnum-mode Categorical as of riptable 1.1.0.
-            filtered_element_count = (rt.isnan(rt_cat._fa) if rt_cat.category_mode in (rt.rt_enum.CategoryMode.Dictionary, rt.rt_enum.CategoryMode.IntEnum) else rt_cat.isfiltered()).sum()
+            filtered_element_count = (
+                rt.isnan(rt_cat._fa)
+                if rt_cat.category_mode in (rt.rt_enum.CategoryMode.Dictionary, rt.rt_enum.CategoryMode.IntEnum)
+                else rt_cat.isfiltered()
+            ).sum()
             assert filtered_element_count == (len(rt_cat) - valid_mask.sum())
 
         result_pa_arr = rt_cat.to_arrow()
@@ -168,8 +291,9 @@ class TestPyarrowConvertCategorical:
         # Verify the pyarrow array has the correct length, number of categories, etc.
         assert len(rt_cat) == len(result_pa_arr)
         assert pat.is_dictionary(result_pa_arr.type)
-        assert len(result_pa_arr.dictionary) >= len(next(iter(rt_cat.category_dict.values()))), \
-            "The number of categories in the pyarrow array's dictionary is smaller than the number of categories in the input Categorical."
+        assert len(result_pa_arr.dictionary) >= len(
+            next(iter(rt_cat.category_dict.values()))
+        ), "The number of categories in the pyarrow array's dictionary is smaller than the number of categories in the input Categorical."
 
         if have_nulls:
             assert valid_mask.sum() > 0
@@ -181,7 +305,9 @@ class TestPyarrowConvertCategorical:
         #           which is not the same behavior as for other Categorical modes.
         #         * MultiKey Categoricals can't be created with an explicit list of category arrays + an index array,
         #           like what is supported for other Categorical modes.
-        if rt_cat.category_mode == rt.rt_enum.CategoryMode.MultiKey or (have_nulls and rt_cat.category_mode == rt.rt_enum.CategoryMode.Dictionary):
+        if rt_cat.category_mode == rt.rt_enum.CategoryMode.MultiKey or (
+            have_nulls and rt_cat.category_mode == rt.rt_enum.CategoryMode.Dictionary
+        ):
             pytest.xfail("Expected failure due to issues with the Categorical constructor and/or filtering.")
 
         result_cat = rt.Categorical.from_arrow(result_pa_arr, zero_copy_only=False, writable=output_writable)
@@ -192,17 +318,26 @@ class TestPyarrowConvertCategorical:
         # TODO: Remove CategoryMode.Dictionary from the relaxed_cat_check here -- it's failing because our encoding in
         #       pyarrow doesn't currenly preserve unused entries from the name <-> code mapping. Once that's fixed
         #       we should be able to use the stronger equality check.
-        assert_array_or_cat_equal(rt_cat, result_cat, relaxed_cat_check=rt_cat.ordered or rt_cat.category_mode == rt.rt_enum.CategoryMode.MultiKey or rt_cat.category_mode == rt.rt_enum.CategoryMode.Dictionary)
+        assert_array_or_cat_equal(
+            rt_cat,
+            result_cat,
+            relaxed_cat_check=rt_cat.ordered
+            or rt_cat.category_mode == rt.rt_enum.CategoryMode.MultiKey
+            or rt_cat.category_mode == rt.rt_enum.CategoryMode.Dictionary,
+        )
 
-    @pytest.mark.parametrize(('num_cats', 'dtype'), [
-        pytest.param(127, np.uint8),
-        pytest.param(128, np.uint8),
-        pytest.param(129, np.uint8),
-        pytest.param(32769, np.uint16)
-    ])
-    @pytest.mark.parametrize('ordered', [False, True])
-    @pytest.mark.parametrize('output_writable', [False, True])
-    @pytest.mark.parametrize('have_nulls', [False, True])
+    @pytest.mark.parametrize(
+        ("num_cats", "dtype"),
+        [
+            pytest.param(127, np.uint8),
+            pytest.param(128, np.uint8),
+            pytest.param(129, np.uint8),
+            pytest.param(32769, np.uint16),
+        ],
+    )
+    @pytest.mark.parametrize("ordered", [False, True])
+    @pytest.mark.parametrize("output_writable", [False, True])
+    @pytest.mark.parametrize("have_nulls", [False, True])
     def test_pa_to_rt_unsigned(self, num_cats, dtype, ordered: bool, output_writable: bool, have_nulls: bool) -> None:
         # Create a numpy array containing `num_cats` distinct strings.
         cat_labels = np.array([f"x{i}" for i in range(0, num_cats)])
@@ -231,21 +366,48 @@ class TestPyarrowConvertCategorical:
 
 
 class TestPyarrowConvertDataset:
-    @pytest.mark.parametrize(('rt_dset',), [
-        pytest.param(rt.Dataset({}), id='empty'),
-        pytest.param(rt.Dataset({
-            'ink_capacity': rt.FA([15, 10, 15, 25, 10, 15, 25, 15]),
-            'purchase_date': rt.Date(['2019-06-19', '2019-06-19', '2020-01-15', '2020-05-22', '2020-02-10', '2020-02-10', '2020-03-17', '2020-03-17']),
-            'country_code': rt.Categorical(
-                # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
-                [36, 36, 344, 840, 840, 124, 36, 484],
-                {
-                    'IRL': 372, 'USA': 840, 'AUS': 36, 'HKG': 344, 'JPN': 392,
-                    'MEX': 484, 'KHM': 116, 'THA': 764, 'JAM': 388, 'ARM': 51
-                }, ordered=True)
-            })
-        )
-    ])
+    @pytest.mark.parametrize(
+        ("rt_dset",),
+        [
+            pytest.param(rt.Dataset({}), id="empty"),
+            pytest.param(
+                rt.Dataset(
+                    {
+                        "ink_capacity": rt.FA([15, 10, 15, 25, 10, 15, 25, 15]),
+                        "purchase_date": rt.Date(
+                            [
+                                "2019-06-19",
+                                "2019-06-19",
+                                "2020-01-15",
+                                "2020-05-22",
+                                "2020-02-10",
+                                "2020-02-10",
+                                "2020-03-17",
+                                "2020-03-17",
+                            ]
+                        ),
+                        "country_code": rt.Categorical(
+                            # Country codes -- adapted from TestCategorical.test_hstack_fails_for_different_mode_cats.
+                            [36, 36, 344, 840, 840, 124, 36, 484],
+                            {
+                                "IRL": 372,
+                                "USA": 840,
+                                "AUS": 36,
+                                "HKG": 344,
+                                "JPN": 392,
+                                "MEX": 484,
+                                "KHM": 116,
+                                "THA": 764,
+                                "JAM": 388,
+                                "ARM": 51,
+                            },
+                            ordered=True,
+                        ),
+                    }
+                )
+            ),
+        ],
+    )
     def test_roundtrip_rt_pa_rt(self, rt_dset: rt.Dataset) -> None:
         """Test round-tripping from rt.Dataset to pyarrow.Table and back."""
         result_pa_tbl = rt_dset.to_arrow()
@@ -257,19 +419,21 @@ class TestPyarrowConvertDataset:
             # here, we're more interested in the dataset-level stuff.
             assert_array_or_cat_equal(rt_dset[col_name], result_rt_dset[col_name], relaxed_cat_check=True)
 
+
 class TestPyarrowConvertFixedSizeBinary:
-    @pytest.mark.parametrize(('pa_arr', 'zero_copy', 'writable'), [
-        (pa.array([b"123", b"456"], type=pa.binary(3)), True, False),
-        (pa.array([b"123", b"456"], type=pa.binary(3)), False, False),
-        (pa.array([b"123", b"456"], type=pa.binary(3)), True, True),
-        (pa.array([b"123", b"456"], type=pa.binary(3)), False, False),
-        (pa.array([b"123", b"456"], mask=[True, False], type=pa.binary(3)), False, False),
-        (pa.array([b"123", b"456"], mask=[True, False], type=pa.binary(3)), False, True),
-        ])
+    @pytest.mark.parametrize(
+        ("pa_arr", "zero_copy", "writable"),
+        [
+            (pa.array([b"123", b"456"], type=pa.binary(3)), True, False),
+            (pa.array([b"123", b"456"], type=pa.binary(3)), False, False),
+            (pa.array([b"123", b"456"], type=pa.binary(3)), True, True),
+            (pa.array([b"123", b"456"], type=pa.binary(3)), False, False),
+            (pa.array([b"123", b"456"], mask=[True, False], type=pa.binary(3)), False, False),
+            (pa.array([b"123", b"456"], mask=[True, False], type=pa.binary(3)), False, True),
+        ],
+    )
     def test_roundtrip_pa_fa_pa(self, pa_arr: pa.Array, zero_copy: bool, writable: bool):
         result_fa_array = rt.FastArray.from_arrow(pa_arr, zero_copy_only=zero_copy, writable=writable)
         result_pa_array = result_fa_array.to_arrow(type=pa.binary(3), preserve_fixed_bytes=True)
 
         assert pa_arr == result_pa_array
-
-

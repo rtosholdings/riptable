@@ -1,38 +1,61 @@
 __all__ = [
-    'DATETIME_TYPES',
-    'DS_DISPLAY_TYPES',
-    'GB_FUNCTIONS',
-    'MATH_OPERATION',
-    'INVALID_DICT',
-    'TIMEWINDOW_FUNCTIONS',
-    'NumpyCharTypes',
-    'REDUCE_FUNCTIONS',
-    'ROLLING_FUNCTIONS',
-    'SD_TYPES',
-    'SM_DTYPES',
-    'TypeRegister',
-    'DisplayJustification',
-    'DisplayColumnColors',
-    'DisplayArrayTypes',
-    'DisplayDetectModes',
-    'DisplayLength',
-    'ColHeader',
+    "DATETIME_TYPES",
+    "DS_DISPLAY_TYPES",
+    "GB_FUNCTIONS",
+    "MATH_OPERATION",
+    "INVALID_DICT",
+    "TIMEWINDOW_FUNCTIONS",
+    "NumpyCharTypes",
+    "REDUCE_FUNCTIONS",
+    "ROLLING_FUNCTIONS",
+    "SD_TYPES",
+    "SM_DTYPES",
+    "TypeRegister",
+    "DisplayJustification",
+    "DisplayColumnColors",
+    "DisplayArrayTypes",
+    "DisplayDetectModes",
+    "DisplayLength",
+    "ColHeader",
 ]
 
 
 import sys
 from collections import namedtuple
-from typing import TYPE_CHECKING, ClassVar, Optional, Callable, Mapping, Any, Tuple, Type, List
 from enum import IntEnum
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Type,
+)
+
 import numpy as np
 
 if TYPE_CHECKING:
     from .rt_accum2 import Accum2
     from .rt_categorical import Categorical
     from .rt_dataset import Dataset
-    from .rt_datetime import Date, DateBase, DateSpan, DateTimeBase, DateTimeNano, TimeSpan
+    from .rt_datetime import (
+        Date,
+        DateBase,
+        DateSpan,
+        DateTimeBase,
+        DateTimeNano,
+        TimeSpan,
+    )
     from .rt_display import (
-        DisplayAttributes, DisplayDetect, DisplayOptions, DisplayString, DisplayTable, DisplayText
+        DisplayAttributes,
+        DisplayDetect,
+        DisplayOptions,
+        DisplayString,
+        DisplayTable,
+        DisplayText,
     )
     from .rt_fastarray import FastArray
     from .rt_groupby import GroupBy
@@ -47,12 +70,12 @@ if TYPE_CHECKING:
 
 
 # common strings used to indicate special columns or items
-INVALID_SHORT_NAME: str = 'Inv'
-INVALID_LONG_NAME: str = 'Invalid'
-TOTAL_LONG_NAME: str = 'Total'
-CLIPPED_LONG_NAME: str = 'Clipped'
-FILTERED_LONG_NAME: str = 'Filtered'
-GROUPBY_KEY_PREFIX: str = 'key'
+INVALID_SHORT_NAME: str = "Inv"
+INVALID_LONG_NAME: str = "Invalid"
+TOTAL_LONG_NAME: str = "Total"
+CLIPPED_LONG_NAME: str = "Clipped"
+FILTERED_LONG_NAME: str = "Filtered"
+GROUPBY_KEY_PREFIX: str = "key"
 """Default groupby key name - followed by _n for n"""
 
 INVALID_POINTER_32: int = -2147483648
@@ -82,7 +105,7 @@ INVALID_DICT: Mapping[int, Any] = {
     # 15: numpy.complex128,  # np.complex128
     # 16: numpy.complex128,  # np.complex128
     17: None,  # np.object_
-    18: b'',  # np.bytes_
+    18: b"",  # np.bytes_
     19: "",  # np.str_
     # 20:                    # numpy.void
     # 21:                    # numpy.datetime64
@@ -90,7 +113,7 @@ INVALID_DICT: Mapping[int, Any] = {
     23: np.nan,  # numpy.float16
 }
 
-if sys.platform != 'win32':
+if sys.platform != "win32":
     INVALID_DICT: Mapping[int, Any] = {
         # keys in this dict can be generated with ndarray.dtype.num
         0: False,  # np.bool
@@ -111,7 +134,7 @@ if sys.platform != 'win32':
         # 15: numpy.complex128,  # np.complex128
         # 16: numpy.complex128,  # np.complex128
         17: None,  # np.object_
-        18: b'',  # np.bytes_
+        18: b"",  # np.bytes_
         19: "",  # np.str_
         # 20:                    # numpy.void
         # 21:                    # numpy.datetime64
@@ -171,6 +194,7 @@ class MATH_OPERATION(IntEnum):
     """
     MATH_OPERATION is the encoding of the Riptable implemented mathematical operations.
     """
+
     # MATH_OPERATION is how Riptable communicates with RiptideCPP and this enumeration
     # is repeated in RiptideCPP CommonInc.h. Any changes made to either location must be
     # reflected in both places.
@@ -538,29 +562,29 @@ class GB_PACKUNPACK(IntEnum):
 
 
 class NumpyCharTypes:
-    All = '?bhilqpBHILQPefdgFDGSUVOMm'
-    AllFloat = 'efdgFDG'
-    AllInteger = 'bBhHiIlLqQpP'
-    Computable = 'fdgbBhHiIlLqQpP'  # does not include boolean or strings
-    Noncomputable = 'SeFDGUVOMm'
-    Unsupported = 'eFDGVOMm'  # unsupported in riptable world
-    Supported = '?fdgbBhHiIlLqQpPSUV'
-    SupportedFloat = 'fdg'
-    SupportedAlternate = '?fdgbBhHiIlLqQpPSU'
-    Character = 'c'
-    Complex = 'FDG'
-    Datetime = 'Mm'
-    Float = 'efdg'
-    Float64 = 'dg'
-    Integer = 'bhilqp'
-    UnsignedInteger = 'BHILQP'
-    UnsignedInteger64 = 'QP'
-    SignedInteger64 = 'qp'
+    All = "?bhilqpBHILQPefdgFDGSUVOMm"
+    AllFloat = "efdgFDG"
+    AllInteger = "bBhHiIlLqQpP"
+    Computable = "fdgbBhHiIlLqQpP"  # does not include boolean or strings
+    Noncomputable = "SeFDGUVOMm"
+    Unsupported = "eFDGVOMm"  # unsupported in riptable world
+    Supported = "?fdgbBhHiIlLqQpPSUV"
+    SupportedFloat = "fdg"
+    SupportedAlternate = "?fdgbBhHiIlLqQpPSU"
+    Character = "c"
+    Complex = "FDG"
+    Datetime = "Mm"
+    Float = "efdg"
+    Float64 = "dg"
+    Integer = "bhilqp"
+    UnsignedInteger = "BHILQP"
+    UnsignedInteger64 = "QP"
+    SignedInteger64 = "qp"
 
     # linux gcc compiler long is int64, msvc long is int32
-    if sys.platform != 'win32':
-        UnsignedInteger64 = 'LQP'
-        SignedInteger64 = 'lqp'
+    if sys.platform != "win32":
+        UnsignedInteger64 = "LQP"
+        SignedInteger64 = "lqp"
 
 
 gScalarType: Tuple[type, ...] = (
@@ -640,32 +664,32 @@ def int_dtype_from_len(newlen: int) -> np.dtype:
 
 
 gAnsiColors: Mapping[str, str] = {
-    'Black': '\x1b[0;30m',
-    'BlinkBlack': '\x1b[5;30m',
-    'BlinkBlue': '\x1b[5;34m',
-    'BlinkCyan': '\x1b[5;36m',
-    'BlinkGreen': '\x1b[5;32m',
-    'BlinkLightGray': '\x1b[5;37m',
-    'BlinkPurple': '\x1b[5;35m',
-    'BlinkRed': '\x1b[5;31m',
-    'BlinkYellow': '\x1b[5;33m',
-    'Blue': '\x1b[0;34m',
-    'Brown': '\x1b[0;33m',
-    'Cyan': '\x1b[0;36m',
-    'DarkGray': '\x1b[1;30m',
-    'Green': '\x1b[0;32m',
-    'LightBlue': '\x1b[1;34m',
-    'LightCyan': '\x1b[1;36m',
-    'LightGray': '\x1b[0;37m',
-    'LightGreen': '\x1b[1;32m',
-    'LightPurple': '\x1b[1;35m',
-    'LightRed': '\x1b[1;31m',
-    'NoColor': '',
-    'Normal': '\x1b[0m',
-    'Purple': '\x1b[0;35m',
-    'Red': '\x1b[0;31m',
-    'White': '\x1b[1;37m',
-    'Yellow': '\x1b[1;33m',
+    "Black": "\x1b[0;30m",
+    "BlinkBlack": "\x1b[5;30m",
+    "BlinkBlue": "\x1b[5;34m",
+    "BlinkCyan": "\x1b[5;36m",
+    "BlinkGreen": "\x1b[5;32m",
+    "BlinkLightGray": "\x1b[5;37m",
+    "BlinkPurple": "\x1b[5;35m",
+    "BlinkRed": "\x1b[5;31m",
+    "BlinkYellow": "\x1b[5;33m",
+    "Blue": "\x1b[0;34m",
+    "Brown": "\x1b[0;33m",
+    "Cyan": "\x1b[0;36m",
+    "DarkGray": "\x1b[1;30m",
+    "Green": "\x1b[0;32m",
+    "LightBlue": "\x1b[1;34m",
+    "LightCyan": "\x1b[1;36m",
+    "LightGray": "\x1b[0;37m",
+    "LightGreen": "\x1b[1;32m",
+    "LightPurple": "\x1b[1;35m",
+    "LightRed": "\x1b[1;31m",
+    "NoColor": "",
+    "Normal": "\x1b[0m",
+    "Purple": "\x1b[0;35m",
+    "Red": "\x1b[0;31m",
+    "White": "\x1b[1;37m",
+    "Yellow": "\x1b[1;33m",
 }
 
 
@@ -679,7 +703,7 @@ class DATETIME_TYPES(IntEnum):
     ORDINAL_DATE = 1
 
 
-DateTimeFormats: Mapping[str, str] = {'day': "%d-%b-%Y"}
+DateTimeFormats: Mapping[str, str] = {"day": "%d-%b-%Y"}
 
 
 class DisplayDetectModes(IntEnum):
@@ -899,38 +923,38 @@ class DayOfWeek(IntEnum):
 
 
 # allowing / now for denest
-INVALID_FILE_CHARS: Tuple[str, ...] = ('\\', ':', '<', '>', '!', '|', '*', '?')
+INVALID_FILE_CHARS: Tuple[str, ...] = ("\\", ":", "<", ">", "!", "|", "*", "?")
 
 
 gBasicStats: Mapping[str, str] = {
-    'count': 'Number of non-null observations',
-    'sum': 'Sum of values',
-    'mean': 'Mean of values',
-    'mad': 'Mean absolute deviation',  # median(abs(a - median(a)))
-    'median': 'Arithmetic median of values',
-    'min': 'Minimum',
-    'max': 'Maximum',
-    'std': 'Unbiased standard deviation',
-    'var': 'Unbiased variance',
-    'nansum': 'Sum of values',
-    'nanmean': 'Mean of values',
-    'nanmad': 'Mean absolute deviation',
-    'nanmedian': 'Arithmetic median of values',
-    'nanmin': 'Minimum',
-    'nanmax': 'Maximum',
-    'nanstd': 'Unbiased standard deviation',
-    'nanvar': 'Unbiased variance',
-    'mode': 'Mode',
-    'abs': 'Absolute Value',
-    'prod': 'Product of values',
-    'sem': 'Unbiased standard error of the mean',
-    'skew': 'Unbiased skewness (3rd moment)',
-    'kurt': 'Unbiased kurtosis (4th moment)',
-    'quantile': 'Sample quantile (value at %)',
-    'cumsum': 'Cumulative sum',
-    'cumprod': 'Cumulative product',
-    'cummax': 'Cumulative maximum',
-    'cummin': 'Cumulative minimum',
+    "count": "Number of non-null observations",
+    "sum": "Sum of values",
+    "mean": "Mean of values",
+    "mad": "Mean absolute deviation",  # median(abs(a - median(a)))
+    "median": "Arithmetic median of values",
+    "min": "Minimum",
+    "max": "Maximum",
+    "std": "Unbiased standard deviation",
+    "var": "Unbiased variance",
+    "nansum": "Sum of values",
+    "nanmean": "Mean of values",
+    "nanmad": "Mean absolute deviation",
+    "nanmedian": "Arithmetic median of values",
+    "nanmin": "Minimum",
+    "nanmax": "Maximum",
+    "nanstd": "Unbiased standard deviation",
+    "nanvar": "Unbiased variance",
+    "mode": "Mode",
+    "abs": "Absolute Value",
+    "prod": "Product of values",
+    "sem": "Unbiased standard error of the mean",
+    "skew": "Unbiased skewness (3rd moment)",
+    "kurt": "Unbiased kurtosis (4th moment)",
+    "quantile": "Sample quantile (value at %)",
+    "cumsum": "Cumulative sum",
+    "cumprod": "Cumulative product",
+    "cummax": "Cumulative maximum",
+    "cummin": "Cumulative minimum",
 }
 
 
@@ -942,7 +966,7 @@ gBasicStats: Mapping[str, str] = {
 # Used in display table for multi-line column headers
 # color_group indexing starts at 0
 # cell_span cannot be 0.  a cell_span of 1 indicates 1 cell wide.
-ColHeader = namedtuple('ColHeader', ['col_name', 'cell_span', 'color_group'])
+ColHeader = namedtuple("ColHeader", ["col_name", "cell_span", "color_group"])
 
 
 ###################################
@@ -978,81 +1002,81 @@ class TypeId(IntEnum):
 # SDS File Header order
 ######################################################
 gSDSFileHeader: List[str] = [
-    'SDSHeaderMagic',
-    'VersionHigh',
-    'VersionLow',
-    'CompMode',
-    'CompType',
-    'CompLevel',
+    "SDSHeaderMagic",
+    "VersionHigh",
+    "VersionLow",
+    "CompMode",
+    "CompType",
+    "CompLevel",
     # ----- offset 16 -----
-    'NameBlockSize',
-    'NameBlockOffset',
-    'NameBlockCount',
-    'FileType',  # struct, dataset
-    'AuthorId',  # python, matlab
+    "NameBlockSize",
+    "NameBlockOffset",
+    "NameBlockCount",
+    "FileType",  # struct, dataset
+    "AuthorId",  # python, matlab
     # ----- offset 48 -----
-    'MetaBlockSize',
-    'MetaBlockOffset',
+    "MetaBlockSize",
+    "MetaBlockOffset",
     # ----- offset 64 -----
-    'TotalMetaCompressedSize',
-    'TotalMetaUncompressedSize',
+    "TotalMetaCompressedSize",
+    "TotalMetaUncompressedSize",
     # ----- offset 80 -----
-    'ArrayBlockSize',
-    'ArrayBlockOffset',
+    "ArrayBlockSize",
+    "ArrayBlockOffset",
     # ----- offset 96 -----
-    'ArraysWritten',
-    'ArrayFirstOffset',
+    "ArraysWritten",
+    "ArrayFirstOffset",
     # ----- offset 112 -----
-    'TotalArrayCompressedSize',
-    'TotalArrayUncompressedSize',
+    "TotalArrayCompressedSize",
+    "TotalArrayUncompressedSize",
 ]
-SDS_EXTENSION: str = '.sds'
-SDS_EXTENSION_BYTES: bytes = b'.sds'
+SDS_EXTENSION: str = ".sds"
+SDS_EXTENSION_BYTES: bytes = b".sds"
 
 
 # please keep the TypeRegister at the end of the file
 class TypeRegister:
-    '''
+    """
     When special classes are loaded, they register with this class to avoid cyclical dependencies
-    '''
+    """
 
-    Struct: ClassVar[Type['Struct']] = None
-    Dataset: ClassVar[Type['Dataset']] = None
-    Multiset: ClassVar[Type['Multiset']] = None
-    GroupBy: ClassVar[Type['GroupBy']] = None
-    Grouping: ClassVar[Type['Grouping']] = None
-    FastArray: ClassVar[Type['FastArray']] = None
-    MathLedger: ClassVar[Type['MathLedger']] = None
-    Categorical: ClassVar[Type['Categorical']] = None
-    Categories: ClassVar[Type['Categories']] = None
-    Accum2: ClassVar[Type['Accum2']] = None
-    DisplayDetect: ClassVar[Type['DisplayDetect']] = None
-    DisplayOptions: ClassVar[Type['DisplayOptions']] = None
-    DisplayTable: ClassVar[Type['DisplayTable']] = None
-    DisplayString: ClassVar[Type['DisplayString']] = None
-    DisplayAttributes: ClassVar[Type['DisplayAttributes']] = None
-    DisplayText: ClassVar[Type['DisplayText']] = None
-    SortCache: ClassVar[Type['SortCache']] = None
-    DateTimeBase: ClassVar[Type['DateTimeBase']] = None
-    DateTimeNano: ClassVar[Type['DateTimeNano']] = None
-    TimeSpan: ClassVar[Type['TimeSpan']] = None
-    SharedMemory: ClassVar[Type['SharedMemory']] = None
-    TimeZone: ClassVar[Type['TimeZone']] = None
-    Calendar: ClassVar[Type['Calendar']] = None
-    DateBase: ClassVar[Type['DateBase']] = None
-    Date: ClassVar[Type['Date']] = None
-    DateSpan: ClassVar[Type['DateSpan']] = None
-    PDataset: ClassVar[Type['PDataset']] = None
+    Struct: ClassVar[Type["Struct"]] = None
+    Dataset: ClassVar[Type["Dataset"]] = None
+    Multiset: ClassVar[Type["Multiset"]] = None
+    GroupBy: ClassVar[Type["GroupBy"]] = None
+    Grouping: ClassVar[Type["Grouping"]] = None
+    FastArray: ClassVar[Type["FastArray"]] = None
+    MathLedger: ClassVar[Type["MathLedger"]] = None
+    Categorical: ClassVar[Type["Categorical"]] = None
+    Categories: ClassVar[Type["Categories"]] = None
+    Accum2: ClassVar[Type["Accum2"]] = None
+    DisplayDetect: ClassVar[Type["DisplayDetect"]] = None
+    DisplayOptions: ClassVar[Type["DisplayOptions"]] = None
+    DisplayTable: ClassVar[Type["DisplayTable"]] = None
+    DisplayString: ClassVar[Type["DisplayString"]] = None
+    DisplayAttributes: ClassVar[Type["DisplayAttributes"]] = None
+    DisplayText: ClassVar[Type["DisplayText"]] = None
+    SortCache: ClassVar[Type["SortCache"]] = None
+    DateTimeBase: ClassVar[Type["DateTimeBase"]] = None
+    DateTimeNano: ClassVar[Type["DateTimeNano"]] = None
+    TimeSpan: ClassVar[Type["TimeSpan"]] = None
+    SharedMemory: ClassVar[Type["SharedMemory"]] = None
+    TimeZone: ClassVar[Type["TimeZone"]] = None
+    Calendar: ClassVar[Type["Calendar"]] = None
+    DateBase: ClassVar[Type["DateBase"]] = None
+    Date: ClassVar[Type["Date"]] = None
+    DateSpan: ClassVar[Type["DateSpan"]] = None
+    PDataset: ClassVar[Type["PDataset"]] = None
 
     @classmethod
     def validate_registry(cls):
         missing = set()
         for _nm in dir(cls):
-            if not _nm.startswith('_') and getattr(TypeRegister, _nm) is None:
+            if not _nm.startswith("_") and getattr(TypeRegister, _nm) is None:
                 missing.add(_nm)
         if len(missing) > 0:
-            msg = ', '.join(sorted(missing))
-            raise RuntimeError(f'riptable: Improper initialization!  Missing: {msg}')
+            msg = ", ".join(sorted(missing))
+            raise RuntimeError(f"riptable: Improper initialization!  Missing: {msg}")
 
     @classmethod
     def is_computable(cls, other):
@@ -1062,11 +1086,11 @@ class TypeRegister:
 
     @classmethod
     def is_array_subclass(cls, arr):
-        '''
+        """
         Certain routines can be sped up by skipping the logic before falling back on a numpy call.
         Note: this is different than using python's issubclass(), which returns True if the classes are the same.
         Returns True if the item is an instance of a FastArray or numpy array subclass.
-        '''
+        """
         if isinstance(arr, np.ndarray):
             if type(arr) == np.ndarray or type(arr) == cls.FastArray:
                 return False
@@ -1076,8 +1100,8 @@ class TypeRegister:
 
     @classmethod
     def is_binned_array(cls, arr):
-        '''
-        Use this instead of checking isinstance(item, TypeRegister.Categorical). For other binned 
+        """
+        Use this instead of checking isinstance(item, TypeRegister.Categorical). For other binned
         types in the future.
 
         Called by:
@@ -1085,24 +1109,24 @@ class TypeRegister:
         Dataset.from_jagged_rows() -re-expands
         GroupBy.__init__           -calls grouping, gb_keychain properties to borrow bins
 
-        '''
+        """
         return isinstance(arr, cls.Categorical)
 
     @classmethod
     def is_binned_type(cls, arrtype):
-        '''
+        """
         Check the type rather than the instance.
         See also is_binned_array()
 
         Called by:
         rt_utils._multistack_items()
-        '''
+        """
         return arrtype == cls.Categorical
 
     # ---------------------------------------------------------------
     @classmethod
     def is_spanlike(cls, arr: np.ndarray):
-        ''' return True if it is a datespan or timespan '''
+        """return True if it is a datespan or timespan"""
         # TODO: datetime/span are computable sometimes... need a way to distinguish from other FA subclasses
         # simple math works, but not larger groupby operations like sum
         result = False
@@ -1113,7 +1137,7 @@ class TypeRegister:
     # ---------------------------------------------------------------
     @classmethod
     def is_datelike(cls, arr: np.ndarray):
-        ''' return True if it is a date or time '''
+        """return True if it is a date or time"""
         # TODO: datetime/span are computable sometimes... need a way to distinguish from other FA subclasses
         # simple math works, but not larger groupby operations like sum
         result = False
@@ -1125,7 +1149,7 @@ class TypeRegister:
 
     @classmethod
     def is_string_or_object(cls, arr):
-        return cls.is_array_subclass(arr) or arr.dtype.char in 'OSU'
+        return cls.is_array_subclass(arr) or arr.dtype.char in "OSU"
 
     @classmethod
     def newclassfrominstance(cls, instance, origin):
@@ -1146,7 +1170,7 @@ class TypeRegister:
         """
         # FastArray subclasses should define this classmethod to return
         # a new object with a different instance array
-        if hasattr(origin, 'newclassfrominstance'):
+        if hasattr(origin, "newclassfrominstance"):
             instance = origin.newclassfrominstance(instance, origin)
         return instance
 

@@ -1,21 +1,23 @@
-import pytest
-import numpy as np
-import riptable as rt
-from riptable.rt_enum import CategoryMode
-from riptable import save_sds, load_sds
-from riptable.Utils.rt_testing import assert_array_equal_, name, get_size
-from hypothesis import given, settings, Verbosity
-from hypothesis.strategies import integers
 import hypothesis.extra.pandas as pdst
+import numpy as np
+import pytest
+from hypothesis import Verbosity, given, settings
 from hypothesis.extra.numpy import arrays
+from hypothesis.strategies import integers
+
+import riptable as rt
+from riptable import load_sds, save_sds
+from riptable.rt_enum import CategoryMode
+from riptable.Utils.rt_testing import assert_array_equal_, get_size, name
+
+from .strategies.categorical_strategy import CategoricalStrategy
 from .strategies.helper_strategies import (
-    ndarray_shape_strategy,
-    ints_or_floats_dtypes,
-    generate_array,
     column_by_dtypes,
+    generate_array,
+    ints_or_floats_dtypes,
+    ndarray_shape_strategy,
     one_of_supported_dtypes,
 )
-from .strategies.categorical_strategy import CategoricalStrategy
 
 
 def assert_save_load(loaded: object, saved: object, err_msg: str = "") -> None:
@@ -28,14 +30,18 @@ def assert_save_load(loaded: object, saved: object, err_msg: str = "") -> None:
     """
 
     try:
-        assert id(loaded) != id(
-            saved
-        ), f"Identity of saved {name(saved)} should be different from the loaded."
+        assert id(loaded) != id(saved), f"Identity of saved {name(saved)} should be different from the loaded."
         # TODO - follow up with addition of xfail for falsifying examples that do not preserve the object types
         # Saved ndarray gets loaded as a FastArray
         # Saved Multiset gets loaded as a Struct
 
-        if not isinstance(saved, (np.ndarray, rt.Multiset,)):
+        if not isinstance(
+            saved,
+            (
+                np.ndarray,
+                rt.Multiset,
+            ),
+        ):
             assert type(loaded) == type(
                 saved
             ), f"Identity of saved {name(saved)} should be different from the loaded {name(loaded)}."
@@ -171,9 +177,7 @@ class TestSaveLoad:
         assert id(multiset[shallow_copy_name]) != id(
             multiset2[shallow_copy_name]
         ), f"Identity of saved object should be different from the loaded object."
-        for f_arr1, f_arr2 in zip(
-            multiset[shallow_copy_name].values(), multiset2[shallow_copy_name].values()
-        ):
+        for f_arr1, f_arr2 in zip(multiset[shallow_copy_name].values(), multiset2[shallow_copy_name].values()):
             # Convert these to ndarrays so we don't need to consider Riptable invalid checks.
             # This test is concerned with ensuring the same data is loaded as saved.
             assert_save_load(f_arr2, f_arr1)
@@ -183,9 +187,7 @@ class TestSaveLoad:
         assert id(multiset[deep_copy_name]) != id(
             multiset2[deep_copy_name]
         ), f"Identity of saved object should be different from the loaded object."
-        for f_arr1, f_arr2 in zip(
-            multiset[deep_copy_name].values(), multiset2[deep_copy_name].values()
-        ):
+        for f_arr1, f_arr2 in zip(multiset[deep_copy_name].values(), multiset2[deep_copy_name].values()):
             assert_save_load(f_arr2, f_arr1)
             assert_array_equal_(f_arr2._np, f_arr2._np)
 
@@ -197,9 +199,7 @@ class TestSaveLoad:
     @pytest.mark.parametrize("stack", [True, False])
     def test_stack_save_load(self, dataframe, stack_count, tmpdir, stack):
         def assert_stack_equal(pds, ds, num_stack=1):
-            assert id(pds) != id(
-                ds
-            ), f"Identity of saved {name(ds)} should be different from the loaded {name(ds)}."
+            assert id(pds) != id(ds), f"Identity of saved {name(ds)} should be different from the loaded {name(ds)}."
             assert isinstance(pds, rt.PDataset), f"got type {type(pds)}"
             assert pds.shape == (
                 num_stack * ds.shape[0],
@@ -235,14 +235,10 @@ class TestSaveLoad:
                 assert isinstance(pds, list), f"got type {type(pds)}"
 
     # Categorical parameter sweep
-    @pytest.mark.parametrize(
-        "category_mode", [CategoryMode.StringArray, CategoryMode.Dictionary]
-    )
+    @pytest.mark.parametrize("category_mode", [CategoryMode.StringArray, CategoryMode.Dictionary])
     @pytest.mark.parametrize("with_categories", [True, False])
     @pytest.mark.parametrize("ordered", [True, False])
-    def test_save_load_categorical(
-        self, category_mode, with_categories, ordered, tmpdir
-    ):
+    def test_save_load_categorical(self, category_mode, with_categories, ordered, tmpdir):
         # Categorical of with a value strategy from on of the supported data types
         @given(
             cat=CategoricalStrategy(

@@ -1,8 +1,9 @@
-from .rt_groupbyops import GroupByOps
 from .rt_groupby import GroupBy
+from .rt_groupbyops import GroupByOps
 
-#=====================================================================================================
-#=====================================================================================================
+
+# =====================================================================================================
+# =====================================================================================================
 class PGroupBy(GroupBy):
     """
     Parameters
@@ -23,23 +24,24 @@ class PGroupBy(GroupBy):
         Hint size for the hash
 
     sort: bool
-        Default to True.  Indicates 
+        Default to True.  Indicates
 
-   
+
     Attributes
     ----------
     gbkeys:  dictionary of numpy arrays binned from
     isortrows: sorted index or None
 
     """
-    DebugMode=False
-    ShowEmpty =True
+
+    DebugMode = False
+    ShowEmpty = True
 
     TestCatGb = True
 
     def __init__(self, *args, **kwargs):
         super()._init(self, *args, **kwargs)
 
-    #---------------------------------------------------------------
-    def copy(self, deep = True):
+    # ---------------------------------------------------------------
+    def copy(self, deep=True):
         pass

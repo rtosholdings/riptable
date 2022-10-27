@@ -1,8 +1,9 @@
 from typing import List
+
 import numpy as np
 
 from .rt_enum import TypeRegister
-from .rt_numpy import unique, ismember, hstack
+from .rt_numpy import hstack, ismember, unique
 from .rt_utils import crc_match
 
 
@@ -38,8 +39,9 @@ def merge_index(indices, listcats, idx_cutoffs=None, unique_cutoffs=None, from_m
     def index_fixups(oldcats, newcats):
         # funnel for ismember in merge_index
         fixups = [ismember(oc, newcats, base_index=1)[1] for oc in oldcats]
-        fixups = [ hstack([TypeRegister.FastArray([0]), f]) for f in fixups ]
+        fixups = [hstack([TypeRegister.FastArray([0]), f]) for f in fixups]
         return fixups
+
     # ------------------------------------------------------------
 
     if unique_cutoffs is not None:
@@ -70,18 +72,17 @@ def merge_index(indices, listcats, idx_cutoffs=None, unique_cutoffs=None, from_m
         # first uniques are the same for all
         newcats = [oc[0] for oc in oldcats]
         if from_mapping:
-            newcats[1] = newcats[1].astype('U', copy=False)
+            newcats[1] = newcats[1].astype("U", copy=False)
         else:
             newcats = newcats[0]
         return indices, newcats
-
 
     if from_mapping:
         # listcats is two arrays:
         # the first is the combined uniques of codes
         # the second is the combined uniques of names
         codes, uidx = unique(listcats[0], return_index=True, sorted=False)
-        names = listcats[1][uidx].astype('U', copy=False)
+        names = listcats[1][uidx].astype("U", copy=False)
         newcats = [codes, names]
         # use first occurance of codes to get uniques for both codes and names
         return indices, newcats
@@ -90,23 +91,23 @@ def merge_index(indices, listcats, idx_cutoffs=None, unique_cutoffs=None, from_m
     # this will get hit by Categorical.hstack() for single/multikey
     # nothing has been stacked
     if unique_cutoffs is None:
-        newcats = [ unique(hstack(oc)) for oc in oldcats ][0]
+        newcats = [unique(hstack(oc)) for oc in oldcats][0]
         oldcats = oldcats[0]
         fixups = index_fixups(oldcats, newcats)
 
         # use masks
-        indices = [ fixups[i][c] for i, c in enumerate(indices) ]
+        indices = [fixups[i][c] for i, c in enumerate(indices)]
 
         return indices, newcats
 
     # otherwise, already stacked
     else:
         # TODO: fix for multikey unique
-        newcats = [ unique(oc) for oc in listcats ][0]
+        newcats = [unique(oc) for oc in listcats][0]
         oldcats = oldcats[0]
         fixups = index_fixups(oldcats, newcats)
 
-        #use slices
+        # use slices
         start = 0
         for i, end in enumerate(idx_cutoffs):
             indices[start:end] = fixups[i][indices[start:end]]

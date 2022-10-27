@@ -1,21 +1,23 @@
-import numpy as np
 import os
+
+import numpy as np
+
+from ..rt_display import DisplayDetect, DisplayString
 from ..rt_enum import (
-    TypeRegister,
-    gAnsiColors,
+    SDS_EXTENSION_BYTES,
+    CategoryMode,
     DisplayDetectModes,
     TypeId,
-    CategoryMode,
-    SDS_EXTENSION_BYTES,
+    TypeRegister,
+    gAnsiColors,
 )
-from ..rt_display import DisplayString, DisplayDetect
 from ..rt_sds import _build_schema, decompress_dataset_internal
 
 BOX_LIGHT = {
-    'UP_AND_RIGHT': u'\u2514',
-    'HORIZONTAL': u'\u2500',
-    'VERTICAL': u'\u2502',
-    'VERTICAL_AND_RIGHT': u'\u251C',
+    "UP_AND_RIGHT": "\u2514",
+    "HORIZONTAL": "\u2500",
+    "VERTICAL": "\u2502",
+    "VERTICAL_AND_RIGHT": "\u251C",
 }  #: Unicode box-drawing glyphs, light style
 
 
@@ -45,7 +47,7 @@ class AttributeTraversal(KeyArgsConstructor):
     Uses an attribute of a node as its list of children.
     """
 
-    attribute = 'children'  #: Attribute to use.
+    attribute = "children"  #: Attribute to use.
 
     def get_children(self, node):
         return getattr(node, self.attribute)
@@ -54,7 +56,7 @@ class AttributeTraversal(KeyArgsConstructor):
 class Style(KeyArgsConstructor):
     """Rendering style for trees."""
 
-    label_format = u'{}'  #: Format for labels.
+    label_format = "{}"  #: Format for labels.
 
     def node_label(self, text):
         """Render a node text into a label."""
@@ -89,32 +91,27 @@ class BoxStyle(Style):
 
     def child_head(self, label):
         return (
-            ' ' * self.indent
-            + self.gfx['VERTICAL_AND_RIGHT']
-            + self.gfx['HORIZONTAL'] * self.horiz_len
-            + ' ' * self.label_space
+            " " * self.indent
+            + self.gfx["VERTICAL_AND_RIGHT"]
+            + self.gfx["HORIZONTAL"] * self.horiz_len
+            + " " * self.label_space
             + label
         )
 
     def child_tail(self, line):
-        return ' ' * self.indent + self.gfx['VERTICAL'] + ' ' * self.horiz_len + line
+        return " " * self.indent + self.gfx["VERTICAL"] + " " * self.horiz_len + line
 
     def last_child_head(self, label):
         return (
-            ' ' * self.indent
-            + self.gfx['UP_AND_RIGHT']
-            + self.gfx['HORIZONTAL'] * self.horiz_len
-            + ' ' * self.label_space
+            " " * self.indent
+            + self.gfx["UP_AND_RIGHT"]
+            + self.gfx["HORIZONTAL"] * self.horiz_len
+            + " " * self.label_space
             + label
         )
 
     def last_child_tail(self, line):
-        return (
-            ' ' * self.indent
-            + ' ' * len(self.gfx['VERTICAL'])
-            + ' ' * self.horiz_len
-            + line
-        )
+        return " " * self.indent + " " * len(self.gfx["VERTICAL"]) + " " * self.horiz_len + line
 
 
 class LeftAligned(KeyArgsConstructor):
@@ -154,7 +151,7 @@ class LeftAligned(KeyArgsConstructor):
         """Render the tree into string suitable for console output.
 
         :param tree: A tree."""
-        return '\n'.join(self.render(self.traverse.get_root(tree)))
+        return "\n".join(self.render(self.traverse.get_root(tree)))
 
 
 class DisplayNested:
@@ -174,22 +171,14 @@ class DisplayNested:
     @property
     def fmtstart(self):
         if self._fmtstart is None:
-            self._fmtstart = (
-                ""
-                if DisplayDetect.Mode == DisplayDetectModes.Console
-                else gAnsiColors['LightCyan']
-            )
+            self._fmtstart = "" if DisplayDetect.Mode == DisplayDetectModes.Console else gAnsiColors["LightCyan"]
         return self._fmtstart
 
     # ---------------------------------------------------------------
     @property
     def fmtend(self):
         if self._fmtend is None:
-            self._fmtend = (
-                ""
-                if DisplayDetect.Mode == DisplayDetectModes.Console
-                else gAnsiColors['Normal']
-            )
+            self._fmtend = "" if DisplayDetect.Mode == DisplayDetectModes.Console else gAnsiColors["Normal"]
         return self._fmtend
 
     # ---------------------------------------------------------------
@@ -206,7 +195,7 @@ class DisplayNested:
 
             info_indent = " " * (maxlen - len(k) + 1)
 
-            if hasattr(v, 'items'):
+            if hasattr(v, "items"):
                 name = f"{k}" if info else f"{k} ({type(v).__name__})"
                 self._map_asciitree(v, structure, name=name, info=info)
 
@@ -253,7 +242,7 @@ class DisplayNested:
 
         menu_str = "<li class='menu-header'><a>"
         if showicon:
-            menu_str += self.inline_svg['container']
+            menu_str += self.inline_svg["container"]
             # menu_str += "<img src='dbicon.png' />&nbsp;&nbsp;"
         menu_str += f"{name} ({type(data).__name__})</a></li><ul class='sfw-ul'>"
         html_str.append(menu_str)
@@ -261,10 +250,8 @@ class DisplayNested:
         for k, v in data.items():
             t = type(v)
 
-            if hasattr(v, 'items'):
-                self._map_htmltree(
-                    v, structure, name=k, html_str=html_str, showicon=showicon
-                )
+            if hasattr(v, "items"):
+                self._map_htmltree(v, structure, name=k, html_str=html_str, showicon=showicon)
 
                 html_str.append("</ul></li>")
             else:
@@ -272,7 +259,7 @@ class DisplayNested:
 
                 if type(v) == TypeRegister.FastArray or type(v) == np.ndarray:
                     if showicon:
-                        file_str += self.inline_svg['array']
+                        file_str += self.inline_svg["array"]
                     file_str += f"<p>{k}"
                     file_str += f" {type(v).__name__} {_arr_info(v)}"  # {v.dtype}"
 
@@ -281,12 +268,12 @@ class DisplayNested:
                     v, (int, float, bool, np.bool_, np.integer, np.floating, str, np.str_, bytes, np.bytes_)
                 ):
                     if showicon:
-                        file_str += self.inline_svg['object']
+                        file_str += self.inline_svg["object"]
                     file_str += f"<p>{k}"
                     file_str += f" {v}"
                 else:
                     if showicon:
-                        file_str += self.inline_svg['object']
+                        file_str += self.inline_svg["object"]
                     file_str += f"<p>{k} {type(v).__name__}"
 
                 file_str += "</p></li>"
@@ -308,17 +295,13 @@ class DisplayNested:
             "li p{ line-height:25px; vertical-align:top; display:inline-block; margin: 0 0 0 5px !important;}"
         )
         html_str.append("svg{display:inline-block;}")
-        html_str.append(
-            "ul.rt-ul{ list-style-type: none !important; list-style: none !important;}"
-        )
+        html_str.append("ul.rt-ul{ list-style-type: none !important; list-style: none !important;}")
         # html_str.append("ul.rt-ul img{ float:left; }")
         # html_str.append("li.listitem-wrap{ width: 100%; height: 20px; line-height: 20px; }")
         html_str.append("</style>")
 
         # JAVASCRIPT
-        html_str.append(
-            "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>"
-        )
+        html_str.append("<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>")
         html_str.append(
             "<script>$(document).ready(function(){$('a').click(function(){$(this).parent().next().toggleClass('hidelist');return false;});});"
         )
@@ -330,7 +313,7 @@ class DisplayNested:
         structure = {}
         html_str.append("<ul class='sfw-ul'>")
         self._map_htmltree(data, structure, name=name, html_str=html_str)
-        html_str.append('</ul></body></html>')
+        html_str.append("</ul></body></html>")
         html_str = "".join(html_str)
 
         return DisplayString(html_str)
@@ -353,9 +336,7 @@ class DisplayNested:
         return self._build_nested_html(data=data, name=name)
 
     def build_nested_string(self, data={}, name=None, showpaths=False, info=False):
-        return self._build_nested_ascii(
-            data=data, name=name, showpaths=showpaths, info=info
-        )
+        return self._build_nested_ascii(data=data, name=name, showpaths=showpaths, info=info)
 
 
 # ---------------------------------------------------------------
@@ -381,9 +362,7 @@ def _cat_info(arr):
     else:
         str_type = ""
 
-    item_name = (
-        f"Categorical {arr.dtype} {arr.shape} {arr.category_mode.name} ({str_type})"
-    )
+    item_name = f"Categorical {arr.dtype} {arr.shape} {arr.category_mode.name} ({str_type})"
     return item_name
 
 
@@ -407,8 +386,8 @@ def treedir(path, name=None):
         else:
             raise ValueError(f"Could not find {name} in directory {path}")
 
-    if '_root' in schema:
-        del schema['_root']
+    if "_root" in schema:
+        del schema["_root"]
     dirname = os.path.basename(os.path.normpath(path))
 
     full_schema = {dirname: schema}

@@ -1,31 +1,22 @@
-__all__ = ['PDataset']
+__all__ = ["PDataset"]
 
 import os
-from typing import Union, List
 import warnings
+from typing import List, Union
 
 import numpy as np
 
-from .rt_fastarray import FastArray
-from .rt_enum import (
-    TypeRegister,
-    DisplayJustification,
-)
-from .rt_numpy import (
-    unique,
-    empty,
-    cumsum,
-    searchsorted,
-    max,
-)
 from .rt_dataset import Dataset
-from .rt_sds import load_sds
-from .rt_itemcontainer import ItemContainer
+from .rt_enum import DisplayJustification, TypeRegister
+from .rt_fastarray import FastArray
 from .rt_groupby import GroupBy
+from .rt_itemcontainer import ItemContainer
+from .rt_numpy import cumsum, empty, max, searchsorted, unique
+from .rt_sds import load_sds
 
 
 class PDataset(Dataset):
-    '''
+    """
     The PDataset class inherits from Dataset.  It holds multiple datasets (preivously stacked together) in contiguous slices.
     Each partition has a name and a contiguous slice that can be used to extract it from the larger Dataset.
     Extracting a partition is zero-copy.  Partitions can be extracted using partition(), or bracket [] indexing.
@@ -40,7 +31,7 @@ class PDataset(Dataset):
     pds['20190204']  or  pds[20190204]  will return a dataset for the given partition name
 
     **Construction**
-    
+
     inputval : -list of files to load and stack
                -list of datasets to stack
                -regular dataset inputval (will only have one partition)
@@ -64,12 +55,12 @@ class PDataset(Dataset):
     -if filenames, look for dates
     -if no dates, auto generate pnames
 
-    '''
+    """
 
     # ------------------------------------------------------------
     def __init__(
         self,
-        inputval: Union[list, dict, 'Dataset', 'ItemContainer'] = None,
+        inputval: Union[list, dict, "Dataset", "ItemContainer"] = None,
         cutoffs=None,
         filenames: List[str] = None,
         pnames=None,
@@ -85,9 +76,7 @@ class PDataset(Dataset):
 
         # stack datasets or load from list of files
         if isinstance(inputval, list):
-            inputval, cutoffs, filenames, pnames = self._init_from_list(
-                inputval, filenames, pnames
-            )
+            inputval, cutoffs, filenames, pnames = self._init_from_list(inputval, filenames, pnames)
 
         self._pre_init()
 
@@ -108,17 +97,17 @@ class PDataset(Dataset):
 
     # ------------------------------------------------------------
     def _pre_init(self):
-        '''
+        """
         Keep this in for chaining pre-inits in parent classes.
-        '''
+        """
         super()._pre_init()
 
     # ------------------------------------------------------------
     def _post_init(self, cutoffs, filenames, pnames, showpartitions):
-        '''
+        """
         Final initializer for variables specific to PDataset.
         Also initializes variables from parent class.
-        '''
+        """
         super()._post_init()
 
         self._showpartitions = showpartitions
@@ -139,9 +128,7 @@ class PDataset(Dataset):
 
         # look for dates in filenames or autogenerate names
         if pnames is None:
-            pnames, filenames = self._init_pnames_filenames(
-                len(self._prows), pnames, filenames
-            )
+            pnames, filenames = self._init_pnames_filenames(len(self._prows), pnames, filenames)
             self._pfilenames = filenames
             self._pnames = {p: i for i, p in enumerate(pnames)}
         # use provided pnames
@@ -156,12 +143,12 @@ class PDataset(Dataset):
     # ------------------------------------------------------------
     @classmethod
     def _filenames_to_pnames(cls, filenames):
-        '''
+        """
         At least two filenames must be present to compare
         Algo will reverse the string on the assumption that pathnames can vary in the front of the string
         It also assumes that the filenames end similarly, such as ".SDS"
         It will search for the difference and look for digits, then try to extract the digits
-        '''
+        """
         # reverse all the filenames
         if len(filenames) > 0:
             rfilenames = [f[::-1] for f in filenames]
@@ -209,18 +196,12 @@ class PDataset(Dataset):
                 # check to see if we captured a number
                 firstchar = str_numba[0][start]
                 lastchar = str_numba[0][end - 1]
-                if (
-                    start < end
-                    and firstchar >= 48
-                    and firstchar <= 58
-                    and lastchar >= 48
-                    and lastchar <= 58
-                ):
+                if start < end and firstchar >= 48 and firstchar <= 58 and lastchar >= 48 and lastchar <= 58:
                     pnames = []
-                    viewtype = 'S' + str(end - start)
+                    viewtype = "S" + str(end - start)
                     for i in range(len(filenames)):
                         newstring = str_numba[i][start:end].view(viewtype)
-                        newstring = newstring[0].astype('U')
+                        newstring = newstring[0].astype("U")
                         # append the reverse
                         pnames.append(newstring[::-1])
 
@@ -260,32 +241,30 @@ class PDataset(Dataset):
     # ------------------------------------------------------------
     @classmethod
     def _init_from_list(cls, dlist, filenames, pnames):
-        '''
+        """
         Construct a PDataset from multiple datasets, or by loading multiple files.
-        '''
+        """
         # make sure only one type
         listtype = {type(i) for i in dlist}
         if len(listtype) == 1:
             listtype = list(listtype)[0]
         else:
-            raise TypeError(f'Found multiple types in constructor list {listtype}')
+            raise TypeError(f"Found multiple types in constructor list {listtype}")
 
         # hstack datasets
         if listtype == Dataset:
             start = 0
             cutoffs = cumsum([ds.shape[0] for ds in dlist])
-            cutoffs = {'cutoffs': cutoffs}
+            cutoffs = {"cutoffs": cutoffs}
             ds = TypeRegister.Dataset.concat_rows(dlist)
             # extract itemcontainer
             ds = ds._all_items
-            pnames, filenames = cls._init_pnames_filenames(
-                len(dlist), pnames, filenames
-            )
+            pnames, filenames = cls._init_pnames_filenames(len(dlist), pnames, filenames)
 
         # perform a .sds load from multiple files
         elif issubclass(listtype, (str, bytes, os.PathLike)):
             ds = load_sds(dlist, stack=True)
-            cutoffs = {'cutoffs': ds._pcutoffs}
+            cutoffs = {"cutoffs": ds._pcutoffs}
             filenames = ds._pfilenames
             if pnames is None:
                 pnames = ds._pnames  # dict
@@ -293,26 +272,26 @@ class PDataset(Dataset):
             ds = ds._all_items
 
         else:
-            raise TypeError(f'Cannot construct from list of type {listtype}')
+            raise TypeError(f"Cannot construct from list of type {listtype}")
 
         return ds, cutoffs, filenames, pnames
 
     # ------------------------------------------------------------
     @classmethod
     def _auto_pnames(cls, pcount):
-        '''
+        """
         Auto generate partition names if none provided and no date found in filenames.
-        '''
-        return ['p' + str(i) for i in range(pcount)]
+        """
+        return ["p" + str(i) for i in range(pcount)]
 
     # ------------------------------------------------------------
     def _autocomplete(self) -> str:
-        return f'PDataset{self.shape}'
+        return f"PDataset{self.shape}"
 
     # ------------------------------------------------------------
     @classmethod
     def _init_pnames_filenames(cls, pcount, pnames, filenames):
-        '''
+        """
         Initialize filenames, pnames based on what was provided to the constructor.
 
         If no pnames provided, try to derive a date from filenames
@@ -326,7 +305,7 @@ class PDataset(Dataset):
             list of partition names or None
         filenames : sequence of str, optional
             list of file paths (possibly empty)
-        '''
+        """
         if pnames is None:
             if filenames is None or len(filenames) == 0:
                 filenames = []
@@ -338,16 +317,14 @@ class PDataset(Dataset):
 
     # ------------------------------------------------------------
     def _copy(self, deep=False, rows=None, cols=None, base_index=0, cls=None):
-        ''' returns a PDataset if no row selection, otherwise Dataset'''
+        """returns a PDataset if no row selection, otherwise Dataset"""
 
         if rows is None:
-            newcols = self._as_itemcontainer(
-                deep=deep, rows=rows, cols=cols, base_index=base_index
-            )
+            newcols = self._as_itemcontainer(deep=deep, rows=rows, cols=cols, base_index=base_index)
             # create a new PDataset
             pds = type(self)(
                 newcols,
-                cutoffs={'cutoffs': self.pcutoffs},
+                cutoffs={"cutoffs": self.pcutoffs},
                 filenames=self._pfilenames,
                 pnames=self._pnames,
                 base_index=base_index,
@@ -356,9 +333,7 @@ class PDataset(Dataset):
         else:
             # row slicing will break partitions, return a regular Dataset
             cls = TypeRegister.Dataset
-            pds = super()._copy(
-                deep=deep, rows=rows, cols=cols, base_index=base_index, cls=cls
-            )
+            pds = super()._copy(deep=deep, rows=rows, cols=cols, base_index=base_index, cls=cls)
 
         return pds
 
@@ -372,7 +347,7 @@ class PDataset(Dataset):
     # ------------------------------------------------------------
     @property
     def pcutoffs(self):
-        '''
+        """
         Returns
         -------
         Cutoffs for partition. For slicing, maintain contiguous arrays.
@@ -381,13 +356,13 @@ class PDataset(Dataset):
         --------
         >>> pds.pcutoffs
         FastArray([1447138, 3046565, 5344567], dtype=int64)
-        '''
+        """
         return self._pcutoffs
 
     # ------------------------------------------------------------
     @property
     def prows(self):
-        '''
+        """
         Returns
         -------
         An array with the number of rows in each partition.
@@ -399,13 +374,13 @@ class PDataset(Dataset):
         >>> pds = load_sds([file1, file2, file3], stack=True)
         >>> pds.prows
         FastArray([1447138, 2599427, 1909895], dtype=int64)
-        '''
+        """
         return self._prows
 
     # ------------------------------------------------------------
     @property
     def pcount(self):
-        '''
+        """
         Returns
         -------
         Number of partitions
@@ -417,13 +392,13 @@ class PDataset(Dataset):
         >>> pds = load_sds([file1, file2, file3], stack=True)
         >>> pds.pcount
         3
-        '''
+        """
         return len(self._prows)
 
     # ------------------------------------------------------------
     @property
     def pnames(self):
-        '''
+        """
         Returns
         -------
         A list with the names of the partitions
@@ -435,11 +410,11 @@ class PDataset(Dataset):
         >>> pds = load_sds([file1, file2, file3], stack=True)
         >>> pds.pnames
         ['20190205', '20190206', '20190207']
-        '''
+        """
         return [*self._pnames.keys()]
 
     def set_pnames(self, pnames):
-        '''
+        """
         Parameters
         ----------
         pnames: list of str
@@ -453,7 +428,7 @@ class PDataset(Dataset):
         ['20190205', '20190206', '20190207']
         >>> pds.set_pnames(['Jane', 'John', 'Jill'])
         ['Jane', 'John', 'Jill']
-        '''
+        """
         if isinstance(pnames, list):
             if len(pnames) == len(self._pnames):
                 newpnames = {}
@@ -463,21 +438,21 @@ class PDataset(Dataset):
                 if len(newpnames) == len(self._pnames):
                     self._pnames = newpnames
                 else:
-                    raise ValueError(f'The new pnames must be unique names: {pnames}')
+                    raise ValueError(f"The new pnames must be unique names: {pnames}")
 
             else:
                 raise ValueError(
-                    f'The length of the new pnames must match the length of the old pnames: {len(self._pnames)}'
+                    f"The length of the new pnames must match the length of the old pnames: {len(self._pnames)}"
                 )
         else:
-            raise ValueError(f'A list of string must be passed in')
+            raise ValueError(f"A list of string must be passed in")
 
         return [*self._pnames.keys()]
 
     # ------------------------------------------------------------
     @property
     def pdict(self):
-        '''
+        """
         Returns
         --------
         A dictionary with the partition names and the partition slices.
@@ -491,7 +466,7 @@ class PDataset(Dataset):
         {'20190204': slice(0, 1447138, None),
          '20190205': slice(1447138, 3046565, None),
          '20190206': slice(3046565, 4509322, None)}
-        '''
+        """
         pdict = {name: self.pslice(i) for i, name in enumerate(self.pnames)}
         return pdict
 
@@ -499,7 +474,7 @@ class PDataset(Dataset):
     # -------------------------------------------------------
     def pgb(self, by, **kwargs):
         """Equivalent to :meth:`~rt.rt_dataset.Dataset.pgroupby`"""
-        kwargs['sort'] = True
+        kwargs["sort"] = True
         return self.pgroupby(by, **kwargs)
 
     # -------------------------------------------------------
@@ -507,7 +482,7 @@ class PDataset(Dataset):
         return GroupBy(self, by, cutoffs=self._pcutoffs, **kwargs)
 
     def igroupby(self):
-        '''
+        """
         Lazily generate a categorical binned by each partition.
         Data will be attached to categorical, so operations can be called without specifying data.
         This allows reduce functions to be applied per partion.
@@ -525,8 +500,8 @@ class PDataset(Dataset):
         20190206     1.532e+07
 
         See Also: Dataset.groupby, Dataset.gb, Dataset.gbu
-        '''
-        reserved_name = 'Partition'
+        """
+        reserved_name = "Partition"
 
         if reserved_name not in self:
             self[reserved_name] = self.pcat
@@ -536,9 +511,9 @@ class PDataset(Dataset):
 
     @property
     def pcat(self):
-        '''
+        """
         Lazy generates a categorical for row labels callback or pgroupby
-        '''
+        """
         if self._pcat is None:
             idx = empty((self.shape[0],), dtype=np.int32)
             for i in range(self.pcount):
@@ -550,39 +525,41 @@ class PDataset(Dataset):
 
     # ------------------------------------------------------------
     def prow_labeler(self, rownumbers, style):
-        '''
+        """
         Display calls this routine back to replace row numbers.
         rownumbers   : fancy index of row numbers being displayed
         style : ColumnStyle object - default from DisplayTable, can be changed
 
         Returns: label header, label array, style
-        '''
+        """
         if self._showpartitions:
             style.align = DisplayJustification.Right
 
             # use the cutoffs to generate which partition index
-            pindex = searchsorted(self._pcutoffs, rownumbers, side='right')
+            pindex = searchsorted(self._pcutoffs, rownumbers, side="right")
             plabels = TypeRegister.FastArray(self.pnames)[pindex]
 
             # find the maximum string width for the rownumber
-            if len(rownumbers) > 0: maxnum = max(rownumbers)
-            else: maxnum = 0
+            if len(rownumbers) > 0:
+                maxnum = max(rownumbers)
+            else:
+                maxnum = 0
             width = len(str(maxnum))
 
             # right justify numbers
-            rownumbers = rownumbers.astype('S')
+            rownumbers = rownumbers.astype("S")
             rownumbers = np.chararray.rjust(rownumbers, width)
 
             # column header
-            header = 'partition + #'
-            rownumbers = plabels + ' ' + rownumbers
+            header = "partition + #"
+            rownumbers = plabels + " " + rownumbers
 
             # set the style width to override the string trim
             style.width = rownumbers.itemsize
 
             return header, rownumbers, style
         else:
-            return '#', rownumbers, style
+            return "#", rownumbers, style
 
     # ------------------------------------------------------------
     @property
@@ -593,7 +570,7 @@ class PDataset(Dataset):
 
     # ------------------------------------------------------------
     def showpartitions(self, show=True):
-        ''' toggle whether partitions are shown on the left '''
+        """toggle whether partitions are shown on the left"""
         if show:
             self._showpartitions = True
         else:
@@ -602,7 +579,7 @@ class PDataset(Dataset):
     # ------------------------------------------------------------
     @property
     def piter(self):
-        '''
+        """
         Iterate over dictionary of arrays for each partition.
         Yields key (load source) -> value (dataset as dictionary)
 
@@ -615,7 +592,7 @@ class PDataset(Dataset):
         20190204
         20190205
         20190206
-        '''
+        """
 
         label = self.pnames
         start = 0
@@ -625,8 +602,8 @@ class PDataset(Dataset):
     # -------------------------------------------------------
     @property
     def pslices(self):
-        ''' 
-        Return the slice (start,end) associated with the partition number  
+        """
+        Return the slice (start,end) associated with the partition number
 
         See Also
         --------
@@ -641,15 +618,15 @@ class PDataset(Dataset):
         [slice(0, 1447138, None),
          slice(1447138, 3046565, None),
          slice(3046565, 4509322, None)]
-        '''
+        """
 
         pslices = [self.pslice(i) for i in range(self.pcount)]
         return pslices
 
     # -------------------------------------------------------
     def pslice(self, index):
-        ''' 
-        Return the slice (start,end) associated with the partition number  
+        """
+        Return the slice (start,end) associated with the partition number
 
         See Also
         --------
@@ -660,29 +637,27 @@ class PDataset(Dataset):
         >>> pds.pslice(0)
         slice(0, 1447138, None)
 
-        '''
+        """
         if isinstance(index, (int, np.integer)):
             if index == 0:
                 return slice(0, self.pcutoffs[index])
             else:
                 return slice(self.pcutoffs[index - 1], self.pcutoffs[index])
 
-        raise IndexError(
-            f'Cannot slice a partition with type {type(index)!r}.  Use an integer instead.'
-        )
+        raise IndexError(f"Cannot slice a partition with type {type(index)!r}.  Use an integer instead.")
 
     # -------------------------------------------------------
     def partition(self, index):
-        '''
-        Return the Dataset associated with the partition number  
+        """
+        Return the Dataset associated with the partition number
 
         Examples
         --------
         Example below assumes 3 filenames with datasets
-        
+
         >>> pds = load_sds([file1, file2, file2], stack=True)
         >>> pds.partition(0)
-        '''
+        """
 
         if isinstance(index, (int, np.integer)):
             # this will route to the dataset
@@ -692,9 +667,7 @@ class PDataset(Dataset):
             # this will loop back if the string is a partition name
             return self[index]
 
-        raise IndexError(
-            f'Cannot index a parition with type {type(index)!r}.  Use an integer instead.'
-        )
+        raise IndexError(f"Cannot index a parition with type {type(index)!r}.  Use an integer instead.")
 
     # -------------------------------------------------------
     def __getitem__(self, index):
@@ -719,16 +692,14 @@ class PDataset(Dataset):
                     # return the dataset for that partition
                     return self.partition(self._pnames[index])
                 else:
-                    raise KeyError(
-                        f'the key {index!r} was not found as column name or parition name'
-                    )
+                    raise KeyError(f"the key {index!r} was not found as column name or parition name")
             else:
-                raise KeyError(f'could not index PDataset with {type(index)}')
+                raise KeyError(f"could not index PDataset with {type(index)}")
 
     # --------------------------------------------------------------------------
     def save(
         self,
-        path='',
+        path="",
         share=None,
         compress=True,
         overwrite=True,
@@ -738,9 +709,7 @@ class PDataset(Dataset):
         append=None,
         complevel=None,
     ):
-        warnings.warn(
-            f"To be implemented. PDataset will currently be saved / loaded as a Dataset."
-        )
+        warnings.warn(f"To be implemented. PDataset will currently be saved / loaded as a Dataset.")
         super().save(
             path=path,
             share=share,
@@ -756,16 +725,16 @@ class PDataset(Dataset):
     # --------------------------------------------------------------------------
     @classmethod
     def hstack(cls, pds_list):
-        '''
+        """
         Stacks columns from multiple datasets.
         see: Dataset.concat_rows
-        '''
+        """
         raise NotImplementedError("PDataset does not stack yet")
 
     # ------------------------------------------------------------
     @classmethod
     def pload(cls, path, start, end, include=None, threads=None, folders=None):
-        '''
+        """
         Returns a PDataset of stacked files from multiple days.
         Will load all files found within the date range provided.
 
@@ -774,12 +743,12 @@ class PDataset(Dataset):
         path  : format string for filepath, {} in place of YYYYMMDD. {} may appear multiple times.
         start : integer or string start date in format YYYYMMDD
         end   : integer or string end date in format YYYYMMDD
-        '''
+        """
         # insert date string at each of these
-        fmtcount = path.count('{}')
+        fmtcount = path.count("{}")
 
         # final loader will check if dates exist, kill warnings?
-        pnames = TypeRegister.Date.range(str(start), str(end)).yyyymmdd.astype('U')
+        pnames = TypeRegister.Date.range(str(start), str(end)).yyyymmdd.astype("U")
 
         try:
             import sotpath
@@ -788,18 +757,16 @@ class PDataset(Dataset):
         except:
             files = [path.format(*[d] * fmtcount) for d in pnames]
 
-        pds = load_sds(
-            files, include=include, stack=True, threads=threads, folders=folders
-        )
+        pds = load_sds(files, include=include, stack=True, threads=threads, folders=folders)
 
         return pds
 
     # ------------------------------------------------------------
     def psave(self):
-        '''
+        """
         Does not work yet.  Would save backout all the partitions.
-        '''
-        raise NotImplementedError(f'not implemented yet')
+        """
+        raise NotImplementedError(f"not implemented yet")
 
 
 TypeRegister.PDataset = PDataset

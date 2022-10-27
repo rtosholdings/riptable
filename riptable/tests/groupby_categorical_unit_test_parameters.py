@@ -1,15 +1,16 @@
-import numpy as np
 import random
+
+import numpy as np
 
 functions_str = [
     # 'count',
-    'sum',
-    'mean',
-    'median',
-    'min',
-    'max',
+    "sum",
+    "mean",
+    "median",
+    "min",
+    "max",
     # 'prod',
-    'var',
+    "var",
     # 'quantile',
     # 'cumsum',
     # 'cumprod',
@@ -35,7 +36,7 @@ def isNaN(num):
 def safe_assert(ary1, ary2):
 
     if len(ary1) != len(ary2):
-        print('mismatch lengths-', len(ary1), len(ary2))
+        print("mismatch lengths-", len(ary1), len(ary2))
         assert len(ary1) == len(ary2)
     epsilon = 0.00000005  ##diference must be in range of this
 
@@ -52,11 +53,11 @@ class categorical_parameters:
         self.val_cols = VAL_COLUMNS_MIN
         self.symbol_ratio = SYMBOL_RATIO_MIN
         self.numb_keys = int(SIZE_DEFAULT * self.symbol_ratio)
-        self.aggs = ''
+        self.aggs = ""
         self.bin_ids = []
         self.aggs_id = 0
 
-        self.update('aggs')
+        self.update("aggs")
 
     def update(self, parameter=None, increment=None):
         def update_aggs(self):
@@ -80,9 +81,7 @@ class categorical_parameters:
             self.val_cols += inc
             value = self.val_cols
             self.val_cols %= VAL_COLUMNS_MAX
-            self.val_cols = (
-                self.val_cols if self.val_cols > VAL_COLUMNS_MIN else VAL_COLUMNS_MIN
-            )
+            self.val_cols = self.val_cols if self.val_cols > VAL_COLUMNS_MIN else VAL_COLUMNS_MIN
             return value != self.val_cols
 
         if parameter is None:
@@ -91,9 +90,9 @@ class categorical_parameters:
             update_aggs(self)
         else:
             switch = {
-                'aggs': update_aggs,
-                'syms': update_symbs,
-                'vals': update_val_cols,
+                "aggs": update_aggs,
+                "syms": update_symbs,
+                "vals": update_val_cols,
             }
             switch[parameter](self)
 
@@ -110,15 +109,13 @@ class categorical_base:
 
     def generate_bin_data(self):
         self.numb_keys = int(SIZE_DEFAULT * self.symbol_ratio)
-        self.keys = ['label' + str(x) for x in range(0, self.numb_keys)]
-        self.bin_ids = [
-            random.randint(0, self.numb_keys - 1) for x in range(0, SIZE_DEFAULT)
-        ]
+        self.keys = ["label" + str(x) for x in range(0, self.numb_keys)]
+        self.bin_ids = [random.randint(0, self.numb_keys - 1) for x in range(0, SIZE_DEFAULT)]
 
     import numpy as np
 
     def generate_dummy_data(self):
-        col_names = ['bin' + char.upper() for char in 'abcdefghijklmnopqrstuviwxyz']
+        col_names = ["bin" + char.upper() for char in "abcdefghijklmnopqrstuviwxyz"]
         col_names = col_names[0 : self.val_cols]
 
         data = {}

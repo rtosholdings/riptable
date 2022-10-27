@@ -1,34 +1,34 @@
 #!/usr/bin/env python
 
 __all__ = [
-    'get_terminal_size',
+    "get_terminal_size",
 ]
 
 import os
+import platform
 import shlex
 import struct
-import platform
 import subprocess
 
 
 def get_terminal_size():
-    """ getTerminalSize()
-     - get width and height of console
-     - works on linux,os x,windows,cygwin(windows)
-     originally retrieved from:
-     http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
+    """getTerminalSize()
+    - get width and height of console
+    - works on linux,os x,windows,cygwin(windows)
+    originally retrieved from:
+    http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
 
-     Returns: (x,y) in screen size
-     Returns: (None, None) on failure
+    Returns: (x,y) in screen size
+    Returns: (None, None) on failure
     """
     current_os = platform.system()
     tuple_xy = None
-    if current_os == 'Windows':
+    if current_os == "Windows":
         tuple_xy = _get_terminal_size_windows()
         if tuple_xy is None:
             tuple_xy = _get_terminal_size_tput()
             # needed for window's python in cygwin's xterm!
-    if current_os in ['Linux', 'Darwin'] or current_os.startswith('CYGWIN'):
+    if current_os in ["Linux", "Darwin"] or current_os.startswith("CYGWIN"):
         tuple_xy = _get_terminal_size_linux()
     if tuple_xy is None:
         # we cannot detect the mode, this is likely spyder
@@ -38,7 +38,7 @@ def get_terminal_size():
 
 def _get_terminal_size_windows():
     try:
-        from ctypes import windll, create_string_buffer
+        from ctypes import create_string_buffer, windll
 
         # stdin handle is -10
         # stdout handle is -11
@@ -71,8 +71,8 @@ def _get_terminal_size_tput():
     # get terminal width
     # src: http://stackoverflow.com/questions/263890/how-do-i-find-the-width-height-of-a-terminal-window
     try:
-        cols = int(subprocess.check_call(shlex.split('tput cols')))
-        rows = int(subprocess.check_call(shlex.split('tput lines')))
+        cols = int(subprocess.check_call(shlex.split("tput cols")))
+        rows = int(subprocess.check_call(shlex.split("tput lines")))
         return cols, rows
     except:
         pass
@@ -84,7 +84,7 @@ def _get_terminal_size_linux():
             import fcntl
             import termios
 
-            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+            cr = struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
             return cr
         except:
             pass
@@ -99,7 +99,7 @@ def _get_terminal_size_linux():
             pass
     if not cr:
         try:
-            cr = (os.environ['LINES'], os.environ['COLUMNS'])
+            cr = (os.environ["LINES"], os.environ["COLUMNS"])
         except:
             return None
     return int(cr[1]), int(cr[0])
@@ -107,4 +107,4 @@ def _get_terminal_size_linux():
 
 if __name__ == "__main__":
     sizex, sizey = get_terminal_size()
-    print('width =', sizex, 'height =', sizey)
+    print("width =", sizex, "height =", sizey)

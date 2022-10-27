@@ -1,11 +1,25 @@
-import warnings
 import sys
-import numpy as np
-import riptable as rt
+import warnings
 from typing import Any, List, Optional, Tuple, Union
+
 import hypothesis.extra.pandas as pdst
+import numpy as np
 from hypothesis import assume
+from hypothesis.extra.numpy import (
+    arrays,
+    basic_indices,
+    boolean_dtypes,
+    byte_string_dtypes,
+    complex_number_dtypes,
+    datetime64_dtypes,
+    floating_dtypes,
+    integer_dtypes,
+    timedelta64_dtypes,
+    unicode_string_dtypes,
+    unsigned_integer_dtypes,
+)
 from hypothesis.strategies import (
+    SearchStrategy,
     booleans,
     characters,
     complex_numbers,
@@ -20,24 +34,11 @@ from hypothesis.strategies import (
     shared,
     slices,
     text,
-    SearchStrategy,
 )
-from hypothesis.extra.numpy import (
-    arrays,
-    basic_indices,
-    boolean_dtypes,
-    byte_string_dtypes,
-    complex_number_dtypes,
-    datetime64_dtypes,
-    floating_dtypes,
-    integer_dtypes,
-    timedelta64_dtypes,
-    unicode_string_dtypes,
-    unsigned_integer_dtypes,
-)
-from riptable.Utils.common import _dtypes_by_group, integer_range, dtypes_by_group
-from riptable.Utils.rt_testing import name
 
+import riptable as rt
+from riptable.Utils.common import _dtypes_by_group, dtypes_by_group, integer_range
+from riptable.Utils.rt_testing import name
 
 _MAX_SHAPE_SIZE: int = 270_000  # maximum shape size (this is an arbitrary value >250k, which should put it above various length cutoffs we use)
 _MAX_VALUE: int = 1_000_000  # numeric maximum and minimum magnitude value
@@ -51,7 +52,7 @@ def ndarray_shape_strategy(
     min_rank: int = 0,
     max_rank: int = 2,
     max_shape_size: Optional[int] = None,
-    max_size_multiplier: Optional[float] = None
+    max_size_multiplier: Optional[float] = None,
 ):
     rank = draw(integers(min_value=min_rank, max_value=max_rank))
 
@@ -65,7 +66,7 @@ def ndarray_shape_strategy(
         # If a max size multiplier was specified, apply it here.
         if max_size_multiplier is not None:
             # Validate the parameter value; this check is implemented to disallow NaNs.
-            if max_size_multiplier > 0.:
+            if max_size_multiplier > 0.0:
                 # Round upwards to avoid any case where we round down to zero.
                 max_shape_size = int(np.ceil(max_shape_size * max_size_multiplier))
             else:
@@ -202,8 +203,7 @@ def select_axis(draw, arr: np.ndarray, default_axis: Optional[int] = None):
     """Strategy for generating a random axis value based on the shape of an array."""
     max_axis = len(arr.shape) - 1
     min_axis = 0
-    return draw(
-        one_of((just(default_axis), integers(min_value=min_axis, max_value=max_axis))))
+    return draw(one_of((just(default_axis), integers(min_value=min_axis, max_value=max_axis))))
 
 
 @composite
@@ -244,9 +244,9 @@ def start_stop_step_strategy(draw):
     dtype = ints_floats_and_complex_numbers()
     l = np.sort(draw(lists(dtype, min_size=3, max_size=3)))
     params = {
-        'start': l[0],
-        'stop': l[2],
-        'step': l[1],
+        "start": l[0],
+        "stop": l[2],
+        "step": l[1],
     }
     return params
 
@@ -260,9 +260,7 @@ def generate_tuples_of_arrays(
     all_same_width=False,
     all_same_height=False,
 ):
-    shape_type = draw(
-        integers(min_value=0, max_value=4)
-    )  # 0: (1,1), 1: (x,), 2: (x,1), 3: (1,x), 4: (x,y)
+    shape_type = draw(integers(min_value=0, max_value=4))  # 0: (1,1), 1: (x,), 2: (x,1), 3: (1,x), 4: (x,y)
     if shape_type == 1 and all_same_height:
         shape_type = 3
     dtype = shared(dtype_strategy)
@@ -303,11 +301,7 @@ def generate_tuples_of_arrays(
     elif shape_type == 4:  # (x,y)
         if all_same_width and all_same_height:
             for i in range(arr_length):
-                arr_list.append(
-                    draw(
-                        arrays(dtype=dtype, shape=(starting_size[0], starting_size[1]))
-                    )
-                )
+                arr_list.append(draw(arrays(dtype=dtype, shape=(starting_size[0], starting_size[1]))))
         elif all_same_height:
             for i in range(arr_length):
                 x = draw(integers(min_value=1, max_value=max_array_size))
@@ -327,17 +321,13 @@ def generate_tuples_of_arrays(
 
 @composite
 def generate_array_axis_and_ddof(draw):
-    arr, axis = draw(
-        generate_array_and_axis(
-            shape=draw(ndarray_shape_strategy()), dtype=draw(ints_or_floats_dtypes())
-        )
-    )
+    arr, axis = draw(generate_array_and_axis(shape=draw(ndarray_shape_strategy()), dtype=draw(ints_or_floats_dtypes())))
     N = np.count_nonzero(~np.isnan(arr), axis=axis)
     ddof = draw(integers(min_value=0, max_value=np.min(N)))
     return {
-        'arr': arr,
-        'axis': axis,
-        'ddof': ddof,
+        "arr": arr,
+        "axis": axis,
+        "ddof": ddof,
     }
 
 
@@ -358,9 +348,9 @@ def interpolation_data(draw):
         fp = m * (xp - vx) ** 2 + vy
 
     return {
-        'x': x,
-        'xp': xp,
-        'fp': fp,
+        "x": x,
+        "xp": xp,
+        "fp": fp,
     }
 
 
@@ -411,12 +401,12 @@ def generate_sample_test_integers(draw, num_bits, signed):
         max_value = 2 ** (num_bits - 1) - 1
     else:
         min_value = 0
-        max_value = (2 ** num_bits) - 1
+        max_value = (2**num_bits) - 1
 
     l = (
         0,
         -1,  # FF..FF
-        (2 ** num_bits) - 1,  # FF..FF, -1 for signed, max for unsigned
+        (2**num_bits) - 1,  # FF..FF, -1 for signed, max for unsigned
         2
         ** (
             num_bits - 1
@@ -522,16 +512,8 @@ def generate_list_ndarrays(draw):
     size = draw(shared(integers(min_value=1, max_value=100)))
     shape = draw(shared(one_darray_shape_strategy(max_shape_size=10)))
     dtype = draw(one_of_supported_dtypes())
-    lst1 = draw(
-        lists(
-            arrays(shape=shape, dtype=dtype, unique=True), min_size=size, max_size=size
-        )
-    )
-    lst2 = draw(
-        lists(
-            arrays(shape=shape, dtype=dtype, unique=True), min_size=size, max_size=size
-        )
-    )
+    lst1 = draw(lists(arrays(shape=shape, dtype=dtype, unique=True), min_size=size, max_size=size))
+    lst2 = draw(lists(arrays(shape=shape, dtype=dtype, unique=True), min_size=size, max_size=size))
     return (lst1, lst2)
 
 
@@ -596,11 +578,15 @@ def rt_element_strategy(
         dtype_info = np.finfo(dtype)
         if include_invalid:
             elements_strategy = floats(
-                width=width, allow_nan=True, allow_infinity=True,
+                width=width,
+                allow_nan=True,
+                allow_infinity=True,
             )
         else:
             elements_strategy = floats(
-                width=width, allow_nan=False, allow_infinity=True,
+                width=width,
+                allow_nan=False,
+                allow_infinity=True,
             )
     elif dtype in _dtypes_by_group["Complex"]:
         # invalid value is not specified
@@ -619,10 +605,7 @@ def rt_element_strategy(
 # get categorical column (using our categorical strategy)
 def column_by_dtypes(dtype_group: Optional[str] = "RiptableNumeric") -> List[pdst.column]:
     """Returns a list of columns from a dtype group for generation of primitive data types wrapped in columns for DataFrame strategies."""
-    return [
-        pdst.column(str(dtype), dtype=np.dtype(dtype))
-        for dtype in set(dtypes_by_group[dtype_group])
-    ]
+    return [pdst.column(str(dtype), dtype=np.dtype(dtype)) for dtype in set(dtypes_by_group[dtype_group])]
 
 
 def column_arrays(draw) -> List[Union[np.ndarray, rt.FastArray]]:

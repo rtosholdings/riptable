@@ -1,18 +1,19 @@
-import pytest
 import unittest
+from math import isclose
 
-from riptable import *
+import pytest
 import riptide_cpp as rc
+
+from riptable import FastArray as FA
+from riptable import *
 from riptable.rt_enum import (
+    INVALID_DICT,
+    DisplayColumnColors,
+    DisplayJustification,
+    DisplayLength,
     NumpyCharTypes,
     gBinaryUFuncs,
-    INVALID_DICT,
-    DisplayLength,
-    DisplayJustification,
-    DisplayColumnColors,
 )
-from riptable import FastArray as FA
-from math import isclose
 
 float_types = [np.float32, np.float64]
 int_types = [
@@ -41,10 +42,10 @@ nan_funcs = [nansum, nanmean, nanmin, nanmax]
 no_negatives = [np.log, np.log2, np.log10, np.sqrt]
 
 num_list = list(range(10))
-str_list = ['a', 'b', 'c', 'd', 'e']
+str_list = ["a", "b", "c", "d", "e"]
 
 # a set is now valid
-invalid_data = [slice(1, 2, 3), ..., {'a': 1}]  # add type, elipses, dict
+invalid_data = [slice(1, 2, 3), ..., {"a": 1}]  # add type, elipses, dict
 
 np.random.seed(1234)
 
@@ -62,9 +63,7 @@ def almost_eq(fa: FastArray, arr: np.ndarray, places=5, rtol=1e-5, atol=1e-5, eq
         # N.B.: Do not compare the elements that both numpy and riptable give nan or inf.
         #       In the case of modulo by zero, numpy gives nan but riptable gives inf.
         finite_mask = np.isfinite(fa_arr) | np.isfinite(np_arr)
-        if not np.allclose(
-            fa_arr[finite_mask], np_arr[finite_mask], rtol, atol, equal_nan
-        ):
+        if not np.allclose(fa_arr[finite_mask], np_arr[finite_mask], rtol, atol, equal_nan):
             return False
     else:
         try:
@@ -78,13 +77,13 @@ def almost_eq(fa: FastArray, arr: np.ndarray, places=5, rtol=1e-5, atol=1e-5, eq
 class FastArray_Test(unittest.TestCase):
 
     # --------VALID CONSTRUCTORS-------------------
-    '''
+    """
     BUGS:
     when initializing from a scalar, the requested dtype is ignored
     it will default to the type of the scalar OR the default numpy type for the python type
 
     Numpy does not ignore the dtype keyword arg.
-    '''
+    """
 
     def test_float_constructors(self):
         for dt in float_types:
@@ -171,10 +170,10 @@ class FastArray_Test(unittest.TestCase):
 
     # --------OVERFLOW / CASTING TESTS-----------
     def test_overflow_int64(self):
-        '''
+        """
         FastArray flips overflow values in integer types to floats.
         Numpy produces an incorrect result.
-        '''
+        """
         a = 0xFFFFFFFFFFFFFFF
         arr_f = FastArray([a] * 20, dtype=np.int64)
         sum_f = arr_f.sum()
@@ -191,10 +190,10 @@ class FastArray_Test(unittest.TestCase):
         self.assertEqual(sum_f, np.float64(int_sum_f))
 
     def test_overflow_uint64(self):
-        '''
+        """
         FastArray flips overflow values in integer types to floats.
         Numpy produces an incorrect result.
-        '''
+        """
         a = 0xFFFFFFFFFFFFFFF
         arr_f = FastArray([a] * 20, dtype=np.uint64)
         sum_f = arr_f.sum()
@@ -212,12 +211,12 @@ class FastArray_Test(unittest.TestCase):
 
     # ----------INPLACE OPERATIONS----------
     def test_inplace_int_float(self):
-        '''
+        """
         Unlike numpy arrays, FastArray allows inplace operations between integer arrays and floating point scalars.
         The datatype of the array will remain the same. However currently division is not supported.
 
         Potential BUG: The floor division operator does not raise an error.
-        '''
+        """
         nums = [1, 2, 3, 4, 5]
         for dt in int_types[1:]:  # dont include bool
             arr = FA(nums, dtype=dt)
@@ -290,14 +289,14 @@ class FastArray_Test(unittest.TestCase):
                 )
 
     def test_forced_dtype_binary(self):
-        '''
+        """
         Test to see that datatype is being correctly forced for result of binary ufuncs.
         You cannot force the type to be an unsigned integer.
         You cannot force the type for a division operation.
-        '''
+        """
         nums = [1, 2, 3, 4, 5]
         types = int_types[1:] + float_types
-        types = [i for i in types if i.__name__[0] != 'u']  # remove unsigned integers
+        types = [i for i in types if i.__name__[0] != "u"]  # remove unsigned integers
         binary_funcs = [
             np.add,
             np.subtract,
@@ -341,9 +340,9 @@ class FastArray_Test(unittest.TestCase):
     #                #self.assertEqual(result.dtype, dt_forced, msg=f"Result datatype {result.dtype} did not match requested datatype {dt_forced} for input datatype {dt} for {func} operation")
 
     # --------REDUCE FUNCTION CASTING-----------
-    '''
+    """
     For certain reduce functions on certain types, FastArray will return a different datatype than numpy
-    '''
+    """
 
     def test_reduce_sums(self):
         reduce_funcs = [np.sum, np.nansum]
@@ -398,10 +397,10 @@ class FastArray_Test(unittest.TestCase):
 
     # -------------- REDUCE FUNCTION ACCURACY ---------
     def test_reduce_accuracy(self):
-        '''
+        """
         FastArray often performs math operations at a higher level of precision than numpy. As a
         result, the answers may be slightly different.
-        '''
+        """
         reduce_funcs = [
             np.sum,
             np.mean,
@@ -432,10 +431,10 @@ class FastArray_Test(unittest.TestCase):
 
     # -------REDUCE FUNCTION PRESERVING---------
     def test_preserve_reduce_type(self):
-        '''
+        """
         Certain reduce functions need to preserve their type. This test is to make sure FastArray
         is not performing unwanted casting.
-        '''
+        """
         reduce_funcs = [np.min, np.max, np.nanmin, np.nanmax]
         arr = FastArray(num_list)
         for dt in int_types + float_types:
@@ -446,12 +445,12 @@ class FastArray_Test(unittest.TestCase):
 
     # --------WARN ON INVALID-------------------
     def test_no_negatives(self):
-        '''
+        """
         FastArray does not warn on certain math functions that cannot take invalids.
         Numpy warns, but produces the same result.
 
         Make sure the result is NaN
-        '''
+        """
         arr = FastArray([-50])
         for f in no_negatives:
             # DJC: unfortunate handling of neg. value warning for log2.
@@ -465,32 +464,32 @@ class FastArray_Test(unittest.TestCase):
 
     # --------FLIPPING DIMENSIONS-----------------
     def test_1_dimension(self):
-        '''
+        """
         FastArray flips scalar initialization to 1 dimension (if the scalar is a supported type)
         Numpy creates an array of 0 dimensions
 
         Reduce functions on numpy arrays of 0 dimensions will produce a scalar.
-        '''
+        """
         dim0 = FastArray(1).ndim
         dim1 = FastArray([1]).ndim
         self.assertEqual(dim0, dim1)
 
     # --------PASS SQUEEZE RESULT OF 0 DIMENSIONS TO NUMPY----
     def test_squeeze_zero(self):
-        '''
+        """
         Because it does not support 0 dimensional arrays, FastArray will
         flip a 0 dimensional result of a squeeze() operation to Numpy.
-        '''
+        """
         arr = FastArray([1]).squeeze()
         self.assertFalse(isinstance(arr, FastArray))
 
     # ----------ATTEMPT TO CONVERT STRINGS-------
     def test_string_convert(self):
-        '''
+        """
         FastArray attempts to convert unicode strings to byte strings. If it can't, it will warn the user.
-        '''
+        """
         u = "AAPL\u2080"
-        b = 'AAPL'
+        b = "AAPL"
         # with self.assertWarns(UserWarning):
         #    u_arr = FastArray(u)
 
@@ -500,22 +499,22 @@ class FastArray_Test(unittest.TestCase):
 
     # --------TOO MANY DIMENSIONS > 1-----------
     def test_invalid_dims(self):
-        '''
+        """
         FastArray only handles one dimension correctly, so it warns the user when the input is more than one dimension.
-        '''
+        """
         multi_dims = np.empty((1, 20, 1, 40, 1))
         with self.assertWarns(UserWarning):
             _ = FastArray(multi_dims)
 
     # -------BINARY UFUNCS WITH SCALAR-------------------
     def test_binary_ufuncs_scalar(self):
-        '''
+        """
         Binary math ufuncs between numeric types and scalars must match numpy exactly.
         In certain cases however, FastArray returns a different dtype, so the CRC check will fail.
 
         In floor_divide, numpy returns -0.0 for floats: ex. 0.0/1
         FastArray returns 0.0
-        '''
+        """
         nonzero_nums = list(range(1, 10))
 
         num_types = int_types + float_types
@@ -545,13 +544,13 @@ class FastArray_Test(unittest.TestCase):
 
     # -------BINARY UFUNCS WITH VECTOR-------------------
     def test_binary_ufuncs_vector(self):
-        '''
+        """
         Binary math ufuncs between numeric types and scalars must match numpy exactly.
         In certain cases however, FastArray returns a different dtype, so the CRC check will fail.
 
         This mixes and matches every numeric datatype and performs every hooked binary ufunc. If the result dtypes match, a CRC check will
         be performed.
-        '''
+        """
 
         num_types = int_types + float_types
         math_ufuncs = [func for func, v in gBinaryUFuncs.items() if v is not None]
@@ -586,11 +585,11 @@ class FastArray_Test(unittest.TestCase):
 
     # ---------------UNARY UFUNCS-------------------
     def test_unary_ufuncs_scalar(self):
-        '''
+        """
         ***incomplete test - need to handle the rest of the unary funcs for as many types as possible
 
         np.negative and np.positive both raise errors when applied to boolean arrays
-        '''
+        """
         random_nums1 = (np.random.rand(10) * 100) + 1
 
         num_types = int_types + float_types
@@ -630,9 +629,9 @@ class FastArray_Test(unittest.TestCase):
 
     # ----------------TEST BITWISE -------------------------
     def test_bitwise(self):
-        '''
+        """
         These functions only apply to integer or boolean arrays.
-        '''
+        """
         bitwise_funcs = [np.bitwise_and, np.bitwise_xor, np.bitwise_or]
         for dt in int_types:
             fa_arr = FastArray(num_list, dtype=dt)
@@ -651,13 +650,13 @@ class FastArray_Test(unittest.TestCase):
 
     # ----------------TEST LOGICAL -------------------------
     def test_compare(self):
-        '''
+        """
         Compares FastArray results to numpy results for binary comparison and logical ufuncs.
         All results will be boolean arrays.
 
         There is a difference between calling a numpy ufunc and using a comparison operator,
         so the operators need to be checked separately.
-        '''
+        """
         basic_types = [np.int32, np.int64, np.float32, np.float64]
         numeric_types = int_types + float_types
         comparison_ufuncs = [
@@ -670,12 +669,12 @@ class FastArray_Test(unittest.TestCase):
         ]
         logical_ufuncs = [np.logical_and, np.logical_xor, np.logical_or]
         comparison_operators = [
-            '__ne__',
-            '__eq__',
-            '__ge__',
-            '__gt__',
-            '__le__',
-            '__lt__',
+            "__ne__",
+            "__eq__",
+            "__ge__",
+            "__gt__",
+            "__le__",
+            "__lt__",
         ]
         all_funcs = comparison_ufuncs + logical_ufuncs
 
@@ -727,10 +726,10 @@ class FastArray_Test(unittest.TestCase):
     def test_np_vs_member(self):
         import builtins
 
-        '''
+        """
         Check to make sure the result is the same no matter how the ufunc is accessed.
-        '''
-        func_names = ['min', 'max', 'sum']
+        """
+        func_names = ["min", "max", "sum"]
         arr = FA([1, 2, 3, 4, 5])
         num_types = int_types[1:] + float_types
         for dt in num_types:
@@ -771,9 +770,9 @@ class FastArray_Test(unittest.TestCase):
 
     # ------------------------------------------------------
     def check_exception(self):
-        '''
+        """
         Example of checking that we raise the same error as numpy
-        '''
+        """
         try:
             n = np.array()
         except Exception as e:
@@ -789,11 +788,11 @@ class FastArray_Test(unittest.TestCase):
 
     # ----------------TEST LOGICAL FOR STRING------------------------
     def test_string_compare(self):
-        '''
+        """
         FastArray currently does not support bytestring array comparison with ufuncs - numpy also prints notimplemented
         However operators <=, <, ==, !=, >, >= will return the correct result (boolean array)
-        '''
-        f_arr = FA(['a', 'b', 'c'])
+        """
+        f_arr = FA(["a", "b", "c"])
         invalid_funcs = [
             np.less_equal,
             np.less,
@@ -802,7 +801,7 @@ class FastArray_Test(unittest.TestCase):
             np.greater,
             np.greater_equal,
         ]
-        valid_func_names = ['__ne__', '__eq__', '__ge__', '__gt__', '__le__', '__lt__']
+        valid_func_names = ["__ne__", "__eq__", "__ge__", "__gt__", "__le__", "__lt__"]
         correct_results = [
             [False, False, False],
             [True, True, True],
@@ -815,9 +814,7 @@ class FastArray_Test(unittest.TestCase):
 
         # ufunc comparisons will not work for strings (should we implement this on our own?)
         for func in invalid_funcs:
-            with self.assertRaises(
-                TypeError, msg=f"String comparison did not raise TypeError for {func}"
-            ):
+            with self.assertRaises(TypeError, msg=f"String comparison did not raise TypeError for {func}"):
                 result = func(f_arr, f_arr)
 
         # strings need to be compared this way
@@ -834,10 +831,10 @@ class FastArray_Test(unittest.TestCase):
 
     # ---------------ERROR FOR NP.POSITIVE, NP.NEGATIVE--------------
     def test_bool_bug1(self):
-        '''
+        """
         Note: FastArray does not hook these ufuncs right now, but if they are taken over,
         the same error should be raised when these functions are called.
-        '''
+        """
         arr = FastArray([True, False, True, False])
 
         with self.assertRaises(TypeError):
@@ -847,10 +844,10 @@ class FastArray_Test(unittest.TestCase):
 
     # ------------------------------------------------------
     def test_display_properties(self):
-        '''
+        """
         FastArrays of default types have default item formatting for display (see Utils.rt_display_properties)
         This checks to see that the correct item format is being returned from a FastArray
-        '''
+        """
         f = FA(num_list, dtype=np.int32)
         item_format, convert_func = f.display_query_properties()
         self.assertEqual(
@@ -862,15 +859,15 @@ class FastArray_Test(unittest.TestCase):
         # self.assertEqual(item_format.invalid, None)
         self.assertEqual(item_format.can_have_spaces, False)
         self.assertEqual(item_format.color, DisplayColumnColors.Default)
-        self.assertEqual(convert_func.__name__, 'convertInt')
+        self.assertEqual(convert_func.__name__, "convertInt")
 
     # ------------------------------------------------------
     def test_ddof_default(self):
-        '''
+        """
         FastArray differs from numpy when calculating var, nanvar, std, and nanstd. We set ddof's default to 1 instead of 0
-        '''
+        """
         arr = FA([1, 2])
-        func_names = ['std', 'var', 'nanstd', 'nanvar']
+        func_names = ["std", "var", "nanstd", "nanvar"]
         for name in func_names:
             # make sure different than numpy
             func = arr.__getattribute__(name)
@@ -892,12 +889,12 @@ class FastArray_Test(unittest.TestCase):
 
     # ------------------------------------------------------
     def test_dtype_reduce(self):
-        '''
+        """
         If a dtype is passed to a reduce function, make sure the result is the correct dtype
-        '''
+        """
         dt = np.int8
         arr = FA([1, 2])
-        func_names = ['std', 'var', 'nanstd', 'nanvar']
+        func_names = ["std", "var", "nanstd", "nanvar"]
         for name in func_names:
             func = arr.__getattribute__(name)
             result = func(dtype=dt)
@@ -909,11 +906,11 @@ class FastArray_Test(unittest.TestCase):
 
     # ------------------------------------------------------
     def test_dtype_int_reduce(self):
-        '''
+        """
         If the result of a reduce function is an integer, it will be cast to int64.
         If the input is uint64, the output will also be uint64
-        '''
-        func_names = ['nansum']
+        """
+        func_names = ["nansum"]
         unsigned_arr = FA(num_list, dtype=np.int32)
         signed_arr = FA(num_list, dtype=np.uint64)
         for name in func_names:
@@ -926,15 +923,15 @@ class FastArray_Test(unittest.TestCase):
 
     # ------------------------------------------------------
     def test_shift(self):
-        '''
+        """
         Check to make sure FastArray's shift mimics pandas shift - not numpy roll.
-        '''
+        """
         arr0 = FA([1, 2, 3, 4, 5])
         all_ints = int_types  # [1:] # bool is not included
         shift_dict = {
             tuple(float_types): np.nan,
-            tuple([np.str_]): '',
-            tuple([np.bytes_]): b'',
+            tuple([np.str_]): "",
+            tuple([np.bytes_]): b"",
         }
         for tp in all_ints:
             if tp is bool:
@@ -1015,7 +1012,7 @@ class FastArray_Test(unittest.TestCase):
         # future.
         # bad = [np.greater, np.greater_equal, np.less, np.less_equal, np.not_equal]
 
-        a = np.array('1')
+        a = np.array("1")
         a = FA(a)
         b = 1
         for f in binary_funcs:

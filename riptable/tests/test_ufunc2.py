@@ -1,59 +1,58 @@
 # This file is adapted for riptable from the following numpy source:
 # https://github.com/numpy/numpy/blob/f6a7a440669c6f386a1b15e081c6db740bb87a88/numpy/core/tests/test_ufunc.py
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-import warnings
 import itertools
-import pytest
+import warnings
+
 import numpy as np
-import numpy.core._umath_tests as umt
-import numpy.linalg._umath_linalg as uml
 import numpy.core._operand_flag_tests as opflag_tests
 import numpy.core._rational_tests as _rational_tests
-import riptable as rt
-
+import numpy.core._umath_tests as umt
+import numpy.linalg._umath_linalg as uml
+import pytest
+from numpy.compat import pickle
 from numpy.testing import (
     assert_,
-    assert_equal,
-    assert_raises,
-    assert_array_equal,
+    assert_allclose,
     assert_almost_equal,
     assert_array_almost_equal,
+    assert_array_equal,
+    assert_equal,
     assert_no_warnings,
-    assert_allclose,
+    assert_raises,
 )
-from numpy.compat import pickle
+
+import riptable as rt
 from riptable import FastArray as FA
 
 # riptable: small modification to allow this code to work with both older and newer
 #           versions of numpy [1.18, 1.21].
-_numpy_version = tuple(int(x) for x in np.version.version.split('.'))
+_numpy_version = tuple(int(x) for x in np.version.version.split("."))
 
-UNARY_UFUNCS = [
-    obj for obj in np.core.umath.__dict__.values() if isinstance(obj, np.ufunc)
-]
+UNARY_UFUNCS = [obj for obj in np.core.umath.__dict__.values() if isinstance(obj, np.ufunc)]
 UNARY_OBJECT_UFUNCS = [uf for uf in UNARY_UFUNCS if "O->O" in uf.types]
 
 
 class TestUfuncKwargs(object):
     def test_kwarg_exact(self):
-        assert_raises(TypeError, np.add, 1, 2, castingx='safe')
+        assert_raises(TypeError, np.add, 1, 2, castingx="safe")
         assert_raises(TypeError, np.add, 1, 2, dtypex=int)
         assert_raises(TypeError, np.add, 1, 2, extobjx=[4096])
         assert_raises(TypeError, np.add, 1, 2, outx=None)
-        assert_raises(TypeError, np.add, 1, 2, sigx='ii->i')
-        assert_raises(TypeError, np.add, 1, 2, signaturex='ii->i')
+        assert_raises(TypeError, np.add, 1, 2, sigx="ii->i")
+        assert_raises(TypeError, np.add, 1, 2, signaturex="ii->i")
         assert_raises(TypeError, np.add, 1, 2, subokx=False)
         assert_raises(TypeError, np.add, 1, 2, wherex=[True])
 
     def test_sig_signature(self):
         ex_type = TypeError if _numpy_version >= (1, 21, 0) else ValueError
-        assert_raises(ex_type, np.add, 1, 2, sig='ii->i', signature='ii->i')
+        assert_raises(ex_type, np.add, 1, 2, sig="ii->i", signature="ii->i")
 
     def test_sig_dtype(self):
         ex_type = TypeError if _numpy_version >= (1, 21, 0) else RuntimeError
-        assert_raises(ex_type, np.add, 1, 2, sig='ii->i', dtype=int)
-        assert_raises(ex_type, np.add, 1, 2, signature='ii->i', dtype=int)
+        assert_raises(ex_type, np.add, 1, 2, sig="ii->i", dtype=int)
+        assert_raises(ex_type, np.add, 1, 2, signature="ii->i", dtype=int)
 
     def test_extobj_refcount(self):
         # Should not segfault with USE_DEBUG.
@@ -118,7 +117,7 @@ class TestUfuncGenericLoops(object):
     ]
 
     # FA ready
-    @pytest.mark.parametrize('input_dtype,output_dtype', np_dtypes)
+    @pytest.mark.parametrize("input_dtype,output_dtype", np_dtypes)
     def test_unary_PyUFunc(self, input_dtype, output_dtype, f=np.exp, x=0, y=1):
         xs = np.full(10, input_dtype(x), dtype=output_dtype)
         xs = FA(xs)
@@ -127,10 +126,10 @@ class TestUfuncGenericLoops(object):
         assert_equal(ys.dtype, output_dtype)
 
     def f2(x, y):
-        return x ** y
+        return x**y
 
     # FA ready
-    @pytest.mark.parametrize('input_dtype,output_dtype', np_dtypes)
+    @pytest.mark.parametrize("input_dtype,output_dtype", np_dtypes)
     def test_binary_PyUFunc(self, input_dtype, output_dtype, f=f2, x=0, y=1):
         xs = np.full(10, input_dtype(x), dtype=output_dtype)
         xs = FA(xs)
@@ -224,10 +223,7 @@ class TestUfunc(object):
             assert_(res is _rational_tests.test_add)
 
     def test_pickle_withstring(self):
-        astring = (
-            b"cnumpy.core\n_ufunc_reconstruct\np0\n"
-            b"(S'numpy.core.umath'\np1\nS'cos'\np2\ntp3\nRp4\n."
-        )
+        astring = b"cnumpy.core\n_ufunc_reconstruct\np0\n" b"(S'numpy.core.umath'\np1\nS'cos'\np2\ntp3\nRp4\n."
         assert_(pickle.loads(astring) is np.cos)
 
     # FA ready
@@ -352,9 +348,7 @@ class TestUfunc(object):
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_signature2(self):
         # more complicated names for variables
-        enabled, num_dims, ixs, flags, sizes = umt.test_signature(
-            2, 1, "(i1,i2),(J_1)->(_kAB)"
-        )
+        enabled, num_dims, ixs, flags, sizes = umt.test_signature(2, 1, "(i1,i2),(J_1)->(_kAB)")
         assert_equal(enabled, 1)
         assert_equal(num_dims, (2, 1, 1))
         assert_equal(ixs, (0, 1, 2, 3))
@@ -364,9 +358,7 @@ class TestUfunc(object):
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_signature3(self):
-        enabled, num_dims, ixs, flags, sizes = umt.test_signature(
-            2, 1, u"(i1, i12),   (J_1)->(i12, i2)"
-        )
+        enabled, num_dims, ixs, flags, sizes = umt.test_signature(2, 1, "(i1, i12),   (J_1)->(i12, i2)")
         assert_equal(enabled, 1)
         assert_equal(num_dims, (2, 1, 2))
         assert_equal(ixs, (0, 1, 2, 1, 3))
@@ -377,9 +369,7 @@ class TestUfunc(object):
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_signature4(self):
         # matrix_multiply signature from _umath_tests
-        enabled, num_dims, ixs, flags, sizes = umt.test_signature(
-            2, 1, "(n,k),(k,m)->(n,m)"
-        )
+        enabled, num_dims, ixs, flags, sizes = umt.test_signature(2, 1, "(n,k),(k,m)->(n,m)")
         assert_equal(enabled, 1)
         assert_equal(num_dims, (2, 2, 2))
         assert_equal(ixs, (0, 1, 1, 2, 0, 2))
@@ -390,9 +380,7 @@ class TestUfunc(object):
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_signature5(self):
         # matmul signature from _umath_tests
-        enabled, num_dims, ixs, flags, sizes = umt.test_signature(
-            2, 1, "(n?,k),(k,m?)->(n?,m?)"
-        )
+        enabled, num_dims, ixs, flags, sizes = umt.test_signature(2, 1, "(n?,k),(k,m?)->(n?,m?)")
         assert_equal(enabled, 1)
         assert_equal(num_dims, (2, 2, 2))
         assert_equal(ixs, (0, 1, 1, 2, 0, 2))
@@ -419,9 +407,7 @@ class TestUfunc(object):
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_signature7(self):
-        enabled, num_dims, ixs, flags, sizes = umt.test_signature(
-            3, 1, "(3),(03,3),(n)->(9)"
-        )
+        enabled, num_dims, ixs, flags, sizes = umt.test_signature(3, 1, "(3),(03,3),(n)->(9)")
         assert_equal(enabled, 1)
         assert_equal(num_dims, (1, 2, 1, 1))
         assert_equal(ixs, (0, 0, 0, 1, 2))
@@ -431,9 +417,7 @@ class TestUfunc(object):
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_signature8(self):
-        enabled, num_dims, ixs, flags, sizes = umt.test_signature(
-            3, 1, "(3?),(3?,3?),(n)->(9)"
-        )
+        enabled, num_dims, ixs, flags, sizes = umt.test_signature(3, 1, "(3?),(3?,3?),(n)->(9)")
         assert_equal(enabled, 1)
         assert_equal(num_dims, (1, 2, 1, 1))
         assert_equal(ixs, (0, 0, 0, 1, 2))
@@ -471,31 +455,29 @@ class TestUfunc(object):
 
     # FA ready
     def test_forced_sig(self):
-        a = 0.5 * np.arange(3, dtype='f8')
+        a = 0.5 * np.arange(3, dtype="f8")
         a = FA(a)
         assert_equal(np.add(a, 0.5), [0.5, 1, 1.5])
-        assert_equal(np.add(a, 0.5, sig='i', casting='unsafe'), [0, 0, 1])
-        assert_equal(np.add(a, 0.5, sig='ii->i', casting='unsafe'), [0, 0, 1])
-        assert_equal(np.add(a, 0.5, sig=('i4',), casting='unsafe'), [0, 0, 1])
-        assert_equal(
-            np.add(a, 0.5, sig=('i4', 'i4', 'i4'), casting='unsafe'), [0, 0, 1]
-        )
+        assert_equal(np.add(a, 0.5, sig="i", casting="unsafe"), [0, 0, 1])
+        assert_equal(np.add(a, 0.5, sig="ii->i", casting="unsafe"), [0, 0, 1])
+        assert_equal(np.add(a, 0.5, sig=("i4",), casting="unsafe"), [0, 0, 1])
+        assert_equal(np.add(a, 0.5, sig=("i4", "i4", "i4"), casting="unsafe"), [0, 0, 1])
 
-        b = np.zeros((3,), dtype='f8')
+        b = np.zeros((3,), dtype="f8")
         b = FA(b)
         np.add(a, 0.5, out=b)
         assert_equal(b, [0.5, 1, 1.5])
         b[:] = 0
-        np.add(a, 0.5, sig='i', out=b, casting='unsafe')
+        np.add(a, 0.5, sig="i", out=b, casting="unsafe")
         assert_equal(b, [0, 0, 1])
         b[:] = 0
-        np.add(a, 0.5, sig='ii->i', out=b, casting='unsafe')
+        np.add(a, 0.5, sig="ii->i", out=b, casting="unsafe")
         assert_equal(b, [0, 0, 1])
         b[:] = 0
-        np.add(a, 0.5, sig=('i4',), out=b, casting='unsafe')
+        np.add(a, 0.5, sig=("i4",), out=b, casting="unsafe")
         assert_equal(b, [0, 0, 1])
         b[:] = 0
-        np.add(a, 0.5, sig=('i4', 'i4', 'i4'), out=b, casting='unsafe')
+        np.add(a, 0.5, sig=("i4", "i4", "i4"), out=b, casting="unsafe")
         assert_equal(b, [0, 0, 1])
 
     # FA NOT support
@@ -506,7 +488,7 @@ class TestUfunc(object):
         b = np.array(20)
         tgt = np.array(0.5)
 
-        for tc in 'bhilqBHILQefdgFDG':
+        for tc in "bhilqBHILQefdgFDG":
             dt = np.dtype(tc)
             aa = a.astype(dt)
             bb = b.astype(dt)
@@ -515,7 +497,7 @@ class TestUfunc(object):
             for x, y in itertools.product([aa, -aa], [bb, -bb]):
 
                 # Check with no output type specified
-                if tc in 'FDG':
+                if tc in "FDG":
                     tgt = complex(x) / complex(y)
                 else:
                     tgt = float(x) / float(y)
@@ -524,8 +506,8 @@ class TestUfunc(object):
                 rtol = max(np.finfo(res).resolution, 1e-15)
                 assert_allclose(res, tgt, rtol=rtol)
 
-                if tc in 'bhilqBHILQ':
-                    assert_(res.dtype.name == 'float64')
+                if tc in "bhilqBHILQ":
+                    assert_(res.dtype.name == "float64")
                 else:
                     assert_(res.dtype.name == dt.name)
 
@@ -534,13 +516,13 @@ class TestUfunc(object):
                 # not change types, even for unsigned types, Hence casts in the
                 # ufunc from signed to unsigned and vice versa will lead to
                 # errors in the values.
-                for tcout in 'bhilqBHILQ':
+                for tcout in "bhilqBHILQ":
                     dtout = np.dtype(tcout)
                     assert_raises(TypeError, np.true_divide, x, y, dtype=dtout)
 
-                for tcout in 'efdg':
+                for tcout in "efdg":
                     dtout = np.dtype(tcout)
-                    if tc in 'FDG':
+                    if tc in "FDG":
                         # Casting complex to float is not allowed
                         assert_raises(TypeError, np.true_divide, x, y, dtype=dtout)
                     else:
@@ -548,14 +530,14 @@ class TestUfunc(object):
                         rtol = max(np.finfo(dtout).resolution, 1e-15)
                         atol = max(np.finfo(dtout).tiny, 3e-308)
                         # Some test values result in invalid for float16.
-                        with np.errstate(invalid='ignore'):
+                        with np.errstate(invalid="ignore"):
                             res = np.true_divide(x, y, dtype=dtout)
-                        if not np.isfinite(res) and tcout == 'e':
+                        if not np.isfinite(res) and tcout == "e":
                             continue
                         assert_allclose(res, tgt, rtol=rtol, atol=atol)
                         assert_(res.dtype.name == dtout.name)
 
-                for tcout in 'FDG':
+                for tcout in "FDG":
                     dtout = np.dtype(tcout)
                     tgt = complex(x) / complex(y)
                     rtol = max(np.finfo(dtout).resolution, 1e-15)
@@ -570,10 +552,10 @@ class TestUfunc(object):
         a = np.ones((), dtype=np.bool_)
         res = np.true_divide(a, a)
         assert_(res == 1.0)
-        assert_(res.dtype.name == 'float64')
+        assert_(res.dtype.name == "float64")
         res = np.true_divide(~a, a)
         assert_(res == 0.0)
-        assert_(res.dtype.name == 'float64')
+        assert_(res.dtype.name == "float64")
 
     # FA ready
     def test_sum_stability(self):
@@ -726,42 +708,40 @@ class TestUfunc(object):
     # FA ready
     def test_type_cast(self):
         msg = "type cast"
-        a = np.arange(6, dtype='short').reshape((2, 3))
+        a = np.arange(6, dtype="short").reshape((2, 3))
         a = FA(a)
         assert_array_equal(umt.inner1d(a, a), np.sum(a * a, axis=-1), err_msg=msg)
         msg = "type cast on one argument"
         a = np.arange(6).reshape((2, 3))
         a = FA(a)
         b = a + 0.1
-        assert_array_almost_equal(
-            umt.inner1d(a, b), np.sum(a * b, axis=-1), err_msg=msg
-        )
+        assert_array_almost_equal(umt.inner1d(a, b), np.sum(a * b, axis=-1), err_msg=msg)
 
     # FA ready
     def test_endian(self):
         msg = "big endian"
-        a = np.arange(6, dtype='>i4').reshape((2, 3))
+        a = np.arange(6, dtype=">i4").reshape((2, 3))
         a = FA(a)
         assert_array_equal(umt.inner1d(a, a), np.sum(a * a, axis=-1), err_msg=msg)
         msg = "little endian"
-        a = np.arange(6, dtype='<i4').reshape((2, 3))
+        a = np.arange(6, dtype="<i4").reshape((2, 3))
         a = FA(a)
         assert_array_equal(umt.inner1d(a, a), np.sum(a * a, axis=-1), err_msg=msg)
 
         # Output should always be native-endian
-        Ba = np.arange(1, dtype='>f8')
+        Ba = np.arange(1, dtype=">f8")
         Ba = FA(Ba)
-        La = np.arange(1, dtype='<f8')
+        La = np.arange(1, dtype="<f8")
         La = FA(La)
-        assert_equal((Ba + Ba).dtype, np.dtype('f8'))
-        assert_equal((Ba + La).dtype, np.dtype('f8'))
-        assert_equal((La + Ba).dtype, np.dtype('f8'))
-        assert_equal((La + La).dtype, np.dtype('f8'))
+        assert_equal((Ba + Ba).dtype, np.dtype("f8"))
+        assert_equal((Ba + La).dtype, np.dtype("f8"))
+        assert_equal((La + Ba).dtype, np.dtype("f8"))
+        assert_equal((La + La).dtype, np.dtype("f8"))
 
-        assert_equal(np.absolute(La).dtype, np.dtype('f8'))
-        assert_equal(np.absolute(Ba).dtype, np.dtype('f8'))
-        assert_equal(np.negative(La).dtype, np.dtype('f8'))
-        assert_equal(np.negative(Ba).dtype, np.dtype('f8'))
+        assert_equal(np.absolute(La).dtype, np.dtype("f8"))
+        assert_equal(np.absolute(Ba).dtype, np.dtype("f8"))
+        assert_equal(np.negative(La).dtype, np.dtype("f8"))
+        assert_equal(np.negative(Ba).dtype, np.dtype("f8"))
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
@@ -787,7 +767,7 @@ class TestUfunc(object):
         msg = "output argument"
         a = np.arange(12).reshape((2, 3, 2))
         b = np.arange(4).reshape((2, 1, 2)) + 1
-        c = np.zeros((2, 3), dtype='int')
+        c = np.zeros((2, 3), dtype="int")
         umt.inner1d(a, b, c)
         assert_array_equal(c, np.sum(a * b, axis=-1), err_msg=msg)
         c[:] = -1
@@ -795,7 +775,7 @@ class TestUfunc(object):
         assert_array_equal(c, np.sum(a * b, axis=-1), err_msg=msg)
 
         msg = "output argument with type cast"
-        c = np.zeros((2, 3), dtype='int16')
+        c = np.zeros((2, 3), dtype="int16")
         umt.inner1d(a, b, c)
         assert_array_equal(c, np.sum(a * b, axis=-1), err_msg=msg)
         c[:] = -1
@@ -803,7 +783,7 @@ class TestUfunc(object):
         assert_array_equal(c, np.sum(a * b, axis=-1), err_msg=msg)
 
         msg = "output argument with incontiguous layout"
-        c = np.zeros((2, 3, 4), dtype='int16')
+        c = np.zeros((2, 3, 4), dtype="int16")
         umt.inner1d(a, b, c[..., 0])
         assert_array_equal(c[..., 0], np.sum(a * b, axis=-1), err_msg=msg)
         c[:] = -1
@@ -1001,9 +981,7 @@ class TestUfunc(object):
         assert_array_equal(c, (a * b.transpose(2, 0, 1)).sum(0, keepdims=True))
         # Hardly useful, but should work.
         c = inner1d(a, b, axes=[0, 2, 1], keepdims=True)
-        assert_array_equal(
-            c, (a.transpose(1, 0, 2) * b.transpose(0, 2, 1)).sum(1, keepdims=True)
-        )
+        assert_array_equal(c, (a.transpose(1, 0, 2) * b.transpose(0, 2, 1)).sum(1, keepdims=True))
         # Check with two core dimensions.
         a = np.eye(3) * np.arange(4.0)[:, np.newaxis, np.newaxis]
         expected = uml.det(a)
@@ -1033,7 +1011,7 @@ class TestUfunc(object):
         )
         # Check errors.
         # Not a boolean
-        assert_raises(TypeError, inner1d, a, b, keepdims='true')
+        assert_raises(TypeError, inner1d, a, b, keepdims="true")
         # More than 1 core dimension, and core output dimensions.
         mm = umt.matrix_multiply
         assert_raises(TypeError, mm, a, b, keepdims=True)
@@ -1056,11 +1034,11 @@ class TestUfunc(object):
     # FA ready
     def test_innerwt_empty(self):
         """Test generalized ufunc with zero-sized operands"""
-        a = np.array([], dtype='f8')
+        a = np.array([], dtype="f8")
         a = FA(a)
-        b = np.array([], dtype='f8')
+        b = np.array([], dtype="f8")
         b = FA(b)
-        w = np.array([], dtype='f8')
+        w = np.array([], dtype="f8")
         w = FA(w)
         assert_array_equal(umt.innerwt(a, b, w), np.sum(a * b * w, axis=-1))
 
@@ -1069,9 +1047,7 @@ class TestUfunc(object):
     @pytest.mark.skip("TODO: Adapt this test for riptable?")
     def test_cross1d(self):
         """Test with fixed-sized signature."""
-        a = np.eye(
-            3
-        )  # TODO: Change this to rt.eye() once we've implemented the eye() function in riptable.
+        a = np.eye(3)  # TODO: Change this to rt.eye() once we've implemented the eye() function in riptable.
         a = FA(a)
         assert_array_equal(umt.cross1d(a, a), rt.zeros((3, 3)))
         out = np.zeros((3, 3))
@@ -1212,17 +1188,14 @@ class TestUfunc(object):
                         a2 = d2.transpose(p2)[s2]
                         ref = ref and a1.base is not None
                         ref = ref and a2.base is not None
-                        if a1.shape[-1] == a2.shape[-2] and broadcastable(
-                            a1.shape[0], a2.shape[0]
-                        ):
+                        if a1.shape[-1] == a2.shape[-2] and broadcastable(a1.shape[0], a2.shape[0]):
                             assert_array_almost_equal(
                                 umt.matrix_multiply(a1, a2),
                                 np.sum(
-                                    a2[..., np.newaxis].swapaxes(-3, -1)
-                                    * a1[..., np.newaxis, :],
+                                    a2[..., np.newaxis].swapaxes(-3, -1) * a1[..., np.newaxis, :],
                                     axis=-1,
                                 ),
-                                err_msg=msg + ' %s %s' % (str(a1.shape), str(a2.shape)),
+                                err_msg=msg + " %s %s" % (str(a1.shape), str(a2.shape)),
                             )
 
         assert_equal(ref, True, err_msg="reference check")
@@ -1252,29 +1225,15 @@ class TestUfunc(object):
     def test_object_logical(self):
         a = np.array([3, None, True, False, "test", ""], dtype=object)
         a = FA(a)
-        assert_equal(
-            np.logical_or(a, None), np.array([x or None for x in a], dtype=object)
-        )
-        assert_equal(
-            np.logical_or(a, True), np.array([x or True for x in a], dtype=object)
-        )
+        assert_equal(np.logical_or(a, None), np.array([x or None for x in a], dtype=object))
+        assert_equal(np.logical_or(a, True), np.array([x or True for x in a], dtype=object))
         assert_equal(np.logical_or(a, 12), np.array([x or 12 for x in a], dtype=object))
-        assert_equal(
-            np.logical_or(a, "blah"), np.array([x or "blah" for x in a], dtype=object)
-        )
+        assert_equal(np.logical_or(a, "blah"), np.array([x or "blah" for x in a], dtype=object))
 
-        assert_equal(
-            np.logical_and(a, None), np.array([x and None for x in a], dtype=object)
-        )
-        assert_equal(
-            np.logical_and(a, True), np.array([x and True for x in a], dtype=object)
-        )
-        assert_equal(
-            np.logical_and(a, 12), np.array([x and 12 for x in a], dtype=object)
-        )
-        assert_equal(
-            np.logical_and(a, "blah"), np.array([x and "blah" for x in a], dtype=object)
-        )
+        assert_equal(np.logical_and(a, None), np.array([x and None for x in a], dtype=object))
+        assert_equal(np.logical_and(a, True), np.array([x and True for x in a], dtype=object))
+        assert_equal(np.logical_and(a, 12), np.array([x and 12 for x in a], dtype=object))
+        assert_equal(np.logical_and(a, "blah"), np.array([x and "blah" for x in a], dtype=object))
 
         assert_equal(np.logical_not(a), np.array([not x for x in a], dtype=object))
 
@@ -1282,13 +1241,11 @@ class TestUfunc(object):
         assert_equal(np.logical_and.reduce(a), None)
 
     # FA NOT support
-    @pytest.mark.skip(
-        "This test utilizes an operation which is explicitly not supported by FastArray."
-    )
+    @pytest.mark.skip("This test utilizes an operation which is explicitly not supported by FastArray.")
     def test_object_comparison(self):
         class HasComparisons(object):
             def __eq__(self, other):
-                return '=='
+                return "=="
 
         arr0d = np.array(HasComparisons())
         assert_equal(arr0d == arr0d, True)
@@ -1296,19 +1253,17 @@ class TestUfunc(object):
 
         arr1d = np.array([HasComparisons()])
         assert_equal(arr1d == arr1d, np.array([True]))
-        assert_equal(
-            np.equal(arr1d, arr1d), np.array([True])
-        )  # normal behavior is a cast
-        assert_equal(np.equal(arr1d, arr1d, dtype=object), np.array(['==']))
+        assert_equal(np.equal(arr1d, arr1d), np.array([True]))  # normal behavior is a cast
+        assert_equal(np.equal(arr1d, arr1d, dtype=object), np.array(["=="]))
 
     # FA ready
     def test_object_array_reduction(self):
         # Reductions on object arrays
-        a = np.array(['a', 'b', 'c'], dtype=object)
+        a = np.array(["a", "b", "c"], dtype=object)
         a = FA(a)
-        assert_equal(np.sum(a), 'abc')
-        assert_equal(np.max(a), 'c')
-        assert_equal(np.min(a), 'a')
+        assert_equal(np.sum(a), "abc")
+        assert_equal(np.max(a), "c")
+        assert_equal(np.min(a), "a")
         a = np.array([True, False, True], dtype=object)
         a = FA(a)
         assert_equal(np.sum(a), 2)
@@ -1509,9 +1464,7 @@ class TestUfunc(object):
         assert_equal(np.minimum.reduce(a, axis=(0, 1)), [0, 1, 1, 1])
         assert_equal(np.minimum.reduce(a, axis=(0, 2)), [0, 1, 1])
         assert_equal(np.minimum.reduce(a, axis=(1, 2)), [1, 0])
-        assert_equal(
-            np.minimum.reduce(a, axis=0), [[0, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
-        )
+        assert_equal(np.minimum.reduce(a, axis=0), [[0, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=1), [[1, 1, 1, 1], [0, 1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=2), [[1, 1, 1], [0, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=()), a)
@@ -1522,9 +1475,7 @@ class TestUfunc(object):
         assert_equal(np.minimum.reduce(a, axis=(0, 1)), [0, 1, 1, 1])
         assert_equal(np.minimum.reduce(a, axis=(0, 2)), [1, 0, 1])
         assert_equal(np.minimum.reduce(a, axis=(1, 2)), [0, 1])
-        assert_equal(
-            np.minimum.reduce(a, axis=0), [[1, 1, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1]]
-        )
+        assert_equal(np.minimum.reduce(a, axis=0), [[1, 1, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=1), [[0, 1, 1, 1], [1, 1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=2), [[1, 0, 1], [1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=()), a)
@@ -1535,9 +1486,7 @@ class TestUfunc(object):
         assert_equal(np.minimum.reduce(a, axis=(0, 1)), [1, 0, 1, 1])
         assert_equal(np.minimum.reduce(a, axis=(0, 2)), [0, 1, 1])
         assert_equal(np.minimum.reduce(a, axis=(1, 2)), [0, 1])
-        assert_equal(
-            np.minimum.reduce(a, axis=0), [[1, 0, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
-        )
+        assert_equal(np.minimum.reduce(a, axis=0), [[1, 0, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=1), [[1, 0, 1, 1], [1, 1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=2), [[0, 1, 1], [1, 1, 1]])
         assert_equal(np.minimum.reduce(a, axis=()), a)
@@ -1545,33 +1494,33 @@ class TestUfunc(object):
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_identityless_reduction_corder(self):
-        a = np.empty((2, 3, 4), order='C')
+        a = np.empty((2, 3, 4), order="C")
         self.check_identityless_reduction(a)
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_identityless_reduction_forder(self):
-        a = np.empty((2, 3, 4), order='F')
+        a = np.empty((2, 3, 4), order="F")
         self.check_identityless_reduction(a)
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_identityless_reduction_otherorder(self):
-        a = np.empty((2, 4, 3), order='C').swapaxes(1, 2)
+        a = np.empty((2, 4, 3), order="C").swapaxes(1, 2)
         self.check_identityless_reduction(a)
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_identityless_reduction_noncontig(self):
-        a = np.empty((3, 5, 4), order='C').swapaxes(1, 2)
+        a = np.empty((3, 5, 4), order="C").swapaxes(1, 2)
         a = a[1:, 1:, 1:]
         self.check_identityless_reduction(a)
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_identityless_reduction_noncontig_unaligned(self):
-        a = np.empty((3 * 4 * 5 * 8 + 1,), dtype='i1')
-        a = a[1:].view(dtype='f8')
+        a = np.empty((3 * 4 * 5 * 8 + 1,), dtype="i1")
+        a = a[1:].view(dtype="f8")
         a.shape = (3, 4, 5)
         a = a[1:, 1:, 1:]
         self.check_identityless_reduction(a)
@@ -1609,9 +1558,9 @@ class TestUfunc(object):
         assert_equal(res, 15)
 
     @pytest.mark.skip("TODO: Adapt this test for riptable?")
-    @pytest.mark.parametrize('axis', (0, 1, None))
+    @pytest.mark.parametrize("axis", (0, 1, None))
     @pytest.mark.parametrize(
-        'where',
+        "where",
         (
             np.array([False, True, True]),
             np.array([[True], [False], [True]]),
@@ -1632,10 +1581,10 @@ class TestUfunc(object):
 
     @pytest.mark.skip("TODO: Adapt this test for riptable?")
     @pytest.mark.parametrize(
-        ('axis', 'where'),
+        ("axis", "where"),
         ((0, np.array([True, False, True])), (1, [True, True, False]), (None, True)),
     )
-    @pytest.mark.parametrize('initial', (-np.inf, 5.0))
+    @pytest.mark.parametrize("initial", (-np.inf, 5.0))
     def test_reduction_with_where_and_initial(self, axis, where, initial):
         a = np.arange(9.0).reshape(3, 3)
         a_copy = a.copy()
@@ -1697,9 +1646,7 @@ class TestUfunc(object):
             expect(func, np.zeros((n // 2, m, n // 2)), axis=1)
             expect(func, np.zeros((n, m // 2, m // 2)), axis=(1, 2))
             expect(func, np.zeros((m // 2, n, m // 2)), axis=(0, 2))
-            expect(
-                func, np.zeros((m // 3, m // 3, m // 3, n // 2, n // 2)), axis=(0, 1, 2)
-            )
+            expect(func, np.zeros((m // 3, m // 3, m // 3, n // 2, n // 2)), axis=(0, 1, 2))
             # Check what happens if the inner (resp. outer) dimensions are a
             # mix of zero and non-zero:
             expect(func, np.zeros((10, m, n)), axis=(0, 1))
@@ -1763,9 +1710,9 @@ class TestUfunc(object):
     def test_ufunc_custom_out(self):
         # Test ufunc with built in input types and custom output type
 
-        a = np.array([0, 1, 2], dtype='i8')
+        a = np.array([0, 1, 2], dtype="i8")
         a = FA(a)
-        b = np.array([0, 1, 2], dtype='i8')
+        b = np.array([0, 1, 2], dtype="i8")
         b = FA(b)
         c = np.empty(3, dtype=_rational_tests.rational)
         c = FA(c)
@@ -1794,16 +1741,16 @@ class TestUfunc(object):
 
     # FA ready
     def test_operand_flags(self):
-        a = np.arange(16, dtype='l').reshape(4, 4)
+        a = np.arange(16, dtype="l").reshape(4, 4)
         a = FA(a)
-        b = np.arange(9, dtype='l').reshape(3, 3)
+        b = np.arange(9, dtype="l").reshape(3, 3)
         b = FA(b)
         opflag_tests.inplace_add(a[:-1, :-1], b)
         assert_equal(
             a,
             np.array(
                 [[0, 2, 4, 3], [7, 9, 11, 7], [14, 16, 18, 11], [12, 13, 14, 15]],
-                dtype='l',
+                dtype="l",
             ),
         )
 
@@ -1818,13 +1765,13 @@ class TestUfunc(object):
     def test_struct_ufunc(self):
         import numpy.core._struct_ufunc_tests as struct_ufunc
 
-        a = np.array([(1, 2, 3)], dtype='u8,u8,u8')
+        a = np.array([(1, 2, 3)], dtype="u8,u8,u8")
         a = FA(a)
-        b = np.array([(1, 2, 3)], dtype='u8,u8,u8')
+        b = np.array([(1, 2, 3)], dtype="u8,u8,u8")
         b = FA(b)
 
         result = struct_ufunc.add_triplet(a, b)
-        assert_equal(result, np.array([(2, 4, 6)], dtype='u8,u8,u8'))
+        assert_equal(result, np.array([(2, 4, 6)], dtype="u8,u8,u8"))
         assert_raises(RuntimeError, struct_ufunc.register_fail)
 
     # FA NOT applicable
@@ -2021,7 +1968,7 @@ class TestUfunc(object):
         assert_equal(a, [1, 1, 1, 3, 1, 5, 1, 7, 1, 9])
 
         # Test unary operator
-        a = np.arange(10, dtype='u4')
+        a = np.arange(10, dtype="u4")
         a = FA(a)
         np.invert.at(a, [2, 5, 2])
         assert_equal(a, [0, 1, 2, 3, 4, 5 ^ 0xFFFFFFFF, 6, 7, 8, 9])
@@ -2041,10 +1988,10 @@ class TestUfunc(object):
         # assert_array_equal(values, [1, 8, 6, 4])
 
         # Test exception thrown
-        values = np.array(['a', 1], dtype=object)
+        values = np.array(["a", 1], dtype=object)
         values = FA(values)
         assert_raises(TypeError, np.add.at, values, [0, 1], 1)
-        assert_array_equal(values, np.array(['a', 1], dtype=object))
+        assert_array_equal(values, np.array(["a", 1], dtype=object))
 
         # Test multiple output ufuncs raise error, gh-5665
         assert_raises(ValueError, np.modf.at, np.arange(10), [1])
@@ -2062,8 +2009,8 @@ class TestUfunc(object):
         assert_equal(f(d, axis=0), r)
         assert_equal(f(d, 0), r)
         assert_equal(f(d, 0, dtype=None), r)
-        assert_equal(f(d, 0, dtype='i'), r)
-        assert_equal(f(d, 0, 'i'), r)
+        assert_equal(f(d, 0, dtype="i"), r)
+        assert_equal(f(d, 0, "i"), r)
         assert_equal(f(d, 0, None), r)
         assert_equal(f(d, 0, None, out=None), r)
         assert_equal(f(d, 0, None, out=o), r)
@@ -2107,9 +2054,7 @@ class TestUfunc(object):
         assert_raises(TypeError, f, d, axis=0, dtype=None, invalid=0)
         assert_raises(TypeError, f, d, invalid=0)
         assert_raises(TypeError, f, d, 0, keepdims=True, invalid="invalid", out=None)
-        assert_raises(
-            TypeError, f, d, axis=0, dtype=None, keepdims=True, out=None, invalid=0
-        )
+        assert_raises(TypeError, f, d, axis=0, dtype=None, keepdims=True, out=None, invalid=0)
         assert_raises(TypeError, f, d, axis=0, dtype=None, out=None, invalid=0)
 
     # FA NOT applicable
@@ -2119,12 +2064,10 @@ class TestUfunc(object):
 
         class MyA(np.ndarray):
             def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-                return getattr(ufunc, method)(
-                    *(input.view(np.ndarray) for input in inputs), **kwargs
-                )
+                return getattr(ufunc, method)(*(input.view(np.ndarray) for input in inputs), **kwargs)
 
         a = np.arange(12.0).reshape(4, 3)
-        ra = a.view(dtype=('f8,f8,f8')).squeeze()
+        ra = a.view(dtype=("f8,f8,f8")).squeeze()
         mra = ra.view(MyA)
 
         target = np.array([True, False, False, False], dtype=bool)
@@ -2135,7 +2078,7 @@ class TestUfunc(object):
         # Scalar comparisons should always work, without deprecation warnings.
         # even when the ufunc fails.
         a = np.array(0.0)
-        b = np.array('a')
+        b = np.array("a")
         assert_(a != b)
         assert_(b != a)
         assert_(not (a == b))
@@ -2178,7 +2121,7 @@ class TestUfunc(object):
             np.not_equal,
         ]
 
-        a = np.array('1')
+        a = np.array("1")
         a = FA(a)
         b = 1
         c = np.array([1.0, 2.0])
@@ -2215,7 +2158,7 @@ class TestUfunc(object):
     @pytest.mark.skip("Not applicable to riptable FastArray.")
     def test_no_doc_string(self):
         # gh-9337
-        assert_('\n' not in umt.inner1d_no_doc.__doc__)
+        assert_("\n" not in umt.inner1d_no_doc.__doc__)
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable FastArray.")
@@ -2223,11 +2166,11 @@ class TestUfunc(object):
         # gh-7961
         exc = pytest.raises(TypeError, np.sqrt, None)
         # minimally check the exception text
-        assert exc.match('loop of ufunc does not support')
+        assert exc.match("loop of ufunc does not support")
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable.")
-    @pytest.mark.parametrize('nat', [np.datetime64('nat'), np.timedelta64('nat')])
+    @pytest.mark.parametrize("nat", [np.datetime64("nat"), np.timedelta64("nat")])
     def test_nat_is_not_finite(self, nat):
         try:
             assert not np.isfinite(nat)
@@ -2236,7 +2179,7 @@ class TestUfunc(object):
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable.")
-    @pytest.mark.parametrize('nat', [np.datetime64('nat'), np.timedelta64('nat')])
+    @pytest.mark.parametrize("nat", [np.datetime64("nat"), np.timedelta64("nat")])
     def test_nat_is_nan(self, nat):
         try:
             assert np.isnan(nat)
@@ -2245,7 +2188,7 @@ class TestUfunc(object):
 
     # FA NOT applicable
     @pytest.mark.skip("Not applicable to riptable.")
-    @pytest.mark.parametrize('nat', [np.datetime64('nat'), np.timedelta64('nat')])
+    @pytest.mark.parametrize("nat", [np.datetime64("nat"), np.timedelta64("nat")])
     def test_nat_is_not_inf(self, nat):
         try:
             assert not np.isinf(nat)
@@ -2254,22 +2197,20 @@ class TestUfunc(object):
 
 
 # FA ready
-@pytest.mark.parametrize(
-    'ufunc', [getattr(np, x) for x in dir(np) if isinstance(getattr(np, x), np.ufunc)]
-)
+@pytest.mark.parametrize("ufunc", [getattr(np, x) for x in dir(np) if isinstance(getattr(np, x), np.ufunc)])
 def test_ufunc_types(ufunc):
-    '''
+    """
     Check all ufuncs that the correct type is returned. Avoid
     object and boolean types since many operations are not defined for
     for them.
 
     Choose the shape so even dot and matmul will succeed
-    '''
+    """
     for typ in ufunc.types:
         # types is a list of strings like ii->i
-        if 'O' in typ or '?' in typ:
+        if "O" in typ or "?" in typ:
             continue
-        inp, out = typ.split('->')
+        inp, out = typ.split("->")
         args = [rt.ones((3, 3), t) for t in inp]
         with warnings.catch_warnings(record=True):
             warnings.filterwarnings("always")
@@ -2284,23 +2225,19 @@ def test_ufunc_types(ufunc):
 
 
 # FA NOT support
-@pytest.mark.skip(
-    "This test utilizes an operation which is explicitly not supported by FastArray."
-)
-@pytest.mark.parametrize(
-    'ufunc', [getattr(np, x) for x in dir(np) if isinstance(getattr(np, x), np.ufunc)]
-)
+@pytest.mark.skip("This test utilizes an operation which is explicitly not supported by FastArray.")
+@pytest.mark.parametrize("ufunc", [getattr(np, x) for x in dir(np) if isinstance(getattr(np, x), np.ufunc)])
 def test_ufunc_noncontiguous(ufunc):
-    '''
+    """
     Check that contiguous and non-contiguous calls to ufuncs
     have the same results for values in range(9)
-    '''
+    """
     for typ in ufunc.types:
         # types is a list of strings like ii->i
-        if any(set('O?mM') & set(typ)):
+        if any(set("O?mM") & set(typ)):
             # bool, object, datetime are too irregular for this simple test
             continue
-        inp, out = typ.split('->')
+        inp, out = typ.split("->")
         args_c = [np.empty(6, t) for t in inp]
         args_n = [np.empty(18, t)[::3] for t in inp]
         for a in args_c:

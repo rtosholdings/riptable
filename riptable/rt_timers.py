@@ -1,47 +1,43 @@
-__all__ = [
-    'GetNanoTime', 'GetTSC',
-    'tic', 'toc',
-    'ticx', 'tocx',
-    'tt', 'ttx',
-    'ticp', 'tocp',
-    'ticf', 'tocf',
-    'utcnow'
-]
+__all__ = ["GetNanoTime", "GetTSC", "tic", "toc", "ticx", "tocx", "tt", "ttx", "ticp", "tocp", "ticf", "tocf", "utcnow"]
 
-'''
+"""
 Timing and profiling functionality
-'''
+"""
 
 import logging
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import riptide_cpp as rc
+
 from riptable.rt_enum import TypeRegister
 
 if TYPE_CHECKING:
     from .rt_datetime import DateTimeNano
 
+
 def GetNanoTime() -> int:
-    '''
+    """
     Returns: a long integer in unix epoch nanoseconds
     Note: this function is written as fast as possible for both Windows and Linux
-    '''
+    """
     return rc.GetNanoTime()
 
+
 def GetTSC() -> int:
-    '''
+    """
     Returns: a long integer from the CPUs's current time stamp counter
 
     time stamp counter (TSC) are based on the CPUs's clock cycle, which is often above 1GHz
     thus GetTSC return values are guaranteed to be both unique and subsample below 1 nanosecond
 
     Note: this function is written as fast as possible for both Windows and Linux
-    '''
+    """
     return rc.GetTSC()
 
-def utcnow(count: int = 1) -> 'DateTimeNano':
-    '''
+
+def utcnow(count: int = 1) -> "DateTimeNano":
+    """
     Call `GetNanoTime` one or more times and return the timestamps in a :class:`~rt.rt_datetime.DateTimeNano` array.
 
     Parameters
@@ -71,28 +67,29 @@ def utcnow(count: int = 1) -> 'DateTimeNano':
     --------
     GetNanoTime()
     datetime.datetime.utcnow()
-    '''
+    """
     if count == 1:
-        return TypeRegister.DateTimeNano([rc.GetNanoTime()], from_tz='GMT')
+        return TypeRegister.DateTimeNano([rc.GetNanoTime()], from_tz="GMT")
     else:
-        x=[rc.GetNanoTime() for i in range(count)]
-        return TypeRegister.DateTimeNano(x, from_tz='GMT')
+        x = [rc.GetNanoTime() for i in range(count)]
+        return TypeRegister.DateTimeNano(x, from_tz="GMT")
+
 
 # Timing code below
 def tic():
-    '''
+    """
     Call tic() followed by code followed by toc() to time a routine in nanoseconds.
 
     See Also
     --------
     toc, ticx, ticp, ticf
-    '''
+    """
     global TicStartTime
     TicStartTime = GetNanoTime()
 
 
 def toc(logger: Optional[logging.Logger] = None) -> None:
-    '''
+    """
     Call tic() followed by code followed by toc() to time a routine in nanoseconds.
 
     Parameters
@@ -104,7 +101,7 @@ def toc(logger: Optional[logging.Logger] = None) -> None:
     See Also
     --------
     toc, ticx, ticp, ticf
-    '''
+    """
     global TicStartTime
     global TocEndTime
     TocEndTime = GetNanoTime()
@@ -116,21 +113,22 @@ def toc(logger: Optional[logging.Logger] = None) -> None:
     else:
         delta = delta_ns / 1_000_000_000.0
         deltaTime = float("{0:.6f}".format(delta))
-        print("Elapsed time",deltaTime,"seconds.")
+        print("Elapsed time", deltaTime, "seconds.")
+
 
 # even more accurate cycle counting
 def ticx():
-    '''
+    """
     Call ticx() followed by code followed by tocx() to time a routine in TSC
 
     See also: toc, ticx, ticp, ticf
-    '''
+    """
     global TicStartTimeX
     TicStartTimeX = GetTSC()
 
 
 def tocx(logger: Optional[logging.Logger] = None) -> None:
-    '''
+    """
     Call ticx() followed by code followed by tocx() to time a routine in TSC
 
     Parameters
@@ -140,7 +138,7 @@ def tocx(logger: Optional[logging.Logger] = None) -> None:
         If not specified (the default), the timing information is written to stdout.
 
     See also: toc, ticx, ticp, ticf
-    '''
+    """
     global TicStartTimeX
     global TocEndTimeX
     TocEndTimeX = GetTSC()
@@ -150,44 +148,49 @@ def tocx(logger: Optional[logging.Logger] = None) -> None:
     if logger:
         logger.debug("Elapsed time (cycles): %d", delta_cycles)
     else:
-        print("Elapsed time", delta_cycles,"cycles.")
+        print("Elapsed time", delta_cycles, "cycles.")
+
 
 def ticf():
-    '''
+    """
     Call ticf() followed by code followed by tocf() to time fastarrays
 
     See also: toc, ticx, ticp, ticf
-    '''
-    FA=TypeRegister.FastArray
+    """
+    FA = TypeRegister.FastArray
     FA._LCLEAR()
     FA._LON()
 
+
 def tocf(dataset=True):
-    '''
+    """
     Call ticf() followed by code followed by tocf() to time fastarrays
 
     Parameters
     ----------------
     dataset: bool, defaults to True.
         If specified, returns a Dataset. Set to False to print out instead.
-    '''
-    FA=TypeRegister.FastArray
+    """
+    FA = TypeRegister.FastArray
     FA._LOFF()
     return TypeRegister.MathLedger._LDUMP()
 
+
 def ticp():
-    '''
+    """
     Call ticp() followed by code followed by tocp() to profile function calls
 
     See also: toc, ticx, ticp, ticf
-    '''
+    """
     import cProfile
+
     global pr
     pr = cProfile.Profile()
     pr.enable()
 
-def tocp(dataset=True, logfile=None, sort='time', strip=True, stats=False, calls=False, find=None):
-    '''
+
+def tocp(dataset=True, logfile=None, sort="time", strip=True, stats=False, calls=False, find=None):
+    """
     Call ticp() followed by code followed by tocp() to profile anything between the ticp/tocp
     tocp() may be called again to retrieve data in a different manner
 
@@ -248,28 +251,30 @@ def tocp(dataset=True, logfile=None, sort='time', strip=True, stats=False, calls
             reccallcount  how many times this is called recursively
             totaltime     total time spent in this call
             inlinetime    inline time (not in further subcalls)
-    '''
+    """
     global pr
     pr.disable()
     if stats:
         return pr.getstats()
 
     if dataset:
-        if sort == 'time': sort='tottime'
+        if sort == "time":
+            sort = "tottime"
         ds = snapshot_stats(pr, sort=sort, calls=calls, findfunc=find)
         if logfile is not None:
             ds.save(logfile)
         return ds
     else:
         import pstats
+
         if strip:
             pstats.Stats(pr).strip_dirs().sort_stats(sort).print_stats()
         else:
             pstats.Stats(pr).sort_stats(sort).print_stats()
 
 
-def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
-    '''
+def snapshot_stats(pr, sort="tottime", calls=True, findfunc=None):
+    """
     Parameters
     ----------
     pr:
@@ -284,12 +289,12 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
     Returns
     -------
     a Dataset
-    '''
+    """
     import os
 
     if findfunc is not None:
         try:
-            funcname, linenum = findfunc.split(':')
+            funcname, linenum = findfunc.split(":")
             linenum = int(linenum)
         except Exception:
             funcname = findfunc
@@ -298,38 +303,37 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
     def parse_func_info(tup):
         func_str = []
 
-        filepath = '~'
+        filepath = "~"
         # module
-        if tup[0] != '~':
+        if tup[0] != "~":
             # parse file name
             normpath = os.path.normpath(tup[0])
             basename = os.path.basename(normpath)
             func_str.append(basename)
-            filepath=normpath[:-len(basename)]
+            filepath = normpath[: -len(basename)]
 
         # line_number
         if tup[1] != 0:
-            func_str.append(':'+str(tup[1]))
+            func_str.append(":" + str(tup[1]))
 
         # func name
         if len(func_str) != 0:
-            func_str.append('('+tup[2]+')')
+            func_str.append("(" + tup[2] + ")")
 
         # python func
         else:
             func_str.append(tup[2])
             # to match pstats display
-            func_str[0].replace('<','{')
-            func_str[0].replace('>','}')
+            func_str[0].replace("<", "{")
+            func_str[0].replace(">", "}")
 
         return "".join(func_str), filepath
-
 
     entries = pr.getstats()
     stats = {}
     callersdicts = {}
 
-    #def get_top_level_stats(self):
+    # def get_top_level_stats(self):
     #    for func, (cc, nc, tt, ct, callers) in self.stats.items():
     #        self.total_calls += nc
     #        self.prim_calls  += cc
@@ -341,14 +345,14 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
 
         code = entry.code
         if isinstance(code, str):
-            func= ('~', 0, code)    # built-in functions ('~' sorts at the end)
+            func = ("~", 0, code)  # built-in functions ('~' sorts at the end)
         else:
-            func= (code.co_filename, code.co_firstlineno, code.co_name)
+            func = (code.co_filename, code.co_firstlineno, code.co_name)
 
-        nc = entry.callcount         # ncalls column of pstats (before '/')s
-        cc = nc - entry.reccallcount # ncalls column of pstats (after '/')
-        tt = entry.inlinetime        # tottime column of pstats
-        ct = entry.totaltime         # cumtime column of pstats
+        nc = entry.callcount  # ncalls column of pstats (before '/')s
+        cc = nc - entry.reccallcount  # ncalls column of pstats (after '/')
+        tt = entry.inlinetime  # tottime column of pstats
+        ct = entry.totaltime  # cumtime column of pstats
         callers = {}
         callersdicts[id(entry.code)] = callers
         stats[func] = cc, nc, tt, ct, callers
@@ -358,9 +362,9 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
         if entry.calls:
             code = entry.code
             if isinstance(code, str):
-                func= ('~', 0, code)    # built-in functions ('~' sorts at the end)
+                func = ("~", 0, code)  # built-in functions ('~' sorts at the end)
             else:
-                func= (code.co_filename, code.co_firstlineno, code.co_name)
+                func = (code.co_filename, code.co_firstlineno, code.co_name)
 
             for subentry in entry.calls:
                 try:
@@ -393,16 +397,16 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
         for func_info, (cc, nc, tt, ct, callers) in stats.items():
             callercount = len(callers)
             if callercount > 0:
-                name, filepath =(parse_func_info(func_info))
-                if name[0] != '<':
-                    funcn, stuff = name.split(':')
-                    lineno, stuff = stuff.split('(')
+                name, filepath = parse_func_info(func_info)
+                if name[0] != "<":
+                    funcn, stuff = name.split(":")
+                    lineno, stuff = stuff.split("(")
                     lineno = int(lineno)
                     if (linenum is None or lineno == linenum) and funcn == funcname:
                         # NOTE: not sure this is
-                        for k,v in callers.items():
-                            name, filepathc = (parse_func_info(k))
-                            cc1, nc1, tt1, ct1 = (v)
+                        for k, v in callers.items():
+                            name, filepathc = parse_func_info(k)
+                            cc1, nc1, tt1, ct1 = v
 
                             callcount.append(cc1)
                             ncalls.append(nc1)
@@ -410,12 +414,9 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
                             cumtime.append(ct1)
                             names.append(name)
 
-        ds = TypeRegister.Dataset({
-            'ncalls' : ncalls,
-            'tottime' : tottime,
-            'cumtime' : cumtime,
-            'callers' : callcount,
-            'function' : names})
+        ds = TypeRegister.Dataset(
+            {"ncalls": ncalls, "tottime": tottime, "cumtime": cumtime, "callers": callcount, "function": names}
+        )
 
     else:
         ncalls = []
@@ -428,7 +429,6 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
         path = []
         pathc = []
 
-
         for func_info, (cc, nc, tt, ct, callers) in stats.items():
             ncalls.append(nc)
             tottime.append(tt)
@@ -436,33 +436,30 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
             callcount.append(cc)
             callercount = len(callers)
             ncallers.append(callercount)
-            name, filepath =(parse_func_info(func_info))
+            name, filepath = parse_func_info(func_info)
             names.append(name)
 
             # does user want more information?
             if calls:
-                filepathc = '~'
+                filepathc = "~"
                 if callercount > 0:
                     firstcall = next(iter(callers))
-                    firstcall, filepathc =(parse_func_info(firstcall))
-                    #firstcall = f'{firstcall[0]}:{firstcall[1]}({firstcall[2]})'
+                    firstcall, filepathc = parse_func_info(firstcall)
+                    # firstcall = f'{firstcall[0]}:{firstcall[1]}({firstcall[2]})'
                 else:
-                    firstcall = '~'
+                    firstcall = "~"
                 firstcaller.append(firstcall)
                 path.append(filepath)
                 pathc.append(filepathc)
 
-        ds = TypeRegister.Dataset({
-            'ncalls' : ncalls,
-            'tottime' : tottime,
-            'cumtime' : cumtime,
-            'callers' : ncallers,
-            'function' : names})
+        ds = TypeRegister.Dataset(
+            {"ncalls": ncalls, "tottime": tottime, "cumtime": cumtime, "callers": ncallers, "function": names}
+        )
 
         if calls:
-            ds['filepath'] = path
+            ds["filepath"] = path
 
-        arr_callcount=np.asanyarray(callcount)
+        arr_callcount = np.asanyarray(callcount)
         ds.percallT = ds.tottime / ds.ncalls
         ds.percallC = ds.cumtime / arr_callcount
 
@@ -470,87 +467,89 @@ def snapshot_stats(pr, sort='tottime', calls=True, findfunc=None):
 
         # check if they want information on the caller
         if calls:
-            ds['callee'] = firstcaller
-            ds['filepathc'] = pathc
+            ds["callee"] = firstcaller
+            ds["filepathc"] = pathc
 
     # NOTE: need an option for this to not SORT because that is the order
     return ds.sort_inplace(sort, ascending=False)
 
-def tt(expression:str, loops=1, return_time=False):
-    '''
+
+def tt(expression: str, loops=1, return_time=False):
+    """
     tictoc time an expression in nanoseconds.  use ; to separate lines
 
     Args:
         arg1 is a string of code to execute
         arg2 is optional and is how many loops to execute
 
-    '''
-    #import __builtin__
-    #__builtin__.__dict__.update(locals())
+    """
+    # import __builtin__
+    # __builtin__.__dict__.update(locals())
     import inspect
+
     frame = inspect.currentframe()
 
     # allow callee to use ; for new lines
-    codestr=expression.replace('; ','\n')
-    codestr=codestr.replace(';','\n')
+    codestr = expression.replace("; ", "\n")
+    codestr = codestr.replace(";", "\n")
 
     # compile to byte code first to eliminate compile time in calculation
-    code=compile(codestr,'<string>','exec')
+    code = compile(codestr, "<string>", "exec")
 
-    #preallocate array of floats
-    aTimers=loops*[0.0]
+    # preallocate array of floats
+    aTimers = loops * [0.0]
 
     for i in range(loops):
         startTime = GetNanoTime()
         exec(code, frame.f_back.f_globals, frame.f_back.f_locals)
         endTime = GetNanoTime()
-        aTimers[i]=(endTime - startTime) / 1000000000.0
+        aTimers[i] = (endTime - startTime) / 1000000000.0
 
-    if loops==1:
+    if loops == 1:
         deltaTime = float("{0:.6f}".format(aTimers[0]))
         if return_time:
             return deltaTime
-        print("Elapsed time",deltaTime,"seconds.")
+        print("Elapsed time", deltaTime, "seconds.")
     else:
-        mTime=np.median(aTimers)
+        mTime = np.median(aTimers)
         deltaTime = float("{0:.6f}".format(mTime))
         if return_time:
             return deltaTime
-        print("Median",loops,"runs",deltaTime,"seconds.")
+        print("Median", loops, "runs", deltaTime, "seconds.")
 
 
-def ttx(expression:str, loops=1):
-    '''
+def ttx(expression: str, loops=1):
+    """
     tictoc time an expression in TSC (time stamp counters).  use ; to separate lines
 
     Args:
         arg1 is a string of code to execute
         arg2 is optional and is how many loops to execute
 
-    '''
+    """
     import inspect
+
     frame = inspect.currentframe()
 
     # allow callee to use ; for new lines
-    codestr=expression.replace(';','\n')
+    codestr = expression.replace(";", "\n")
 
     # compile to byte code first to eliminate compile time in calculation
-    code=compile(codestr,'<string>','exec')
+    code = compile(codestr, "<string>", "exec")
 
-    #preallocate array of floats
-    aTimers=loops*[0]
+    # preallocate array of floats
+    aTimers = loops * [0]
 
     for i in range(loops):
         startTime = GetTSC()
         exec(code, frame.f_back.f_globals, frame.f_back.f_locals)
         endTime = GetTSC()
-        aTimers[i]=(endTime - startTime)
+        aTimers[i] = endTime - startTime
 
-    if loops==1:
+    if loops == 1:
         deltaTime = aTimers[0]
-        print("Elapsed time",deltaTime,"cycles.")
+        print("Elapsed time", deltaTime, "cycles.")
     else:
-        mTime=np.median(aTimers)
+        mTime = np.median(aTimers)
         deltaTime = mTime
-        print("Median",loops,"runs",deltaTime,"cycles.")
-
+        print("Median", loops, "runs", deltaTime, "cycles.")

@@ -1,20 +1,21 @@
-import numpy as np
 import random as rnd
 import unittest
 
-from riptable import Dataset, Cat
+import numpy as np
+
+from riptable import Cat, Dataset
 from riptable.rt_enum import INVALID_DICT
 
 master_type_dict = {
-    'bool': np.array([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=bool),
-    'int8': np.array(
+    "bool": np.array([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0], dtype=bool),
+    "int8": np.array(
         [
             26,
             1,
             -9,
-            INVALID_DICT[np.dtype('int8').num],
+            INVALID_DICT[np.dtype("int8").num],
             13,
-            INVALID_DICT[np.dtype('int8').num],
+            INVALID_DICT[np.dtype("int8").num],
             26,
             5,
             26,
@@ -27,7 +28,7 @@ master_type_dict = {
         ],
         dtype=np.int8,
     ),
-    'uint8': np.array(
+    "uint8": np.array(
         [
             45,
             57,
@@ -38,16 +39,16 @@ master_type_dict = {
             18,
             1,
             62,
-            INVALID_DICT[np.dtype('uint8').num],
+            INVALID_DICT[np.dtype("uint8").num],
             55,
             47,
             31,
-            INVALID_DICT[np.dtype('uint8').num],
+            INVALID_DICT[np.dtype("uint8").num],
             27,
         ],
         dtype=np.uint8,
     ),
-    'int16': np.array(
+    "int16": np.array(
         [
             -601,
             -332,
@@ -57,48 +58,48 @@ master_type_dict = {
             -357,
             -218,
             -673,
-            INVALID_DICT[np.dtype('int16').num],
+            INVALID_DICT[np.dtype("int16").num],
             378,
             -175,
             -529,
-            INVALID_DICT[np.dtype('int16').num],
+            INVALID_DICT[np.dtype("int16").num],
             -796,
             -365,
         ],
         dtype=np.int16,
     ),
-    'uint16': np.array(
+    "uint16": np.array(
         [
             1438,
             1723,
             433,
             1990,
-            INVALID_DICT[np.dtype('uint16').num],
+            INVALID_DICT[np.dtype("uint16").num],
             1528,
             1124,
             42,
             1316,
             1003,
             1874,
-            INVALID_DICT[np.dtype('uint16').num],
+            INVALID_DICT[np.dtype("uint16").num],
             1533,
             1443,
             1170,
         ],
         dtype=np.uint16,
     ),
-    'int32': np.array(
+    "int32": np.array(
         [
             1896652134,
             -1424042309,
-            INVALID_DICT[np.dtype('int32').num],
+            INVALID_DICT[np.dtype("int32").num],
             503239478,
             1067866129,
             -1974125613,
             -1608929297,
             -301645171,
             1402604369,
-            INVALID_DICT[np.dtype('int32').num],
+            INVALID_DICT[np.dtype("int32").num],
             1080040975,
             -289078200,
             -823277029,
@@ -107,11 +108,11 @@ master_type_dict = {
         ],
         dtype=np.int32,
     ),
-    'uint32': np.array(
+    "uint32": np.array(
         [
             337083591,
             688548370,
-            INVALID_DICT[np.dtype('uint32').num],
+            INVALID_DICT[np.dtype("uint32").num],
             580206095,
             328423284,
             211281118,
@@ -123,17 +124,17 @@ master_type_dict = {
             252319702,
             750186713,
             197297577,
-            INVALID_DICT[np.dtype('uint32').num],
+            INVALID_DICT[np.dtype("uint32").num],
         ],
         dtype=np.uint32,
     ),
-    'int64': np.array(
+    "int64": np.array(
         [
-            INVALID_DICT[np.dtype('int64').num],
+            INVALID_DICT[np.dtype("int64").num],
             -423272446,
             -235992796,
             -1442995093,
-            INVALID_DICT[np.dtype('int64').num],
+            INVALID_DICT[np.dtype("int64").num],
             109846344,
             -1458628816,
             232007889,
@@ -147,13 +148,13 @@ master_type_dict = {
         ],
         dtype=np.int64,
     ),
-    'uint64': np.array(
+    "uint64": np.array(
         [
             765232401,
             398653552,
             203749209,
             288238744,
-            INVALID_DICT[np.dtype('uint64').num],
+            INVALID_DICT[np.dtype("uint64").num],
             271583764,
             985270266,
             391578626,
@@ -162,12 +163,12 @@ master_type_dict = {
             694962930,
             34303390,
             647346354,
-            INVALID_DICT[np.dtype('uint64').num],
+            INVALID_DICT[np.dtype("uint64").num],
             334977533,
         ],
         dtype=np.uint64,
     ),
-    'float32': np.array(
+    "float32": np.array(
         [
             np.nan,
             0.6201803850883267,
@@ -186,7 +187,7 @@ master_type_dict = {
             0.28945199094333374,
         ]
     ).astype(np.float32),
-    'float64': np.array(
+    "float64": np.array(
         [
             0.264105510380617,
             np.nan,
@@ -205,43 +206,43 @@ master_type_dict = {
             np.nan,
         ]
     ).astype(np.float64),
-    'bytes': np.array(
+    "bytes": np.array(
         [
-            INVALID_DICT[np.dtype('bytes').num],
-            b'12398dfkw',
-            b'dlkv;lk3-2',
-            b'111dkjfj3',
-            b'e0383hjfns',
-            b'qwernvldkj',
-            b'abefgkejf',
-            b'as777nrn',
-            b'23dhsjkifuywfwefj',
-            INVALID_DICT[np.dtype('bytes').num],
-            b'zkdfjlw',
-            b'a',
-            br';][{}[\|||+=_-',
-            b'qwernvldkj',
-            b'abefgkejf',
+            INVALID_DICT[np.dtype("bytes").num],
+            b"12398dfkw",
+            b"dlkv;lk3-2",
+            b"111dkjfj3",
+            b"e0383hjfns",
+            b"qwernvldkj",
+            b"abefgkejf",
+            b"as777nrn",
+            b"23dhsjkifuywfwefj",
+            INVALID_DICT[np.dtype("bytes").num],
+            b"zkdfjlw",
+            b"a",
+            rb";][{}[\|||+=_-",
+            b"qwernvldkj",
+            b"abefgkejf",
         ],
         dtype=np.bytes_,
     ),
-    'unicode': np.array(
+    "unicode": np.array(
         [
-            'asdf233rf',
-            '12398dfkw',
-            'dlkv;lk3-2',
-            '111dkjfj3',
-            'e0383hjfns',
-            INVALID_DICT[np.dtype('str_').num],
-            'abefgkejf',
-            'as777nrn',
-            '23dhsjkifuywfwefj',
-            'rrrrn2fhfewl',
-            'zkdfjlw',
-            'a',
-            r';][{}[\|||+=_-',
-            'qwernvldkj',
-            INVALID_DICT[np.dtype('str_').num],
+            "asdf233rf",
+            "12398dfkw",
+            "dlkv;lk3-2",
+            "111dkjfj3",
+            "e0383hjfns",
+            INVALID_DICT[np.dtype("str_").num],
+            "abefgkejf",
+            "as777nrn",
+            "23dhsjkifuywfwefj",
+            "rrrrn2fhfewl",
+            "zkdfjlw",
+            "a",
+            r";][{}[\|||+=_-",
+            "qwernvldkj",
+            INVALID_DICT[np.dtype("str_").num],
         ],
         dtype=np.str_,
     ),
@@ -249,13 +250,13 @@ master_type_dict = {
 
 simple_keys = dict(
     zip(
-        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'],
+        ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m"],
         list(master_type_dict.values()),
     )
 )
 ds = Dataset(simple_keys)
 num_cols = len(simple_keys)
-num_rows = len(simple_keys['a'])
+num_rows = len(simple_keys["a"])
 dict_key_list = list(simple_keys.keys())
 dict_col_names = np.array(dict_key_list)
 # --------------------SLICE DATA---------------------------------------------
@@ -347,24 +348,19 @@ col_bool_arrays = {
 
 # ---------------------------------------------------------------------------
 col_string_lists = {
-    "col_names_size"
-    + str(sample_size): [
-        dict_key_list[i] for i in rnd.sample(range(1, num_cols), sample_size)
-    ]
+    "col_names_size" + str(sample_size): [dict_key_list[i] for i in rnd.sample(range(1, num_cols), sample_size)]
     for sample_size in range(1, num_cols)
 }
 
 # ---------------------------------------------------------------------------
 row_idx_arrays = {
-    "int_idx_size"
-    + str(idx_size): np.random.randint(low=0, high=num_rows, size=idx_size)
+    "int_idx_size" + str(idx_size): np.random.randint(low=0, high=num_rows, size=idx_size)
     for idx_size in range(1, num_rows)
 }
 
 # ---------------------------------------------------------------------------
 col_idx_arrays = {
-    "int_idx_size"
-    + str(idx_size): np.random.randint(low=0, high=num_cols, size=idx_size)
+    "int_idx_size" + str(idx_size): np.random.randint(low=0, high=num_cols, size=idx_size)
     for idx_size in range(1, num_cols)
 }
 
@@ -427,7 +423,7 @@ class Dataset_Slice_Accuracy(unittest.TestCase):
 
     def row_single(self):
         # [int]
-        dict_size = len(simple_keys['a'])
+        dict_size = len(simple_keys["a"])
         for input in range(dict_size):
             # TODO: fix bug where slice is [-1] in ds._getitem how single ints are handled
             ds1 = ds[input, :]
@@ -478,24 +474,19 @@ class Dataset_Slice_Accuracy(unittest.TestCase):
     def rsingle_cmulti(self, slice_dict):
         # [int, slice/bool/idx]
 
-        num_rows = len(simple_keys['a'])
+        num_rows = len(simple_keys["a"])
         for col_slice_str, col_slice in slice_dict.items():
             dict_sliced_col_names = dict_col_names[col_slice]
             for row_num in range(num_rows):
                 try:
                     ds1 = ds[row_num, col_slice]
                 except IndexError as e:
-                    self.assertEqual(e.args[0], 'Cannot index cols with duplicates.')
+                    self.assertEqual(e.args[0], "Cannot index cols with duplicates.")
                     continue
                 if ShowSliceInfo:
                     print(f"Checking ds[{row_num}, {col_slice_str}]")
-                dict_list = [
-                    simple_keys[dict_name][row_num]
-                    for dict_name in dict_sliced_col_names
-                ]
-                ds_list = [
-                    getattr(ds1, dict_name)[0] for dict_name in dict_sliced_col_names
-                ]
+                dict_list = [simple_keys[dict_name][row_num] for dict_name in dict_sliced_col_names]
+                ds_list = [getattr(ds1, dict_name)[0] for dict_name in dict_sliced_col_names]
                 self.match_lists(ds_list, dict_list)
 
     # --------------------------------------------------------------------------
@@ -507,7 +498,7 @@ class Dataset_Slice_Accuracy(unittest.TestCase):
                 try:
                     ds1 = ds[row_slice, col_slice]
                 except IndexError as e:
-                    self.assertEqual(e.args[0], 'Cannot index cols with duplicates.')
+                    self.assertEqual(e.args[0], "Cannot index cols with duplicates.")
                     continue
                 if ShowSliceInfo:
                     print(f"Checking ds[{row_slice_str}, {col_slice_str}]")
@@ -544,9 +535,7 @@ class Dataset_Slice_Accuracy(unittest.TestCase):
 
                 if ShowSliceInfo:
                     print("Checking ds[" + str(row_num) + "," + col_str + "]")
-                dict_list = [
-                    simple_keys[dict_name][row_num] for dict_name in col_stringlist
-                ]
+                dict_list = [simple_keys[dict_name][row_num] for dict_name in col_stringlist]
                 ds_list = [getattr(ds1, dict_name)[0] for dict_name in col_stringlist]
                 self.match_lists(ds_list, dict_list)
 
@@ -604,30 +593,30 @@ class Dataset_Slice_Accuracy(unittest.TestCase):
         arrsize = 200
         numrows = 7
 
-        ds = Dataset({'time': np.arange(arrsize * 1.0)})
+        ds = Dataset({"time": np.arange(arrsize * 1.0)})
         ds.data = np.random.randint(numrows, size=arrsize)
         ds.data2 = np.random.randint(numrows, size=arrsize)
         symbols = [
-            'AAPL',
-            'AMZN',
-            'FB',
-            'GOOG',
-            'IBM',
-            '6',
-            '7',
-            '8',
-            '9',
-            '10',
-            '11',
-            '12',
-            '13',
-            '14',
-            '15',
-            '16',
-            '17',
-            '18',
+            "AAPL",
+            "AMZN",
+            "FB",
+            "GOOG",
+            "IBM",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
         ]
-        symbol2 = ['A', 'X', 'P', 'C', 'D', 'E', 'F', 'G', 'G', 'I', 'J', 'K']
+        symbol2 = ["A", "X", "P", "C", "D", "E", "F", "G", "G", "I", "J", "K"]
         ds.symbol2 = Cat(1 + np.arange(arrsize) % len(symbol2), symbol2)
         ds.symbol = Cat(1 + np.arange(arrsize) % len(symbols), symbols)
 
@@ -635,11 +624,11 @@ class Dataset_Slice_Accuracy(unittest.TestCase):
         del x.symbol
         del x.data
         del x.time
-        x.label_set_names('data2')
+        x.label_set_names("data2")
 
         # now x has two columns, and one is labelled so adding an entire dataset should just add x.symbol2
         ds.junk = x
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

@@ -10,14 +10,12 @@ from typing import List
 import numpy as np
 from numpy.random import default_rng
 
-from .benchmark import _timestamp_funcs
-from .rand_data import rand_array, rand_fancyindex, rand_keyarray
-from .runner import create_comparison_dataset, create_trial_dataset
-
 from ..rt_dataset import Dataset
 from ..rt_grouping import Grouping
 from ..rt_numpy import empty, groupbyhash, groupbylex, groupbypack
-
+from .benchmark import _timestamp_funcs
+from .rand_data import rand_array, rand_fancyindex, rand_keyarray
+from .runner import create_comparison_dataset, create_trial_dataset
 
 logger = logging.getLogger(__name__)
 """The logger for this module."""
@@ -65,9 +63,7 @@ def bench_groupbyhash(**kwargs) -> Dataset:
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        key_data = rand_keyarray(
-            rng, rowcount, dtype=np.dtype(dtype), unique_count=key_unique_count
-        )
+        key_data = rand_keyarray(rng, rowcount, dtype=np.dtype(dtype), unique_count=key_unique_count)
 
         # Sweep over other parameters that aren't required by the setup phase.
         other_params = use_hints  # itertools.product(use_hints, ...)
@@ -140,9 +136,7 @@ def bench_groupbylex(**kwargs) -> Dataset:
 
     # Parameters to sweep over for the benchmark which are *not* required for the setup phase.
     # TODO: Enable this parameter once we support multi-keys in this benchmark.
-    as_recarrays = [
-        False
-    ]  # , True]     # Use to set the 'rec' parameter for groupbylex; only meaningful for multi-key
+    as_recarrays = [False]  # , True]     # Use to set the 'rec' parameter for groupbylex; only meaningful for multi-key
 
     # Datasets containing timing data and parameters from the trials in this benchmark.
     benchmark_data: List[Dataset] = []
@@ -154,9 +148,7 @@ def bench_groupbylex(**kwargs) -> Dataset:
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        key_data = rand_keyarray(
-            rng, rowcount, dtype=np.dtype(dtype), unique_count=key_unique_count
-        )
+        key_data = rand_keyarray(rng, rowcount, dtype=np.dtype(dtype), unique_count=key_unique_count)
 
         # Sweep over other parameters that aren't required by the setup phase.
         for as_recarray in as_recarrays:
@@ -205,7 +197,6 @@ def bench_groupbypack(**kwargs) -> Dataset:
     #  * provide pcutoffs array?
     #  * number of threads
     #  * recycler on/off
-
     # Fixed parameters which apply to all of the trials in this benchmark.
     warmup_iters = 1
     iters = 5
@@ -237,9 +228,7 @@ def bench_groupbypack(**kwargs) -> Dataset:
         # Make sure to re-initialize the RNG each time so we get a repeatable result.
         rng = default_rng(rng_seed)
 
-        key_data = rand_keyarray(
-            rng, rowcount, dtype=np.dtype(dtype), unique_count=key_unique_count
-        )
+        key_data = rand_keyarray(rng, rowcount, dtype=np.dtype(dtype), unique_count=key_unique_count)
         gb_data = groupbyhash(key_data, hint_size=key_unique_count)
 
         # Sweep over other parameters that aren't required by the setup phase.
@@ -256,9 +245,7 @@ def bench_groupbypack(**kwargs) -> Dataset:
                     start_time_ns = timestamper()
 
                     ### The actual function invocation ###
-                    ncountgroup = rc.BinCount(
-                        gb_data["iKey"], gb_data["unique_count"] + 1
-                    )
+                    ncountgroup = rc.BinCount(gb_data["iKey"], gb_data["unique_count"] + 1)
                     groupbypack(gb_data["iKey"], ncountgroup)
 
                     ### Store the timing results (if this was a real invocation).

@@ -1,20 +1,21 @@
 import unittest
-import pytest
-from enum import IntEnum
 from contextlib import contextmanager
-from typing import Union, List
+from enum import IntEnum
+from typing import List, Union
+
+import pytest
 from IPython import get_ipython
 from IPython.core.completer import provisionalcompleter
 from IPython.terminal import ptutils
-from riptable import FastArray, Categorical, Dataset, Struct, Multiset, arange
-from riptable.Utils.ipython_utils import (
-    enable_custom_attribute_completion,
-    _get_key_names,
-)
+
+from riptable import Categorical, Dataset, FastArray, Multiset, Struct, arange
 from riptable.rt_misc import autocomplete
 from riptable.tests.test_categorical import decision_dict
 from riptable.tests.utils import LikertDecision
-
+from riptable.Utils.ipython_utils import (
+    _get_key_names,
+    enable_custom_attribute_completion,
+)
 
 _DEBUG = False
 
@@ -51,14 +52,14 @@ CODES = [1, 44, 44, 133, 75]
 # Tests should not depend on ordering of _RT_DATA_TABLE, see above work item.
 _RT_DATA_TABLE = [
     Categorical(
-        FastArray(['a', 'b', 'c', 'c', 'd', 'a', 'b']),
+        FastArray(["a", "b", "c", "c", "d", "a", "b"]),
         ordered=True,
         base_index=1,
         filter=None,
     ),
     Categorical(CODES, LikertDecision),
     Categorical(CODES, decision_dict),
-    Categorical(['b', 'a', 'a', 'c', 'a', 'b'], ['b', 'a', 'c', 'e'], sort_gb=True),
+    Categorical(["b", "a", "a", "c", "a", "b"], ["b", "a", "c", "e"], sort_gb=True),
     Dataset(
         {
             _k: list(range(_i * 10, (_i + 1) * 10))
@@ -89,17 +90,13 @@ _RT_DATA_TABLE = [
             "ds_alpha": Dataset(
                 {
                     k: list(range(i * 10, (i + 1) * 10))
-                    for i, k in enumerate(
-                        ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"]
-                    )
+                    for i, k in enumerate(["alpha", "beta", "gamma", "delta", "epsilon", "zeta"])
                 }
             ),
             "ds_beta": Dataset(
                 {
                     k: list(range(i * 10, (i + 1) * 10))
-                    for i, k in enumerate(
-                        ["eta", "theta", "iota", "kappa", "lambada", "mu"]
-                    )
+                    for i, k in enumerate(["eta", "theta", "iota", "kappa", "lambada", "mu"])
                 }
             ),
         }
@@ -108,9 +105,19 @@ _RT_DATA_TABLE = [
         {
             "alpha": 1,
             "beta": [2, 3],
-            "gamma": ['2', '3'],
+            "gamma": ["2", "3"],
             "delta": arange(10),
-            "epsilon": Struct({"theta": Struct({"kappa": 3, "zeta": 4,}), "iota": 2,}),
+            "epsilon": Struct(
+                {
+                    "theta": Struct(
+                        {
+                            "kappa": 3,
+                            "zeta": 4,
+                        }
+                    ),
+                    "iota": 2,
+                }
+            ),
         }
     ),
 ]
@@ -146,16 +153,14 @@ def get_completion_text(completion_type) -> str:
         text = "d."
     else:
         raise ValueError(
-            "get_completion_text: could not handled {} of type {}".format(
-                completion_type, type(completion_type)
-            )
+            "get_completion_text: could not handled {} of type {}".format(completion_type, type(completion_type))
         )
     return text
 
 
-@pytest.mark.parametrize('greedy_jedi_config_type', _GREEDY_JEDI_CONFIG_TABLE)
-@pytest.mark.parametrize('completion_type', _COMPLETION_TYPE_TABLE)
-@pytest.mark.parametrize('rt_data', _RT_DATA_TABLE)
+@pytest.mark.parametrize("greedy_jedi_config_type", _GREEDY_JEDI_CONFIG_TABLE)
+@pytest.mark.parametrize("completion_type", _COMPLETION_TYPE_TABLE)
+@pytest.mark.parametrize("rt_data", _RT_DATA_TABLE)
 def test_simple_completion(
     greedy_jedi_config_type: GreedyJediConfigType,
     completion_type: CompletionType,
@@ -216,10 +221,8 @@ class TestIPCompleterIntegration(unittest.TestCase):
     def test_categorical_string_array_key_completion(self):
         ip = get_ipython()
         complete = ip.Completer.complete
-        lst = ['a', 'b', 'c', 'c', 'd', 'a', 'b']  # type: List[str]
-        ip.user_ns["cat"] = Categorical(
-            FastArray(lst), ordered=True, base_index=1, filter=None
-        )
+        lst = ["a", "b", "c", "c", "d", "a", "b"]  # type: List[str]
+        ip.user_ns["cat"] = Categorical(FastArray(lst), ordered=True, base_index=1, filter=None)
         _, matches = complete(line_buffer="cat['")
         for s in lst:
             self.assertIn(s, matches)
@@ -259,8 +262,8 @@ class TestIPCompleterIntegration(unittest.TestCase):
         complete = ip.Completer.complete
 
         # note - 'e' is not in first list
-        lst1 = ['b', 'a', 'a', 'c', 'a', 'b']  # type: List[str]
-        lst2 = ['b', 'a', 'c', 'e']  # type: List[str]
+        lst1 = ["b", "a", "a", "c", "a", "b"]  # type: List[str]
+        lst2 = ["b", "a", "c", "e"]  # type: List[str]
         ip.user_ns["cat"] = Categorical(lst1, lst2, sort_gb=True)
         _, matches = complete(line_buffer="cat['")
         for c in lst1:
@@ -274,7 +277,7 @@ class TestIPCompleterIntegration(unittest.TestCase):
 
 # region rt_misc autocomplete
 @pytest.mark.parametrize(
-    'rt_data, text',
+    "rt_data, text",
     [
         # Simple attribute completion tests
         (_RT_DATA_TABLE[4], "d."),
@@ -290,9 +293,7 @@ class TestIPCompleterIntegration(unittest.TestCase):
         (_RT_DATA_TABLE[6], "s.epsilon.theta."),
     ],
 )
-def test_riptable_autocomplete_keys_ordering(
-    rt_data: Union[Dataset, Multiset, Struct], text: str
-):
+def test_riptable_autocomplete_keys_ordering(rt_data: Union[Dataset, Multiset, Struct], text: str):
     # Keys are expected to be in sorted order.
     autocomplete()
     with provisionalcompleter(), jedi_completion():
@@ -302,11 +303,7 @@ def test_riptable_autocomplete_keys_ordering(
         ns_key: str = text_split[0]
         ip.user_ns[ns_key] = rt_data
 
-        completions = list(
-            ptutils._deduplicate_completions(
-                text, ip.Completer.completions(text, len(text))
-            )
-        )
+        completions = list(ptutils._deduplicate_completions(text, ip.Completer.completions(text, len(text))))
         matches = [completion.text for completion in completions]
 
         expected_matches: List[str] = []
@@ -328,7 +325,7 @@ def test_riptable_autocomplete_keys_ordering(
 
 
 @pytest.mark.parametrize(
-    'rt_data, text',
+    "rt_data, text",
     [
         # Simple attribute completion tests
         (_RT_DATA_TABLE[4], "d."),
@@ -355,26 +352,18 @@ def test_riptable_autocomplete_equivalent_to_ipython_without_ordering(
         ns_key: str = text.split(".")[0]
         ip.user_ns[ns_key] = rt_data
 
-        expected_completions = list(
-            ptutils._deduplicate_completions(
-                text, ip.Completer.completions(text, len(text))
-            )
-        )
+        expected_completions = list(ptutils._deduplicate_completions(text, ip.Completer.completions(text, len(text))))
         expected_matches = set([completion.text for completion in expected_completions])
 
         autocomplete()
 
-        completions = list(
-            ptutils._deduplicate_completions(
-                text, ip.Completer.completions(text, len(text))
-            )
-        )
+        completions = list(ptutils._deduplicate_completions(text, ip.Completer.completions(text, len(text))))
         matches = set([completion.text for completion in completions])
 
         # IPython's set of completions should be the same as Riptable's set of completions.
         assert not expected_matches.symmetric_difference(
             matches
-        ), f'expected matches {expected_matches}\ngot matches {matches}'
+        ), f"expected matches {expected_matches}\ngot matches {matches}"
 
 
 # endregion rt_misc autocomplete
@@ -385,7 +374,7 @@ def test_riptable_autocomplete_equivalent_to_ipython_without_ordering(
 # As of 20191218, if ``CUSTOM_COMPLETION`` is toggled on it results in a one-time registration of custom
 # but does not support deregistration.
 @pytest.mark.parametrize(
-    'rt_data, text',
+    "rt_data, text",
     [
         # Simple attribute completion tests
         (_RT_DATA_TABLE[4], "d."),
@@ -401,9 +390,7 @@ def test_riptable_autocomplete_equivalent_to_ipython_without_ordering(
         (_RT_DATA_TABLE[6], "s.epsilon.theta."),
     ],
 )
-def test_monkey_patch_complete_match_ordering(
-    rt_data: Union[Dataset, Multiset, Struct], text: str
-):
+def test_monkey_patch_complete_match_ordering(rt_data: Union[Dataset, Multiset, Struct], text: str):
     # 1) Keys are expected to be in sorted order.
     enable_custom_attribute_completion()
 
@@ -436,5 +423,5 @@ def test_monkey_patch_complete_match_ordering(
 # endregion ipython_utils enable_custom_attribute_completion
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

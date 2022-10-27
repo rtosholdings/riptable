@@ -2,24 +2,23 @@
 Benchmarks for 'FastArray' operators (e.g. ``+``, ``*``, ``%``).
 """
 __all__ = [
-    'bench_op_add',
+    "bench_op_add",
 ]
 
 import itertools
 import logging
-import numpy as np
-
-from numpy.random import default_rng
 from itertools import product
 from typing import List, Tuple
 
-from .benchmark import timestamper
-from .rand_data import rand_dataset
-from .runner import create_comparison_dataset, create_trial_dataset, benchmark
+import numpy as np
+from numpy.random import default_rng
+
 from ..rt_categorical import Categorical
 from ..rt_dataset import Dataset
 from ..rt_numpy import empty
-
+from .benchmark import timestamper
+from .rand_data import rand_dataset
+from .runner import benchmark, create_comparison_dataset, create_trial_dataset
 
 logger = logging.getLogger(__name__)
 """The logger for this module."""
@@ -28,6 +27,7 @@ logger = logging.getLogger(__name__)
 def bench_op_add(**kwargs) -> Dataset:
     # Implement a benchmark that uses the __add__ operator on two FastArrays
     raise NotImplementedError()
+
 
 # TODO: Implement benchmarks for other operators; for each one, need to try all applicable cases:
 #   * ndarray vs. FastArray

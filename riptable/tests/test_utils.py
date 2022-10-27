@@ -1,8 +1,8 @@
-import unittest
 import string
-import riptable as rt
+import unittest
+from typing import Any, List, Optional, Union
 
-from typing import Optional, List, Any, Union
+import riptable as rt
 from riptable.rt_enum import CategoryMode
 
 #
@@ -57,13 +57,9 @@ def _get_categorical_multikey_data() -> List[List[rt.FastArray]]:
         results.append([rt.FA(values), rt.FA(values)])
     for values, values1 in zip(strings, numerics):  # two keys of different dtypes
         results.append([rt.FA(values), rt.FA(values1)])
-    for values, values1, values2 in zip(
-        strings, strings, numerics
-    ):  # three keys of different dtypes
+    for values, values1, values2 in zip(strings, strings, numerics):  # three keys of different dtypes
         results.append([rt.FA(values), rt.FA(values1), rt.FA(values2)])
-    for values, values1, values2, values3 in zip(
-        strings, strings, strings, numerics
-    ):  # four keys of different dtypes
+    for values, values1, values2, values3 in zip(strings, strings, strings, numerics):  # four keys of different dtypes
         results.append([rt.FA(values), rt.FA(values1), rt.FA(values2), rt.FA(values3)])
     return results
 
@@ -72,9 +68,7 @@ def verbose_categorical(categorical: rt.Categorical) -> str:
     lst = []
     lst.append(f"Categorical:\n{repr(categorical)}")
     lst.append(f"Type:\n{type(categorical)}")
-    lst.append(
-        f"Category mode:\n{repr(rt.rt_enum.CategoryMode(categorical.category_mode))}"
-    )
+    lst.append(f"Category mode:\n{repr(rt.rt_enum.CategoryMode(categorical.category_mode))}")
     lst.append(f"Lock:\n{categorical._locked}")
     # add support for multikey categoricals
     if categorical.category_mode != rt.rt_enum.CategoryMode.MultiKey:
@@ -108,11 +102,7 @@ def get_categorical_data_factory_method(
     >>> cats = [Categorical(values) for values in data]
     """
     if category_modes is None:  # return all types of categories
-        return (
-            get_categorical_base_data()
-            + _get_categorical_numeric_data()
-            + _get_categorical_multikey_data()
-        )
+        return get_categorical_base_data() + _get_categorical_numeric_data() + _get_categorical_multikey_data()
     if not isinstance(category_modes, list):  # wrap single category mode in a list
         category_modes = [category_modes]
 

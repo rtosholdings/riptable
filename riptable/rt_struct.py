@@ -1,35 +1,54 @@
-__all__ = ['Struct', ]
+__all__ = [
+    "Struct",
+]
 
-import keyword
-import warnings
-import os
-import sys
-import logging
-import json
 import itertools
-from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
+import json
+import keyword
+import logging
+import os
+import re
+import sys
+import warnings
 from collections import OrderedDict
 from re import IGNORECASE, compile
-import re
+from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import numpy as np
 import riptide_cpp as rc
 
-#from IPython import get_ipython
-#from IPython.display import display, HTML
-
-from .rt_utils import bytes_to_str, is_list_like, h5io_to_struct
-from .rt_sds  import save_sds, _load_sds, _multistack_categoricals, _rebuild_rootfile
-from .rt_timers import GetTSC
-from .rt_enum import DS_DISPLAY_TYPES, DisplayDetectModes, TypeRegister, NumpyCharTypes, TypeId, CategoryMode, INVALID_FILE_CHARS, SDSFlag, DisplayColumnColors, ColHeader, ColumnStyle
+from .rt_display import DisplayDetect, DisplayString, DisplayTable
+from .rt_enum import (
+    DS_DISPLAY_TYPES,
+    INVALID_FILE_CHARS,
+    CategoryMode,
+    ColHeader,
+    ColumnStyle,
+    DisplayColumnColors,
+    DisplayDetectModes,
+    NumpyCharTypes,
+    SDSFlag,
+    TypeId,
+    TypeRegister,
+)
 from .rt_hstack import hstack_any
-from .Utils.rt_display_nested import DisplayNested
-from .Utils.rt_metadata import MetaData
+from .rt_itemcontainer import (
+    ATTRIBUTE_MARGIN_COLUMN,
+    ATTRIBUTE_NUMBER_OF_FOOTER_ROWS,
+    ItemContainer,
+)
 from .rt_misc import build_header_tuples
-from .rt_itemcontainer import ItemContainer, ATTRIBUTE_MARGIN_COLUMN, ATTRIBUTE_NUMBER_OF_FOOTER_ROWS
-from .rt_numpy import mask_ori, mask_andi, arange, hstack
+from .rt_numpy import arange, hstack, mask_andi, mask_ori
+from .rt_sds import _load_sds, _multistack_categoricals, _rebuild_rootfile, save_sds
+from .rt_timers import GetTSC
+from .rt_utils import bytes_to_str, h5io_to_struct, is_list_like
+from .Utils.rt_display_nested import DisplayNested
 from .Utils.rt_display_properties import get_array_formatter
-from .rt_display import DisplayTable, DisplayDetect, DisplayString
+from .Utils.rt_metadata import MetaData
+
+# from IPython import get_ipython
+# from IPython.display import display, HTML
+
 
 # Type-checking-only imports.
 if TYPE_CHECKING:
@@ -207,13 +226,16 @@ class Struct:
         --------
         Struct.get_restricted_names
         """
-        if len(name) < 1: return False
+        if len(name) < 1:
+            return False
 
         # check for str or bytes and not leading underscore
         if isinstance(name, str):
-            if name[0]=='_': return False
+            if name[0] == "_":
+                return False
         elif isinstance(name, bytes):
-            if name[0]==b'_': return False
+            if name[0] == b"_":
+                return False
         else:
             return False
 
@@ -258,38 +280,39 @@ class Struct:
             seen.add(_nm)
             if not Struct.AllNames:
                 try:
-                    if _nm.startswith('_'):
+                    if _nm.startswith("_"):
                         invalid.append(_nm)
                 except:
-                    if _nm.startswith(b'_'):
+                    if _nm.startswith(b"_"):
                         invalid.append(_nm)
 
         if len(invalid) > 0:
             if self.__class__.WarnOnInvalidNames:
                 warnings.warn(
-                    f'Invalid column name(s) {invalid} --- please rename the column(s) or the class will lose this method.')
+                    f"Invalid column name(s) {invalid} --- please rename the column(s) or the class will lose this method."
+                )
             else:
-                raise ValueError('Invalid column names passed: {}'.format(', '.join(invalid)))
+                raise ValueError("Invalid column names passed: {}".format(", ".join(invalid)))
         if len(names) > len(seen):
-            raise ValueError('Duplicate column names passed.')
+            raise ValueError("Duplicate column names passed.")
 
     # ------------------------------------------------------------
     def _escape_invalid_file_chars(self, name):
-        '''
+        """
         Certain characters will cause problems in item names if a Struct needs to name an
         SDS file.
         ('\\', ':', '<', '>', '!', '|', '*', '?')
 
-        '''
-        if not isinstance(name,str):
-            name = name.decode('utf-8')
+        """
+        if not isinstance(name, str):
+            name = name.decode("utf-8")
         replace_list = []
         for char in INVALID_FILE_CHARS:
             if char in name:
                 replace_list.append(char)
 
         for c in replace_list:
-            name = name.replace(c,'_')
+            name = name.replace(c, "_")
 
         return name
 
@@ -301,12 +324,12 @@ class Struct:
             self._all_items = dictionary._all_items.copy()
             return
         if not isinstance(dictionary, dict):
-            raise TypeError(f'Unexpected type passed to Struct ctor: {type(dictionary).__name__}')
+            raise TypeError(f"Unexpected type passed to Struct ctor: {type(dictionary).__name__}")
         self._validate_names(dictionary)
 
         allnames = Struct.AllNames
         for k, v in dictionary.items():
-            if allnames or k[0] != '_':
+            if allnames or k[0] != "_":
                 # remember the original attributes in case we want to freeze later
                 if self.UseFastArray and isinstance(v, np.ndarray):
                     # flip value to FastArray
@@ -337,11 +360,11 @@ class Struct:
     def _superadditem(self, name, value):
         # the item will be added to the class dict
         try:
-            hasunderscore= name.startswith('_')
+            hasunderscore = name.startswith("_")
         except:
             # assume it failed because bytes passed
-            name=name.decode('utf-8')
-            hasunderscore= name.startswith('_')
+            name = name.decode("utf-8")
+            hasunderscore = name.startswith("_")
 
         if hasunderscore:
             # an underscore means it cannot be part of struct/dataset
@@ -351,9 +374,9 @@ class Struct:
 
     # ------------------------------------------------------------
     def _check_addtype(self, name, value):
-        '''
+        """
         override to check types
-        '''
+        """
         return value
 
     # ------------------------------------------------------------
@@ -374,7 +397,7 @@ class Struct:
         if value is not None:
             self.col_set_value(name, value)
             ncols = self._ncols + 1
-            self._superadditem('_ncols', ncols)
+            self._superadditem("_ncols", ncols)
 
     # ------------------------------------------------------------
     def _replaceitem(self, name, value):
@@ -394,7 +417,7 @@ class Struct:
         value = self._check_addtype(name, value)
         self._superadditem(name, value)
         ncols = self._ncols + 1
-        self._superadditem('_ncols', ncols)
+        self._superadditem("_ncols", ncols)
 
     # ------------------------------------------------------------
     def _deleteitem(self, name):
@@ -406,17 +429,17 @@ class Struct:
             self._update_sort(name)
 
             if self._ncols <= 0:
-                if hasattr(self, '_nrows'):
+                if hasattr(self, "_nrows"):
                     # print("Dataset is empty (has no rows).")
-                    self.__setattr__('_nrows', None)
+                    self.__setattr__("_nrows", None)
         else:
-            raise IndexError(f'Unknown column {name!r} does not exist and cannot be deleted.')
+            raise IndexError(f"Unknown column {name!r} does not exist and cannot be deleted.")
 
     # ------------------------------------------------------------
     def _update_sort(self, name):
-        '''
+        """
         Discard sort index if sortby item was removed or replaced.
-        '''
+        """
         if self._col_sortlist is not None:
             if name in self._col_sortlist:
                 self._col_sortlist = None
@@ -451,7 +474,7 @@ class Struct:
         # when an item is removed
         if self.is_locked():
             # locked and item is new
-            raise AttributeError(f'Not allowed to delete item {name} in locked object')
+            raise AttributeError(f"Not allowed to delete item {name} in locked object")
         else:
             self._deleteitem(name)
 
@@ -462,7 +485,7 @@ class Struct:
     # ------------------------------------------------------------
     def __setattr__(self, name, value):
         # when an item is replaced or added
-        if name.startswith('_'):
+        if name.startswith("_"):
             # internal or special item that we do not track
             # to add items with '_' set AllNames to True and user ['_someitem'] to add it
             # self._setattr(name,value)
@@ -475,10 +498,10 @@ class Struct:
                 # locked but not a new item
                 # NOTE: maybe we want to allow them to change?  Then uncomment and remove raise statement.
                 # self._replaceitem(name, value)
-                raise AttributeError(f'Not allowed to replace item {name} in locked object.')
+                raise AttributeError(f"Not allowed to replace item {name} in locked object.")
             else:
                 # locked and item is new
-                raise AttributeError(f'Not allowed to create new item {name} in locked object.')
+                raise AttributeError(f"Not allowed to create new item {name} in locked object.")
 
         elif self.__contains__(name):
             # Name already exists as an item in the Struct, so we know it's not a reserved name.
@@ -492,8 +515,8 @@ class Struct:
             obj = getattr(self, name, _default_getattr_placeholder)
             if callable(obj):
                 # special protect certain names which would ruin class
-                warnings.warn(f'The method {name} is readonly and cannot be assigned.')
-                return AttributeError(f'The method {name} is readonly and cannot be assigned.')
+                warnings.warn(f"The method {name} is readonly and cannot be assigned.")
+                return AttributeError(f"The method {name} is readonly and cannot be assigned.")
             elif obj is _default_getattr_placeholder:
                 self._addnewitem(name, value)
             else:
@@ -501,15 +524,14 @@ class Struct:
                 # this branch anymore, so if there is somehow it'd be good to have some data on
                 # how we're getting here.
                 logger.debug(
-                    "Replacing non-item attribute '%s' in `__setattr__`.", name,
-                    extra={'name': name, 'attr': obj}
+                    "Replacing non-item attribute '%s' in `__setattr__`.", name, extra={"name": name, "attr": obj}
                 )
                 self._replaceitem(name, value)
 
     # ------------------------------------------------------------
     def __getattr__(self, name):
         # check first if the name is in one of the dicts
-        impossible = '____'
+        impossible = "____"
         inlocal = self.__dict__.get(name, impossible)
         if inlocal is impossible:
             inlocal = self.__class__.__dict__.get(name, impossible)
@@ -523,7 +545,7 @@ class Struct:
 
         return inlocal
 
-        #if Struct.AllNames:
+        # if Struct.AllNames:
         #    # code optimization, try is faster
         #    try:
         #        return self.col_get_value(name)
@@ -531,13 +553,12 @@ class Struct:
         #        pass
         #    return object.__getattribute__(self, name)
 
-        #else:
+        # else:
         #    # code optimization, try is faster
         #    try:
         #        return self.col_get_value(name)
         #    except:
         #        pass
-
 
     # ------------------------------------------------------------
     def _get_count_for_slice(self, idx, for_rows):
@@ -564,10 +585,10 @@ class Struct:
         if by_col_arg:
             by = "column"
         else:
-            if hasattr(self, '_nrows') and self._nrows is not None:
+            if hasattr(self, "_nrows") and self._nrows is not None:
                 by = "row"
             else:
-                raise IndexError(f'{self.__class__.__name__} row index out of range (empty)')
+                raise IndexError(f"{self.__class__.__name__} row index out of range (empty)")
         if isinstance(idx, slice):
             # slice other than [:]
             if not (idx.start is None and idx.stop is None and idx.step is None):
@@ -578,27 +599,26 @@ class Struct:
         elif isinstance(idx, list):
             if len(idx) > 0:
                 first_item = idx[0]
-                if isinstance(first_item, bool): # a bool is an int so must test first
+                if isinstance(first_item, bool):  # a bool is an int so must test first
                     if by_col_arg:
                         mask = idx
                 elif isinstance(first_item, (int, np.integer)):
                     mask = idx
-                elif isinstance(first_item, (str, bytes)): # string-ish
+                elif isinstance(first_item, (str, bytes)):  # string-ish
                     if by_col_arg:
                         idx = [bytes_to_str(_i) for _i in idx]
                     else:
                         mask = self._index_from_row_labels(idx)
-                        #raise TypeError(f'Error in {by} slice; rows cannot be string indexed.')
+                        # raise TypeError(f'Error in {by} slice; rows cannot be string indexed.')
                 elif isinstance(first_item, tuple):
                     if not by_col_arg:
                         mask = self._index_from_row_labels(idx)
                     else:
                         raise TypeError(f"Cannot index {by} with tuple.")
                 else:
-                    raise TypeError(
-                        f'Error in {by} slice; lists cannot be {type(first_item).__name__} indexed.')
+                    raise TypeError(f"Error in {by} slice; lists cannot be {type(first_item).__name__} indexed.")
             else:
-                raise IndexError(f'Error in {by} slice; empty list.')
+                raise IndexError(f"Error in {by} slice; empty list.")
         elif isinstance(idx, np.ndarray):
             if len(idx) > 0:
                 dtype_char = idx.dtype.char
@@ -606,14 +626,14 @@ class Struct:
                 if dtype_char in NumpyCharTypes.AllInteger:
                     mask = idx
                 # bool based ---------------------
-                elif dtype_char == '?':
+                elif dtype_char == "?":
                     if by_col_arg:
                         mask = idx
                 # string based -------------------
-                elif dtype_char in ('S', 'U'):
+                elif dtype_char in ("S", "U"):
                     if by_col_arg:
-                        if dtype_char == 'S':
-                            idx = idx.astype('U')
+                        if dtype_char == "S":
+                            idx = idx.astype("U")
                     else:
                         mask = self._index_from_row_labels(idx)
                 # other ----------------------------
@@ -625,14 +645,15 @@ class Struct:
             if not by_col_arg:
                 mask = self._index_from_row_labels(idx)
         elif idx is None:
-            raise TypeError('Cannot index by None.')
-        elif isinstance(idx, (int, np.integer)): # single item, never true in current usage
+            raise TypeError("Cannot index by None.")
+        elif isinstance(idx, (int, np.integer)):  # single item, never true in current usage
             mask = slice(idx, idx + 1)
-        else: # some other type?
+        else:  # some other type?
             # row indexing allows tuples
             if by_col_arg:
                 raise TypeError(
-                    f'Error in {by} slice; {self.__class__.__name__} cannot be {type(idx).__name__} indexed.')
+                    f"Error in {by} slice; {self.__class__.__name__} cannot be {type(idx).__name__} indexed."
+                )
             else:
                 mask = self._index_from_row_labels(idx)
         if mask is not None:
@@ -646,11 +667,12 @@ class Struct:
                 # return the mask for the row
                 return mask
         return idx
+
     # ------------------------------------------------------------
     def _index_from_row_labels(self, fld):
-        '''
+        """
         Use this if row index was a string or tuple. Will only be applied to the Dataset's label columns (if it has any).
-        '''
+        """
 
         if isinstance(fld, (str, bytes, tuple)):
             fld = [fld]
@@ -663,7 +685,9 @@ class Struct:
             num_cols = 1
 
         if len(labels) != num_cols:
-            raise IndexError(f"This structure has {len(labels)} label columns. Cannot use string row indexing with {len(fld)} {type(fld[0])}.")
+            raise IndexError(
+                f"This structure has {len(labels)} label columns. Cannot use string row indexing with {len(fld)} {type(fld[0])}."
+            )
 
         # maybe TODO: this multi-column matching loop happens in a couple other spots, is there a way to genericize it?
         idx_mask = []
@@ -713,14 +737,13 @@ class Struct:
             if len(index) == 2:
                 row_arg, col_arg = index
             else:
-                raise IndexError(
-                    f'Can only index {self.__class__.__name__} as ds[r, c], ds[r, :], ds[:, c] or ds[c].')
+                raise IndexError(f"Can only index {self.__class__.__name__} as ds[r, c], ds[r, :], ds[:, c] or ds[c].")
 
             if isinstance(row_arg, (int, np.integer)):
                 row_idx = row_arg
                 nrows = 1
             elif row_arg is None:
-                raise TypeError('Cannot index rows with None.')
+                raise TypeError("Cannot index rows with None.")
             else:
                 row_idx = self._mask_get_item(row_arg, by_col_arg=False)
                 nrows = self._get_count_for_slice(row_idx, True)
@@ -736,7 +759,7 @@ class Struct:
             col_idx = list(self.keys())[int(col_arg)]
             ncols = 1
         elif col_arg is None:
-            raise TypeError('Cannot index cols with None.')
+            raise TypeError("Cannot index cols with None.")
         else:
             col_idx = self._mask_get_item(col_arg, by_col_arg=True)
             ncols = self._get_count_for_slice(col_idx, False)
@@ -764,15 +787,16 @@ class Struct:
         """
         if isinstance(index, (tuple, type(None))):
             raise IndexError(
-                f'Can only index {self.__class__.__name__} as st[c], where c is colname, list of colnames or boolean mask.')
+                f"Can only index {self.__class__.__name__} as st[c], where c is colname, list of colnames or boolean mask."
+            )
         col_idx, _, _, _, _ = self._extract_indexing(index)
         if isinstance(col_idx, str):
             if self.col_exists(col_idx):
                 return getattr(self, col_idx)
             else:
-                raise IndexError(f'Could not find column named: {col_idx}')
+                raise IndexError(f"Could not find column named: {col_idx}")
         elif isinstance(col_idx, (list, np.ndarray)) and len(set(col_idx)) < len(col_idx):
-            raise IndexError('Cannot index cols with duplicates.')
+            raise IndexError("Cannot index cols with duplicates.")
         return self.__class__({_k: getattr(self, _k) for _k in col_idx})
 
     # ------------------------------------------------------------
@@ -786,29 +810,30 @@ class Struct:
         """
         if isinstance(index, (tuple, type(None))):
             raise IndexError(
-                f'Can only index {self.__class__.__name__} as st[c], where c is colname, list of colnames or boolean mask.')
+                f"Can only index {self.__class__.__name__} as st[c], where c is colname, list of colnames or boolean mask."
+            )
         col_idx, _, ncols, _, _ = self._extract_indexing(index)
         if col_idx is None:
             col_idx = list(self.keys())
         if ncols == 0:
             return
         if ncols == 1:
-            if not isinstance(col_idx, str): col_idx = col_idx[0]
-            #if self.col_exists(col_idx) or self.is_valid_colname(col_idx):
+            if not isinstance(col_idx, str):
+                col_idx = col_idx[0]
+            # if self.col_exists(col_idx) or self.is_valid_colname(col_idx):
             if self.is_valid_colname(col_idx):
                 setattr(self, col_idx, value)
             else:
-                raise IndexError(f'Invalid column name: {col_idx!r}')
+                raise IndexError(f"Invalid column name: {col_idx!r}")
         else:
             if not all([self.col_exists(_k) for _k in col_idx]):
-                raise IndexError('If creating a new column can only do one at a time.')
+                raise IndexError("If creating a new column can only do one at a time.")
             if isinstance(value, (tuple, list)) and len(value) == ncols:
                 for _k1, _v2 in zip(col_idx, value):
                     setattr(self, _k1, _v2)
             else:
-                raise IndexError('Can only set multiple columns from a list/tuple of matching size.')
+                raise IndexError("Can only set multiple columns from a list/tuple of matching size.")
         return
-
 
     # ------------------------------------------------------------
     def _struct_compare_check(self, func_name, lhs):
@@ -834,13 +859,14 @@ class Struct:
                     res = func(lhs_val)
                     if isinstance(res, type(NotImplemented)):
                         raise NotImplementedError(
-                            f'Cannot compare types for key {colname!r}; {type(self_val).__name__} and {type(lhs_val).__name__}')
+                            f"Cannot compare types for key {colname!r}; {type(self_val).__name__} and {type(lhs_val).__name__}"
+                        )
                     try:
                         # print(self_val, lhs_val, res, hasattr(res, 'all'))
                         # import pdb; pdb.set_trace()
                         res = bool(res)
                     except (TypeError, ValueError, NotImplementedError):  # cannot cast to bool
-                        if hasattr(res, 'all'):
+                        if hasattr(res, "all"):
                             res = res.all()
                         else:
                             res = all(res)
@@ -852,26 +878,26 @@ class Struct:
                     newds[colname] = False
             return Struct(newds)
         else:
-            raise TypeError(f'Cannot compare a Struct to type {type(lhs).__name__}')
+            raise TypeError(f"Cannot compare a Struct to type {type(lhs).__name__}")
 
     # ------------------------------------------------------------
     def __ne__(self, lhs):
-        return self._struct_compare_check('__ne__', lhs)
+        return self._struct_compare_check("__ne__", lhs)
 
     def __eq__(self, lhs):
-        return self._struct_compare_check('__eq__', lhs)
+        return self._struct_compare_check("__eq__", lhs)
 
     def __ge__(self, lhs):
-        return self._struct_compare_check('__ge__', lhs)
+        return self._struct_compare_check("__ge__", lhs)
 
     def __gt__(self, lhs):
-        return self._struct_compare_check('__gt__', lhs)
+        return self._struct_compare_check("__gt__", lhs)
 
     def __le__(self, lhs):
-        return self._struct_compare_check('__le__', lhs)
+        return self._struct_compare_check("__le__", lhs)
 
     def __lt__(self, lhs):
-        return self._struct_compare_check('__lt__', lhs)
+        return self._struct_compare_check("__lt__", lhs)
 
     # -------------------------------------------------------
     def _run_once(self):
@@ -919,16 +945,14 @@ class Struct:
         if name is None:
             name = classname
         metadict = {
-            'name' : name,
-            'classname' : classname,
-            'author' : 'python',
-
+            "name": name,
+            "classname": classname,
+            "author": "python",
             #'item_names' : [], # ***remove list of all item names
-            'item_meta' : [],  # list of special fastarray metadata strings
-
-            'labels' : self.label_get_names(),
-            '_col_sortlist' : self._col_sortlist,
-            'footers' : []
+            "item_meta": [],  # list of special fastarray metadata strings
+            "labels": self.label_get_names(),
+            "_col_sortlist": self._col_sortlist,
+            "footers": [],
         }
         return metadict
 
@@ -939,12 +963,12 @@ class Struct:
 
         # flip item meta to a dictionary lookup of item name -> meta
         # names are only held here
-        item_meta = meta.get('item_meta', [])
-        item_meta = [ MetaData(imeta) for imeta in item_meta ]
-        item_meta = { imeta['name']:imeta for imeta in item_meta }
+        item_meta = meta.get("item_meta", [])
+        item_meta = [MetaData(imeta) for imeta in item_meta]
+        item_meta = {imeta["name"]: imeta for imeta in item_meta}
 
         try:
-            from_matlab = meta['author']=='matlab'
+            from_matlab = meta["author"] == "matlab"
         except:
             from_matlab = False
 
@@ -957,10 +981,10 @@ class Struct:
                 # this items arrays and other info are in a dictionary
                 if itemflag & SDSFlag.Nested:
                     idict = item
-                    iflags = item.pop('_flags')
-                    imeta = item.pop('_meta')
+                    iflags = item.pop("_flags")
+                    imeta = item.pop("_meta")
                     # also use the generic routine for all classes here
-                    item = TypeRegister.from_meta_data( idict, iflags, imeta )
+                    item = TypeRegister.from_meta_data(idict, iflags, imeta)
                     allitems[itemname] = item
 
                 else:
@@ -981,12 +1005,12 @@ class Struct:
                             # this needs to do a pass over the whole dict for each special item...
                             # can't pop the item because dict is being iterated over
                             # maybe use another dict?
-                            idict = { k:v for k,v in itemdict.items() if k.startswith(itemname+'!') }
+                            idict = {k: v for k, v in itemdict.items() if k.startswith(itemname + "!")}
                             idict[itemname] = item
                             # flags only seem important for container loading
                             iflags = []
 
-                            item = TypeRegister.from_meta_data( itemdict=idict, meta=imeta )
+                            item = TypeRegister.from_meta_data(itemdict=idict, meta=imeta)
 
                     if not from_matlab or item.strides[0] != 0:
                         # matlab can save 0 length arrays
@@ -996,19 +1020,18 @@ class Struct:
 
         # TODO: add code to restore footers
         try:
-            result.label_set_names(meta['labels'])
+            result.label_set_names(meta["labels"])
         except:
             pass
 
         return result
-
 
     # ------------------------------------------------------------
     def _as_meta_data(self, name=None, nested=True):
 
         itemdict = {}
         itemflags = []
-        meta = MetaData( self._meta_dict(name=name) )
+        meta = MetaData(self._meta_dict(name=name))
 
         # need to be able to add '_meta' as an item in Struct
         warnstate = Struct.WarnOnInvalidNames
@@ -1016,7 +1039,7 @@ class Struct:
 
         for itemname, item in self.items():
             try:
-                if item.__module__ == 'hdf5.io':
+                if item.__module__ == "hdf5.io":
                     item = h5io_to_struct(item)
             except:
                 pass
@@ -1026,20 +1049,20 @@ class Struct:
                 itemflag = SDSFlag.OriginalContainer
 
                 # get arrays, flags, meta from array subclass
-                if hasattr(item, '_as_meta_data'):
+                if hasattr(item, "_as_meta_data"):
                     idict, iflags, imeta = item._as_meta_data(name=itemname)
-                    for k,v in idict.items():
+                    for k, v in idict.items():
                         itemdict[k] = v
                     itemflags = itemflags + iflags
                     # like this or store as separate item?
-                    meta['item_meta'].append(imeta)
+                    meta["item_meta"].append(imeta)
 
                 # regular array
                 else:
                     # might need to copy strided data
                     if item.ndim == 1:
                         if item.strides[0] != item.itemsize:
-                            warnings.warn(f'array named {itemname} had bad 1d strides')
+                            warnings.warn(f"array named {itemname} had bad 1d strides")
                             item = item.copy()
 
                     itemflag += SDSFlag.Stackable
@@ -1051,9 +1074,9 @@ class Struct:
                 # add nested struct to itemdict?
                 # how does its metadata get added?
                 # how do flags get added?
-                idict, iflags, imeta = item._as_meta_data(name=itemname,nested=nested)
-                idict['_meta'] = imeta
-                idict['_flags'] = iflags
+                idict, iflags, imeta = item._as_meta_data(name=itemname, nested=nested)
+                idict["_meta"] = imeta
+                idict["_flags"] = iflags
                 itemdict[itemname] = idict
 
                 itemflag = SDSFlag.OriginalContainer + SDSFlag.Nested
@@ -1063,26 +1086,26 @@ class Struct:
             else:
                 item = np.asarray([item])
                 # if scalar created an object array, flip to string and warn
-                if item.dtype.char == 'O':
-                    warnings.warn(f'Item {item[0]} was not a supported scalar type. Saving as bytestring.')
-                    item = item.astype('S')
+                if item.dtype.char == "O":
+                    warnings.warn(f"Item {item[0]} was not a supported scalar type. Saving as bytestring.")
+                    item = item.astype("S")
                 itemdict[itemname] = item
                 itemflag = SDSFlag.Scalar + SDSFlag.OriginalContainer
                 itemflags.append(itemflag)
 
-        #FOOTERS
+        # FOOTERS
         # just re-sort using the column sort list from other meta data
         ## get sorted row index (Dataset only)
-        #if hasattr( self, 'get_row_sort_info' ):
+        # if hasattr( self, 'get_row_sort_info' ):
         #    sort_id = self.get_row_sort_info()
         #    sort_idx = TypeRegister.SortCache.get_sorted_row_index(*sort_id)
         #    if sort_idx is not None:
         #        items.append(sort_idx)
 
-        #SORT
+        # SORT
         # new footers - cannot be saved this way
         ## get footers (currently only implemented for Accum2 result)
-        #if hasattr( self, '_footers'):
+        # if hasattr( self, '_footers'):
         #    for k, v in self._footers.items():
         #        meta['footers'].append(k)
         #        items.append(v)
@@ -1094,13 +1117,13 @@ class Struct:
 
     # --------------------------------------------------------------------------------------------------
     def _autocomplete(self) -> str:
-        return f'Struct{self.shape}'
+        return f"Struct{self.shape}"
 
     # --------------------------------------------------------------------------------------------------
     def _build_sds_meta_data(self, name=None, nesting=True, **kwargs):
-        '''
+        """
         Final SDS file will be laid out as follows:
-       
+
         - header
         - meta data string (json, includes scalars)
         - arrays
@@ -1108,24 +1131,24 @@ class Struct:
         - meta tuples [tuple(item name, SDSFlags) for all items]
 
         Nested data structures will generate their own SDS files.
-        '''
+        """
 
         if name is None:
-            name = kwargs.get('name', 'anon_struct0')
+            name = kwargs.get("name", "anon_struct0")
 
         # structs don't have nrows
-        meta = MetaData({
-            'name' : name,
-            'classname' : self.__class__.__name__,
-            'author' : 'python',
-            'version' : 1,
-
-            'item_meta' : [],  # list of special fastarray metadata strings
-
-            'labels' : self.label_get_names(),
-            '_col_sortlist' : self._col_sortlist,
-            'footers' : [],
-        })
+        meta = MetaData(
+            {
+                "name": name,
+                "classname": self.__class__.__name__,
+                "author": "python",
+                "version": 1,
+                "item_meta": [],  # list of special fastarray metadata strings
+                "labels": self.label_get_names(),
+                "_col_sortlist": self._col_sortlist,
+                "footers": [],
+            }
+        )
 
         items = []
         spec_items = []
@@ -1140,7 +1163,7 @@ class Struct:
         if nesting:
             for k, item in self.items():
                 try:
-                    if item.__module__ == 'hdf5.io':
+                    if item.__module__ == "hdf5.io":
                         item = h5io_to_struct(item)
                 except:
                     pass
@@ -1152,7 +1175,7 @@ class Struct:
                 k = k.decode() if isinstance(k, bytes) else k
 
                 # create a master list of item names in order
-                #meta['item_names'].append(k)
+                # meta['item_names'].append(k)
 
                 # add item to master list of item names
                 if isinstance(item, np.ndarray):
@@ -1162,29 +1185,29 @@ class Struct:
                     additem = item
                     if item.ndim == 1:
                         if item.strides[0] != item.itemsize:
-                            warnings.warn(f'array named {k} had bad 1d strides')
+                            warnings.warn(f"array named {k} had bad 1d strides")
                             additem = item.copy()
 
                     items.append(additem)
 
                     # other arrays may need to be stored
-                    if hasattr(item, '_build_sds_meta_data'):
+                    if hasattr(item, "_build_sds_meta_data"):
                         i_meta, i_items, i_tups = item._build_sds_meta_data(k, **kwargs)
 
-                        meta['item_meta'].append(i_meta.string)
+                        meta["item_meta"].append(i_meta.string)
                         for spec_idx, i_item in enumerate(i_items):
                             spec_items.append(i_item)
 
                         # check if underlying array is stackable
                         # no struct arrays are stackable
                         if type(self) != TypeRegister.Struct:
-                            array_flags += i_meta.get('_base_is_stackable', 0)
+                            array_flags += i_meta.get("_base_is_stackable", 0)
 
                         # if in struct, extra array tuples need to be rebuilt
                         else:
                             for i, tup in enumerate(i_tups):
                                 # 0 means not stackable/not in dataset
-                                i_tups[i] = tuple(( tup[0], 0 ))
+                                i_tups[i] = tuple((tup[0], 0))
 
                         for tup in i_tups:
                             spec_tups.append(tup)
@@ -1194,7 +1217,7 @@ class Struct:
                             array_flags += SDSFlag.Stackable
 
                     # Matlab, C# et. al. will not read meta data, must rely on column names + enum
-                    mtup = tuple(( k_bytes, array_flags ))
+                    mtup = tuple((k_bytes, array_flags))
                     meta_tups.append(mtup)
 
                     all_tups.append(mtup)
@@ -1202,13 +1225,13 @@ class Struct:
                 # do we include info about contained structures in the SDS file?
                 # will the store class take care of making directories, querying nested structures for meta data?
                 elif isinstance(item, Struct):
-                    #containers not used
-                    #meta['containers'].append(k)
+                    # containers not used
+                    # meta['containers'].append(k)
                     # put None as a placeholder
                     items.append(None)
 
                     itemnum = SDSFlag.Nested | SDSFlag.OriginalContainer
-                    t = tuple(( k_bytes, itemnum ))
+                    t = tuple((k_bytes, itemnum))
                     all_tups.append(t)
 
                 # misc items, scalars, etc. get added to config dict
@@ -1217,13 +1240,13 @@ class Struct:
 
                     item = np.asarray([item])
                     # if scalar created an object array, flip to string and warn
-                    if item.dtype.char == 'O':
-                        warnings.warn(f'Item {item[0]} was not a supported scalar type. Saving as bytestring.')
-                        item = item.astype('S')
+                    if item.dtype.char == "O":
+                        warnings.warn(f"Item {item[0]} was not a supported scalar type. Saving as bytestring.")
+                        item = item.astype("S")
                     items.append(item)
 
                     itemnum = SDSFlag.Scalar | SDSFlag.OriginalContainer
-                    t = tuple(( k_bytes, itemnum ))
+                    t = tuple((k_bytes, itemnum))
                     all_tups.append(t)
 
             # add special columns like categorical categories to array list
@@ -1235,21 +1258,21 @@ class Struct:
                 all_tups.append(t)
 
         # get sorted row index (Dataset only)
-        if hasattr( self, 'get_row_sort_info' ):
+        if hasattr(self, "get_row_sort_info"):
             sort_id = self.get_row_sort_info()
             sort_idx = TypeRegister.SortCache.get_sorted_row_index(*sort_id)
             if sort_idx is not None:
                 items.append(sort_idx)
 
         # get footers (currently only implemented for Accum2 result)
-        if hasattr( self, '_footers'):
+        if hasattr(self, "_footers"):
             for k, v in self._footers.items():
-                meta['footers'].append(k)
+                meta["footers"].append(k)
                 items.append(v)
 
         # test for loading items in order with tuples only
         # TJD remove this by July 2019 since it is no longer checked
-        meta['load_from_tuples']=1
+        meta["load_from_tuples"] = 1
         meta_tups = all_tups
 
         return meta, items, meta_tups
@@ -1257,14 +1280,14 @@ class Struct:
     # -------------------------------------------------------
     @classmethod
     def _tree_from_sds_meta_data(cls, meta, arrays, meta_tups, file_header):
-        '''
+        """
         SDS loads in info mode (no data loaded, just metadata + file header information)
 
         Returns
         -------
         str
             Tree display of nested structures in SDS directory.
-        '''
+        """
         if not isinstance(meta, MetaData):
             meta = MetaData(meta)
 
@@ -1305,42 +1328,42 @@ class Struct:
 
         # hard coded for categorical right now, maybe add more info about SDSFlags
         for spec in spec_items:
-            result[spec] = 'CAT'
+            result[spec] = "CAT"
 
         return result
 
     # -------------------------------------------------------
     @classmethod
     def _scalar_summary(cls, scalar_tup):
-        '''
+        """
         Scalars are stored as arrays in SDS, but a flag is set in the meta tuple.
         They will be labeled as scalar and their dtype will be displayed.
-        '''
-        info_str = ['scalar']
+        """
+        info_str = ["scalar"]
         typename = scalar_tup[1]
         typename = str(np.sctypeDict[typename].__name__)
         itemsize = str(scalar_tup[3])
 
         info_str.append(typename)
-        info_str.append(itemsize+' bytes')
+        info_str.append(itemsize + " bytes")
 
         return " ".join(info_str)
 
     # -------------------------------------------------------
     @classmethod
     def _array_info_list(cls, arrinfo):
-        '''
+        """
         Build list of info for single array.
         Used for all arrays in a container or a single array stored in single SDS file.
 
         returns ['FA', 'shape', 'dtype name', 'i+itemsize']
-        '''
+        """
         shape, typenum, flagnum, itemsize = arrinfo
         info_str = []
         info_str.append("FA")
         info_str.append(str(shape))
         info_str.append(str(np.sctypeDict[typenum].__name__))
-        info_str.append("i"+str(itemsize))
+        info_str.append("i" + str(itemsize))
         return info_str
 
     @classmethod
@@ -1350,7 +1373,7 @@ class Struct:
     # -------------------------------------------------------
     @classmethod
     def _array_summary(cls, data, name=None):
-        '''
+        """
         :param data: Tuple of array info from CompressionType.Info
             tup1: (tuple) shape
             tup2: (int) dtype.num
@@ -1361,7 +1384,7 @@ class Struct:
         Intenal routine for tree from meta summary (info only, no arrays)
 
         :return: String of array info for a single struct.
-        '''
+        """
 
         # in case a struct has no arrays
         if len(data) == 0:
@@ -1377,18 +1400,18 @@ class Struct:
         num_fields = len(all_strs[0])
         max_widths = []
         for i in range(num_fields):
-            max_len = len(max([ info[i] for info in all_strs], key=len))
+            max_len = len(max([info[i] for info in all_strs], key=len))
             max_widths.append(max_len)
 
         # fix alignment for console display
         final_summaries = cls._align_array_info(all_strs, max_widths)
 
         # build temp struct
-        result = Struct({ n : final_summaries[idx] for idx, n in enumerate(data.keys()) })
+        result = Struct({n: final_summaries[idx] for idx, n in enumerate(data.keys())})
         return result
 
         ##  return struct of summary strings
-        #return result.tree(name=name)
+        # return result.tree(name=name)
 
     # -------------------------------------------------------
     @classmethod
@@ -1399,8 +1422,8 @@ class Struct:
             newinfo = []
             for idx, item in enumerate(arrinfo):
                 padding = " "
-                padding *= maxwidths[idx]- len(item) + 1
-                newinfo.append(item+padding)
+                padding *= maxwidths[idx] - len(item) + 1
+                newinfo.append(item + padding)
             finalinfo.append(" ".join(newinfo))
 
         return finalinfo
@@ -1431,14 +1454,14 @@ class Struct:
             if deep:
                 # try varying order of copy
                 try:
-                    st[name]= obj.copy(deep=deep)
+                    st[name] = obj.copy(deep=deep)
                 except Exception:
                     try:
-                        st[name]= obj.copy()
+                        st[name] = obj.copy()
                     except Exception:
-                        st[name]= obj
+                        st[name] = obj
             else:
-                st[name]= obj
+                st[name] = obj
 
         if st_locked:
             st._lock()
@@ -1446,7 +1469,7 @@ class Struct:
 
     # --------------------------------------------------------
     def copy(self, deep: bool = True):
-        '''
+        """
         Returns a shallow or deep copy of the `Struct`.
         Defaults to a deep copy.
 
@@ -1467,13 +1490,13 @@ class Struct:
         0   test    Dataset   6 rows x 2 cols
         1   test2   Struct    1                 ds2
         2   arr     int32     10                0     1   2
-        '''
+        """
         return self._copy(deep)
 
     # -------------------------------------------------------
     @classmethod
     def concat_structs(cls, struct_list):
-        '''Merges data from multiple structs.
+        """Merges data from multiple structs.
 
         Structs must have the same keys, and contain only Structs, Datasets, arrays, and riptable arrays.
 
@@ -1491,13 +1514,13 @@ class Struct:
         See Also
         --------
         :func:`hstack`
-        '''
+        """
         return cls.hstack(struct_list)
 
     # -------------------------------------------------------
     @classmethod
     def hstack(cls, struct_list):
-        '''
+        """
         Merges data from multiple structs.
         Structs must have the same keys, and contain only Structs, Datasets, arrays, and riptable arrays.
 
@@ -1515,20 +1538,20 @@ class Struct:
         See Also
         --------
         riptable.hstack
-        '''
+        """
         return hstack_any(struct_list, cls, Struct)
 
     # -------------------------------------------------------
     @classmethod
     def _load_from_sds_meta_data_nested(cls, name, meta, arrdict):
         ds_struct = cls(arrdict)
-        ds_struct.label_set_names(meta['labels'])
+        ds_struct.label_set_names(meta["labels"])
         return ds_struct
 
     # -------------------------------------------------------
     @classmethod
     def _load_from_sds_meta_data(cls, meta, arrays, meta_tups=[], file_header={}, include=None):
-        '''
+        """
         Iterates over sections of the meta data object to rebuild a data structure.
 
         Arrays will be in the following order:
@@ -1552,45 +1575,45 @@ class Struct:
         -------
         Struct, Dataset, or Multiset
             For now, Struct, Dataset, and Multiset all use this parent method.
-        '''
+        """
         # TODO: check possible include list - will tuples still be returned for excluded items?
         # currently getting removed from root struct only
 
         def load_class_meta(data, arrays, meta):
             arr_idx = 0
-            data.label_set_names(meta['labels'])
+            data.label_set_names(meta["labels"])
 
             # send the sort index to the SortCache
-            data._col_sortlist = meta.get('_col_sortlist', None)
+            data._col_sortlist = meta.get("_col_sortlist", None)
             if data._col_sortlist is not None:
                 # if a sorted index exists, it's the last array in the list
                 uid = data._uniqueid
-                sortlist = [ data[col] for col in data._col_sortlist ]
+                sortlist = [data[col] for col in data._col_sortlist]
                 sortidx = arrays[arr_idx]
                 TypeRegister.SortCache.store_sort(uid, sortlist, sortidx)
                 arr_idx += 1
 
             # attach footers (accum2 operation results)
-            if len(meta['footers']) > 0:
+            if len(meta["footers"]) > 0:
                 footers = {}
-                for f in meta['footers']:
+                for f in meta["footers"]:
                     footers[f] = arrays[arr_idx]
-                    arr_idx+=1
+                    arr_idx += 1
                 data._footers = footers
 
-        #---- start of method below ------------------------
+        # ---- start of method below ------------------------
         if not isinstance(meta, MetaData):
             try:
                 meta = MetaData(meta)
             except:
-                warnings.warn(f'meta data did not contain a valid json string.')
+                warnings.warn(f"meta data did not contain a valid json string.")
 
         data = {}
 
         if isinstance(meta, MetaData):
-            author = meta.get('author', 'unknown')
+            author = meta.get("author", "unknown")
             try:
-                from_matlab = author =='matlab'
+                from_matlab = author == "matlab"
             except:
                 from_matlab = False
             spec_items = {}
@@ -1627,27 +1650,28 @@ class Struct:
                             # TODO: change this when matlab stores metadata
                             if not from_matlab:
                                 origerror = sys.exc_info()[1]
-                                warnings.warn(f'Error occured when processing meta data on index {item_idx}.  Author: {author}. Error: {origerror!r}')
-
+                                warnings.warn(
+                                    f"Error occured when processing meta data on index {item_idx}.  Author: {author}. Error: {origerror!r}"
+                                )
 
                 # auxilery item (categorical uniques, etc.)
                 # python only
                 else:
-                    sep_idx = itemname.find('!')
+                    sep_idx = itemname.find("!")
                     spec_name = itemname[:sep_idx]
 
                     # each dictionary key in spec_arrays corresponds to an item in the original container
                     # spec_items = {itemname: [arr1, arr2, arr3...]}
-                    spec_list = spec_items.setdefault(spec_name,[])
+                    spec_list = spec_items.setdefault(spec_name, [])
                     spec_list.append(arrays[item_idx])
 
             # only use the meta data for rebuilding special subclasses
             # python only
-            item_meta = meta.get('item_meta', [])
+            item_meta = meta.get("item_meta", [])
             for i_meta in item_meta:
                 i_meta = MetaData(i_meta)
 
-                i_name = i_meta['name']
+                i_name = i_meta["name"]
                 # item may have been excluded, but will still appear in item_meta list
                 if i_name in data:
                     underlying_arr = data[i_name]
@@ -1676,16 +1700,16 @@ class Struct:
 
         return data
 
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     @classmethod
     def _load_without_meta_data(cls, meta, arrays, meta_tups, file_header: Optional[dict] = None):
-        '''
+        """
         Loads from meta tuples only (e.g. when no metadata is generated by Matlab)
-        '''
+        """
         if file_header is None:
             file_header = dict()
         data = {}
-        extra_cols = [] # not used yet
+        extra_cols = []  # not used yet
 
         for idx, meta_tup in enumerate(meta_tups):
             name = meta_tup[0].decode()
@@ -1703,8 +1727,8 @@ class Struct:
 
                 data[name] = item
             else:
-                #extra_cols.append(meta_tup)
-                print(f'column {name} was not from original dataset')
+                # extra_cols.append(meta_tup)
+                print(f"column {name} was not from original dataset")
 
         try:
             # TODO: get dataset/struct/table info from SDS load call
@@ -1715,7 +1739,7 @@ class Struct:
 
         return data
 
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def make_categoricals(self, columnlist=None, dtype=None) -> None:
         """
         Converts specified string/bytes columns or all string/bytes columns to Categorical.
@@ -1760,16 +1784,15 @@ class Struct:
         for colname in columnlist:
             col = self[colname]
             # check to see if we need to make a nested call
-            if hasattr(col, 'make_categoricals'):
+            if hasattr(col, "make_categoricals"):
                 col.make_categoricals(dtype=dtype)
             else:
-                if isinstance(col, np.ndarray) and col.dtype.char in 'US':
+                if isinstance(col, np.ndarray) and col.dtype.char in "US":
                     self[colname] = TypeRegister.Categorical(col, dtype=dtype)
 
-
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def make_struct_from_categories(self, prefix=None, keep_prefix=False):
-        '''
+        """
         Build a struct of unique arrays from all categoricals in the container, or those with a specified prefix.
 
         Parameters
@@ -1791,12 +1814,12 @@ class Struct:
         Notes
         -----
         This is a partial inverse operation of Struct.make_matlab_categoricals
-        '''
+        """
         if prefix is None:
             names = self.keys()
             plen = 0
         else:
-            names = [ n for n in self.keys() if n.startswith(prefix) ]
+            names = [n for n in self.keys() if n.startswith(prefix)]
             if keep_prefix:
                 plen = 0
             else:
@@ -1807,7 +1830,7 @@ class Struct:
             col = self[n]
             if isinstance(col, TypeRegister.Categorical):
                 try:
-                    cats[n[plen:]]=col.category_array
+                    cats[n[plen:]] = col.category_array
                 except:
                     NotImplementedError(f"Categorical struct return only supports categoricals from single arrays.")
 
@@ -1815,7 +1838,9 @@ class Struct:
         return cats
 
     # -------------------------------------------------------
-    def make_matlab_datetimes(self, dtcols: Optional[Union[str, list]] = None, gmt: bool = False, auto: bool = True) -> None:
+    def make_matlab_datetimes(
+        self, dtcols: Optional[Union[str, list]] = None, gmt: bool = False, auto: bool = True
+    ) -> None:
         """
         Convert datetime columns from Matlab to DateTimeNano and TimeSpan arrays.
 
@@ -1836,14 +1861,14 @@ class Struct:
 
         if auto:
             for name, col in self.items():
-                if name.endswith('MS') and col.dtype.char in NumpyCharTypes.AllFloat:
-                    self[name] = TypeRegister.TimeSpan(col*1_000_000)
+                if name.endswith("MS") and col.dtype.char in NumpyCharTypes.AllFloat:
+                    self[name] = TypeRegister.TimeSpan(col * 1_000_000)
 
         for name in dtcols:
-            self[name] = TypeRegister.DateTimeNano(self[name], from_tz='GMT', to_tz='NYC')
+            self[name] = TypeRegister.DateTimeNano(self[name], from_tz="GMT", to_tz="NYC")
 
     # -------------------------------------------------------
-    def make_matlab_categoricals(self, xtra, remove_trailing=True, dtype=None, prefix='p', keep_prefix=True) -> None:
+    def make_matlab_categoricals(self, xtra, remove_trailing=True, dtype=None, prefix="p", keep_prefix=True) -> None:
         """
         Turn matlab categorical indices and corresponding unique arrays into riptable categoricals.
 
@@ -1870,7 +1895,7 @@ class Struct:
         for pname in pNames:
             if hasattr(self, pname):
                 # move past the letter 'p' in the name to get to the array the index is referencing
-                strNames = xtra[pname[len(prefix):]]
+                strNames = xtra[pname[len(prefix) :]]
 
                 # check to see if we have the pVersion of the name
                 pArray = getattr(self, pname)
@@ -1883,13 +1908,13 @@ class Struct:
                             strNames = TypeRegister.FastArray(strNames)
 
                         # matlab has padded strings, unpad for correct comparisons
-                        if remove_trailing and strNames.dtype.char in ('U','S'):
+                        if remove_trailing and strNames.dtype.char in ("U", "S"):
                             strNames = rc.RemoveTrailingSpaces(strNames)
                         newcategory = TypeRegister.Categorical(pArray, strNames, base_index=1, from_matlab=True)
 
                         # drop the leading prefix from the index column, remove index column
                         if not keep_prefix:
-                            trimmed_name = pname[len(prefix):]
+                            trimmed_name = pname[len(prefix) :]
                             try:
                                 self.col_remove(trimmed_name)
                                 warnings.warn(f"Replaced column {trimmed_name} with categorical from matlab.")
@@ -1908,20 +1933,30 @@ class Struct:
                         else:
                             self.col_set_value(pname, newcategory)
 
-                        #help recycler
+                        # help recycler
                         del newcategory
                     except:
-                        raise TypeError(f'Cannot convert {pname} as a Categorical')
+                        raise TypeError(f"Cannot convert {pname} as a Categorical")
 
                 # help recycler
                 del pArray
 
-        print(f'Converted {strCount} arrays: {strConvert}')
+        print(f"Converted {strCount} arrays: {strConvert}")
 
     # -------------------------------------------------------
     @classmethod
-    def load(cls, path: Union[str, os.PathLike] = '', name: Optional[str] = None, share: Optional[str] = None, info: bool = False,
-             columns=None, include_all_sds=False, include: Optional[Sequence[str]] = None, threads: Optional[int] = None, folders: Optional[Sequence[str]] = None):
+    def load(
+        cls,
+        path: Union[str, os.PathLike] = "",
+        name: Optional[str] = None,
+        share: Optional[str] = None,
+        info: bool = False,
+        columns=None,
+        include_all_sds=False,
+        include: Optional[Sequence[str]] = None,
+        threads: Optional[int] = None,
+        folders: Optional[Sequence[str]] = None,
+    ):
         """
         Load a Struct from a directory or single SDS file.
 
@@ -1955,7 +1990,16 @@ class Struct:
         riptable.load_sds
 
         """
-        result = _load_sds(path, name=name, sharename=share, info=info, include_all_sds=include_all_sds, include=include, threads=threads, folders=folders)
+        result = _load_sds(
+            path,
+            name=name,
+            sharename=share,
+            info=info,
+            include_all_sds=include_all_sds,
+            include=include,
+            threads=threads,
+            folders=folders,
+        )
         if info:
             result = cls._info_tree(path, result)
         return result
@@ -1972,8 +2016,16 @@ class Struct:
         return data.tree(name=name, info=True)
 
     # -------------------------------------------------------
-    def save(self, path: Union[str, os.PathLike] = '', name: Optional[str] = None, share: Optional[str] = None,
-             overwrite: bool = True, compress: bool = True, onefile: bool = False, bandsize: Optional[int] = None):
+    def save(
+        self,
+        path: Union[str, os.PathLike] = "",
+        name: Optional[str] = None,
+        share: Optional[str] = None,
+        overwrite: bool = True,
+        compress: bool = True,
+        onefile: bool = False,
+        bandsize: Optional[int] = None,
+    ):
         """
         Save a struct to a directory. If the struct contains only arrays, will be saved as a single .SDS file.
 
@@ -1996,24 +2048,33 @@ class Struct:
             If True will collapse all nesting Structs
         bandsize : int, optional, default None
         """
-        save_sds(path, self, share=share, compress=compress, overwrite=overwrite, name=name, onefile=onefile, bandsize=bandsize)
+        save_sds(
+            path,
+            self,
+            share=share,
+            compress=compress,
+            overwrite=overwrite,
+            name=name,
+            onefile=onefile,
+            bandsize=bandsize,
+        )
 
     # -------------------------------------------------------
     @classmethod
     def _serialize_item(cls, item, itemname):
-        '''
+        """
         return a dict of {name: array}
         a matching list of ints which are the arrayflags
         a metastring if it exists
-        '''
+        """
         itemdict = {}
-        itemflags=[]
+        itemflags = []
         metastring = None
         # arrays / array sublclasses
         if isinstance(item, np.ndarray):
 
             # get arrays, flags, meta from array subclass
-            if hasattr(item, '_build_sds_meta_data'):
+            if hasattr(item, "_build_sds_meta_data"):
                 # store the instance array
                 itemdict[itemname] = item._fa
                 itemflags.append(SDSFlag.OriginalContainer + SDSFlag.Stackable + SDSFlag.Meta)
@@ -2033,7 +2094,7 @@ class Struct:
                 # might need to copy strided data
                 if item.ndim == 1:
                     if item.strides[0] != item.itemsize:
-                        warnings.warn(f'array named {itemname} had bad 1d strides')
+                        warnings.warn(f"array named {itemname} had bad 1d strides")
                         item = item.copy()
 
                 itemdict[itemname] = item
@@ -2043,17 +2104,17 @@ class Struct:
         else:
             item = np.asarray([item])
             # if scalar created an object array, flip to string and warn
-            if item.dtype.char == 'O':
-                warnings.warn(f'Item {item[0]} was not a supported scalar type. Saving as bytestring.')
-                item = item.astype('S')
+            if item.dtype.char == "O":
+                warnings.warn(f"Item {item[0]} was not a supported scalar type. Saving as bytestring.")
+                item = item.astype("S")
             itemdict[itemname] = item
             itemflags.append(SDSFlag.Scalar + SDSFlag.OriginalContainer)
 
         return itemdict, itemflags, metastring
 
     # -------------------------------------------------------
-    def flatten(self, sep='/', level=0):
-        '''
+    def flatten(self, sep="/", level=0):
+        """
         Flattens or collapses a Struct, recursively called
 
         Parameters
@@ -2073,65 +2134,64 @@ class Struct:
         See Also
         --------
         flatten_undo
-        '''
+        """
 
         def make_nested_meta(v, name, metastringdict_other):
             metajson = {}
             # nested items have their own metastring
             metastring = v._build_sds_meta_data(name=name, nesting=False)[0].string
-            metajson['_root'] = metastring
+            metajson["_root"] = metastring
             for metaname, metavalue in metastringdict_other.items():
                 metajson[metaname] = metavalue
-            return np.asanyarray([json.dumps(metajson)], dtype='S')
+            return np.asanyarray([json.dumps(metajson)], dtype="S")
 
         flattened = {}
         metastringdict = {}
         arrayflags = []
 
-        for name,v in self.items():
+        for name, v in self.items():
             if isinstance(v, Struct):
                 # first add the nested container (dataset or struct)
                 # nested item ends in slash (sep)
                 # always create two in a row, second one for meta
                 prefix = name + sep
 
-                #place holder for ordered dict
-                flattened[prefix]=None
+                # place holder for ordered dict
+                flattened[prefix] = None
                 arrayflags.append(0 + SDSFlag.Nested)
 
                 flattened_other, arrayflags_other, metastringdict_other = v.flatten(sep, level + 1)
 
                 # finally put in the json
-                flattened[prefix]=make_nested_meta(v, name, metastringdict_other)
+                flattened[prefix] = make_nested_meta(v, name, metastringdict_other)
 
             else:
-                prefix=''
+                prefix = ""
                 flattened_other, arrayflags_other, metastring = Struct._serialize_item(v, name)
                 if metastring:
-                    metastringdict[name]=metastring
+                    metastringdict[name] = metastring
 
-            for k,v in flattened_other.items():
-                flattened[prefix + k]=v
+            for k, v in flattened_other.items():
+                flattened[prefix + k] = v
 
             arrayflags += arrayflags_other
 
         if level == 0:
-            st=Struct(flattened)
+            st = Struct(flattened)
 
             # remember info to undo the flattening
             st._sep = sep
             st.arrayflags = TypeRegister.FastArray(arrayflags)
 
             # use json.loads(bytes(st._metastring))
-            st.metastring = bytes(make_nested_meta(self, '_root', metastringdict))
+            st.metastring = bytes(make_nested_meta(self, "_root", metastringdict))
             return st
 
         return flattened, arrayflags, metastringdict
 
-
     # -------------------------------------------------------
-    def flatten_undo(self, sep=None, startname='', obj_array=None):
-        '''
+    def flatten_undo(self, sep=None, startname="", obj_array=None):
+        """
         Restores a Struct to original form before Struct.flatten()
 
         Parameters
@@ -2145,14 +2205,14 @@ class Struct:
         See Also
         --------
         flatten
-        '''
+        """
 
-        if hasattr(self, 'metastring'):
+        if hasattr(self, "metastring"):
             metastring = self.metastring
         else:
             raise TypeError("This structure has not been flattened, no metastring")
 
-        if hasattr(self, 'arrayflags'):
+        if hasattr(self, "arrayflags"):
             arrayflags = self.arrayflags
         else:
             raise TypeError("This structure has not been flattened, no arrayflags")
@@ -2163,17 +2223,17 @@ class Struct:
 
         if obj_array is None:
             # first pass, build an array of (colname, value, arrayflag)
-            obj_array = np.empty(self._ncols, dtype='O')
-            for i, ((colname, arr), af) in enumerate(zip(self.items(),arrayflags)):
-                obj_array[i]=(colname, arr, af)
+            obj_array = np.empty(self._ncols, dtype="O")
+            for i, ((colname, arr), af) in enumerate(zip(self.items(), arrayflags)):
+                obj_array[i] = (colname, arr, af)
 
         if sep is None:
-            if hasattr(self, '_sep'):
-                sep=self._sep
+            if hasattr(self, "_sep"):
+                sep = self._sep
             else:
-                sep = '/'
+                sep = "/"
 
-        result = Struct._flatten_undo(sep, 0, startname, obj_array, meta=metastring )
+        result = Struct._flatten_undo(sep, 0, startname, obj_array, meta=metastring)
 
         # put it back
         self.arrayflags = arrayflags
@@ -2183,32 +2243,32 @@ class Struct:
 
     # -------------------------------------------------------
     @classmethod
-    def _flatten_undo(cls, sep, startpos, startname, obj_array, meta=None, cutoffs=None ):
-        '''
+    def _flatten_undo(cls, sep, startpos, startname, obj_array, meta=None, cutoffs=None):
+        """
         internal routine
-        '''
+        """
+
         def build_class_nested(metastring, npdict):
             if metastring is not None:
                 meta_struct = json.loads(metastring)
-                classname = meta_struct['classname']
-                name = meta_struct['name']
+                classname = meta_struct["classname"]
+                name = meta_struct["name"]
                 # done with this subsection, return our last location
                 newclass = getattr(TypeRegister, classname)
-                #print("**newclass", name, meta_struct)
+                # print("**newclass", name, meta_struct)
                 return newclass._load_from_sds_meta_data_nested(name, meta_struct, npdict)
             return None
 
-
-        #----------------------------------------------
+        # ----------------------------------------------
         if meta is not None:
             metastringdict = json.loads(bytes(meta))
         else:
             metastringdict = {}
 
-        seplen=len(sep)
-        newstruct={}
-        i=startpos
-        stoppos= len(obj_array)
+        seplen = len(sep)
+        newstruct = {}
+        i = startpos
+        stoppos = len(obj_array)
 
         while i < stoppos:
             itemname = obj_array[i][0]
@@ -2216,15 +2276,15 @@ class Struct:
             if startpos != 0 and not itemname.startswith(startname):
 
                 # build the nested class we collected earlier
-                return build_class_nested(metastringdict.get('_root',None), newstruct), i
+                return build_class_nested(metastringdict.get("_root", None), newstruct), i
 
             # get the value for the itemname and its arrayflag
-            value= obj_array[i][1]
+            value = obj_array[i][1]
             if value is not None:
                 arrayflags = obj_array[i][2]
 
                 # remove nested portion of name
-                purename = itemname[len(startname):]
+                purename = itemname[len(startname) :]
 
                 # check for nesting
                 if arrayflags & SDSFlag.Nested:
@@ -2235,73 +2295,77 @@ class Struct:
                     purename = purename[:-seplen]
 
                     # will return a new i
-                    newstruct[purename], i=Struct._flatten_undo(sep, i+1, itemname, obj_array, meta=newmeta, cutoffs=cutoffs)
+                    newstruct[purename], i = Struct._flatten_undo(
+                        sep, i + 1, itemname, obj_array, meta=newmeta, cutoffs=cutoffs
+                    )
                 else:
-                    #no nesting
+                    # no nesting
                     if arrayflags & SDSFlag.Meta:
                         # eat up all the arrays belonging to this advanced class
-                        metabytes = metastringdict.get(purename,None)
-                        #print("**meta for", purename, metabytes)
+                        metabytes = metastringdict.get(purename, None)
+                        # print("**meta for", purename, metabytes)
                         if metabytes is not None:
                             meta_struct = json.loads(metabytes)
-                            classname = meta_struct['classname']
+                            classname = meta_struct["classname"]
                             newclass = getattr(TypeRegister, classname)
                             if cutoffs is not None and TypeRegister.is_binned_type(newclass):
                                 idx_cutoffs = cutoffs[i]
                                 # blindly assume next value is the categorical unique
                                 unique_cutoffs = []
-                                cols =[]
+                                cols = []
                                 while (i + 1) < stoppos:
-                                    colname = obj_array[i+1][0]
+                                    colname = obj_array[i + 1][0]
                                     # note this code assumes ! is the delimiter
-                                    if not colname.startswith(itemname + '!'):
+                                    if not colname.startswith(itemname + "!"):
                                         break
-                                    i = i +1
+                                    i = i + 1
                                     unique_cutoffs.append(cutoffs[i])
                                     cols.append(obj_array[i][1])
 
-                                value = _multistack_categoricals(purename, [meta_struct], value, cols, idx_cutoffs, unique_cutoffs)
-                                #value = newclass._load_from_sds_meta_data(purename, value, cols, meta_struct)
+                                value = _multistack_categoricals(
+                                    purename, [meta_struct], value, cols, idx_cutoffs, unique_cutoffs
+                                )
+                                # value = newclass._load_from_sds_meta_data(purename, value, cols, meta_struct)
                             else:
-                                cols =[]
+                                cols = []
                                 while (i + 1) < stoppos:
-                                    colname = obj_array[i+1][0]
+                                    colname = obj_array[i + 1][0]
                                     # note this code assumes ! is the delimiter
-                                    if not colname.startswith(itemname + '!'):
+                                    if not colname.startswith(itemname + "!"):
                                         break
-                                    i = i +1
+                                    i = i + 1
                                     cols.append(obj_array[i][1])
                                 value = newclass._load_from_sds_meta_data(purename, value, cols, meta_struct)
 
                     if arrayflags & SDSFlag.Scalar:
                         value = value[0]
                     newstruct[purename] = value
-                    i=i+1
+                    i = i + 1
             else:
-                i=i+1
+                i = i + 1
 
         # check if in middle of processing
-        newclass = build_class_nested(metastringdict.get('_root',None), newstruct)
+        newclass = build_class_nested(metastringdict.get("_root", None), newstruct)
 
         if startpos != 0:
             return newclass, i
-            #return Struct(newstruct), i
+            # return Struct(newstruct), i
         return newclass
 
     # -------------------------------------------------------
     @classmethod
     def _from_sds_onefile(cls, arrs, meta_tups, meta=None, folders=None):
-        '''
+        """
         Special routine called after loading an SDS onefile to re-expand
-        '''
-        sep = '/'
-        startname =''
+        """
+        sep = "/"
+        startname = ""
 
         # TODO: move this routine to Struct
         # build an array of objects (colname, value, arrayflag) - required to reverse flatten
-        obj_array = np.empty(len(arrs), dtype='O')
+        obj_array = np.empty(len(arrs), dtype="O")
         for i, (arr, (colname, af)) in enumerate(zip(arrs, meta_tups)):
-            obj_array[i]=(colname.decode(), arr, af)
+            obj_array[i] = (colname.decode(), arr, af)
 
         newstruct = TypeRegister.Struct._flatten_undo(sep, 0, startname, obj_array, meta=meta)
 
@@ -2310,7 +2374,6 @@ class Struct:
             # remove the last /
             newstruct = newstruct[folders[0][:-1]]
         return newstruct
-
 
     # -------------------------------------------------------
     @property
@@ -2327,7 +2390,7 @@ class Struct:
     @property
     def shape(self):
         """tuple of int: Number of rows and columns."""
-        if hasattr(self, '_nrows') and self._nrows is not None:
+        if hasattr(self, "_nrows") and self._nrows is not None:
             return self._nrows, self._ncols
         return 0, self._ncols
 
@@ -2349,7 +2412,7 @@ class Struct:
 
     # -------------------------------------------------------
     def get_ncols(self):
-        """ Return the number of items in the Struct.
+        """Return the number of items in the Struct.
 
         Returns
         -------
@@ -2396,7 +2459,7 @@ class Struct:
 
     # ------------------------------------------------------------
     def get_attribute(self, attrib_name, default=None):
-        '''
+        """
         Get an attribute that applies to all items/columns.
 
         Parameters
@@ -2413,12 +2476,12 @@ class Struct:
         See Also
         --------
         col_get_attribute, set_attribute
-        '''
+        """
         return getattr(self._all_items, attrib_name, default)
 
     # -------------------------------------------------------
     def set_attribute(self, attrib_name, attrib_value):
-        '''
+        """
         Set an attribute that applies to all items/columns.
 
         Parameters
@@ -2431,7 +2494,7 @@ class Struct:
         See Also
         --------
         col_set_attribute, get_attribute
-        '''
+        """
         setattr(self._all_items, attrib_name, attrib_value)
 
     # -------------------------------------------------------
@@ -2452,7 +2515,7 @@ class Struct:
         self.col_remove(name)
 
     # -------------------------------------------------------
-    def col_get_value(self, name:str):
+    def col_get_value(self, name: str):
         """
         Return a single item.
 
@@ -2475,7 +2538,7 @@ class Struct:
         return self._all_items.item_get_value(name)
 
     # -------------------------------------------------------
-    def col_set_value(self, name:str, value):
+    def col_set_value(self, name: str, value):
         """
         Check if item name is allowed, possibly escape. Set the value portion of the item to value.
 
@@ -2490,18 +2553,17 @@ class Struct:
         if not Struct.AllNames and not self.is_valid_colname(name):
             if self.__class__.WarnOnInvalidNames:
                 warnings.warn(
-                    f'Invalid column name {name!r} --- please rename the column or the class may lose this method.')
+                    f"Invalid column name {name!r} --- please rename the column or the class may lose this method."
+                )
             else:
                 if str.islower(name[0]):
-                    warnings.warn(
-                        f'Invalid column name {name!r} --- column auto capitalized to {name.capitalize()!r}.')
-                    name=name.capitalize()
+                    warnings.warn(f"Invalid column name {name!r} --- column auto capitalized to {name.capitalize()!r}.")
+                    name = name.capitalize()
                     self.col_set_value(name, value)
 
                 else:
-                    warnings.warn(
-                        f'Adding column with invalid name {name!r}.')
-                    #raise ValueError(f'Invalid column name {name!r}')
+                    warnings.warn(f"Adding column with invalid name {name!r}.")
+                    # raise ValueError(f'Invalid column name {name!r}')
 
         # all columns are set here
         # for FastArrays we automatically attach the column name to the instance
@@ -2518,8 +2580,8 @@ class Struct:
         self._update_sort(name)
 
     # -------------------------------------------------------
-    def col_get_attribute(self, name:str, attrib_name:str, default=None):
-        '''
+    def col_get_attribute(self, name: str, attrib_name: str, default=None):
+        """
         Gets the attribute of the specified column, the `attrib_name` must be used to indicate which attribute.
 
         Parameters
@@ -2540,12 +2602,12 @@ class Struct:
         417
         >>> ds.col_get_attribute('col1', 'DOESNOTEXIST', nan)
         nan
-        '''
+        """
         return self._all_items.item_get_attribute(name, attrib_name, default)
 
     # -------------------------------------------------------
-    def col_set_attribute(self, name:str, attrib_name:str, attrib_value) -> None:
-        '''
+    def col_set_attribute(self, name: str, attrib_name: str, attrib_value) -> None:
+        """
         Sets the attribute of the specified column, the attrib_name must be used to indicate which attribute.
 
         Parameters
@@ -2562,21 +2624,21 @@ class Struct:
         >>> ds.col_set_attribute('col1', 'TEST', 417)
         >>> ds.col_get_attribute('col1', 'TEST')
         417
-        '''
+        """
         self._all_items.item_set_attribute(name, attrib_name, attrib_value)
 
     # -------------------------------------------------------
     def col_get_len(self):
-        """ Gets the number of columns (or items) in the Struct"""
+        """Gets the number of columns (or items) in the Struct"""
         return self._all_items.item_get_len()
 
     # -------------------------------------------------------
     def col_exists(self, name):
-        """ Return True if the column name already exists"""
+        """Return True if the column name already exists"""
         return self._all_items.item_exists(name)
 
     # -------------------------------------------------------
-    def col_filter(self, items=None, like=None, regex: Optional['re.Pattern'] = None, axis=None):
+    def col_filter(self, items=None, like=None, regex: Optional["re.Pattern"] = None, axis=None):
         """
         Subset rows or columns of dataset according to labels in the specified index.
 
@@ -2644,36 +2706,36 @@ class Struct:
                 if matcher.search(k) is not None:
                     newlist.append(k)
         if (items is None) and not like and not regex:
-            raise TypeError('Must pass either `items`, `like`, or `regex`')
+            raise TypeError("Must pass either `items`, `like`, or `regex`")
 
         if len(newlist) == 0:
-            raise ValueError('All columns were removed')
+            raise ValueError("All columns were removed")
 
         return self[newlist]
 
     # -------------------------------------------------------
     def label_set_names(self, listnames):
-        """ Set which column names can be used as labels in display"""
+        """Set which column names can be used as labels in display"""
         self._all_items.label_set_names(listnames)
 
     # -------------------------------------------------------
     def label_get_names(self):
-        """ Gets the column names used as labels in display"""
+        """Gets the column names used as labels in display"""
         return self._all_items.label_get_names()
 
     # -------------------------------------------------------
     def label_as_dict(self):
-        """ Gets the column names used as labels in display"""
+        """Gets the column names used as labels in display"""
         return self._all_items.label_as_dict()
 
     # -------------------------------------------------------
     def label_remove(self):
-        """ Reomves any labels used in display"""
+        """Reomves any labels used in display"""
         return self._all_items.label_remove()
 
     # -------------------------------------------------------
     def label_filter(self, items=None, like=None, regex=None, axis=None):
-        '''
+        """
         Subset rows of dataset according to value in its label column.
 
         TODO: how should multikey be handled?
@@ -2732,25 +2794,27 @@ class Struct:
         --------   -----   -----   -----
         john        0.82    1.19    0.96
         mary ann    2.85    2.05    2.08
-        '''
+        """
         import re
 
         labels = self.label_get_names()
         if labels is None:
-            raise TypeError(f'Dataset has no label columns. Cannot filter rows from label column.')
+            raise TypeError(f"Dataset has no label columns. Cannot filter rows from label column.")
 
         tempsum = sum([items is None, like is None, regex is None])
 
         if tempsum != 2:
-            raise TypeError('Keyword arguments `items`, `like`, or `regex` are mutually exclusive.  one must be supplied')
+            raise TypeError(
+                "Keyword arguments `items`, `like`, or `regex` are mutually exclusive.  one must be supplied"
+            )
 
         labels = {k: self[k] for k in labels}
 
         if items is not None:
             newlist = items
             if not isinstance(items, list):
-                newlist=[items]
-            filter = [ item == col for col in labels.values() for item in newlist ]
+                newlist = [items]
+            filter = [item == col for col in labels.values() for item in newlist]
             newlist = mask_ori(filter)
 
         elif like:
@@ -2761,40 +2825,40 @@ class Struct:
                 if isinstance(item, str):
                     item = item.encode()
             # slow, need faster string contains method
-            newlist = [ col.apply(lambda x: item in x) for col in labels.values() for item in newlist ]
+            newlist = [col.apply(lambda x: item in x) for col in labels.values() for item in newlist]
             newlist = mask_ori(newlist)
 
         # regex also slow because it has to be applied to each row item
         elif regex:
             matcher = re.compile(regex)
-            newlist = [ col.apply(lambda x: matcher.search(x) is not None) for col in labels.values()]
+            newlist = [col.apply(lambda x: matcher.search(x) is not None) for col in labels.values()]
             newlist = mask_ori(newlist)
         else:
-            raise TypeError('Must pass either `items`, `like`, or `regex`')
+            raise TypeError("Must pass either `items`, `like`, or `regex`")
 
-        #if sum(newlist) == 0:
+        # if sum(newlist) == 0:
         #    raise ValueError('All rows were removed')
 
-        return self[newlist,:]
+        return self[newlist, :]
 
     # -------------------------------------------------------
     def summary_set_names(self, listnames):
-        """ Set which column names can be used as rights in display"""
+        """Set which column names can be used as rights in display"""
         self._all_items.summary_set_names(listnames)
 
     # -------------------------------------------------------
     def summary_get_names(self):
-        """ Gets the column names used as rights in display"""
+        """Gets the column names used as rights in display"""
         return self._all_items.summary_get_names()
 
     # -------------------------------------------------------
     def summary_as_dict(self):
-        """ Gets the column names used as rights in display"""
+        """Gets the column names used as rights in display"""
         return self._all_items.summary_as_dict()
 
     # -------------------------------------------------------
     def summary_remove(self):
-        """ Reomves any rights used in display"""
+        """Reomves any rights used in display"""
         return self._all_items.summary_remove()
 
     # -------------------------------------------------------
@@ -2833,15 +2897,15 @@ class Struct:
         4   e      int64   7      1      1     1
         """
         if self.is_locked():
-            raise AttributeError('Not allowed to call col_swap() on locked object.')
+            raise AttributeError("Not allowed to call col_swap() on locked object.")
         if not isinstance(from_cols, list) and set(from_cols).issubset(self):
-            raise ValueError(f'{self.__class__.__name__}.col_swap(): Invalid from_cols.')
+            raise ValueError(f"{self.__class__.__name__}.col_swap(): Invalid from_cols.")
         if not isinstance(to_cols, list) and set(to_cols).issubset(self):
-            raise ValueError(f'{self.__class__.__name__}.col_swap(): Invalid to_cols.')
+            raise ValueError(f"{self.__class__.__name__}.col_swap(): Invalid to_cols.")
         if from_cols == to_cols:
             return
         if not (len(from_cols) == len(to_cols) == len(set(from_cols)) and set(from_cols) == set(to_cols)):
-            raise ValueError(f'{self.__class__.__name__}.col_swap(): To list must be a permutation of from list.')
+            raise ValueError(f"{self.__class__.__name__}.col_swap(): To list must be a permutation of from list.")
         temp = {_k: getattr(self, _k) for _k in from_cols}
         for _k1, _k2 in zip(to_cols, from_cols):
             setattr(self, _k1, temp[_k2])
@@ -2905,7 +2969,7 @@ class Struct:
         Struct.col_move_to_front, Struct.col_move
         """
         if self.is_locked():
-            raise AttributeError('Not allowed to call col_move_to_front() on locked object.')
+            raise AttributeError("Not allowed to call col_move_to_front() on locked object.")
 
         self._all_items.item_move_to_front(cols)
 
@@ -2949,12 +3013,12 @@ class Struct:
         Struct.col_move
         """
         if self.is_locked():
-            raise AttributeError('Not allowed to call col_move_to_back() on locked object.')
+            raise AttributeError("Not allowed to call col_move_to_back() on locked object.")
 
         self._all_items.item_move_to_back(cols)
 
     # -------------------------------------------------------
-    def col_map(self, rename_dict:Mapping[str, str]) -> None:
+    def col_map(self, rename_dict: Mapping[str, str]) -> None:
         """
         Rename columns and re-arrange names of columns based on the rules set forth in the supplied dictionary.
 
@@ -2982,14 +3046,16 @@ class Struct:
         4    0.40   0.45   0.53    0.49    0.76
         """
         if self.is_locked():
-            raise AttributeError('Not allowed to call col_map() on locked object.')
+            raise AttributeError("Not allowed to call col_map() on locked object.")
         # the keys of rename_dict are the old column names
         # the values of rename_dict are the new column names
         if isinstance(rename_dict, dict):
             if len(set(rename_dict.values())) < len(set(rename_dict)):
-                raise ValueError('Cannot rename multiple columns to same column name.')
-            if not (all(isinstance(_k, (str, bytes)) for _k in rename_dict) and
-                    all(isinstance(_k, (str, bytes)) for _k in rename_dict.values())):
+                raise ValueError("Cannot rename multiple columns to same column name.")
+            if not (
+                all(isinstance(_k, (str, bytes)) for _k in rename_dict)
+                and all(isinstance(_k, (str, bytes)) for _k in rename_dict.values())
+            ):
                 raise TypeError("Name map must be a dictionary of string ids to string ids.")
             if len(set(rename_dict.values()) & set(self)):
                 rename_dict, swaps = self._safe_reordering_of_renames(rename_dict)
@@ -3012,8 +3078,9 @@ class Struct:
         transitions = []
         seen = set()
         for _o, _n in orig_dict.items():
-            if _o in seen: continue
-            if _o not in protected: # no-ops
+            if _o in seen:
+                continue
+            if _o not in protected:  # no-ops
                 seen.add(_o)
             else:
                 seqd, is_cycle = self._get_seq(orig_dict, protected, _o)
@@ -3021,7 +3088,7 @@ class Struct:
                     swaps.append((list(seqd), list(seqd.values())))
                     seen.update(seqd)
                 else:
-                    transitions.append(seqd) # not yet to be marked as seen
+                    transitions.append(seqd)  # not yet to be marked as seen
         transitions.sort(key=len, reverse=True)
         while transitions:
             trans = transitions.pop(0)
@@ -3031,7 +3098,7 @@ class Struct:
                     rename_dict[_o] = _n
                     seen.add(_o)
         if len(seen) != len(orig_dict):
-            raise ValueError('Cannot rename columns to extant column names.')
+            raise ValueError("Cannot rename columns to extant column names.")
         return rename_dict, swaps
 
     @staticmethod
@@ -3047,8 +3114,8 @@ class Struct:
         return seqd, True
 
     # -------------------------------------------------------
-    def col_add_prefix(self, prefix:str) -> None:
-        '''
+    def col_add_prefix(self, prefix: str) -> None:
+        """
         Add the same prefix to all items in the Struct/Dataset.
 
         Rather than renaming the columns in a col_rename loop - which would have to rebuild the underlying dictionary N times,
@@ -3076,7 +3143,7 @@ class Struct:
         2        0.34        0.24        0.87        0.81        0.80
         3        0.63        0.22        0.85        0.60        0.91
         4        0.46        0.70        0.02        0.49        0.34
-        '''
+        """
         sorts = self._col_sortlist
 
         # clear item dict first so if prefix + oldname exists, data won't be overwritten
@@ -3084,10 +3151,10 @@ class Struct:
 
         # fix sorts
         if sorts is not None:
-            self._col_sortlist = [prefix+s for s in sorts]
+            self._col_sortlist = [prefix + s for s in sorts]
 
     # -------------------------------------------------------
-    def col_rename(self, old:str, new:str) -> None:
+    def col_rename(self, old: str, new: str) -> None:
         """
         Rename a single column.
 
@@ -3128,9 +3195,9 @@ class Struct:
         if old == new:
             return
         if self.is_locked():
-            raise AttributeError('Not allowed to call col_rename() on locked object.')
+            raise AttributeError("Not allowed to call col_rename() on locked object.")
         if not self.is_valid_colname(new):
-            raise ValueError('Invalid column name: {}'.format(new))
+            raise ValueError("Invalid column name: {}".format(new))
 
         value = self._all_items.item_rename(old, new)
 
@@ -3154,7 +3221,8 @@ class Struct:
         missing = set(colnames) - set(self)
         if len(missing) != 0:
             raise IndexError(
-                f'Unknown column(s) {missing} do(es) not exist. Cannot proceed with function {func.__name__}')
+                f"Unknown column(s) {missing} do(es) not exist. Cannot proceed with function {func.__name__}"
+            )
 
     # --------------------------------------------------------
     def col_remove(self, flist):
@@ -3183,7 +3251,7 @@ class Struct:
         4       4       4       4
         """
         if self.is_locked():
-            raise AttributeError('Not allowed to call col_remove() on locked object.')
+            raise AttributeError("Not allowed to call col_remove() on locked object.")
         # flip single strings to lists to use the same routine
         if isinstance(flist, (str, bytes)):
             flist = [flist]
@@ -3195,7 +3263,8 @@ class Struct:
                 self._deleteitem(i)
         else:
             raise TypeError(
-                "Fields must be list, tuple, ndarray, dictionary (keys) or a single unicode or byte string.")
+                "Fields must be list, tuple, ndarray, dictionary (keys) or a single unicode or byte string."
+            )
 
     # --------------------------------------------------------
     def col_pop(self, colspec):
@@ -3243,8 +3312,7 @@ class Struct:
         col_set = set(col_idx if is_list_like(col_idx) else [col_idx])
         missing = col_set - set(self.keys())
         if missing:
-            raise IndexError(
-                'Unknown column(s) {} do(es) not exist and cannot be popped.'.format(sorted(missing)))
+            raise IndexError("Unknown column(s) {} do(es) not exist and cannot be popped.".format(sorted(missing)))
 
         if isinstance(col_idx, list):
             newds = self[col_idx]
@@ -3286,8 +3354,8 @@ class Struct:
         return TypeRegister.FastArray(self._all_items.item_str_match(expression, flags=flags))
 
     # --------------------------------------------------------
-    def col_str_replace(self, old:str, new:str, max:int=-1):
-        '''
+    def col_str_replace(self, old: str, new: str, max: int = -1):
+        """
         If a column name contains the old string, the old string will be replaced with the new one.
         If replacing the string will conflict with an existing column name, an error will be raised.
         Labels / sortby columns will be fixed if their names are modified.
@@ -3341,7 +3409,7 @@ class Struct:
 
         >>> ds = rt.Dataset({'a': rt.arange(5), 'A': rt.arange(5)})
         ValueError: Item A already existed, cannot make replacement in item.
-        '''
+        """
         # will return true if any column names changed
         replaced = self._all_items.item_str_replace(old, new, maxr=max)
         if replaced and self._col_sortlist is not None:
@@ -3353,14 +3421,13 @@ class Struct:
 
     # ------------------------------------------------------------
     def _as_dictionary(self, copy=False, rows=None, cols=None):
-        '''
+        """
         Return a dictionary of numpy arrays.
-        '''
+        """
         # if there is a groupby with key columns
         # TJD fast way to return dict
         if (not copy) and rows is None and cols is None:
             return self._all_items.items_as_dict()
-
 
         if cols is not None:
             col_selection = cols
@@ -3373,7 +3440,7 @@ class Struct:
         return self._copy_from_dict(source_dict, copy, rows, cols)
 
     # ------------------------------------------------------------
-    def as_ordered_dictionary(self, sublist:List[str] = None):
+    def as_ordered_dictionary(self, sublist: List[str] = None):
         """
         Returns contents of Struct as a collections.OrderedDict instance.
 
@@ -3387,13 +3454,14 @@ class Struct:
         OrderedDict
         """
         from collections import OrderedDict
+
         odict = OrderedDict()
         if sublist is None:
             sublist = self._all_items
         for k in sublist:
-            #if k in self.__dict__:
+            # if k in self.__dict__:
             #    odict[k] = self.__dict__[k]
-            #else:
+            # else:
             #    raise ValueError(k, "is not a valid key in __dict__.")
             if self.col_exists(k):
                 odict[k] = self.col_get_value(k)
@@ -3401,10 +3469,9 @@ class Struct:
                 raise ValueError(k, "is not a valid key in _all_items.")
         return odict
 
-
     # -------------------------------------------------------
     def equals(self, other):
-        '''
+        """
         Test whether two Structs contain the same elements in each column.
         NaNs in the same location are considered equal.
 
@@ -3426,7 +3493,7 @@ class Struct:
         >>> s2 = rt.Struct({'t': 54, 'test': np.int64(34), 'test2': rt.arange(200)})
         >>> s1.equals(s2)
         True
-        '''
+        """
         if not isinstance(other, Struct):
             # try to make it a dataset
             other = Struct(other)
@@ -3437,8 +3504,8 @@ class Struct:
 
         for c1, c2 in zip(self, other):
             if c1 == c2:
-                v1=self[c1]
-                v2=other[c2]
+                v1 = self[c1]
+                v2 = other[c2]
                 if isinstance(v1, np.ndarray):
                     if isinstance(v2, np.ndarray):
                         if rc.CalculateCRC(v2) != rc.CalculateCRC(v1):
@@ -3452,7 +3519,7 @@ class Struct:
                         if isinstance(v2, Struct):
                             comptest = v1.equals(v2)
                         else:
-                            comptest = (v1== v2)
+                            comptest = v1 == v2
                         if not comptest:
                             print(f"The columns {c1!r} and {c2!r} do not compare the same")
                             return False
@@ -3463,7 +3530,6 @@ class Struct:
                 print(f"The column names {c1!r} and {c2!r} do not match in the same order")
                 return False
         return True
-
 
     # ------------------------------------------------------------
     # can be used to copy keylists as well
@@ -3478,13 +3544,13 @@ class Struct:
             if isinstance(rows, (int, np.integer)):
                 if rows > 0:
                     # take a head slice
-                    rowmask=slice(0,rows)
+                    rowmask = slice(0, rows)
                 else:
                     # take a tail slice
-                    rowmask=slice(rows,None)
+                    rowmask = slice(rows, None)
             else:
                 # could be a boolean mask
-                rowmask =rows
+                rowmask = rows
 
         for k, arr in source_dict.items():
             if rowmask is not None:
@@ -3500,7 +3566,7 @@ class Struct:
         return npdict
 
     # -------------------------------------------------------
-    def asdict(self, sublist : List[str] = None, copy:bool=False):
+    def asdict(self, sublist: List[str] = None, copy: bool = False):
         """
         Return contents of Struct as a dictionary.
 
@@ -3540,7 +3606,8 @@ class Struct:
 
     def __bool__(self):
         raise ValueError(
-            f'The truth value of a {self.__class__.__name__} with more than one element is ambiguous. Use a.any() or a.all()')
+            f"The truth value of a {self.__class__.__name__} with more than one element is ambiguous. Use a.any() or a.all()"
+        )
 
     def tolist(self) -> list:
         """
@@ -3573,15 +3640,20 @@ class Struct:
         for _v in self.values():
             if isinstance(_v, Struct):
                 # avoid calling Dataset.any()
-                if Struct.any(_v): return True
-            elif hasattr(_v, 'any'):
+                if Struct.any(_v):
+                    return True
+            elif hasattr(_v, "any"):
                 try:
-                    if _v.any(): return True
+                    if _v.any():
+                        return True
                 except TypeError:
-                    if any(_v): return True
-            elif hasattr(_v, '__iter__'):
-                if any(_v): return True
-            elif bool(_v): return True
+                    if any(_v):
+                        return True
+            elif hasattr(_v, "__iter__"):
+                if any(_v):
+                    return True
+            elif bool(_v):
+                return True
         return False
 
     def all(self):
@@ -3599,24 +3671,29 @@ class Struct:
         # return all(getattr(self, _cn) for _cn in self._all_items)
         for _v in self.values():
             if isinstance(_v, Struct):
-                if not Struct.all(_v): return False
-            elif hasattr(_v, 'all'):
+                if not Struct.all(_v):
+                    return False
+            elif hasattr(_v, "all"):
                 try:
-                    if not _v.all(): return False
+                    if not _v.all():
+                        return False
                 except TypeError:
-                    if not all(_v): return False
-            elif hasattr(_v, '__iter__'):
-                if not all(_v): return False
-            elif not bool(_v): return False
+                    if not all(_v):
+                        return False
+            elif hasattr(_v, "__iter__"):
+                if not all(_v):
+                    return False
+            elif not bool(_v):
+                return False
         return True
 
     @staticmethod
-    def _sizeof_fmt(num, suffix='B'):
-        for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
+    def _sizeof_fmt(num, suffix="B"):
+        for unit in ["", "K", "M", "G", "T", "P", "E", "Z"]:
             if abs(num) < 1024.0:
                 return "%3.1f %s%s" % (num, unit, suffix)
             num /= 1024.0
-        return "%.1f %s%s" % (num, 'Y', suffix)
+        return "%.1f %s%s" % (num, "Y", suffix)
 
     # ------------------------------------------------------------
     def _last_row_stats(self):
@@ -3624,7 +3701,7 @@ class Struct:
 
     # ------------------------------------------------------------
     def tree(self, name=None, showpaths=False, info=False):
-        '''
+        """
         Returns a hierarchical view of the Struct.
 
         Parameters
@@ -3657,7 +3734,7 @@ class Struct:
          │     ├──── A int32 (3,) 4
          │     └──── B int32 (2,) 4
          └──── D int32 (3,) 4
-        '''
+        """
         if name is None:
             name = type(self).__name__
 
@@ -3724,76 +3801,80 @@ class Struct:
     # -------------------------------------------------------
     @property
     def _T(self):
-        '''
+        """
         Display transposed view of table; all columns will be shown as rows, will not be abbreviated.
-        '''
-        oldmaxwidth=TypeRegister.DisplayOptions.MAX_STRING_WIDTH
+        """
+        oldmaxwidth = TypeRegister.DisplayOptions.MAX_STRING_WIDTH
         if oldmaxwidth < 32:
-            TypeRegister.DisplayOptions.MAX_STRING_WIDTH=32
+            TypeRegister.DisplayOptions.MAX_STRING_WIDTH = 32
         result = self.dtranspose()
-        TypeRegister.DisplayOptions.MAX_STRING_WIDTH=oldmaxwidth
+        TypeRegister.DisplayOptions.MAX_STRING_WIDTH = oldmaxwidth
         return result
 
     # -------------------------------------------------------
     @property
     def _V(self):
-        '''
+        """
         Display all rows (up to 10,000), instead of using ellipses.
-        '''
+        """
         maxrows = 10_000
-        numrows = self._nrows if hasattr(self, '_nrows') else len(self)
+        numrows = self._nrows if hasattr(self, "_nrows") else len(self)
         if numrows < maxrows:
-            return self._temp_display('ROW_ALL', True)
+            return self._temp_display("ROW_ALL", True)
         else:
-            raise ValueError(f"Dataset has more than 10,000 rows. Cannot display all rows. (to override, set Display.options.ROW_ALL = True and print with repr)")
+            raise ValueError(
+                f"Dataset has more than 10,000 rows. Cannot display all rows. (to override, set Display.options.ROW_ALL = True and print with repr)"
+            )
 
     # -------------------------------------------------------
     @property
     def _H(self):
-        '''
+        """
         Display all columns, allow long strings to be displayed.
-        '''
-        return self._temp_display(['COL_ALL', 'MAX_STRING_WIDTH'], [True, 1000])
+        """
+        return self._temp_display(["COL_ALL", "MAX_STRING_WIDTH"], [True, 1000])
 
     # -------------------------------------------------------
     @property
     def _G(self):
-        '''
+        """
         Display all columns, allow long strings to be displayed.
-        '''
+        """
         savemode = (DisplayTable.options.COL_ALL, DisplayTable.options.CONSOLE_X_HTML)
-        DisplayTable.options.COL_ALL=True
-        DisplayTable.options.CONSOLE_X_HTML=150
+        DisplayTable.options.COL_ALL = True
+        DisplayTable.options.CONSOLE_X_HTML = 150
         print(self)
-        DisplayTable.options.COL_ALL=savemode[0]
-        DisplayTable.options.CONSOLE_X_HTML=savemode[1]
+        DisplayTable.options.COL_ALL = savemode[0]
+        DisplayTable.options.CONSOLE_X_HTML = savemode[1]
         return None
 
     # -------------------------------------------------------
     @property
     def _A(self):
-        '''
+        """
         Display all columns and all rows, allow long strings to be displayed.
-        '''
+        """
         maxrows = 10_000
         numrows = self._nrows
         if numrows > maxrows:
-            raise ValueError(f"Dataset has more than 10,000 rows. Cannot display all rows. To override, set Display.options.ROW_ALL = True and print(ds)")
-        return self._temp_display(['COL_ALL', 'ROW_ALL', 'MAX_STRING_WIDTH'], [True, True, 1000])
+            raise ValueError(
+                f"Dataset has more than 10,000 rows. Cannot display all rows. To override, set Display.options.ROW_ALL = True and print(ds)"
+            )
+        return self._temp_display(["COL_ALL", "ROW_ALL", "MAX_STRING_WIDTH"], [True, True, 1000])
 
     # -------------------------------------------------------
     def _temp_display(self, option, value):
-        '''
+        """
         Temporarily modify a display option when generating dataset display.
         User configured option (or default) will be restored after display string is generated.
-        '''
+        """
         if not isinstance(option, list):
             option = [option]
         if not isinstance(value, list):
             value = [value]
 
         # store setting
-        revert = [getattr(TypeRegister.DisplayOptions, opt) for opt in option ]
+        revert = [getattr(TypeRegister.DisplayOptions, opt) for opt in option]
         for i, v in enumerate(value):
             setattr(TypeRegister.DisplayOptions, option[i], v)
 
@@ -3801,11 +3882,10 @@ class Struct:
         display_type = self._get_final_display_mode()
         output = self.make_table(display_type)
 
-        #restore setting
+        # restore setting
         for i, rev in enumerate(revert):
             setattr(TypeRegister.DisplayOptions, option[i], rev)
         return TypeRegister.DisplayString(output)
-
 
     # -------------------------------------------------------
     def _get_final_display_mode(self, plain=False):
@@ -3824,7 +3904,7 @@ class Struct:
 
     # -------------------------------------------------------
     def display_attributes(self):
-        '''
+        """
         Returns a dict of display attributes, currently consisting of
         NumberOfFooterRows and a list of MarginColumns.
 
@@ -3832,11 +3912,12 @@ class Struct:
         -------
         d : dict
             A dictionary of display attributes
-        '''
+        """
         attribs = dict()
         # Footer rows
-        attribs[TypeRegister.DisplayAttributes.NUMBER_OF_FOOTER_ROWS] =\
-            getattr(self._all_items, ATTRIBUTE_NUMBER_OF_FOOTER_ROWS, 0)
+        attribs[TypeRegister.DisplayAttributes.NUMBER_OF_FOOTER_ROWS] = getattr(
+            self._all_items, ATTRIBUTE_NUMBER_OF_FOOTER_ROWS, 0
+        )
         # Margin columns
         cols = []
         for name in self._all_items.keys():
@@ -3908,7 +3989,7 @@ class Struct:
         header_tups, main_data, footer_tups = self._prepare_display_data()
 
         restore_str_width = TypeRegister.DisplayOptions.MAX_STRING_WIDTH
-        if hasattr(self, '_nrows'):
+        if hasattr(self, "_nrows"):
             nrows = self._nrows
         # number of rows is set to number of columns for structs
         else:
@@ -3920,42 +4001,40 @@ class Struct:
         badcols = None
         if self._badcols is not None:
             bad_color = table.get_bad_color()
-            badcols = { k: bad_color for k in self._badcols}
+            badcols = {k: bad_color for k in self._badcols}
 
         badrows = None
         if self._badrows is not None:
             bad_color = table.get_bad_color()
-            badrows = { k: bad_color for k in self._badrows}
+            badrows = {k: bad_color for k in self._badrows}
 
         # send to rt_display to build a result string for console or html
         result = table.build_result_table(
-            header_tups, # list of lists of ColHeader tuples
-            main_data, # list of column arrays
-            nrows, # number of rows ( dataset only )
-
-            keys=label_keys,               # dictionary of groupby keys taht will appear on the far left
-            row_numbers=self._row_numbers, # callback function to return custom left-hand table
-            right_cols=summary_cols,       # dictionary of keys->arrays that will appear on the far right
-            footer_tups=footer_tups,       # list of lists of ColHeader tuples
-
-            sortkeys=self._col_sortlist,    # list of names of columns the table was sorted by
+            header_tups,  # list of lists of ColHeader tuples
+            main_data,  # list of column arrays
+            nrows,  # number of rows ( dataset only )
+            keys=label_keys,  # dictionary of groupby keys taht will appear on the far left
+            row_numbers=self._row_numbers,  # callback function to return custom left-hand table
+            right_cols=summary_cols,  # dictionary of keys->arrays that will appear on the far right
+            footer_tups=footer_tups,  # list of lists of ColHeader tuples
+            sortkeys=self._col_sortlist,  # list of names of columns the table was sorted by
             sorted_row_idx=sorted_row_idx,  # fancy index for sort when table has a sorted view
-
-            from_str=from_str,              # display called from str() or plain console
-            transpose_on=self._transpose_on,# display called from ._T
+            from_str=from_str,  # display called from str() or plain console
+            transpose_on=self._transpose_on,  # display called from ._T
             badrows=badrows,
             badcols=badcols,
-            styles=self._styles,            # dictionary of column name -> ColumnStyle object **not implemented
-            callback=getattr(self,'_display_callback',None)    )  # user can specify their own callback
-                                            # callback signature must be callback(cols, stylefunc, rows=True)
-                                            # from riptable.rt_display import DisplayColumnColors
-                                            # callback(list of DisplayColumns, stylefunc, rows=True)
-                                            # Example:
-                                            #def makered(cols, stylefunc, rows=True):
-                                            #    for col in cols:
-                                            #        for cell in col:
-                                            #            if cell.string.startswith('-'): cell.color=DisplayColumnColors.Red
-                                            #ds._display_callback = makered
+            styles=self._styles,  # dictionary of column name -> ColumnStyle object **not implemented
+            callback=getattr(self, "_display_callback", None),
+        )  # user can specify their own callback
+        # callback signature must be callback(cols, stylefunc, rows=True)
+        # from riptable.rt_display import DisplayColumnColors
+        # callback(list of DisplayColumns, stylefunc, rows=True)
+        # Example:
+        # def makered(cols, stylefunc, rows=True):
+        #    for col in cols:
+        #        for cell in col:
+        #            if cell.string.startswith('-'): cell.color=DisplayColumnColors.Red
+        # ds._display_callback = makered
 
         TypeRegister.DisplayOptions.MAX_STRING_WIDTH = restore_str_width
 
@@ -3963,7 +4042,7 @@ class Struct:
 
     # -------------------------------------------------------
     def set_display_callback(self, userfunc, scope=None):
-        '''
+        """
         Set the user display callback for styling text.
 
         Parameters
@@ -3971,10 +4050,10 @@ class Struct:
         userfunc: function
             This function must take two arguments, ``userfunc(cols, **kwargs)``.
 
-        scope: default None  
-            The callback for just this Dataset, or all Datasets. Can be None, 
+        scope: default None
+            The callback for just this Dataset, or all Datasets. Can be None,
             `Dataset`, or `Struct`.
-            
+
         Examples
         --------
         >>> from riptable.rt_display import DisplayColumnColors
@@ -3988,49 +4067,48 @@ class Struct:
         >>> ds.set_display_callback(make_red)
         >>> ds
 
-        '''
+        """
         if not callable(userfunc):
             raise TypeError("The userfunc passed must be a callable function.")
         if scope is None:
             self._display_callback = userfunc
-        elif scope == 'Dataset':
+        elif scope == "Dataset":
             TypeRegister.Dataset._display_callback = userfunc
-        elif scope == 'Struct':
+        elif scope == "Struct":
             TypeRegister.Struct._display_callback = userfunc
         else:
             raise ValueError("The 'scope' must be None, 'Dataset', or 'Struct'")
 
     # -------------------------------------------------------
     def _sort_column_styles(self, style):
-        '''
+        """
         Callback to return sort-by columns.
 
         style : default sort style from display
 
         Returns dictionary of column name -> tuple( array, ColumnStyle )
         These columns will be moved to the left of the table.
-        '''
+        """
         cols = {}
         sort_style = ColumnStyle(color=DisplayColumnColors.Sort)
         for name in self._col_sortlist:
-            cols[name] = ( self[name], sort_style )
+            cols[name] = (self[name], sort_style)
         return cols
 
     # -------------------------------------------------------
     @property
     def _styles(self):
-        '''
+        """
         Subclasses can return a callback function which takes no arguments
         Returns dictionary of column names -> ColumnStyle objects
-        '''
-        if hasattr(self, '_column_styles'):
+        """
+        if hasattr(self, "_column_styles"):
             return self._column_styles
-
 
     # -------------------------------------------------------
     @property
     def _row_numbers(self):
-        '''
+        """
         Subclasses can define their own callback function to customize the left side of the table.
         If not defined, normal row numbers will be displayed
 
@@ -4046,17 +4124,17 @@ class Struct:
         header : string
         label_array : ndarray
         style : `ColumnStyle`
-        '''
+        """
         return None
 
     # -------------------------------------------------------
     @property
     def _sort_columns(self):
-        '''
+        """
         Subclasses can define their own callback function to return columns they were sorted by, and styles.
         Callback function will receive trimmed fancy index (based on sort index) and return a dictionary of column headers -> (masked_array, ColumnStyle objects)
         These columns will be moved to the left side of the table (but to the right of row labels, groupbykeys, row numbers, etc.)
-        '''
+        """
         return None
 
     # -------------------------------------------------------
@@ -4065,8 +4143,8 @@ class Struct:
 
     # -------------------------------------------------------
     def __repr__(self):
-        Struct._lastrepr =GetTSC()
-        if hasattr(self, '_repr_override'):
+        Struct._lastrepr = GetTSC()
+        if hasattr(self, "_repr_override"):
             return self._repr_override(self)
         if TypeRegister.DisplayOptions.HTML_DISPLAY is False:
             return self.make_table(DS_DISPLAY_TYPES.STR)
@@ -4075,7 +4153,7 @@ class Struct:
 
     # -------------------------------------------------------
     def _repr_html_(self):
-        Struct._lastreprhtml =GetTSC()
+        Struct._lastreprhtml = GetTSC()
         if TypeRegister.DisplayOptions.HTML_DISPLAY is False:
             plainstring = self.make_table(DS_DISPLAY_TYPES.STR)
             print(DisplayString(plainstring))
@@ -4086,13 +4164,13 @@ class Struct:
     # -------------------------------------------------------
     @property
     def footers(self):
-        '''
+        """
         Returns the footer attributes.
 
         For example, Accum2 and AccumTable objects can have footers.
-        '''
+        """
         try:
-            footers = getattr(self, '_footers')
+            footers = getattr(self, "_footers")
         except:
             footers = None
         return footers
@@ -4106,11 +4184,11 @@ class Struct:
         """
         # move this to a class default variable or display option
         item_numbers = [str(i) for i in range(self._summary_len)]
-        summary_labels = ['Name', 'Type', 'Size']
+        summary_labels = ["Name", "Type", "Size"]
         summary_headers = summary_labels + item_numbers
         header_tups = [build_header_tuples(summary_headers, 1, 0)]
         # structs will always show row numbers
-        header_tups[-1].insert( 0, ColHeader("#",1,0) )
+        header_tups[-1].insert(0, ColHeader("#", 1, 0))
 
         footer_tups = self.footers
 
@@ -4127,29 +4205,28 @@ class Struct:
             data = self.__getattr__(a)
 
             if isinstance(data, np.ndarray):
-                #if data.ndim!=1:print(f'{a} did not have 2 dims got {data.ndim}')
+                # if data.ndim!=1:print(f'{a} did not have 2 dims got {data.ndim}')
                 item_type = str(data.dtype)
                 try:
                     size = len(data)
                 except:
                     # handle unsized objects happens with x=np.asanyarray('test')
-                    data=np.asanyarray([data])
+                    data = np.asanyarray([data])
                     size = len(data)
 
                 if isinstance(data, TypeRegister.Categorical):
-                    items = np.array([str(i) for i in data[:self._summary_len]])
+                    items = np.array([str(i) for i in data[: self._summary_len]])
                 else:
                     # bug when sending 2dim columns to struct display
                     # cannot hstack string repr with column name
                     try:
                         if data.ndim == 1:
-                            items = data[:self._summary_len].astype(str)
+                            items = data[: self._summary_len].astype(str)
                         else:
-                            items = np.array([str(i) for i in data[:self._summary_len]])
+                            items = np.array([str(i) for i in data[: self._summary_len]])
                     except:
                         # fix bug in record arrays
-                        items = np.array([str(i) for i in data[:self._summary_len]])
-
+                        items = np.array([str(i) for i in data[: self._summary_len]])
 
                 if size < self._summary_len:
                     # fill the rest with empty strings
@@ -4160,7 +4237,7 @@ class Struct:
                 item_type = type(data).__name__
                 num_rows = str(data._nrows)
                 num_cols = str(data._ncols)
-                size = num_rows+" rows x "+num_cols+" cols"
+                size = num_rows + " rows x " + num_cols + " cols"
                 items = np.full(self._summary_len, "")
 
             elif isinstance(data, Struct):
@@ -4168,7 +4245,7 @@ class Struct:
                 size = data._ncols
                 data = list(data.keys())
                 if size >= self._summary_len:
-                    data = data[:self._summary_len]
+                    data = data[: self._summary_len]
                 else:
                     left = np.array(data, dtype=str)
                     right = np.full(self._summary_len - size, "")
@@ -4182,10 +4259,9 @@ class Struct:
                 elif isinstance(data, (set, tuple)):
                     data = list(data)
 
-
                 if isinstance(data, list):
                     size = len(data)
-                    items = data[:self._summary_len]
+                    items = data[: self._summary_len]
                     if size < self._summary_len:
                         diff = self._summary_len - size
                         for i in range(diff):
@@ -4200,8 +4276,7 @@ class Struct:
             sizes.append(size)
             summary_items.append(items)
 
-        main_data = [np.array(names, dtype=str), np.array(types, dtype=str),
-                     np.array(sizes, dtype=str)]
+        main_data = [np.array(names, dtype=str), np.array(types, dtype=str), np.array(sizes, dtype=str)]
 
         summary_items = np.array(summary_items)
 
@@ -4233,6 +4308,7 @@ class Struct:
         info, doc, :func:`.rt_meta.apply_schema`
         """
         from .rt_meta import apply_schema as _apply_schema
+
         return _apply_schema(self, schema)
 
     def info(self, **kwargs):
@@ -4250,12 +4326,14 @@ class Struct:
 
         """
         from .rt_meta import info as _info
+
         return _info(self, **kwargs)
 
     @property
     def doc(self):
         """:class:`.rt_meta.Doc` The descriptive documentation object for the structure."""
         from .rt_meta import doc as _doc
+
         return _doc(self)
 
     # ------------------------------------------------------------
@@ -4296,7 +4374,8 @@ class Struct:
             Used for detecting duplicate/aliased objects.
             """
 
-            __slots__ = ['obj']
+            __slots__ = ["obj"]
+
             def __init__(self, obj):
                 self.obj = obj
 
@@ -4330,7 +4409,8 @@ class Struct:
         while len(pending_objects) > 0:
             current_obj = pending_objects.pop()
             for name, obj in current_obj.items():
-                if obj is None: pass
+                if obj is None:
+                    pass
                 elif isinstance(obj, TypeRegister.Categorical):
                     # Categorical needs to include the storage for categories.
                     size = obj._total_size
@@ -4357,7 +4437,7 @@ class Struct:
 
                     # Always add this object's size to the total logical size of the Struct data
                     # (without regard to whether this is a duplicate/aliased object).
-                    total_logical_size += array_data.nbytes       # assumes data is an np.ndarray or a subclass of it
+                    total_logical_size += array_data.nbytes  # assumes data is an np.ndarray or a subclass of it
 
                     # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
                     # add it to the "seen objects" set and add it's size to the total physical size.
@@ -4376,7 +4456,7 @@ class Struct:
 
                     # Always add this object's size to the total logical size of the Struct data
                     # (without regard to whether this is a duplicate/aliased object).
-                    total_logical_size += obj.nbytes       # assumes data is an np.ndarray or a subclass of it
+                    total_logical_size += obj.nbytes  # assumes data is an np.ndarray or a subclass of it
 
                     # If the data hasn't been seen yet (i.e. it's not an alias of some other data we've seen before)
                     # add it to the "seen objects" set and add it's size to the total physical size.
@@ -4412,11 +4492,11 @@ class Struct:
 
                 else:
                     # Log the object type so we know what's not being handled.
-                    logger.debug(f'set_memory_stats: Unhandled object \'{name}\' of type \'{type(obj)}\'.')
+                    logger.debug(f"set_memory_stats: Unhandled object '{name}' of type '{type(obj)}'.")
 
         return (total_physical_size, total_logical_size)
 
-    def key_search(self,regex,case_sensitive=False,recursive=True,path=''):
+    def key_search(self, regex, case_sensitive=False, recursive=True, path=""):
         if case_sensitive:
             pattern = re.compile(regex)
         else:
@@ -4424,9 +4504,12 @@ class Struct:
         output = [path + s for s in self.keys() if pattern.search(s)]
         if recursive:
             for s in self.keys():
-                if isinstance(self[s],Struct):
-                    output = output + self[s].key_search(regex,case_sensitive=case_sensitive,recursive=recursive,path=path+s+'.')
+                if isinstance(self[s], Struct):
+                    output = output + self[s].key_search(
+                        regex, case_sensitive=case_sensitive, recursive=recursive, path=path + s + "."
+                    )
         return output
+
 
 # keep this as the last line
 TypeRegister.Struct = Struct

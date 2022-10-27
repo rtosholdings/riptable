@@ -2,7 +2,6 @@ import os
 import subprocess
 from typing import List, Optional
 
-
 # The HTML rendering is expected to be a snippet of an HTML document as opposed to a standalone webpage.
 # The following will ignore validation errors that are meant for a standalone HTML document.
 _WHITELIST_ERRORS: List[str] = [
@@ -66,9 +65,7 @@ class VNUChecker:
     def __repr_(self):
         return f"{VNUChecker._CN}(java={self._java}, jar_path={self._jar_path}, dir_path={self.base_path}, errors_only={self._errors_only}, ascii_quotes={self._ascii_quotes})"
 
-    def _is_whitelist_error(
-        self, error_text: str, extra_whitelists: Optional[List[str]] = None
-    ) -> bool:
+    def _is_whitelist_error(self, error_text: str, extra_whitelists: Optional[List[str]] = None) -> bool:
         """Returns ``False`` if ``error_text`` is a whitelisted error, otherwise ``True``."""
         if extra_whitelists is None:
             extra_whitelists = []
@@ -108,7 +105,5 @@ class VNUChecker:
                 raise ValueError(f"{self._CN}.validate: need a directory to validate")
             dir_path = self.base_path
         if not os.listdir(dir_path):
-            raise ValueError(
-                f"{self._CN}.validate: {dir_path} is empty; no files to validate"
-            )
+            raise ValueError(f"{self._CN}.validate: {dir_path} is empty; no files to validate")
         return self._run()

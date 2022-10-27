@@ -1,30 +1,28 @@
 __all__ = [
-    'FAString',
-    'CatString',
+    "FAString",
+    "CatString",
 ]
 
 from functools import partial, wraps
 from inspect import signature
-from typing import List, NamedTuple, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, NamedTuple, Optional, Union
 
 if TYPE_CHECKING:
     from .rt_dataset import Dataset
 
-import warnings
 import inspect
-
+import re
+import warnings
 from functools import wraps
 
-import re
-import numpy as np
 import numba as nb
+import numpy as np
 from numba.core.dispatcher import Dispatcher
 
 from .config import get_global_settings
-from .rt_fastarray import FastArray
-
-from .rt_numpy import empty, where, ones, zeros, unique
 from .rt_enum import TypeRegister
+from .rt_fastarray import FastArray
+from .rt_numpy import empty, ones, unique, where, zeros
 from .Utils.common import cached_property
 
 # Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
@@ -39,14 +37,16 @@ class FAStrDispatchPair(NamedTuple):
     parallel: Dispatcher
 
     @staticmethod
-    def create(py_func: callable) -> 'FAStrDispatchPair':
+    def create(py_func: callable) -> "FAStrDispatchPair":
         func_serial = _njit_serial(py_func)
         func_par = _njit_par(py_func)
         return FAStrDispatchPair(serial=func_serial, parallel=func_par)
 
 
 def _warn_deprecated_naming(old_func, new_func):
-    warnings.warn(f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=2
+    )
 
 
 # NOTE YOU MUST INSTALL tbb
@@ -89,7 +89,7 @@ def _str_equal(str1, str2):
 def _handle_apply_unique(func):
     sign = signature(func)
 
-    if 'apply_unique' not in sign.parameters:
+    if "apply_unique" not in sign.parameters:
         raise ValueError(f"apply_unique not found in the signature of {func}")
 
     @wraps(func)
@@ -97,9 +97,9 @@ def _handle_apply_unique(func):
         bound_args = sign.bind_partial(*args, **kwargs)
         bound_args.apply_defaults()
 
-        if bound_args.kwargs['apply_unique']:
+        if bound_args.kwargs["apply_unique"]:
             new_kwargs = bound_args.kwargs.copy()
-            new_kwargs['apply_unique'] = False
+            new_kwargs["apply_unique"] = False
             unique_values, index = unique(self.backtostring, return_inverse=True)
             result = func(unique_values.str, *bound_args.args, **new_kwargs)
             return result[index] if isinstance(result, FastArray) else result[index, :]
@@ -119,6 +119,7 @@ class FAString(FastArray):
     """
     String accessor class for `FastArray`.
     """
+
     _APPLY_PARALLEL_THRESHOLD = 10_000
 
     def __new__(cls, arr):
@@ -130,18 +131,18 @@ class FAString(FastArray):
                 arr = np.asanyarray(arr)
 
         intype = arr.dtype.char
-        if intype == 'O':
+        if intype == "O":
             # try to convert to string (might have come from pandas)
             # default to unicode (note: FastArray attempts 'S' first)
-            arr = arr.astype('U')
+            arr = arr.astype("U")
             intype = arr.dtype.char
 
         itemsize = np.int64(arr.itemsize)
 
-        if intype == 'S':
+        if intype == "S":
             # convert to two dim one byte array
             instance = arr.view(np.uint8)
-        elif intype == 'U':
+        elif intype == "U":
             # convert to two dim four byte array
             instance = arr.view(np.uint32)
             itemsize = itemsize // 4
@@ -164,10 +165,10 @@ class FAString(FastArray):
     # -----------------------------------------------------
     @property
     def backtostring(self):
-        '''
+        """
         convert back to FastArray or np.ndarray 'S' or 'U' string
         'S12'  or 'U40'
-        '''
+        """
         return FastArray(self._np).view(self._intype + str(self._itemsize))
 
     @property
@@ -179,9 +180,9 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     def possibly_convert_tostr(self, arr):
-        '''
+        """
         converts list like or an array to the same string type
-        '''
+        """
 
         # if data comes in list like, convert to an array
         if not isinstance(arr, np.ndarray):
@@ -233,7 +234,7 @@ class FAString(FastArray):
 
     # -----------------------------------------------------
     def apply(self, func, *args, dtype=None):
-        '''
+        """
         Write your own string apply function
         NOTE: byte strings are passed as uint8
         NOTE: unicode strings are passed as uint32
@@ -269,7 +270,7 @@ class FAString(FastArray):
 
         >>> FAString(['this  ','that ','test']).apply(nb_upper)
 
-        '''
+        """
         return self._apply_func(func, func, *args, dtype=dtype, input=self)
 
     # -----------------------------------------------------
@@ -340,12 +341,13 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # find length of string
             strlen = 0
-            while (strlen < itemsize):
-                if src[rowpos + strlen] == 0: break
+            while strlen < itemsize:
+                if src[rowpos + strlen] == 0:
+                    break
                 strlen += 1
             end = rowpos + strlen - 1
             start = rowpos
-            while (start < end):
+            while start < end:
                 temp = src[end]
                 src[end] = src[start]
                 src[start] = temp
@@ -359,15 +361,16 @@ class FAString(FastArray):
             rowpos = i * itemsize
             # find length of string
             strlen = 0
-            while (strlen < itemsize):
-                if src[rowpos + strlen] == 0: break
+            while strlen < itemsize:
+                if src[rowpos + strlen] == 0:
+                    break
                 strlen += 1
             srcpos = 0
-            while (strlen > 0):
+            while strlen > 0:
                 strlen -= 1
                 dest[rowpos + strlen] = src[rowpos + srcpos]
                 srcpos += 1
-            while (srcpos < itemsize):
+            while srcpos < itemsize:
                 dest[rowpos + srcpos] = 0
                 srcpos += 1
 
@@ -418,7 +421,7 @@ class FAString(FastArray):
             dest[i] = -1
             # loop over all substrings of sufficient length
             for j in range(itemsize - str2len + 1):
-                if _str_equal(src[rowpos + j:], str2):
+                if _str_equal(src[rowpos + j :], str2):
                     # store location of match
                     dest[i] = j
                     break
@@ -432,7 +435,7 @@ class FAString(FastArray):
             dest[i] = False
             # loop over all substrings of sufficient length
             for j in range(itemsize - str2len + 1):
-                if _str_equal(src[rowpos + j:], str2):
+                if _str_equal(src[rowpos + j :], str2):
                     dest[i] = True
                     break
 
@@ -448,7 +451,7 @@ class FAString(FastArray):
             # loop over all substrings of sufficient length
             str_pos = 0
             while str_pos <= itemsize - str2len:
-                if _str_equal(src[rowpos + str_pos:], str2):
+                if _str_equal(src[rowpos + str_pos :], str2):
                     dest[i, str_pos] = True
                     str_pos += str2len
                 else:
@@ -470,7 +473,7 @@ class FAString(FastArray):
             # check if enough space left
             if itemsize >= str2len:
                 k = itemsize
-                while ((k > 0) and (src[rowpos + k - 1] == 0)):
+                while (k > 0) and (src[rowpos + k - 1] == 0):
                     k -= 1
 
                 # check if still enough space left
@@ -478,7 +481,7 @@ class FAString(FastArray):
 
                     k2 = str2len
                     # check if only the end matches
-                    while (k2 > 0):
+                    while k2 > 0:
                         if src[rowpos + k - 1] != str2[k2 - 1]:
                             break
                         k -= 1
@@ -500,7 +503,7 @@ class FAString(FastArray):
             if itemsize >= str2len:
                 k = 0
                 # check if only the beginning matches
-                while (k < str2len):
+                while k < str2len:
                     if src[rowpos + k] != str2[k]:
                         break
                     k += 1
@@ -511,7 +514,7 @@ class FAString(FastArray):
     # -----------------------------------------------------
     @property
     def upper(self):
-        '''
+        """
         upper case a string (bytes or unicode)
         makes a copy
 
@@ -520,13 +523,13 @@ class FAString(FastArray):
         >>> FAString(['this','that','test']).upper
         FastArray(['THIS','THAT','TEST'], dtype='<U4')
 
-        '''
+        """
         return self._apply_func(self.nb_upper, self.nb_upper_par)
 
     # -----------------------------------------------------
     @property
     def lower(self):
-        '''
+        """
         upper case a string (bytes or unicode)
         makes a copy
 
@@ -535,20 +538,20 @@ class FAString(FastArray):
         >>> FAString(['THIS','THAT','TEST']).lower
         FastArray(['this','that','test'], dtype='<U4')
 
-        '''
+        """
         return self._apply_func(self.nb_lower, self.nb_lower_par)
 
     # -----------------------------------------------------
     @property
     def upper_inplace(self):
-        '''
+        """
         upper case a string (bytes or unicode)
         does not make a copy
 
         Examples
         --------
         FAString(['this','that','test']).upper_inplace
-        '''
+        """
         # TODO: Enable parallel version + dispatching based on array length.
         self.nb_upper_inplace(self._itemsize)
         return self.backtostring
@@ -556,34 +559,34 @@ class FAString(FastArray):
     # -----------------------------------------------------
     @property
     def reverse(self):
-        '''
+        """
         upper case a string (bytes or unicode)
         does not make a copy
 
         Examples
         --------
         FAString(['this','that','test']).reverse
-        '''
+        """
         return self._apply_func(self.nb_reverse, self.nb_reverse_par)
 
     # -----------------------------------------------------
     @property
     def reverse_inplace(self):
-        '''
+        """
         upper case a string (bytes or unicode)
         does not make a copy
 
         Examples
         --------
         FAString(['this','that','test']).reverse_inplace
-        '''
+        """
         # TODO: Enable parallel version + dispatching based on array length.
         self.nb_reverse_inplace(self._itemsize)
         return self.backtostring
 
     # -----------------------------------------------------
     def removetrailing(self, remove=32):
-        '''
+        """
         removes spaces at end of string (often to fixup matlab string)
         makes a copy
 
@@ -595,25 +598,25 @@ class FAString(FastArray):
         --------
         >>> FAString(['this  ','that ','test']).removetrailing()
         FastArray(['this','that','test'], dtype='<U6')
-        '''
+        """
         return self._apply_func(self.nb_removetrailing, self.nb_removetrailing_par, remove)
 
     # -----------------------------------------------------
     @cached_property  # only cached for Python 3.7 or higher
     def strlen(self):
-        '''
+        """
         return the string length of every string (bytes or unicode)
 
         Examples
         --------
         >>> FAString(['this  ','that ','test']).strlen
         FastArray([6, 5, 4])
-        '''
+        """
         return self._apply_func(self.nb_strlen, self.nb_strlen_par, dtype=np.int32)
 
     # -----------------------------------------------------
     def index_any_of(self, str2):
-        '''
+        """
         return the first index location any of the characters that are part of str2,
         or -1 if none of the characters match
 
@@ -625,21 +628,21 @@ class FAString(FastArray):
         --------
         >>> FAString(['this  ','that ','test']).index_any_of('ia')
         FastArray([2, 2, -1])
-        '''
+        """
         if not isinstance(str2, FAString):
-            if str2 == '':
+            if str2 == "":
                 return zeros(self.n_elements, dtype=np.int32)
             str2 = self._validate_input(str2)
 
         return self._apply_func(self.nb_index_any_of, self.nb_index_any_of_par, str2, dtype=np.int32)
 
     def strpbrk(self, str2):
-        _warn_deprecated_naming('strpbrk', 'index_any_of')
+        _warn_deprecated_naming("strpbrk", "index_any_of")
         return self.index_any_of(str2)
 
     # -----------------------------------------------------
     def index(self, str2):
-        '''
+        """
         return the first index location of the entire substring specified in str2,
         or -1 if the substring does not exist
 
@@ -651,9 +654,9 @@ class FAString(FastArray):
         --------
         >>> FAString(['this  ','that ','test']).index('at')
         FastArray([-1, 2, -1])
-        '''
+        """
         if not isinstance(str2, FAString):
-            if str2 == '':
+            if str2 == "":
                 return zeros(self.n_elements, dtype=np.int32)
 
             str2 = self._validate_input(str2)
@@ -661,7 +664,7 @@ class FAString(FastArray):
         return self._apply_func(self.nb_index, self.nb_index_par, str2, dtype=np.int32)
 
     def strstr(self, str2):
-        _warn_deprecated_naming('strstr', 'index')
+        _warn_deprecated_naming("strstr", "index")
         return self.index(str2)
 
     # -----------------------------------------------------
@@ -669,19 +672,19 @@ class FAString(FastArray):
         """
         Return a boolean array that's True for each string element that contains the
         given substring, otherwise False.
-        
+
         The entire substring must match.
-        
+
         Parameters
         ----------
         str2 : str
             A string with one or more characters to search for. To search using regular
             expressions, use :meth:`FAString.regex_match`.
-            
+
         Returns
         -------
         `FastArray`
-            A boolean array where the value is True if the string contains the 
+            A boolean array where the value is True if the string contains the
             entire substring specified in `str2`, otherwise False.
 
         See Also
@@ -689,20 +692,20 @@ class FAString(FastArray):
         FAString.startswith
         FAString.endswith
         FAString.regex_match
-        
+
         Examples
         --------
         >>> FAString(['this  ','that ','test']).contains('at')
         FastArray([False, True, False])
-        
+
         This can be called on a `FastArray` using ``.str.contains()``.
-        
+
         >>> a = rt.FastArray(['this  ','that ','test'])
         >>> a.str.contains('at')
         FastArray([False,  True, False])
         """
         if not isinstance(str2, FAString):
-            if str2 == '':
+            if str2 == "":
                 return ones(self.n_elements, dtype=bool)
 
             str2 = self._validate_input(str2)
@@ -728,7 +731,7 @@ class FAString(FastArray):
         ])
         """
         if not isinstance(str2, FAString):
-            if str2 == '':
+            if str2 == "":
                 return ones(len(self), dtype=bool)
 
             str2 = self._validate_input(str2)
@@ -736,7 +739,7 @@ class FAString(FastArray):
         return self.nb_find(self._itemsize, str2=str2, dest=zeros((self.n_elements, self._itemsize), dtype=bool))
 
     def strstrb(self, str2):
-        _warn_deprecated_naming('strstrb', 'contains')
+        _warn_deprecated_naming("strstrb", "contains")
         return self.contains(str2)
 
     def _nb_replace(src, itemsize, dest, dest_itemsize, old, new, locations):
@@ -755,7 +758,7 @@ class FAString(FastArray):
                     if new_is_empty:
                         src_pos += old_len
                     else:
-                        dest[dest_pos: dest_pos + new_len] = new
+                        dest[dest_pos : dest_pos + new_len] = new
                         src_pos += old_len
                         dest_pos += new_len
                 else:
@@ -769,7 +772,7 @@ class FAString(FastArray):
         Replace all occurrences of `old` with `new`
         """
         if not isinstance(old, FAString):
-            if old == '':
+            if old == "":
                 raise ValueError("cannot replace the empty string")
             old = self._validate_input(old)
 
@@ -804,9 +807,9 @@ class FAString(FastArray):
     # -----------------------------------------------------
     def startswith(self, str2):
         """
-        Return a boolean array that's True where the given substring matches the start 
+        Return a boolean array that's True where the given substring matches the start
         of each string element, otherwise False.
-        
+
         The entire substring must match.
 
         Parameters
@@ -814,32 +817,32 @@ class FAString(FastArray):
         str2 : str
             A string with one or more characters to search for. To search using regular
             expressions, use :meth:`FAString.regex_match`.
-        
+
         Returns
         -------
         `FastArray`
-            A boolean array where the value is True if the string starts with the 
+            A boolean array where the value is True if the string starts with the
             entire substring specified in `str2`, otherwise False.
 
         See Also
         --------
         FAString.endswith
-        FAString.contains   
+        FAString.contains
         FAString.regex_match
-        
+
         Examples
         --------
         >>> FAString(['this  ','that ','test']).startswith('thi')
         FastArray([True, False, False])
-        
+
         This can be called on a `FastArray` using ``.str.startswith()``.
-        
+
         >>> a = rt.FastArray(['this  ','that ','test'])
         >>> a.str.startswith('thi')
         FastArray([True, False, False])
         """
         if not isinstance(str2, FAString):
-            if str2 == '':
+            if str2 == "":
                 return ones(self.n_elements, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
@@ -852,9 +855,9 @@ class FAString(FastArray):
     # -----------------------------------------------------
     def endswith(self, str2):
         """
-        Return a boolean array that's True where the given substring matches the end 
+        Return a boolean array that's True where the given substring matches the end
         of each string element, otherwise False.
-        
+
         The entire substring must match.
 
         Parameters
@@ -862,7 +865,7 @@ class FAString(FastArray):
         str2 : str
             A string with one or more characters to search for. To search using regular
             expressions, use :meth:`FAString.regex_match`.
-        
+
         Returns
         -------
         `FastArray`
@@ -872,22 +875,22 @@ class FAString(FastArray):
         See Also
         --------
         FAString.startswith
-        FAString.contains   
+        FAString.contains
         FAString.regex_match
-        
+
         Examples
         --------
         >>> FAString(['abab','ababa','abababb']).endswith('ab')
         FastArray([True, False, False])
-        
+
         This can be called on a `FastArray` using ``.str.endswith()``.
-        
+
         >>> a = rt.FastArray(['abab','ababa','abababb'])
         >>> a.str.endswith('ab')
         FastArray([True, False, False])
         """
         if not isinstance(str2, FAString):
-            if str2 == '':
+            if str2 == "":
                 return ones(self.n_elements, dtype=bool)
 
             str2 = self.possibly_convert_tostr(str2)
@@ -900,11 +903,11 @@ class FAString(FastArray):
     @_handle_apply_unique
     def regex_match(self, regex: Union["str", bytes], apply_unique: bool = True) -> FastArray:
         """
-        Return a boolean array that's True where the given substring or regular 
+        Return a boolean array that's True where the given substring or regular
         expression pattern is contained in each string element, otherwise False.
-        
+
         The entire substring or pattern must match.
-        
+
         Applies :py:func:`re.search` on each element with `regex` as the pattern.
 
         Parameters
@@ -912,40 +915,40 @@ class FAString(FastArray):
         regex : str
             String or regular expression pattern to search for.
         apply_unique: bool, default True
-            When True, the regex is applied to the unique values and then expanded 
-            using the reverse index (see :meth:`riptable.unique`). This is optimal 
+            When True, the regex is applied to the unique values and then expanded
+            using the reverse index (see :meth:`riptable.unique`). This is optimal
             for repetitive data and benign for unique or highly non-repetitive data.
 
         Returns
         -------
         `FastArray`
-            A boolean array where the value is True if the string element contains the 
+            A boolean array where the value is True if the string element contains the
             entire substring or regex pattern specified in `regex`, otherwise False.
 
         See Also
         --------
-        FAString.regex_replace : Replace each instance of a specified substring or 
+        FAString.regex_replace : Replace each instance of a specified substring or
             pattern.
-        FAString.extract : 
+        FAString.extract :
             Extract one or more pattern groups into a `Dataset` or `FastArray`.
         FAString.contains
         FAString.startswith
-        FAString.endswith        
-        
+        FAString.endswith
+
         Examples
         --------
         Find any instance of 'ab' that appears at the end of a string:
-        
+
         >>> FAString(['abab','ababa','abababb']).regex_match('ab$')
         FastArray([True, False, False])
-        
+
         This can be called on a `FastArray` using ``.str.regex_match()``.
-        
+
         >>> a = rt.FastArray(['abab','ababa','abababb'])
         >>> a.str.regex_match('ab$')
         FastArray([True, False, False])
         """
-        if self._intype == 'S':
+        if self._intype == "S":
             regex = _maybe_encode(regex)
         regex = re.compile(regex)
         vmatch = np.vectorize(lambda x: bool(regex.search(x)))
@@ -954,18 +957,19 @@ class FAString(FastArray):
         return bools
 
     @_handle_apply_unique
-    def regex_replace(self, regex: Union["str", bytes], repl: Union["str", bytes],
-                      apply_unique: bool = True) -> FastArray:
+    def regex_replace(
+        self, regex: Union["str", bytes], repl: Union["str", bytes], apply_unique: bool = True
+    ) -> FastArray:
         """
         Replace each instance of a specified substring or pattern.
-        
-        The entire substring or pattern must match. If the substring or pattern isn't 
+
+        The entire substring or pattern must match. If the substring or pattern isn't
         found, the original string is returned unchanged.
-        
-        The behavior is identical to that of :py:func:`re.sub`. In particular, the 
-        returned string is obtained by replacing the leftmost non-overlapping 
+
+        The behavior is identical to that of :py:func:`re.sub`. In particular, the
+        returned string is obtained by replacing the leftmost non-overlapping
         occurrences of the substring or pattern with the replacement string.
-        
+
         Parameters
         ----------
         regex : str
@@ -973,114 +977,114 @@ class FAString(FastArray):
         repl : str
             The replacement string.
         apply_unique : bool, default True
-            When True, the regex is applied to the unique values and then expanded 
-            using the reverse index (see :meth:`riptable.unique`). This is optimal 
+            When True, the regex is applied to the unique values and then expanded
+            using the reverse index (see :meth:`riptable.unique`). This is optimal
             for repetitive data and benign for unique or highly non-repetitive data.
-        
+
         Returns
         -------
         `FastArray`
             An array with all occurrences of the substring or pattern replaced.
-        
+
         See Also
         --------
-        FAString.regex_match : 
-            Return a boolean array that indicates whether given substring or regular 
+        FAString.regex_match :
+            Return a boolean array that indicates whether given substring or regular
             expression pattern is contained in each string element.
-        FAString.extract : 
+        FAString.extract :
             Extract one or more pattern groups into a `Dataset` or `FastArray`.
         FAString.contains
         FAString.startswith
-        FAString.endswith 
-        
+        FAString.endswith
+
         Examples
         --------
-        Replace instances of 'aa' with 'b'. All non-overlapping occurrences are 
+        Replace instances of 'aa' with 'b'. All non-overlapping occurrences are
         replaced, starting from the left:
-        
+
         >>> FAString(['aaa', 'aaaa', 'aaaaa']).regex_replace('aa', 'b')
         FastArray(['ba', 'bb', 'bba'], dtype='<U3>')
-        
+
         Replace any instance of 'ab' that appears at the end of a string with 'b'.
-        
+
         >>> FAString(['abab','ababa','abababb']).regex_replace('ab$', 'b')
         FastArray(['abb', 'ababa', 'abababb'], dtype='<U7')
-        
+
         This can be called on a FastArray using ``.str.regex_replace()``. The
         returned `FastArray` elements are byte strings.
-        
+
         >>> a = rt.FastArray(['abab','ababa','abababb'])
         >>> a.str.regex_replace('ab$', 'b')
         FastArray([b'abb', b'ababa', b'abababb'], dtype='|S7')
         """
-        if self._intype == 'S':
+        if self._intype == "S":
             regex, repl = map(_maybe_encode, (regex, repl))
         regex = re.compile(regex)
         vmatch = np.vectorize(lambda x: regex.sub(repl, x))
         return vmatch(self.backtostring)
 
     @_handle_apply_unique
-    def extract(self, regex: str, expand: Optional[bool] = None,
-                fillna: str = '', names=None, apply_unique: bool = True
-                ) -> Union[FastArray, "Dataset"]:
+    def extract(
+        self, regex: str, expand: Optional[bool] = None, fillna: str = "", names=None, apply_unique: bool = True
+    ) -> Union[FastArray, "Dataset"]:
         """
-        Extract one or more pattern groups from each element of an array into a 
+        Extract one or more pattern groups from each element of an array into a
         `FastArray` or `Dataset`.
-        
-        This is useful when you have pieces of data in a string that you want to split 
+
+        This is useful when you have pieces of data in a string that you want to split
         into separate elements.
-        
-        For one capture group, the default is to return a `FastArray`, but this can be 
-        overridden by setting `expand` to True or by providing a name of a `Dataset` 
+
+        For one capture group, the default is to return a `FastArray`, but this can be
+        overridden by setting `expand` to True or by providing a name of a `Dataset`
         column to populate. For more than one capture group, a `Dataset` is returned.
-        
-        Column names for the resulting `Dataset` can be specified within the regex 
-        using ``(?P<name>)`` in the capture group(s) or by passing the `names` argument, 
+
+        Column names for the resulting `Dataset` can be specified within the regex
+        using ``(?P<name>)`` in the capture group(s) or by passing the `names` argument,
         which may be more convenient.
-         
+
         Parameters
         ----------
         regex : str
-            The pattern(s) to search for. Define multiple capture groups using 
+            The pattern(s) to search for. Define multiple capture groups using
             parentheses.
         expand : bool, default False
-            Set to True to return a `Dataset` for a single capture group. If False, a 
+            Set to True to return a `Dataset` for a single capture group. If False, a
             `FastArray` is returned.
         fillna : str, default '' (empty string)
-            For elements where there's no match, this is the fill value for the 
+            For elements where there's no match, this is the fill value for the
             resulting `FastArray` or `Dataset` column.
         names : list of str, default None
             For more than one capture group, a `Dataset` is returned. Optionally, you
             can provide column names (keys) for the extracted data.
         apply_unique : bool
-            When True, the regex is applied to the unique values and then expanded 
-            using the reverse index (see :meth:`riptable.unique`). This is optimal 
+            When True, the regex is applied to the unique values and then expanded
+            using the reverse index (see :meth:`riptable.unique`). This is optimal
             for repetitive data and benign for unique or highly non-repetitive data.
-            
+
         Returns
         -------
         `FastArray` or `Dataset`
-            For one capture group, a `FastArray` (or optionally a `Dataset`) is 
+            For one capture group, a `FastArray` (or optionally a `Dataset`) is
             returned. For more than one capture group, a `Dataset` is returned.
-            
+
         See Also
         --------
-        FAString.regex_match : 
-            Return a boolean array that indicates whether given string or regular 
+        FAString.regex_match :
+            Return a boolean array that indicates whether given string or regular
             expression pattern is contained in each string element.
         FAString.regex_replace : Replace each instance of a specified string or pattern.
 
         Examples
         --------
-        These examples use a `FastArray` containing OSI symbols. 
-        
+        These examples use a `FastArray` containing OSI symbols.
+
         >>> osi = rt.FastArray(['SPX UO 12/15/23 C5700', 'SPXW UO 09/17/21 C3650'])
 
         Extract one substring:
-        
+
         >>> osi.str.extract('\w+')
         FastArray([b'SPX', b'SPXW'], dtype='|S4')
-        
+
         Provide a name for the resulting `Dataset` column:
 
         >>> osi.str.extract('(?P<root>\w+)')
@@ -1088,7 +1092,7 @@ class FAString(FastArray):
         -   ----
         0   SPX
         1   SPXW
-        
+
         Define two capture groups and provide names for the resulting `Dataset` columns:
 
         >>> osi.str.extract('(\w+).* (\d{2}/\d{2}/\d{2})', names = ['root', 'expiration'])
@@ -1096,8 +1100,8 @@ class FAString(FastArray):
         -   ----   ----------
         0   SPX    12/15/23
         1   SPXW   09/17/21
-        
-        Extract one substring into a `Dataset` column using ``expand = True``. (Note 
+
+        Extract one substring into a `Dataset` column using ``expand = True``. (Note
         that for the element with an unmatched pattern, an empty string is returned).
 
         >>> osi.str.extract('\w+W', expand = True)
@@ -1108,14 +1112,14 @@ class FAString(FastArray):
         """
         kwargs = dict(expand=expand, fillna=fillna, names=names, apply_unique=apply_unique)
 
-        if self._intype == 'S':
+        if self._intype == "S":
             regex = _maybe_encode(regex)
         compiled = re.compile(regex)
 
         ngroups = compiled.groups
         if ngroups == 0:
             # convenience where we treat the entire pattern as a capture group
-            return self.extract(f'({regex.decode()})', **kwargs)
+            return self.extract(f"({regex.decode()})", **kwargs)
 
         # expand defaults to False if we have one capture group and do not specify names
         if expand is None:
@@ -1124,7 +1128,7 @@ class FAString(FastArray):
             raise ValueError("expand cannot be False with multiple capture groups")
 
         if names is None:
-            names = [f'group_{i}' for i in range(ngroups)]
+            names = [f"group_{i}" for i in range(ngroups)]
             for name, index in compiled.groupindex.items():
                 names[index - 1] = name
         elif len(names) != ngroups:
@@ -1167,8 +1171,7 @@ class FAString(FastArray):
                 max_chars = max(max_chars, out_pos + 1)
         return out[:, :max_chars]
 
-    def _substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None
-               ) -> FastArray:
+    def _substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None) -> FastArray:
         """
         Take a substring of each element using slice args.
         """
@@ -1183,11 +1186,12 @@ class FAString(FastArray):
             if value.shape != (self.n_elements,):
                 raise ValueError(
                     f"{name} must be an integer or an array of length equal to the number of elements"
-                    f" in self. Expected {(self.n_elements,)}, got {value.shape}")
+                    f" in self. Expected {(self.n_elements,)}, got {value.shape}"
+                )
             return value
 
-        start = _bound_to_array(start, 'start')
-        stop = _bound_to_array(stop, 'stop')
+        start = _bound_to_array(start, "start")
+        stop = _bound_to_array(stop, "stop")
 
         strlen = self.strlen
 
@@ -1202,9 +1206,9 @@ class FAString(FastArray):
 
         n_chars = out.shape[1]
         if n_chars == 0:  # empty sub strings everywhere
-            out = zeros(self.n_elements, self.dtype).view(f'{self._intype}1')
+            out = zeros(self.n_elements, self.dtype).view(f"{self._intype}1")
         else:
-            out = out.ravel().view(f'<{self._intype}{n_chars}')
+            out = out.ravel().view(f"<{self._intype}{n_chars}")
         return FastArray(out)
 
     @property
@@ -1274,7 +1278,7 @@ class FAString(FastArray):
         # Handle scalars
         if np.ndim(position) == 0:
             for size in [8, 16, 32, 64]:
-                dtype = getattr(np, f'uint{size}')
+                dtype = getattr(np, f"uint{size}")
                 if self._itemsize <= np.iinfo(dtype).max:
                     break
             position = ones(self.n_elements, dtype) * position
@@ -1285,9 +1289,8 @@ class FAString(FastArray):
         out = zeros(self.n_elements, self.dtype)
         broken_at = self._nb_char(position, self._itemsize, self.strlen, out)
         if broken_at >= 0:
-            raise ValueError(f"Position {position[broken_at]} out of bounds "
-                             f"for string of length {self._itemsize}")
-        out = out.view(f'{self._intype}1')
+            raise ValueError(f"Position {position[broken_at]} out of bounds " f"for string of length {self._itemsize}")
+        out = out.view(f"{self._intype}1")
         return FastArray(out)
 
     # Use the specialized decorators to create both a serial and parallel version of each
@@ -1349,34 +1352,33 @@ def _populate_wrappers(cls):
     functions = dict(inspect.getmembers(FAString, inspect.isfunction))
     properties = dict(inspect.getmembers(FAString, lambda o: isinstance(o, (cached_property, property))))
     for name in [
-        'upper',
-        'lower',
-        'reverse',
-        'removetrailing',
-        'strlen',
-        'index_any_of',
-        'index',
-        'contains',
-        'startswith',
-        'endswith',
-        'regex_match',
-        'regex_replace',
-        '_substr',
-        'char',
-        'replace',
-        '_find',
-
+        "upper",
+        "lower",
+        "reverse",
+        "removetrailing",
+        "strlen",
+        "index_any_of",
+        "index",
+        "contains",
+        "startswith",
+        "endswith",
+        "regex_match",
+        "regex_replace",
+        "_substr",
+        "char",
+        "replace",
+        "_find",
         # Deprecated methods.
-        'strstr',
-        'strstrb',
-        'strpbrk'
+        "strstr",
+        "strstrb",
+        "strpbrk",
     ]:
         if name in functions:
             wrapper = cls._build_method(functions[name])
         elif name in properties:
             wrapper = cls._build_property(name)
         else:
-            raise RuntimeError(f'{name} is not defined on FAString as a function or property')
+            raise RuntimeError(f"{name} is not defined on FAString as a function or property")
         setattr(cls, name, wrapper)
     return cls
 
@@ -1385,6 +1387,7 @@ class _SubStrAccessor:
     """
     Class for providing slicing on string arrays via FAString.substr
     """
+
     def __init__(self, fastring):
         self.fastring = fastring
 
@@ -1409,6 +1412,7 @@ class CatString:
 
     def __init__(self, cat):
         from .rt_categorical import CategoryMode
+
         self.cat = cat
         if cat.category_mode == CategoryMode.StringArray:
             string_list = cat.category_array
@@ -1421,8 +1425,10 @@ class CatString:
         return self.cat.isfiltered()
 
     def _convert_fastring_output(self, out):
-        if out.dtype.kind in 'SU':
-            out = TypeRegister.Categorical._from_maybe_non_unique_labels(self.cat._fa, out, base_index=self.cat.base_index)
+        if out.dtype.kind in "SU":
+            out = TypeRegister.Categorical._from_maybe_non_unique_labels(
+                self.cat._fa, out, base_index=self.cat.base_index
+            )
             return out
         else:
             return where(self._isfiltered, out.inv, out[self.cat.ikey - 1])
@@ -1451,8 +1457,7 @@ class CatString:
 
         return property(wrapper)
 
-    def extract(self, regex: str, expand: Optional[bool] = None,
-                fillna: str = '', names=None):
+    def extract(self, regex: str, expand: Optional[bool] = None, fillna: str = "", names=None):
         out = self.fastring.extract(regex, expand=expand, fillna=fillna, names=names, apply_unique=False)
         if isinstance(out, TypeRegister.Dataset):
             return TypeRegister.Dataset({key: self._convert_fastring_output(col) for key, col in out.items()})

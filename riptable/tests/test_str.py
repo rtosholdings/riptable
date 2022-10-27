@@ -1,29 +1,49 @@
 import math
-from typing import Tuple
 import re
+from typing import Tuple
 
 import pytest
 
 parametrize = pytest.mark.parametrize
 
+from numpy.testing import assert_array_equal
+
 import riptable as rt
 from riptable import *
 
-from numpy.testing import assert_array_equal
 from ..testing.array_assert import assert_array_or_cat_equal
 
-
-SYMBOLS = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM']
+SYMBOLS = ["AAPL", "AMZN", "FB", "GOOG", "IBM"]
 PARALLEL_MULTIPLIER = 2000
 NB_PARALLEL_SYMBOLS = SYMBOLS * PARALLEL_MULTIPLIER
 assert len(NB_PARALLEL_SYMBOLS) >= FAString._APPLY_PARALLEL_THRESHOLD
 
 _top_25_US_cities_by_population_2019_state_names = [
-    'New York', 'California', 'Illinois', 'Texas', 'Arizona',
-    'Pennsylvania', 'Texas', 'California', 'Texas', 'California',
-    'Texas', 'Florida', 'Texas', 'Ohio', 'North Carolina',
-    'California', 'Indiana', 'Washington', 'Colorado', 'District of Columbia',
-    'Massachusetts', 'Texas', 'Tennessee', 'Michigan', 'Oklahoma',
+    "New York",
+    "California",
+    "Illinois",
+    "Texas",
+    "Arizona",
+    "Pennsylvania",
+    "Texas",
+    "California",
+    "Texas",
+    "California",
+    "Texas",
+    "Florida",
+    "Texas",
+    "Ohio",
+    "North Carolina",
+    "California",
+    "Indiana",
+    "Washington",
+    "Colorado",
+    "District of Columbia",
+    "Massachusetts",
+    "Texas",
+    "Tennessee",
+    "Michigan",
+    "Oklahoma",
 ]
 """
 The state names (not abbreviations) of the top 25 US cities by population
@@ -34,7 +54,7 @@ https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population
 
 
 def _tile_array(arr: np.ndarray, tile_count: int) -> np.ndarray:
-    return arr.tile(tile_count) if hasattr(arr, 'tile') else np.tile(arr, tile_count)
+    return arr.tile(tile_count) if hasattr(arr, "tile") else np.tile(arr, tile_count)
 
 
 def _make_parallelizable_array(arr: np.ndarray) -> Tuple[np.ndarray, int]:
@@ -63,18 +83,18 @@ class TestFAString:
     cat_symbol = Cat(np.tile(np.arange(len(SYMBOLS) + 1), 3), SYMBOLS)
 
     def test_cat_base_index_0(self):
-        cat = rt.Categorical(np.tile([0, 1], 100), ['abc ', 'bcd'], base_index=0)
+        cat = rt.Categorical(np.tile([0, 1], 100), ["abc ", "bcd"], base_index=0)
         result = cat.str.removetrailing()
-        expected = rt.Categorical(np.tile([0, 1], 100), np.asarray(['abc', 'bcd']).astype('S4'), base_index=0)
+        expected = rt.Categorical(np.tile([0, 1], 100), np.asarray(["abc", "bcd"]).astype("S4"), base_index=0)
         assert_array_or_cat_equal(result, expected)
 
-    @parametrize('position', [0, 1, -1, -2, 3])
+    @parametrize("position", [0, 1, -1, -2, 3])
     def test_char(self, position):
         result = FAString(SYMBOLS).char(position)
-        expected = rt.FastArray([s[position] if position < len(s) else '' for s in SYMBOLS])
+        expected = rt.FastArray([s[position] if position < len(s) else "" for s in SYMBOLS])
         assert_array_equal(result, expected)
 
-    @parametrize('position', [0, 1, -1, -2])
+    @parametrize("position", [0, 1, -1, -2])
     def test_char_cat(self, position):
         result = self.cat_symbol.str.char(position)
         expected = Categorical(self.cat_symbol.ikey, [s[position] for s in SYMBOLS], base_index=1)
@@ -88,20 +108,21 @@ class TestFAString:
         expected = FastArray([s[pos] for s, pos in zip(SYMBOLS, position)])
         assert_array_equal(result, expected)
 
-    @parametrize('position', [
-        -3, 6, [0, 0, 0, 0, -5]
-    ])
+    @parametrize("position", [-3, 6, [0, 0, 0, 0, -5]])
     def test_char_failure(self, position):
-        with pytest.raises(ValueError, match=r'Position -?\d out of bounds'):
+        with pytest.raises(ValueError, match=r"Position -?\d out of bounds"):
             FAString(SYMBOLS).char(position)
 
-    @parametrize("str2, expected", [
-        ('A', [True, True, False, False, False]),
-        ('AA', [True, False, False, False, False]),
-        ('', [True] * 5),
-        ('AAA', [False] * 5),
-        ('AAPL', [True] + [False] * 4)
-    ])
+    @parametrize(
+        "str2, expected",
+        [
+            ("A", [True, True, False, False, False]),
+            ("AA", [True, False, False, False, False]),
+            ("", [True] * 5),
+            ("AAA", [False] * 5),
+            ("AAPL", [True] + [False] * 4),
+        ],
+    )
     def test_contains(self, str2, expected):
         result = FAString(SYMBOLS).contains(str2)
         assert_array_equal(result, expected)
@@ -109,14 +130,19 @@ class TestFAString:
         result = FAString(NB_PARALLEL_SYMBOLS).contains(str2)
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
-    @pytest.mark.skip(reason="Test adapted from `test_contains` but expected results need to be adapted for `cat_symbol` data.")
-    @parametrize("str2, expected", [
-        ('A', [True, True, False, False, False]),
-        ('AA', [True, False, False, False, False]),
-        ('', [True] * 5),
-        ('AAA', [False] * 5),
-        ('AAPL', [True] + [False] * 4)
-    ])
+    @pytest.mark.skip(
+        reason="Test adapted from `test_contains` but expected results need to be adapted for `cat_symbol` data."
+    )
+    @parametrize(
+        "str2, expected",
+        [
+            ("A", [True, True, False, False, False]),
+            ("AA", [True, False, False, False, False]),
+            ("", [True] * 5),
+            ("AAA", [False] * 5),
+            ("AAPL", [True] + [False] * 4),
+        ],
+    )
     def test_contains_cat(self, str2, expected):
         result = self.cat_symbol.str.contains(str2)
         assert_array_equal(result, expected)
@@ -124,13 +150,16 @@ class TestFAString:
         # No parallel test for CatString. It internally uses FAString on the
         # category label array, and that code path is already tested elsewhere.
 
-    @parametrize("str2, expected", [
-        ('A', [True, True, False, False, False]),
-        ('AA', [True, False, False, False, False]),
-        ('', [True] * 5),
-        ('AAA', [False] * 5),
-        ('AAPL', [True] + [False] * 4)
-    ])
+    @parametrize(
+        "str2, expected",
+        [
+            ("A", [True, True, False, False, False]),
+            ("AA", [True, False, False, False, False]),
+            ("", [True] * 5),
+            ("AAA", [False] * 5),
+            ("AAPL", [True] + [False] * 4),
+        ],
+    )
     def test_strstrb(self, str2, expected):
         result = FAString(SYMBOLS).strstrb(str2)
         assert_array_equal(result, expected)
@@ -139,14 +168,18 @@ class TestFAString:
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
     @pytest.mark.skip(
-        reason="Test adapted from `test_contains` but expected results need to be adapted for `cat_symbol` data.")
-    @parametrize("str2, expected", [
-        ('A', [True, True, False, False, False]),
-        ('AA', [True, False, False, False, False]),
-        ('', [True] * 5),
-        ('AAA', [False] * 5),
-        ('AAPL', [True] + [False] * 4)
-    ])
+        reason="Test adapted from `test_contains` but expected results need to be adapted for `cat_symbol` data."
+    )
+    @parametrize(
+        "str2, expected",
+        [
+            ("A", [True, True, False, False, False]),
+            ("AA", [True, False, False, False, False]),
+            ("", [True] * 5),
+            ("AAA", [False] * 5),
+            ("AAPL", [True] + [False] * 4),
+        ],
+    )
     def test_strstrb_cat(self, str2, expected):
         result = self.cat_symbol.str.strstrb(str2)
         assert_array_equal(result, expected)
@@ -154,37 +187,46 @@ class TestFAString:
         # No parallel test for CatString. It internally uses FAString on the
         # category label array, and that code path is already tested elsewhere.
 
-    @parametrize("func, expected, filtered", [
-        ('index', 0, rt.rt_enum.INVALID_POINTER_32),
-        ('index_any_of', 0, rt.rt_enum.INVALID_POINTER_32),
-        ('contains', True, False),
-        ('startswith', True, False),
-        ('endswith', True, False),
-    ])
+    @parametrize(
+        "func, expected, filtered",
+        [
+            ("index", 0, rt.rt_enum.INVALID_POINTER_32),
+            ("index_any_of", 0, rt.rt_enum.INVALID_POINTER_32),
+            ("contains", True, False),
+            ("startswith", True, False),
+            ("endswith", True, False),
+        ],
+    )
     def test_empty_string_comparisons_cat(self, func, expected, filtered):
-        result = getattr(self.cat_symbol.str, func)('')
+        result = getattr(self.cat_symbol.str, func)("")
         expected = rt.tile(expected, len(self.cat_symbol)).astype(result.dtype)
         expected[self.cat_symbol.isfiltered()] = filtered
         assert_array_equal(result, expected)
 
-    @parametrize("str2, expected", [
-        ('bb', [False, False, True]),
-        ('ba', [False, True, False]),
-    ])
+    @parametrize(
+        "str2, expected",
+        [
+            ("bb", [False, False, True]),
+            ("ba", [False, True, False]),
+        ],
+    )
     def test_endswith(self, str2, expected):
         # TODO: Expand test to include when the underlying array is a Categorical.
         #       Also test parallel case.
-        result = FAString(['abab', 'ababa', 'abababb']).endswith(str2)
+        result = FAString(["abab", "ababa", "abababb"]).endswith(str2)
         assert_array_equal(result, expected)
 
-    @parametrize("str2, expected", [
-        ('A', [0, 0, -1, -1, -1]),
-        ('AA', [0, -1, -1, -1, -1]),
-        ('AAPL', [0, -1, -1, -1, -1]),
-        ('', [0] * 5),
-        ('AAA', [-1] * 5),
-        ('B', [-1, -1, 1, -1, 1])
-    ])
+    @parametrize(
+        "str2, expected",
+        [
+            ("A", [0, 0, -1, -1, -1]),
+            ("AA", [0, -1, -1, -1, -1]),
+            ("AAPL", [0, -1, -1, -1, -1]),
+            ("", [0] * 5),
+            ("AAA", [-1] * 5),
+            ("B", [-1, -1, 1, -1, 1]),
+        ],
+    )
     def test_index(self, str2, expected):
         result = FAString(SYMBOLS).index(str2)
         assert_array_equal(result, expected)
@@ -197,49 +239,52 @@ class TestFAString:
         assert_array_equal(result, expected)
 
     def test_index_cat(self):
-        result = self.cat_symbol.str.index('A')
+        result = self.cat_symbol.str.index("A")
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
         expected = rt.FA([inv, 0, 0, -1, -1, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     def test_index_any_of(self):
-        result = FAString(SYMBOLS).index_any_of('PZG')
+        result = FAString(SYMBOLS).index_any_of("PZG")
         expected = rt.FA([2, 2, -1, 0, -1])
         assert_array_equal(result, expected)
 
-        result = FAString(NB_PARALLEL_SYMBOLS).index_any_of('PZG')
+        result = FAString(NB_PARALLEL_SYMBOLS).index_any_of("PZG")
         expected = rt.FA([2, 2, -1, 0, -1] * PARALLEL_MULTIPLIER)
         assert_array_equal(result, expected)
 
         # test old alias
-        result = FAString(SYMBOLS).strpbrk('PZG')
+        result = FAString(SYMBOLS).strpbrk("PZG")
         expected = rt.FA([2, 2, -1, 0, -1])
         assert_array_equal(result, expected)
 
     def test_index_any_of_cat(self):
-        result = self.cat_symbol.str.index_any_of('PZG')
+        result = self.cat_symbol.str.index_any_of("PZG")
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
         expected = rt.FA([inv, 2, 2, -1, 0, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
     def test_lower(self):
         result = FAString(SYMBOLS).lower
-        assert (result.tolist() == [s.lower() for s in SYMBOLS])
+        assert result.tolist() == [s.lower() for s in SYMBOLS]
 
     def test_lower_cat(self):
         result = self.cat_symbol.str.lower
         expected = Cat(self.cat_symbol.ikey, [s.lower() for s in SYMBOLS])
         assert_array_or_cat_equal(result, expected, relaxed_cat_check=True)
 
-    regex_match_test_cases = parametrize('regex, expected', [
-        ('.', [True] * 5),
-        (r'\.', [False] * 5),
-        ('A', [True, True, False, False, False]),
-        ('[A|B]', [True, True, True, False, True]),
-        ('B$', [False, False, True, False, False]),
-    ])
+    regex_match_test_cases = parametrize(
+        "regex, expected",
+        [
+            (".", [True] * 5),
+            (r"\.", [False] * 5),
+            ("A", [True, True, False, False, False]),
+            ("[A|B]", [True, True, True, False, True]),
+            ("B$", [False, False, True, False, False]),
+        ],
+    )
 
-    @parametrize('apply_unique', [True, False])
+    @parametrize("apply_unique", [True, False])
     @regex_match_test_cases
     def test_regex_match(self, regex, expected, apply_unique):
         fa = FA(SYMBOLS * 2)
@@ -250,19 +295,21 @@ class TestFAString:
         cat = Cat(SYMBOLS * 2)  # introduce duplicity to test ikey properly
         assert_array_equal(cat.str.regex_match(regex), expected * 2)
 
-    regex_replace_test_cases = parametrize('regex, repl', [
-        ('.', 'A'),
-        ('\w+', 'A'),
-        ('\d+', '0'),
-        ('[A|B|C]', 'C'),
-        ('B$', ''),
-    ])
+    regex_replace_test_cases = parametrize(
+        "regex, repl",
+        [
+            (".", "A"),
+            ("\w+", "A"),
+            ("\d+", "0"),
+            ("[A|B|C]", "C"),
+            ("B$", ""),
+        ],
+    )
 
-    @pytest.mark.parametrize('arr_type_factory', [
-        pytest.param(rt.FastArray, id='FastArray'),
-        pytest.param(rt.Categorical, id='Categorical')
-    ])
-    @parametrize('apply_unique', [True, False])
+    @pytest.mark.parametrize(
+        "arr_type_factory", [pytest.param(rt.FastArray, id="FastArray"), pytest.param(rt.Categorical, id="Categorical")]
+    )
+    @parametrize("apply_unique", [True, False])
     @regex_replace_test_cases
     def test_regex_replace(self, regex, repl, apply_unique, arr_type_factory):
         fa = arr_type_factory(SYMBOLS * 2)
@@ -271,27 +318,32 @@ class TestFAString:
         assert_array_or_cat_equal(result, expected)
 
     def test_removetrailing_empty(self) -> None:
-        arr = rt.FA([], dtype='S11')  # empty array
+        arr = rt.FA([], dtype="S11")  # empty array
         result = arr.str.removetrailing()
         assert_array_equal(arr, result)
 
-    @pytest.mark.parametrize('strings', [
-        pytest.param(
-            [(x + (' ' * (((len(x) * 17) + idx) % 3)) if idx % 3 != 0 else x) for idx, x in
-             enumerate(_top_25_US_cities_by_population_2019_state_names)],
-            id="modified US state names"
-        )
-    ])
-    @pytest.mark.parametrize('arr_type_factory', [
-        pytest.param(rt.FastArray, id='FastArray'),
-        pytest.param(rt.Categorical, id='Categorical')
-    ])
-    @pytest.mark.parametrize('unicode', [pytest.param(False, id='ascii'), pytest.param(True, id='unicode')])
-    @pytest.mark.parametrize('parallel', [pytest.param(False, id='serial'), pytest.param(True, id='parallel')])
-    @pytest.mark.parametrize('chars', [pytest.param(' ', id='space'), 's'])
-    def test_removetrailing(self, strings: list, arr_type_factory: callable, unicode: bool, parallel: bool,
-                            chars) -> None:
-        dtype_str = '<U' if unicode else '|S'
+    @pytest.mark.parametrize(
+        "strings",
+        [
+            pytest.param(
+                [
+                    (x + (" " * (((len(x) * 17) + idx) % 3)) if idx % 3 != 0 else x)
+                    for idx, x in enumerate(_top_25_US_cities_by_population_2019_state_names)
+                ],
+                id="modified US state names",
+            )
+        ],
+    )
+    @pytest.mark.parametrize(
+        "arr_type_factory", [pytest.param(rt.FastArray, id="FastArray"), pytest.param(rt.Categorical, id="Categorical")]
+    )
+    @pytest.mark.parametrize("unicode", [pytest.param(False, id="ascii"), pytest.param(True, id="unicode")])
+    @pytest.mark.parametrize("parallel", [pytest.param(False, id="serial"), pytest.param(True, id="parallel")])
+    @pytest.mark.parametrize("chars", [pytest.param(" ", id="space"), "s"])
+    def test_removetrailing(
+        self, strings: list, arr_type_factory: callable, unicode: bool, parallel: bool, chars
+    ) -> None:
+        dtype_str = "<U" if unicode else "|S"
         if not unicode:
             strings = [x.encode() for x in strings]
         ndarray = np.array(strings, dtype=dtype_str)
@@ -311,12 +363,13 @@ class TestFAString:
 
         # Verify the output matches the expected result.
         assert_array_or_cat_equal(
-            result, expected,
+            result,
+            expected,
             # TEMP: The function doesn't shrink the dtype of the category array in
             #       an output categorical. So the dtype of the output cat will be the
             #       same as that of the output cat, even if trailing character(s) have
             #       been removed and the strings could fit in a smaller dtype.
-            exact_dtype_match=False
+            exact_dtype_match=False,
         )
 
     #
@@ -328,31 +381,30 @@ class TestFAString:
     #
 
     def test_find(self):
-        res = FAString(['this', 'that', 'test'])._find('t')
-        expected = FastArray([[True, False, False, False],
-                              [True, False, False, True],
-                              [True, False, False, True]])
+        res = FAString(["this", "that", "test"])._find("t")
+        expected = FastArray([[True, False, False, False], [True, False, False, True], [True, False, False, True]])
         assert_array_equal(res, expected)
 
-    @pytest.mark.parametrize('arr_type_factory', [
-        pytest.param(rt.FastArray, id='FastArray'),
-        pytest.param(rt.Categorical, id='Categorical')
-    ])
-    @pytest.mark.parametrize('unicode', [pytest.param(False, id='ascii'), pytest.param(True, id='unicode')])
-    @pytest.mark.parametrize('parallel', [pytest.param(False, id='serial'), pytest.param(True, id='parallel')])
-    @pytest.mark.parametrize('old, new', [
-        ('A', 'B'),
-        ('A', 'BB'),
-        ('A', ''),
-        ('OO', 'O'),
-        ('FB', 'TWITTER'),
-        ('AAPL', ''),
-        ('XYZ', 'LMNOP')
-    ], ids=['one-for-one', 'one-for-two', 'one-for-none',
-            'two-for-one-pair', 'all-replaced',
-            'all-replaced-with-empty', 'no-op'])
+    @pytest.mark.parametrize(
+        "arr_type_factory", [pytest.param(rt.FastArray, id="FastArray"), pytest.param(rt.Categorical, id="Categorical")]
+    )
+    @pytest.mark.parametrize("unicode", [pytest.param(False, id="ascii"), pytest.param(True, id="unicode")])
+    @pytest.mark.parametrize("parallel", [pytest.param(False, id="serial"), pytest.param(True, id="parallel")])
+    @pytest.mark.parametrize(
+        "old, new",
+        [("A", "B"), ("A", "BB"), ("A", ""), ("OO", "O"), ("FB", "TWITTER"), ("AAPL", ""), ("XYZ", "LMNOP")],
+        ids=[
+            "one-for-one",
+            "one-for-two",
+            "one-for-none",
+            "two-for-one-pair",
+            "all-replaced",
+            "all-replaced-with-empty",
+            "no-op",
+        ],
+    )
     def test_replace(self, arr_type_factory, unicode, parallel, old, new):
-        dtype_str = '<U' if unicode else '|S'
+        dtype_str = "<U" if unicode else "|S"
         ndarray = np.array(SYMBOLS, dtype=dtype_str)
         arr = arr_type_factory(ndarray)
         arr, tile_count = (arr, None) if not parallel else _make_parallelizable_array(arr)
@@ -365,7 +417,8 @@ class TestFAString:
             expected = _tile_array(expected, tile_count)
         # breakpoint()
         assert_array_or_cat_equal(
-            result, expected,
+            result,
+            expected,
             exact_dtype_match=False,
             relaxed_cat_check=True,
         )
@@ -373,21 +426,15 @@ class TestFAString:
     def test_startswith(self):
         arrsize = 200
         symbol = Cat(1 + arange(arrsize) % len(SYMBOLS), SYMBOLS)
-        assert_array_equal(symbol.expand_array.str.startswith('AAPL'), symbol.str.startswith(
-            'AAPL'
-        ))
+        assert_array_equal(symbol.expand_array.str.startswith("AAPL"), symbol.str.startswith("AAPL"))
 
     def test_startswith_cat(self):
         arrsize = 200
         symbol = Cat(1 + arange(arrsize) % len(SYMBOLS), SYMBOLS)
-        assert_array_equal(symbol.expand_array.str.startswith('AAPL'), symbol.str.startswith(
-            'AAPL'
-        ))
+        assert_array_equal(symbol.expand_array.str.startswith("AAPL"), symbol.str.startswith("AAPL"))
 
     def test_startswith_cat_filtered(self):
-        assert_array_equal(self.cat_symbol.expand_array.str.startswith('IBM'), self.cat_symbol.str.startswith(
-            'IBM'
-        ))
+        assert_array_equal(self.cat_symbol.expand_array.str.startswith("IBM"), self.cat_symbol.str.startswith("IBM"))
 
     def test_strlen_cat(self):
         result = self.cat_symbol.str.strlen
@@ -401,19 +448,22 @@ class TestFAString:
         assert_array_equal(result, expected)
 
     def test_strpbrk_cat(self):
-        result = self.cat_symbol.str.strpbrk('PZG')
+        result = self.cat_symbol.str.strpbrk("PZG")
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
         expected = rt.FA([inv, 2, 2, -1, 0, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
-    @parametrize("str2, expected", [
-        ('A', [0, 0, -1, -1, -1]),
-        ('AA', [0, -1, -1, -1, -1]),
-        ('AAPL', [0, -1, -1, -1, -1]),
-        ('', [0] * 5),
-        ('AAA', [-1] * 5),
-        ('B', [-1, -1, 1, -1, 1])
-    ])
+    @parametrize(
+        "str2, expected",
+        [
+            ("A", [0, 0, -1, -1, -1]),
+            ("AA", [0, -1, -1, -1, -1]),
+            ("AAPL", [0, -1, -1, -1, -1]),
+            ("", [0] * 5),
+            ("AAA", [-1] * 5),
+            ("B", [-1, -1, 1, -1, 1]),
+        ],
+    )
     def test_strstr(self, str2, expected):
         result = FAString(SYMBOLS).strstr(str2)
         assert_array_equal(result, expected)
@@ -422,22 +472,25 @@ class TestFAString:
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
     def test_strstr_cat(self):
-        result = self.cat_symbol.str.strstr('A')
+        result = self.cat_symbol.str.strstr("A")
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
         expected = rt.FA([inv, 0, 0, -1, -1, -1], dtype=result.dtype).tile(3)
         assert_array_equal(result, expected)
 
-    substr_test_cases = parametrize("start_stop", [
-        (0, 1),
-        (0, 2),
-        (1, 3),
-        (1, -1),
-        (-2, 3),
-        (2,),
-        (-1,),
-        (-3, -1),
-        (-1, 1),
-    ])
+    substr_test_cases = parametrize(
+        "start_stop",
+        [
+            (0, 1),
+            (0, 2),
+            (1, 3),
+            (1, -1),
+            (-2, 3),
+            (2,),
+            (-1,),
+            (-3, -1),
+            (-1, 1),
+        ],
+    )
 
     @substr_test_cases
     def test_substr(self, start_stop):
@@ -460,13 +513,16 @@ class TestFAString:
         # check categories are unique
         assert len(set(result.category_array)) == len(result.category_array)
 
-    @parametrize("start, stop, expected", [
-        (0, [1, 2, 3, 2, 3], ['A', 'AM', 'FB', 'GO', 'IBM']),
-        ([1, 1, 1, 1, 1], [1, 2, 3, 2, 3], ['', 'M', 'B', 'O', 'BM']),
-        ([1, 2, 3, 2, 3], None, ['A', 'AM', 'FB', 'GO', 'IBM']),
-        ([0, 1, 1, 0, 1], [3, 10, 2, -1, -2], ['AAP', 'MZN', 'B', 'GOO', '']),
-        ([1, 1, 1, 1, 1], [1, 1, 1, 1, 1] , ['', '', '', '', '']),
-    ])
+    @parametrize(
+        "start, stop, expected",
+        [
+            (0, [1, 2, 3, 2, 3], ["A", "AM", "FB", "GO", "IBM"]),
+            ([1, 1, 1, 1, 1], [1, 2, 3, 2, 3], ["", "M", "B", "O", "BM"]),
+            ([1, 2, 3, 2, 3], None, ["A", "AM", "FB", "GO", "IBM"]),
+            ([0, 1, 1, 0, 1], [3, 10, 2, -1, -2], ["AAP", "MZN", "B", "GOO", ""]),
+            ([1, 1, 1, 1, 1], [1, 1, 1, 1, 1], ["", "", "", "", ""]),
+        ],
+    )
     def test_substr_array_bounds(self, start, stop, expected):
         result = FAString(SYMBOLS).substr(start, stop)
         assert_array_equal(rt.FastArray(expected), result)
@@ -489,18 +545,18 @@ class TestFAString:
         assert_array_equal(expected, result)
 
     def test_substr_char_stop(self):
-        s = FastArray(['ABC', 'A_B', 'AB_C', 'AB_C_DD'])
-        res = s.str.substr_char_stop('_')
-        expected = FastArray([b'ABC', b'A', b'AB', b'AB'], dtype='|S3')
+        s = FastArray(["ABC", "A_B", "AB_C", "AB_C_DD"])
+        res = s.str.substr_char_stop("_")
+        expected = FastArray([b"ABC", b"A", b"AB", b"AB"], dtype="|S3")
         assert_array_equal(expected, res)
 
-        res = s.str.substr_char_stop('_', inclusive=True)
-        expected = FastArray([b'ABC', b'A_', b'AB_', b'AB_'], dtype='|S3')
+        res = s.str.substr_char_stop("_", inclusive=True)
+        expected = FastArray([b"ABC", b"A_", b"AB_", b"AB_"], dtype="|S3")
         assert_array_equal(expected, res)
 
     def test_upper(self):
         result = FAString(SYMBOLS).upper
-        assert (result.tolist() == [s.upper() for s in SYMBOLS])
+        assert result.tolist() == [s.upper() for s in SYMBOLS]
 
     def test_upper_cat(self):
         result = self.cat_symbol.str.upper
@@ -514,56 +570,74 @@ class TestFAString:
 
 class TestExtract:
     duplicity = 2
-    osi = rt.FastArray(['SPX UO 12/15/23 C5700',
-                        'SPX UO 07/16/21 P3480',
-                        'SPXW UO 07/16/21 P3190',
-                        'SPXW UO 06/30/21 C4100',
-                        'SPXW UO 09/17/21 C3650'] * duplicity)
+    osi = rt.FastArray(
+        [
+            "SPX UO 12/15/23 C5700",
+            "SPX UO 07/16/21 P3480",
+            "SPXW UO 07/16/21 P3190",
+            "SPXW UO 06/30/21 C4100",
+            "SPXW UO 09/17/21 C3650",
+        ]
+        * duplicity
+    )
 
-    expirations = [b'12/15/23', b'07/16/21', b'07/16/21', b'06/30/21', b'09/17/21'] * duplicity
-    roots = [b'SPX', b'SPX', b'SPXW', b'SPXW', b'SPXW'] * duplicity
-    strikes = [b'5700', b'3480', b'3190', b'4100', b'3650'] * duplicity
+    expirations = [b"12/15/23", b"07/16/21", b"07/16/21", b"06/30/21", b"09/17/21"] * duplicity
+    roots = [b"SPX", b"SPX", b"SPXW", b"SPXW", b"SPXW"] * duplicity
+    strikes = [b"5700", b"3480", b"3190", b"4100", b"3650"] * duplicity
 
-    dataset_out_test_cases = parametrize('pattern, expected', [
-        ('(\w+).* (\d{2}/\d{2}/\d{2})',
-         dict(group_0=roots,
-              group_1=expirations)),
+    dataset_out_test_cases = parametrize(
+        "pattern, expected",
+        [
+            ("(\w+).* (\d{2}/\d{2}/\d{2})", dict(group_0=roots, group_1=expirations)),
+            ("(?P<root>\w+).*(\d{2}/\d{2}/\d{2})", dict(root=roots, group_1=expirations)),
+            ("(?P<root>\w+).*(?P<expiration>\d{2}/\d{2}/\d{2})", dict(root=roots, expiration=expirations)),
+            (" [C|P](?P<strike>\d+)$", dict(strike=strikes)),
+            (
+                "(?P<root>\w+W).*(?P<expiration>\d{2}/\d{2}/\d{2})",
+                dict(
+                    root=[root if b"W" in s else "" for s, root in zip(osi, roots)],
+                    expiration=[exp if b"W" in s else "" for s, exp in zip(osi, expirations)],
+                ),
+            ),
+        ],
+        ids=["non-names", "some-names", "all-names", "single-named", "some-unmatched"],
+    )
 
-        ('(?P<root>\w+).*(\d{2}/\d{2}/\d{2})',
-         dict(root=roots,
-              group_1=expirations)),
-
-        ('(?P<root>\w+).*(?P<expiration>\d{2}/\d{2}/\d{2})',
-         dict(root=roots,
-              expiration=expirations)),
-
-        (' [C|P](?P<strike>\d+)$',
-         dict(strike=strikes)),
-
-        ('(?P<root>\w+W).*(?P<expiration>\d{2}/\d{2}/\d{2})',
-         dict(root=[root if b'W' in s else '' for s, root in zip(osi, roots)],
-              expiration=[exp if b'W' in s else '' for s, exp in zip(osi, expirations)]))
-    ], ids=['non-names', 'some-names', 'all-names', 'single-named', 'some-unmatched'])
-
-    @parametrize('apply_unique', [True, False])
+    @parametrize("apply_unique", [True, False])
     @dataset_out_test_cases
     def test_extract_dataset(self, pattern, expected, apply_unique):
         result = self.osi.str.extract(pattern, expand=True, apply_unique=apply_unique)
         assert result.keys() == list(expected)
-        [assert_array_or_cat_equal(FastArray(expected[key]), result[key], ) for key in result]
+        [
+            assert_array_or_cat_equal(
+                FastArray(expected[key]),
+                result[key],
+            )
+            for key in result
+        ]
 
-    @parametrize('apply_unique', [True, False])
+    @parametrize("apply_unique", [True, False])
     def test_extract_dataset_detected_names(self, apply_unique):
-        pattern = ' [C|P](?P<strike>\d+)$'
+        pattern = " [C|P](?P<strike>\d+)$"
         expected = dict(strike=self.strikes)
         result = self.osi.str.extract(pattern, apply_unique=apply_unique)
         assert result.keys() == list(expected)
-        [assert_array_or_cat_equal(FastArray(expected[key]), result[key], ) for key in result]
+        [
+            assert_array_or_cat_equal(
+                FastArray(expected[key]),
+                result[key],
+            )
+            for key in result
+        ]
 
-    array_out_test_cases = parametrize("pattern, expected", [
-        (' [C|P](\d+)', strikes),
-        ('\w{2}', [s[:2] for s in roots]),
-    ], ids=['group', 'no-group'])
+    array_out_test_cases = parametrize(
+        "pattern, expected",
+        [
+            (" [C|P](\d+)", strikes),
+            ("\w{2}", [s[:2] for s in roots]),
+        ],
+        ids=["group", "no-group"],
+    )
 
     @array_out_test_cases
     def test_extract_array(self, pattern, expected):
@@ -571,10 +645,7 @@ class TestExtract:
         expected = rt.FastArray(expected)
         assert_array_or_cat_equal(expected, result)
 
-    @parametrize("kwargs, key", [
-        (dict(expand=True), 'group_0'),
-        (dict(names=['extract']), 'extract')
-    ])
+    @parametrize("kwargs, key", [(dict(expand=True), "group_0"), (dict(names=["extract"]), "extract")])
     @array_out_test_cases
     def test_single_group_datasets(self, pattern, expected, kwargs, key):
         result = self.osi.str.extract(pattern, **kwargs)
@@ -584,13 +655,18 @@ class TestExtract:
 
     @dataset_out_test_cases
     def test_categorical_extract_dataset(self, pattern, expected):
-        result = rt.Cat(self.osi).str.extract(pattern, expand=True, )
-        [assert_array_or_cat_equal(Categorical(expected[key]), result[key],
-                                   relaxed_cat_check=True, check_cat_names=False)
-         for key in result]
+        result = rt.Cat(self.osi).str.extract(
+            pattern,
+            expand=True,
+        )
+        [
+            assert_array_or_cat_equal(
+                Categorical(expected[key]), result[key], relaxed_cat_check=True, check_cat_names=False
+            )
+            for key in result
+        ]
 
     @array_out_test_cases
     def test_categorical_extract_array(self, pattern, expected):
         result = rt.Cat(self.osi).str.extract(pattern)
-        assert_array_or_cat_equal(Categorical(expected), result,
-                                  relaxed_cat_check=True, check_cat_names=False)
+        assert_array_or_cat_equal(Categorical(expected), result, relaxed_cat_check=True, check_cat_names=False)

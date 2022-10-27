@@ -2,24 +2,25 @@
 # we preserve the original behavior and keep up to date with new IPython versions.
 # RIP-318 tracks the current backwards compatibility failures
 # See the original here: https://github.com/ipython/ipython/blob/master/IPython/core/tests/test_completer.py
-import sys
 import os
-import pytest
+import sys
 import textwrap
 import unittest
 
+import pytest
 from IPython import get_ipython
 from IPython.core import completer
-from IPython.utils.tempdir import TemporaryDirectory, TemporaryWorkingDirectory
-from IPython.utils.generics import complete_object
 from IPython.core.completer import (
     Completion,
-    provisionalcompleter,
-    match_dict_keys,
     _deduplicate_completions,
+    match_dict_keys,
+    provisionalcompleter,
 )
-from riptable.Utils.ipython_utils import enable_custom_attribute_completion
+from IPython.utils.generics import complete_object
+from IPython.utils.tempdir import TemporaryDirectory, TemporaryWorkingDirectory
+
 from riptable.test_tooling_integration.ipython_integration_test import greedy_completion
+from riptable.Utils.ipython_utils import enable_custom_attribute_completion
 from riptable.Utils.teamcity_helper import is_running_in_teamcity
 
 
@@ -123,15 +124,15 @@ class TestCompleter(unittest.TestCase):
         """Test that errors from custom attribute completers are silenced."""
         ip = get_ipython()
 
-        _, matches = ip.complete('in')
-        assert matches.index('input') < matches.index('int')
+        _, matches = ip.complete("in")
+        assert matches.index("input") < matches.index("int")
 
         def complete_example(a):
-            return ['example2', 'example1']
+            return ["example2", "example1"]
 
-        ip.Completer.custom_completers.add_re('ex*', complete_example)
-        _, matches = ip.complete('ex')
-        assert matches.index('example2') < matches.index('example1')
+        ip.Completer.custom_completers.add_re("ex*", complete_example)
+        _, matches = ip.complete("ex")
+        assert matches.index("example2") < matches.index("example1")
 
     def test_unicode_completions(self):
         ip = get_ipython()
@@ -148,8 +149,9 @@ class TestCompleter(unittest.TestCase):
             nt.assert_true(isinstance(matches, list))
 
     def test_latex_completions(self):
-        from IPython.core.latex_symbols import latex_symbols
         import random
+
+        from IPython.core.latex_symbols import latex_symbols
 
         ip = get_ipython()
         # Test some random unicode symbols
@@ -169,9 +171,7 @@ class TestCompleter(unittest.TestCase):
         nt.assert_in("\\aleph", matches)
 
     @pytest.mark.xfail(reason="RIP-318 - AssertionError: 0 != 1")
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_back_latex_completion(self):
         ip = get_ipython()
 
@@ -181,9 +181,7 @@ class TestCompleter(unittest.TestCase):
         nt.assert_equal(matches[0], "\\beta")
 
     @pytest.mark.xfail(reason="RIP-318 - AssertionError: 0 != 1")
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_back_unicode_completion(self):
         ip = get_ipython()
 
@@ -192,9 +190,7 @@ class TestCompleter(unittest.TestCase):
         nt.assert_equal(matches[0], "\\ROMAN NUMERAL FIVE")
 
     @pytest.mark.xfail(reason="RIP-318 - AssertionError: 0 != 1")
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_forward_unicode_completion(self):
         ip = get_ipython()
 
@@ -202,12 +198,8 @@ class TestCompleter(unittest.TestCase):
         nt.assert_equal(len(matches), 1)
         nt.assert_equal(matches[0], "Ⅴ")
 
-    @pytest.mark.xfail(
-        reason="RIP-318 - AssertionError: Lists differ: ['\\jmath'] != []"
-    )
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.xfail(reason="RIP-318 - AssertionError: Lists differ: ['\\jmath'] != []")
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_no_ascii_back_completion(self):
         ip = get_ipython()
         with TemporaryWorkingDirectory():  # Avoid any filename completions
@@ -247,12 +239,8 @@ class TestCompleter(unittest.TestCase):
         for s in ['""', '""" """', '"hi" "ipython"']:
             nt.assert_false(completer.has_open_quotes(s))
 
-    @pytest.mark.xfail(
-        sys.platform == "win32", reason="RIP-318 - abspath completions fail on Windows"
-    )
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.xfail(sys.platform == "win32", reason="RIP-318 - abspath completions fail on Windows")
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_abspath_file_completions(self):
         ip = get_ipython()
         with TemporaryDirectory() as tmpdir:
@@ -302,31 +290,21 @@ class TestCompleter(unittest.TestCase):
 
             # Single quote matches embedded single quote
             text = "open('foo"
-            c = ip.Completer._complete(
-                cursor_line=0, cursor_pos=len(text), full_text=text
-            )[1]
+            c = ip.Completer._complete(cursor_line=0, cursor_pos=len(text), full_text=text)[1]
             nt.assert_equal(c, [escaped])
 
             # Double quote requires no escape
             text = 'open("foo'
-            c = ip.Completer._complete(
-                cursor_line=0, cursor_pos=len(text), full_text=text
-            )[1]
+            c = ip.Completer._complete(cursor_line=0, cursor_pos=len(text), full_text=text)[1]
             nt.assert_equal(c, [name])
 
             # No quote requires an escape
             text = "%ls foo"
-            c = ip.Completer._complete(
-                cursor_line=0, cursor_pos=len(text), full_text=text
-            )[1]
+            c = ip.Completer._complete(cursor_line=0, cursor_pos=len(text), full_text=text)[1]
             nt.assert_equal(c, [escaped])
 
-    @pytest.mark.xfail(
-        reason="RIP-318 - assert ['TestClass.T...TestClass.a1'] == ['TestClass.a', 'TestClass.a1']"
-    )
-    @pytest.mark.skipif(
-        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-    )
+    @pytest.mark.xfail(reason="RIP-318 - assert ['TestClass.T...TestClass.a1'] == ['TestClass.a', 'TestClass.a1']")
+    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     def test_all_completions_dups(self):
         """
         Make sure the output of `IPCompleter.all_completions` does not have
@@ -339,11 +317,11 @@ class TestCompleter(unittest.TestCase):
             with provisionalcompleter():
                 ip.Completer.use_jedi = jedi_status
                 matches = c.all_completions("TestCl")
-                assert matches == ['TestClass'], jedi_status
+                assert matches == ["TestClass"], jedi_status
                 matches = c.all_completions("TestClass.")
                 assert len(matches) > 2, jedi_status
                 matches = c.all_completions("TestClass.a")
-                assert matches == ['TestClass.a', 'TestClass.a1'], jedi_status
+                assert matches == ["TestClass.a", "TestClass.a1"], jedi_status
 
     def test_jedi(self):
         """
@@ -391,9 +369,7 @@ class TestCompleter(unittest.TestCase):
             c = next(completions)  # should be `open`
             ip.Completer.use_jedi = False
         assert "file" in c.signature, "Signature of function was not found by completer"
-        assert (
-            "encoding" in c.signature
-        ), "Signature of function was not found by completer"
+        assert "encoding" in c.signature, "Signature of function was not found by completer"
 
     def test_deduplicate_completions(self):
         """
@@ -410,9 +386,7 @@ class TestCompleter(unittest.TestCase):
         )
         with provisionalcompleter():
             ip.Completer.use_jedi = True
-            l = list(
-                _deduplicate_completions("Z.z", ip.Completer.completions("Z.z", 3))
-            )
+            l = list(_deduplicate_completions("Z.z", ip.Completer.completions("Z.z", 3)))
             ip.Completer.use_jedi = False
 
         assert len(l) == 1, "Completions (Z.z<tab>) correctly deduplicate: %s " % l
@@ -445,42 +419,38 @@ class TestCompleter(unittest.TestCase):
                 nt.assert_in(completion, completions)
 
         with provisionalcompleter():
-            yield _, "a[0].", 5, "a[0].real", "Should have completed on a[0].: %s", Completion(
-                5, 5, "real"
-            )
-            yield _, "a[0].r", 6, "a[0].real", "Should have completed on a[0].r: %s", Completion(
-                5, 6, "real"
-            )
+            yield _, "a[0].", 5, "a[0].real", "Should have completed on a[0].: %s", Completion(5, 5, "real")
+            yield _, "a[0].r", 6, "a[0].real", "Should have completed on a[0].r: %s", Completion(5, 6, "real")
 
             yield _, "a[0].from_", 10, "a[0].from_bytes", "Should have completed on a[0].from_: %s", Completion(
                 5, 10, "from_bytes"
             )
 
-#    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
-#    @pytest.mark.skipif(
-#        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-#    )
-#    def test_omit__names(self):
-# deleted due to lint failure
+    #    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
+    #    @pytest.mark.skipif(
+    #        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
+    #    )
+    #    def test_omit__names(self):
+    # deleted due to lint failure
 
-#    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
-#    @pytest.mark.skipif(
-#        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
-#    )
-#    def test_limit_to__all__False_ok(self):
-#        """
-#        Limit to all is deprecated, once we remove it this test can go away.
-#        """
-#        ip = get_ipython()
-#        c = ip.Completer
-#        c.use_jedi = False
-#        ip.ex("class D: x=24")
-#        ip.ex("d=D()")
-#        cfg = Config()
-#        cfg.IPCompleter.limit_to__all__ = False
-#        c.update_config(cfg)
-#        s, matches = c.complete("d.")
-#        nt.assert_in("d.x", matches)
+    #    @pytest.mark.xfail(reason="RIP-318 - requires traitlets module")
+    #    @pytest.mark.skipif(
+    #        is_running_in_teamcity(), reason="Please remove alongside xfail removal."
+    #    )
+    #    def test_limit_to__all__False_ok(self):
+    #        """
+    #        Limit to all is deprecated, once we remove it this test can go away.
+    #        """
+    #        ip = get_ipython()
+    #        c = ip.Completer
+    #        c.use_jedi = False
+    #        ip.ex("class D: x=24")
+    #        ip.ex("d=D()")
+    #        cfg = Config()
+    #        cfg.IPCompleter.limit_to__all__ = False
+    #        c.update_config(cfg)
+    #        s, matches = c.complete("d.")
+    #        nt.assert_in("d.x", matches)
 
     def test_get__all__entries_ok(self):
         class A:
@@ -518,9 +488,7 @@ class TestCompleter(unittest.TestCase):
         kwd = c._default_arguments_from_docstring("min(iterable[, key=func]) -> value")
         nt.assert_equal(kwd, ["key"])
         # with cython type etc
-        kwd = c._default_arguments_from_docstring(
-            "Minuit.migrad(self, int ncall=10000, resume=True, int nsplit=1)\n"
-        )
+        kwd = c._default_arguments_from_docstring("Minuit.migrad(self, int ncall=10000, resume=True, int nsplit=1)\n")
         nt.assert_equal(kwd, ["ncall", "resume", "nsplit"])
         # white spaces
         kwd = c._default_arguments_from_docstring(
@@ -890,9 +858,7 @@ class TestCompleter(unittest.TestCase):
         nt.assert_in("hello", matches)
         nt.assert_in("world", matches)
         # complete on the numpy struct itself
-        dt = numpy.dtype(
-            [("my_head", [("my_dt", ">u4"), ("my_df", ">u4")]), ("my_data", ">f4", 5)]
-        )
+        dt = numpy.dtype([("my_head", [("my_dt", ">u4"), ("my_df", ">u4")]), ("my_data", ">f4", 5)])
         x = numpy.zeros(2, dtype=dt)
         ip.user_ns["d"] = x[1]
         _, matches = complete(line_buffer="d['")
@@ -1024,5 +990,5 @@ class TestCompleter(unittest.TestCase):
 # endregion IPython/core/tests/test_completer.py
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tester = unittest.main()

@@ -20,42 +20,29 @@ class Flatten_Test(unittest.TestCase):
     def test_nested(self):
         st1 = Struct(
             {
-                'cat1': Categorical(['a', 'b', 'c', 'd']),
-                'arr1': arange(5),
-                'ds1': Dataset({'col_' + str(i): np.random.rand(5) for i in range(5)}),
-                'arr2': arange(10),
-                'test_string': 'this is my string',
-                'array3': arange(30).astype(np.int8),
-                'nested_struct1': Struct(
+                "cat1": Categorical(["a", "b", "c", "d"]),
+                "arr1": arange(5),
+                "ds1": Dataset({"col_" + str(i): np.random.rand(5) for i in range(5)}),
+                "arr2": arange(10),
+                "test_string": "this is my string",
+                "array3": arange(30).astype(np.int8),
+                "nested_struct1": Struct(
                     {
-                        'set1': Dataset(
-                            {'col_' + str(i): np.random.randint(5) for i in range(3)}
-                        ),
-                        'set2': Dataset(
+                        "set1": Dataset({"col_" + str(i): np.random.randint(5) for i in range(3)}),
+                        "set2": Dataset({"col_" + str(i): np.random.choice(["a", "b", "c"], 10) for i in range(2)}),
+                        "nested_2": Struct(
                             {
-                                'col_' + str(i): np.random.choice(['a', 'b', 'c'], 10)
-                                for i in range(2)
-                            }
-                        ),
-                        'nested_2': Struct(
-                            {
-                                'c1': Categorical(arange(5)),
-                                'c2': Categorical(['aaa', 'bbbb', 'cccc']),
-                                'leaf_dataset': Dataset(
-                                    {'col_' + str(i): arange(5) for i in range(3)}
-                                ),
-                                'array4': arange(20).astype(np.uint64),
-                                'dtn1': DateTimeNano.random(20),
-                                'nested_3': Dataset(
+                                "c1": Categorical(arange(5)),
+                                "c2": Categorical(["aaa", "bbbb", "cccc"]),
+                                "leaf_dataset": Dataset({"col_" + str(i): arange(5) for i in range(3)}),
+                                "array4": arange(20).astype(np.uint64),
+                                "dtn1": DateTimeNano.random(20),
+                                "nested_3": Dataset(
                                     {
-                                        'CAT': Categorical(
-                                            np.random.choice(['X', 'Y', 'Z'], 17)
-                                        ),
-                                        'DTN': DateTimeNano.random(17),
-                                        'DATE': Date(
-                                            np.random.randint(15000, 20000, 17)
-                                        ),
-                                        'TSPAN': TimeSpan(
+                                        "CAT": Categorical(np.random.choice(["X", "Y", "Z"], 17)),
+                                        "DTN": DateTimeNano.random(17),
+                                        "DATE": Date(np.random.randint(15000, 20000, 17)),
+                                        "TSPAN": TimeSpan(
                                             np.random.randint(
                                                 0,
                                                 1_000_000_000 * 60 * 60 * 24,
@@ -63,27 +50,18 @@ class Flatten_Test(unittest.TestCase):
                                                 dtype=np.int64,
                                             )
                                         ),
-                                        'DSPAN': DateSpan(
-                                            np.random.randint(0, 365, 17)
-                                        ),
+                                        "DSPAN": DateSpan(np.random.randint(0, 365, 17)),
                                     }
                                 ),
                             }
                         ),
-                        'set3': Dataset(
-                            {
-                                'col_' + str(i): np.random.choice([True, False], 10)
-                                for i in range(4)
-                            }
-                        ),
+                        "set3": Dataset({"col_" + str(i): np.random.choice([True, False], 10) for i in range(4)}),
                     }
                 ),
-                'ds2': Dataset(
-                    {'heading_' + str(i): np.random.rand(5) for i in range(3)}
-                ),
-                'int1': 5,
-                'float1': 7.0,
-                'cat2': Categorical(['a', 'b', 'c', 'd']),
+                "ds2": Dataset({"heading_" + str(i): np.random.rand(5) for i in range(3)}),
+                "int1": 5,
+                "float1": 7.0,
+                "cat2": Categorical(["a", "b", "c", "d"]),
             }
         )
 
