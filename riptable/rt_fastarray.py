@@ -1318,6 +1318,42 @@ class FastArray(np.ndarray):
 
     # --------------------------------------------------------------------------
     def astype(self, dtype, order="K", casting="unsafe", subok=True, copy=True) -> FastArray:
+        """
+        Return a `FastArray` with values converted to the specified data type.
+
+        Check your results when you convert missing values. Sentinel values are
+        preserved when Riptable handles the conversion. However, in some cases
+        the array is sent to NumPy for conversion and results may not be what
+        you expect.
+
+        For parameter descriptions, see :py:meth:`numpy.ndarray.astype`. Note
+        that until a reported bug is fixed, the `casting` parameter is ignored
+        when Riptable handles the conversion.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` with values converted to the specified data type.
+
+        See Also
+        --------
+        Dataset.astype
+
+        Examples
+        --------
+        >>> a = rt.FastArray([1.7, 2.0, 3.0])
+        >>> a.astype(int)
+        FastArray([1, 2, 3])
+
+        Convert a `NaN` to an `int` sentinel and back:
+
+        >>> a = rt.FastArray([rt.nan, 1.0, 2.0])
+        >>> a_int = a.astype(int)
+        >>> a_int
+        FastArray([-2147483648,           1,           2])
+        >>> a_int.astype(float)
+        FastArray([nan,  1.,  2.])
+        """
         # result= super(FastArray, self).astype(dtype, order,casting,subok,copy)
         # 17 is object
         # 18 = ASCII string
@@ -2000,6 +2036,18 @@ class FastArray(np.ndarray):
     def nanmedian(self, **kwargs) -> np.number:
         return np.nanmedian(self, **kwargs)
 
+    def quantile(self, **kwargs) -> np.number | FastArray:
+        return np.quantile(self, **kwargs)
+
+    def nanquantile(self, **kwargs) -> np.number | FastArray:
+        return np.nanquantile(self, **kwargs)
+
+    def percentile(self, **kwargs) -> np.number | FastArray:
+        return np.percentile(self, **kwargs)
+
+    def nanpercentile(self, **kwargs) -> np.number | FastArray:
+        return np.nanpercentile(self, **kwargs)
+
     def clip_lower(self, a_min, **kwargs) -> FastArray:
         return self.clip(a_min, None, **kwargs)
 
@@ -2188,8 +2236,35 @@ class FastArray(np.ndarray):
 
     # ---------------------------------------------------------------------------
     def issorted(self) -> bool:
-        """returns True if the array is sorted otherwise False
-        If the data is likely to be sorted, call the issorted property to check.
+        """
+        Return True if the array is sorted, False otherwise.
+
+        NaNs at the end of an array are considered sorted.
+
+        Calls :meth:`riptable.issorted`.
+
+        Returns
+        -------
+        bool
+            True if the array is sorted, False otherwise.
+
+        See Also
+        --------
+        riptable.issorted
+
+        Examples
+        --------
+        >>> a = rt.FastArray(['a', 'b', 'c'])
+        >>> a.issorted()
+        True
+
+        >>> a = rt.FastArray([1.0, 2.0, 3.0, rt.nan])
+        >>> rt.issorted(a)
+        True
+
+        >>> a = rt.FastArray(['a', 'c', 'b'])
+        >>> a.issorted()
+        False
         """
         return issorted(self)
 
@@ -2213,15 +2288,6 @@ class FastArray(np.ndarray):
     #############################################
     # Boolean section
     #############################################
-    def isnotfinite(self, fancy=False):
-        return self._unary_op(MATH_OPERATION.ISNOTFINITE, fancy=fancy)
-
-    def isinf(self, fancy=False):
-        return self._unary_op(MATH_OPERATION.ISINF, fancy=fancy)
-
-    def isnotinf(self, fancy=False):
-        return self._unary_op(MATH_OPERATION.ISNOTINF, fancy=fancy)
-
     def isnormal(self, fancy=False):
         return self._unary_op(MATH_OPERATION.ISNORMAL, fancy=fancy)
 
@@ -2394,6 +2460,144 @@ class FastArray(np.ndarray):
         FastArray([3])
         """
         return self._unary_op(MATH_OPERATION.ISFINITE, fancy=fancy)
+
+    def isnotfinite(self, fancy=False):
+        """
+        Return a boolean array that's True for each non-finite `FastArray` element,
+        False otherwise.
+
+        A value is considered to be finite if it's not positive or negative infinity
+        or a NaN (Not a Number).
+
+        Parameters
+        ----------
+        fancy : bool, default False
+            Set to True to instead return the indices of the True (non-finite) values.
+
+        Returns
+        -------
+        `FastArray`
+            An array or booleans or indices.
+
+        See Also
+        --------
+        FastArray.isfinite, riptable.isfinite, riptable.isnotfinite, riptable.isinf,
+        riptable.isnotinf, FastArray.isinf, FastArray.isnotinf
+        Dataset.mask_or_isfinite :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one finite value.
+        Dataset.mask_and_isfinite :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            finite values.
+        Dataset.mask_or_isinf :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one value that's positive or negative infinity.
+        Dataset.mask_and_isinf :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            infinite values.
+
+        Examples
+        --------
+        >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+        >>> a.isnotfinite()
+        FastArray([ True,  True,  True, False])
+
+        With ``fancy = True``:
+
+        >>> a.isnotfinite(fancy = True)
+        FastArray([0, 1, 2])
+        """
+        return self._unary_op(MATH_OPERATION.ISNOTFINITE, fancy=fancy)
+
+    def isinf(self, fancy=False):
+        """
+        Return a boolean array that's True for each `FastArray` element that's positive
+        or negative infinity, False otherwise.
+
+        Parameters
+        ----------
+        fancy : bool, default False
+            Set to True to instead return the indices of the True (infinite) values.
+
+        Returns
+        -------
+        `FastArray`
+            An array or booleans or indices.
+
+        See Also
+        --------
+        FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite,
+        riptable.isinf, riptable.isnotinf, riptable.isfinite, riptable.isnotfinite
+        Dataset.mask_or_isfinite :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one finite value.
+        Dataset.mask_and_isfinite :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            finite values.
+        Dataset.mask_or_isinf :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one value that's positive or negative infinity.
+        Dataset.mask_and_isinf :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            infinite values.
+
+        Examples
+        --------
+        >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+        >>> a.isinf()
+        FastArray([ True,  True, False, False])
+
+        With ``fancy = True``:
+
+        >>> a.isinf(fancy = True)
+        FastArray([0, 1])
+        """
+        return self._unary_op(MATH_OPERATION.ISINF, fancy=fancy)
+
+    def isnotinf(self, fancy=False):
+        """
+        Return a boolean array that's True for each `FastArray` element that's not positive
+        or negative infinity, False otherwise.
+
+        Parameters
+        ----------
+        fancy : bool, default False
+            Set to True to instead return the indices of the True (non-infinite) values.
+
+        Returns
+        -------
+        `FastArray`
+            An array or booleans or indices.
+
+        See Also
+        --------
+        FastArray.isinf, riptable.isnotinf, riptable.isinf, riptable.isfinite,
+        riptable.isnotfinite, FastArray.isfinite, FastArray.isnotfinite
+        Dataset.mask_or_isfinite :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one finite value.
+        Dataset.mask_and_isfinite :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            finite values.
+        Dataset.mask_or_isinf :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one value that's positive or negative infinity.
+        Dataset.mask_and_isinf :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            infinite values.
+
+        Examples
+        --------
+        >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+        >>> a.isnotinf()
+        FastArray([False, False,  True,  True])
+
+        With ``fancy = True``:
+
+        >>> a.isnotinf(fancy = True)
+        FastArray([2, 3])
+        """
+        return self._unary_op(MATH_OPERATION.ISNOTINF, fancy=fancy)
 
     #############################################
     # Reduce section

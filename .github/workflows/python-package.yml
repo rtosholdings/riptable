@@ -5,9 +5,9 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-2019]
-        python-version: [3.8, 3.9, '3.10']
+        python-version: [3.8, 3.9, "3.10"]
         numpy-version: [1.22]
     steps:
       - name: Checkout repo
@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
       - name: Setup Miniconda
         env:
-         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: "pypi_build"
@@ -44,13 +44,12 @@ jobs:
       - name: Configure Conda
         run: |
           conda config --set unsatisfiable_hints_check_depth 0 # setting unsatisfiable_hints=False is broken
-      - name: Install Linux core dependencies
-        # Needed for pip install of riptide_cpp from sdist
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - name: Install dependencies
         run: |
-          # pip install of tbb-devel is broken (see https://github.com/oneapi-src/oneTBB/issues/682)
-          conda install -q -y binutils=2.36 binutils_linux-64 gxx=8 gcc=8 "cmake>=3.18" ninja "tbb=2021.6" "tbb-devel=2021.6"
+          python dev_tools/gen_requirements.py --out pypi_reqs.txt pypi
+          conda install -q -y --file pypi_reqs.txt
       - name: Install core dependencies
+        # Needed for pip install of riptide_cpp from sdist
         run: |
           python -m pip install --upgrade pip
           pip install numpy==${{ matrix.numpy-version }}.*
@@ -58,9 +57,9 @@ jobs:
           python -c "import riptide_cpp; print(riptide_cpp.__version__); print(riptide_cpp.__file__)"
       - name: Install other dependencies
         run: |
-          pip install setuptools
-          pip install ansi2html ipython numba ipykernel python-dateutil
-          pip install flake8 pytest hypothesis nose bottleneck pandas
+          python dev_tools/gen_requirements.py --out runtime_reqs.txt runtime
+          python dev_tools/gen_requirements.py --out tests_reqs.txt tests
+          pip install -r runtime_reqs.txt -r tests_reqs.txt
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
@@ -97,7 +96,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
+          python-version: "3.x"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -119,8 +118,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ['ubuntu-latest', 'windows-2019']
-        python-version: [3.8, 3.9, '3.10']
+        os: ["ubuntu-latest", "windows-2019"]
+        python-version: [3.8, 3.9, "3.10"]
     env:
       python_version: 3.9
       ANACONDA_USER: rtosholdings
@@ -132,7 +131,7 @@ jobs:
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         env:
-         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
           activate-environment: "conda_build"
           python-version: ${{ env.python_version }}
@@ -144,7 +143,8 @@ jobs:
         shell: bash -l {0}
         run: |
           set -ex
-          conda install conda-build setuptools_scm -q -y
+          python dev_tools/gen_requirements.py --out conda_reqs.txt conda
+          conda install -q -y --file conda_reqs.txt
       - name: Build Package
         shell: bash -l {0}
         run: |
@@ -171,7 +171,7 @@ jobs:
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         env:
-         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
           activate-environment: "conda_deploy"
           auto-update-conda: true

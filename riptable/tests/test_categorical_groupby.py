@@ -151,6 +151,16 @@ gb_funcs_L2 = ["first", "last", "median", "mode", "nanmedian"]
 gb_funcs_L3 = ["cumsum", "cumprod"]
 all_gb_ops = gb_funcs_L1 + gb_funcs_L2 + gb_funcs_L3
 
+all_gb_kwargs = {func: [{}] for func in all_gb_ops}
+all_gb_kwargs["quantile"] = [
+    {"q": 0.245},
+    {"q": 0.0},
+    {"q": 0.713},
+    {"q": 0.6},
+    {"q": 0.501},
+    {"q": 0.500000},
+]
+
 even_filter = logical(arange(30) % 2)
 d_filter = str_fa != b"d"
 
@@ -364,14 +374,16 @@ class TestCategoricalGroupby:
 
     def get_gb_results(self, op_name, gb, c, c_data, cols_to_match):
         gb_call = getattr(gb, op_name)
-        gb_result = gb_call()
-        gb_cat_call = getattr(c, op_name)
-        gb_cat_result = gb_cat_call(c_data)
-        # print('gb\n',gb_result)
-        # print('cat\n',gb_cat_result)
-
-        for col in cols_to_match:
-            match = bool(np.all(gb_result[col] == gb_cat_result[col]))
+        list_gb_kwargs = all_gb_kwargs[op_name]
+        match = True
+        for gb_kwargs in list_gb_kwargs:
+            gb_result = gb_call(**gb_kwargs)
+            gb_cat_call = getattr(c, op_name)
+            gb_cat_result = gb_cat_call(c_data, **gb_kwargs)
+            # print('gb\n',gb_result)
+            # print('cat\n',gb_cat_result)
+            for col in cols_to_match:
+                match = match and bool(np.all(gb_result[col] == gb_cat_result[col]))
         return match
 
     def get_filtered_bin_results(self, op_name, c, c_data, col_name, filter, bin_idx, correct):

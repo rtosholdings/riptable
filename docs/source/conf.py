@@ -88,10 +88,15 @@ master_doc = "index"
 autoapi_dirs = ["../../riptable"]
 autoapi_ignore = ["*test*"]
 
+# Suppress Sphinx build warnings
+
+suppress_warnings = ["autodoc"]
+
+# --Intersphinx configuration--------------------------------------------------
+
 # Turn off SSL verification so Intersphinx can reach the endpoints below ------
 tls_verify = False
 
-# --Intersphinx configuration--------------------------------------------------
 intersphinx_mapping = {
     "pyarrow": ("https://arrow.apache.org/docs", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),

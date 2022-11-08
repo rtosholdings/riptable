@@ -1,0 +1,10 @@
+# Based on https://docs.github.com/en/get-started/getting-started-with-git/configuring-git-to-handle-line-endings
+
+* text=auto
+
+*.py text
+
+*.csv text eol=crlf
+
+*.png binary
+*.jpg binary

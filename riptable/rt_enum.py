@@ -504,6 +504,7 @@ class GB_FUNCTIONS(IntEnum):
     GB_MEDIAN = 103  # auto handles nan
     GB_MODE = 104  # auto handles nan
     GB_TRIMBR = 105  # auto handles nan
+    GB_QUANTILE_MULT = 106  # handles all (nan)median/quantile versions
 
     # All int/uints output upgraded to INT64
     # Output is all elements (not just grouped)
@@ -543,6 +544,7 @@ GB_DATE_ALLOWED = [
     GB_FUNCTIONS.GB_NANMIN,
     GB_FUNCTIONS.GB_NANMAX,
     GB_FUNCTIONS.GB_MEDIAN,
+    GB_FUNCTIONS.GB_QUANTILE_MULT,
     GB_FUNCTIONS.GB_MODE,
     GB_FUNCTIONS.GB_ROLLING_DIFF,
     GB_FUNCTIONS.GB_ROLLING_SHIFT,

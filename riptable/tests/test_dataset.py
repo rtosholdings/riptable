@@ -1960,7 +1960,7 @@ class TestDataset(unittest.TestCase):
         x = Dataset(df, unicode=True)
         self.assertTrue(x.test[1] == "1")
 
-    def test_copyinplace(self):
+    def test_filter_mask_copy(self):
         ds = Dataset()
         # also check that len returns 0 instead of None
         self.assertTrue(len(ds) == 0)
@@ -1968,9 +1968,134 @@ class TestDataset(unittest.TestCase):
         ds.MyIntKey = [1, 2, 3, 4]
         ds.MyDate = Date([1, 2, 3, 4])
         ds.MyValue = 1, 2, 1, 2
-        ds.filter(ds.MyValue == 1, inplace=True)
-        result = ds.cat(["MyStrKey", "MyDate"]).null()
+        output = ds.filter(ds.MyValue == 1, inplace=False)
+        self.assertIsNot(ds, output)
+        self.assertEqual(ds.get_nrows(), 4)
+        self.assertEqual(output.get_nrows(), 2)
+        self.assertEqual(ds.get_ncols(), 4)
+        self.assertEqual(output.get_ncols(), 4)
+        # TODO: Assert column ordering is the same before/after the operation.
+        result = output.cat(["MyStrKey", "MyDate"]).null()
         self.assertTrue(isinstance(result["MyDate"], Date))
+
+    def test_filter_mask_inplace(self):
+        ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds) == 0)
+        ds.MyStrKey = Categorical(list("ABCD"))
+        ds.MyIntKey = [1, 2, 3, 4]
+        ds.MyDate = Date([1, 2, 3, 4])
+        ds.MyValue = 1, 2, 1, 2
+        output = ds.filter(ds.MyValue == 1, inplace=True)
+        self.assertIs(ds, output)
+        self.assertEqual(ds.get_nrows(), 2)
+        self.assertEqual(output.get_nrows(), 2)
+        self.assertEqual(ds.get_ncols(), 4)
+        self.assertEqual(output.get_ncols(), 4)
+        # TODO: Assert column ordering is the same before/after the operation.
+        result = output.cat(["MyStrKey", "MyDate"]).null()
+        self.assertTrue(isinstance(result["MyDate"], Date))
+
+    def test_filter_fancy_copy(self):
+        ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds) == 0)
+        ds.MyStrKey = Categorical(list("ABCD"))
+        ds.MyIntKey = [1, 2, 3, 4]
+        ds.MyDate = Date([1, 2, 3, 4])
+        ds.MyValue = 1, 2, 1, 2
+        output = ds.filter([0, 2], inplace=False)
+        self.assertIsNot(ds, output)
+        self.assertEqual(ds.get_nrows(), 4)
+        self.assertEqual(output.get_nrows(), 2)
+        self.assertEqual(ds.get_ncols(), 4)
+        self.assertEqual(output.get_ncols(), 4)
+        # TODO: Assert column ordering is the same before/after the operation.
+        result = output.cat(["MyStrKey", "MyDate"]).null()
+        self.assertTrue(isinstance(result["MyDate"], Date))
+
+    def test_filter_fancy_inplace(self):
+        ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds) == 0)
+        ds.MyStrKey = Categorical(list("ABCD"))
+        ds.MyIntKey = [1, 2, 3, 4]
+        ds.MyDate = Date([1, 2, 3, 4])
+        ds.MyValue = 1, 2, 1, 2
+        output = ds.filter([0, 2], inplace=True)
+        self.assertIs(ds, output)
+        self.assertEqual(ds.get_nrows(), 2)
+        self.assertEqual(output.get_nrows(), 2)
+        self.assertEqual(ds.get_ncols(), 4)
+        self.assertEqual(output.get_ncols(), 4)
+        # TODO: Assert column ordering is the same before/after the operation.
+        result = output.cat(["MyStrKey", "MyDate"]).null()
+        self.assertTrue(isinstance(result["MyDate"], Date))
+
+    def test_filter_scalar_copy(self):
+        ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds) == 0)
+        ds.MyStrKey = Categorical(list("ABCD"))
+        ds.MyIntKey = [1, 2, 3, 4]
+        ds.MyDate = Date([1, 2, 3, 4])
+        ds.MyValue = 1, 2, 1, 2
+        output = ds.filter(2, inplace=False)
+        self.assertIsNot(ds, output)
+        self.assertEqual(ds.get_nrows(), 4)
+        self.assertEqual(output.get_nrows(), 1)
+        self.assertEqual(ds.get_ncols(), 4)
+        self.assertEqual(output.get_ncols(), 4)
+        # TODO: Assert column ordering is the same before/after the operation.
+        result = output.cat(["MyStrKey", "MyDate"]).null()
+        self.assertTrue(isinstance(result["MyDate"], Date))
+
+    def test_filter_mask_inplace_norows(self):
+        ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds) == 0)
+        ds.MyStrKey = Categorical(list("ABCD"))
+        ds.MyIntKey = [1, 2, 3, 4]
+        ds.MyDate = Date([1, 2, 3, 4])
+        ds.MyValue = 1, 2, 1, 2
+        output = ds.filter(ds.MyValue == 13, inplace=True)
+        self.assertIs(ds, output)
+        self.assertEqual(ds.get_nrows(), 0)
+        self.assertEqual(output.get_nrows(), 0)
+        self.assertEqual(ds.get_ncols(), 4)
+        self.assertEqual(output.get_ncols(), 4)
+        # TODO: Assert column ordering is the same before/after the operation.
+        result = output.cat(["MyStrKey", "MyDate"]).null()
+        self.assertTrue(isinstance(result["MyDate"], Date))
+
+    def test_filter_mask_copy_norows(self):
+        ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds) == 0)
+        ds.MyStrKey = Categorical(list("ABCD"))
+        ds.MyIntKey = [1, 2, 3, 4]
+        ds.MyDate = Date([1, 2, 3, 4])
+        ds.MyValue = 1, 2, 1, 2
+        output = ds.filter(ds.MyValue == 13, inplace=False)
+        self.assertIsNot(ds, output)
+        self.assertEqual(ds.get_nrows(), 4)
+        self.assertEqual(output.get_nrows(), 0)
+        self.assertEqual(ds.get_ncols(), 4)
+        self.assertEqual(output.get_ncols(), 4)
+        # TODO: Assert column ordering is the same before/after the operation.
+        result = output.cat(["MyStrKey", "MyDate"]).null()
+        self.assertTrue(isinstance(result["MyDate"], Date))
+
+    def test_filter_mask_length_mismatch_raises(self):
+        ds = Dataset()
+        # also check that len returns 0 instead of None
+        self.assertTrue(len(ds) == 0)
+        ds.MyStrKey = Categorical(list("ABCD"))
+        ds.MyIntKey = [1, 2, 3, 4]
+        ds.MyDate = Date([1, 2, 3, 4])
+        ds.MyValue = 1, 2, 1, 2
+        with self.assertRaises(ValueError):
+            _ = ds.filter((ds.MyValue == 13)[:3], inplace=False)
 
     def test_underscorename(self):
         ds = Dataset()

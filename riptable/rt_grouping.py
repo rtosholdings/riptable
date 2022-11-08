@@ -10,11 +10,10 @@ __all__ = [
 
 # TODO: Enable this and use it in code below to replace print() calls;
 #       can remove 'verbose' parameters too since logging can be turned on externally.
-# import logging
-
+import logging
 import warnings
 from enum import EnumMeta, IntEnum
-from typing import TYPE_CHECKING, Callable, Dict, List, Mapping, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Mapping, Optional, Tuple, Union, Iterable
 
 import numba as nb
 import numpy as np
@@ -2442,12 +2441,19 @@ class Grouping:
                         if funcNum == GB_FUNC_USER or funcNum not in GB_DATE_ALLOWED:
                             if Grouping.DebugMode:
                                 print("calc removing", k, funcNum)
+                            logging.warning(
+                                f"Datelike data in column {k} is not supported for {funcNum}, column is ignored."
+                            )
                             removelist.append(k)
 
                     elif TypeRegister.is_string_or_object(npdict[k]):
                         if funcNum == GB_FUNC_USER or funcNum not in GB_STRING_ALLOWED:
                             if Grouping.DebugMode:
                                 print("calc removing", k, funcNum)
+                            logging.warning(
+                                f"Data in column {k} (possibly strings or categorical) "
+                                + f"is not supported for {funcNum}, column is ignored."
+                            )
                             removelist.append(k)
 
             for key in removelist:
@@ -3331,7 +3337,9 @@ class Grouping:
         if len(values) != 0 or empty_allowed:
 
             if Grouping.DebugMode:
-                print("values", values, values[0].dtype)
+                print("values", values)
+                if isinstance(values, Iterable) and len(values):
+                    print(values[0].dtype)
                 print("ikey", self.ikey, self.ikey.dtype)
                 if mustpack:
                     print("igroup", self.iGroup, self.iGroup.dtype)
@@ -3436,10 +3444,13 @@ class Grouping:
                 raise TypeError(f"Nothing was calculated for Accum2 operation.")
             elif Grouping.DebugMode:
                 print("Warning: nothing calculated.")
+            logging.warning(f"Nothing was calculated for GroupBy operation.")
 
         # create a new dataset from the groupby results
         if Grouping.DebugMode:
-            print("calculateallpacked!", len(accum[0]), accum)
+            print("calculateallpacked!", accum)
+            if isinstance(accum, Iterable) and len(accum):
+                print(accum[0])
         dset = self._make_accum_dataset(
             origdict, npdict, accum, funcNum, return_all=return_all, keychain=keychain, **kwargs
         )

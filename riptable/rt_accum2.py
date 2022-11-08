@@ -739,10 +739,19 @@ class Accum2(GroupByOps, FastArray):
         if func is not None:
             # we can have common filters, row filters, and col filters
 
-            if newfilter is not None:
-                totalOfTotals = func(origarr[newfilter])
-            else:
-                totalOfTotals = func(origarr)
+            try:
+                if newfilter is not None:
+                    totalOfTotals = func(origarr[newfilter])
+                else:
+                    totalOfTotals = func(origarr)
+            except:
+                if "func_param" not in kwargs:
+                    raise ValueError(f"Function {name} requires an extra parameter.")
+                func_param = kwargs["func_param"]
+                if newfilter is not None:
+                    totalOfTotals = func(origarr[newfilter], func_param)
+                else:
+                    totalOfTotals = func(origarr, func_param)
         else:
             # todo, get invalid
             totalOfTotals = 0
@@ -922,6 +931,9 @@ class Accum2(GroupByOps, FastArray):
             if not callable(funcNum):
                 # get the name, func, routine to call
                 func = apply_dict_total.get(funcNum)
+                if func and callable(func[0]):
+                    func_name = func[0](kwargs["func_param"])
+                    func = (func_name, func[1], func[2])
             else:
                 # assume _reduce
                 # funcNum is really a callable function, we can get the name
@@ -1267,6 +1279,13 @@ apply_dict_total = {
     GB_FUNCTIONS.GB_STD: ("Std", np.std, Accum2._calc_multipass),
     GB_FUNCTIONS.GB_NANSTD: ("Nanstd", np.nanstd, Accum2._calc_multipass),
     GB_FUNCTIONS.GB_MEDIAN: ("Median", np.nanmedian, Accum2._calc_multipass),
+    # Didn't change name of Median to Nanmedian in GroupByOps.quantile_name_from_param to avoid breaking existing things
+    # quantile functions take an argument with 1e9 multiplier, so use simple wrappers in GroupByOps
+    GB_FUNCTIONS.GB_QUANTILE_MULT: (
+        GroupByOps.quantile_name_from_param,
+        GroupByOps.np_quantile_mult,
+        Accum2._calc_multipass,
+    ),
     GB_FUNCTIONS.GB_MODE: ("Mode", None, Accum2._calc_multipass),
     GB_FUNCTIONS.GB_TRIMBR: ("Trimbr", None, Accum2._calc_multipass),
     # -- transform (or same size) functions

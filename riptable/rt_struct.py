@@ -3154,6 +3154,46 @@ class Struct:
             self._col_sortlist = [prefix + s for s in sorts]
 
     # -------------------------------------------------------
+    def col_add_suffix(self, suffix: str) -> None:
+        """
+        Add the same suffix to all items in the Struct/Dataset.
+
+        Rather than renaming the columns in a col_rename loop - which would have to rebuild the underlying dictionary N times,
+        this clears the original dictionary, and rebuilds a new one once.
+        Label columns and sortby columns will also be fixed to match the new names.
+
+        Parameters
+        ----------
+        suffix : str
+            String to add before every each item name
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> #TODO Need to call np.random.seed(12345) first to ensure example runs deterministically
+        >>> ds = rt.Dataset({'col_'+str(i):np.random.rand(5) for i in range(5)})
+        >>> ds.col_add_suffix('_NEW')
+        #   col_0_NEW   col_1_NEW   col_2_NEW   col_3_NEW   col_4_NEW
+        -   ---------   ---------   ---------   ---------   ---------
+        0        0.70        0.52        0.07        0.81        0.26
+        1        0.13        0.43        0.01        0.46        0.45
+        2        0.34        0.24        0.87        0.81        0.80
+        3        0.63        0.22        0.85        0.60        0.91
+        4        0.46        0.70        0.02        0.49        0.34
+        """
+        sorts = self._col_sortlist
+
+        # clear item dict first so if oldname + suffix exists, data won't be overwritten
+        self._all_items.item_add_suffix(suffix)
+
+        # fix sorts
+        if sorts is not None:
+            self._col_sortlist = [s + suffix for s in sorts]
+
+    # -------------------------------------------------------
     def col_rename(self, old: str, new: str) -> None:
         """
         Rename a single column.

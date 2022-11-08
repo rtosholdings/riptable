@@ -14,7 +14,7 @@ functions_str = [
     "max",
     # 'prod',
     "var",
-    # 'quantile',
+    "quantile",
     "cumsum",
     "cumprod",
     # 'cummax',
@@ -23,6 +23,9 @@ functions_str = [
     "last",
     # 'mode'
 ]
+
+# dictionary of {func_name : (rt_cat_kwargs, pd_gb_kwargs)}
+functions_kwargs = {"quantile": ({"q": 0.84}, {"q": 0.84, "interpolation": "midpoint"})}
 
 import numpy as np
 
@@ -88,8 +91,14 @@ class GroupbyFunctions_Test(unittest.TestCase):
                 pd_func = getattr(pd_gb, name)
                 sfw_func = getattr(sfw_gb, name)
 
-                pd_out = pd_func()
-                sfw_out = sfw_func()
+                pd_kwargs = {}
+                sfw_kwargs = {}
+
+                if name in functions_kwargs:
+                    sfw_kwargs, pd_kwargs = functions_kwargs[name]
+
+                pd_out = pd_func(**pd_kwargs)
+                sfw_out = sfw_func(**sfw_kwargs)
 
                 pd_col = pd_out[val]._values
                 if name == "count":
@@ -98,8 +107,8 @@ class GroupbyFunctions_Test(unittest.TestCase):
                     sfw_col = sfw_out[val]
 
                 is_integer_subttype = np.issubdtype(type_, np.integer)
-                is_median = name != "median"
-                if not safe_equal(pd_col, sfw_col) and (not is_integer_subttype and not is_median):
+                # median for integer was fixed, so removed previous check here
+                if not safe_equal(pd_col, sfw_col):
                     print("data_type_t = ", type_)
                     print("function =", name)
                     print("pandas output =", pd_col)
@@ -141,8 +150,17 @@ class GroupbyFunctions_Test(unittest.TestCase):
             sfw_gb = sfw_data.groupby(key)
 
             for name in functions_str:
-                pd_out = getattr(pd_gb, name)()
-                sfw_out = getattr(sfw_gb, name)()
+                pd_func = getattr(pd_gb, name)
+                sfw_func = getattr(sfw_gb, name)
+
+                pd_kwargs = {}
+                sfw_kwargs = {}
+
+                if name in functions_kwargs:
+                    pd_kwargs, sfw_kwargs = functions_kwargs[name]
+
+                pd_out = pd_func(**pd_kwargs)
+                sfw_out = sfw_func(**sfw_kwargs)
 
                 if name == "count":
                     # only compare one column for count
