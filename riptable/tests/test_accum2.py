@@ -25,7 +25,7 @@ from numpy.testing import (
 
 from riptable import *
 from riptable.rt_datetime import DateTimeNano
-from riptable.rt_numpy import arange
+from riptable.rt_numpy import arange, QUANTILE_METHOD_NP_KW
 
 # To create AccumTable test data
 from riptable.Utils.pandas_utils import dataset_from_pandas_df
@@ -308,11 +308,121 @@ class Accum2_Test(unittest.TestCase):
         self.assertTrue(not rt.any(ds.symbol._fa == 0))
         for sym in chosen_symbols:
             s_median = rt.nanmedian(ds[symbol_categorical == sym, :].time)
-        i = rt.where(symbol_categorical.category_array == sym)[0].item()
-        self.assertEqual(footer[i + 1], s_median)
+            i = rt.where(symbol_categorical.category_array == sym)[0].item()
+            self.assertEqual(footer[i + 1], s_median)
         for i in range(7):
             s_median = rt.nanmedian(ds[(ds.data == i) & filt, :].time)
-        self.assertEqual(totalcol[i], s_median)
+            self.assertEqual(totalcol[i], s_median)
+
+    def test_accum2_quantile(self):
+        kwargs = {QUANTILE_METHOD_NP_KW: "midpoint"}
+        symbols = ["AAPL", "AMZN", "FB", "GOOG", "IBM"]
+
+        def footer_name(q):
+            if q == 0.5:
+                return "Median"
+            elif q == 0.0:
+                return "Min"
+            elif q == 1.0:
+                return "Max"
+            else:
+                return "Quantile"
+
+        # large N to check multithreading
+        for N in [200, 2345, 123_985]:
+            ds = Dataset({"time": arange(N)})
+            ds.symbol = Cat(1 + arange(N) % 5, symbols)
+            for _ in range(5):
+                ds.data = np.random.randint(-15, 15, size=N)
+                ds.data2 = np.random.randn(N)
+                for q in [0.0, 0.154, 0.482, 0.5, 0.91, 1.0]:
+                    ac = Accum2(ds.data, ds.symbol).quantile(ds.time, q=q)
+                    totalcol = ac[ac.summary_get_names()[0]]
+                    footer = ac.footer_get_values()[footer_name(q)]
+                    for i in range(len(symbols)):
+                        s_quantile = ds[ds.symbol == symbols[i], :].time.quantile(q=q, **kwargs)
+                        self.assertEqual(footer[i + 1], s_quantile)
+                    for val in range(-15, 15):
+                        curr_slice = ds[ds.data == val, :].time
+                        if not len(curr_slice):
+                            continue
+                        idx = np.arange(len(ac))[ac.data == val]
+                        s_quantile = curr_slice.quantile(q=q, **kwargs)
+                        self.assertEqual(totalcol[idx], s_quantile)
+
+                    # quantile and percentile should be the same
+                    ac_p = Accum2(ds.data, ds.symbol).percentile((ds.time, ds.data2), q=(q * 100))
+                    ac_q = Accum2(ds.data, ds.symbol).quantile((ds.time, ds.data2), q=q)
+                    for multiset_key in ac_p.keys():
+                        for col in ac_p[multiset_key].keys():
+                            assert_array_almost_equal(ac_p[multiset_key][col], ac_q[multiset_key][col])
+
+    def test_accum2_nanquantile_with_filter(self):
+        kwargs = {QUANTILE_METHOD_NP_KW: "midpoint"}
+        symbols = ["AAPL", "AMZN", "FB", "GOOG", "IBM"]
+
+        def footer_name(q):
+            if q == 0.5:
+                return "Median"
+            elif q == 0.0:
+                return "Nanmin"
+            elif q == 1.0:
+                return "Nanmax"
+            else:
+                return "Nanquantile"
+
+        # large N to check multithreading
+        for N in [222, 6539, 78_013]:
+            # TODO: fix this for integer types. Min (nanmin) puts `Inv` as the smallest value
+            ds = Dataset({"time": arange(N).astype(float)})
+            ds.symbol = Cat(1 + arange(N) % 5, symbols)
+            for _ in range(5):
+                ds.data = np.random.randint(-10, 20, size=N)
+                ds.data2 = np.random.random(size=N)
+                # N.B. make a copy here for testing
+                symbol_categorical = Cat(1 + arange(N) % 5, symbols)
+                # N.B. Categorical.copy and Categorical constructor doesn't do deep copy?!
+                ds.symbol = Cat(1 + arange(N) % 5, symbols)
+                for q in [0.0, 0.001, 0.333, 0.5, 0.67, 0.831, 1.0]:
+                    chosen_symbols = ["AMZN", "AAPL"]
+                    filt = symbol_categorical.isin(chosen_symbols)
+                    ac = Accum2(ds.data, ds.symbol)
+                    stat1 = ac.nanquantile(ds.time, q=q, filter=filt)
+                    totalcol = stat1[stat1.summary_get_names()[0]]
+                    footer = stat1.footer_get_values()[footer_name(q)]
+                    # Make sure we don't change the input data
+                    self.assertTrue(not rt.any(ds.symbol._fa == 0))
+
+                    for sym in chosen_symbols:
+                        s_quantile = ds[symbol_categorical == sym, :].time.nanquantile(q=q, **kwargs)
+                        i = rt.where(symbol_categorical.category_array == sym)[0].item()
+                        self.assertEqual(footer[i + 1], s_quantile)
+                    for val in range(-10, 20):
+                        curr_slice = ds[(ds.data == val) & filt, :].time
+                        if not len(curr_slice):
+                            continue
+                        idx = np.arange(len(stat1))[stat1.data == val]
+                        s_quantile = curr_slice.nanquantile(q=q, **kwargs)
+                        self.assertEqual(totalcol[idx], s_quantile)
+
+                    chosen_symbols = ["IBM", "FB"]
+                    filt = symbol_categorical.isin(chosen_symbols)
+                    stat2 = ac.nanquantile(ds.time, q=q, filter=filt)
+                    totalcol = stat2[stat2.summary_get_names()[0]]
+                    footer = stat2.footer_get_values()[footer_name(q)]
+                    # Make sure we don't change the input data
+                    self.assertTrue(not rt.any(ds.symbol._fa == 0))
+                    for sym in chosen_symbols:
+                        s_quantile = ds[symbol_categorical == sym, :].time.nanquantile(q=q, **kwargs)
+                        i = rt.where(symbol_categorical.category_array == sym)[0].item()
+                        self.assertEqual(footer[i + 1], s_quantile)
+                    for val in range(-10, 20):
+                        curr_slice = ds[(ds.data == val) & filt, :].time
+                        if not len(curr_slice):
+                            continue
+                        idx = np.arange(len(stat2))[stat2.data == val]
+                        s_quantile = curr_slice.nanquantile(q=q, **kwargs)
+                        self.assertEqual(totalcol[idx], s_quantile)
 
     def test_showfilter_label_subclass(self):
         d = Date.range("20190201", "20190210")
@@ -364,6 +474,12 @@ class Accum2_Test(unittest.TestCase):
         ds.accum2("symbol", "data").sum(ds.data2, showfilter=True)
         ds.accum2("symbol", "data").median(ds.data2, showfilter=True)
         ds.accum2("symbol", "data").median(ds.data2, showfilter=False)
+        ds.accum2("symbol", "data").quantile(ds.data2, showfilter=True, q=0.35)
+        ds.accum2("symbol", "data").quantile(ds.data2, showfilter=False, q=0.75)
+        ds.accum2("symbol", "data").nanquantile(ds.data2, showfilter=True, q=[0.0, 0.54, 0.999])
+        ds.accum2("symbol", "data").nanquantile(ds.data2, showfilter=False, q=[0.000001, 0.5, 0.31])
+        ds.accum2("symbol", "data").percentile(ds.data2, showfilter=True, q=[10, 20, 100])
+        ds.accum2("symbol", "data").nanpercentile(ds.data2, showfilter=False, q=0.000001)
         ds.accum2("symbol", "data").apply_reduce(np.median, ds.data2, showfilter=True)
         ds.accum2("symbol", "data").apply_reduce(np.median, ds.data2, showfilter=False)
         f = logical(arange(200) % 2)

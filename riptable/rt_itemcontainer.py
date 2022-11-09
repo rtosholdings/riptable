@@ -2,9 +2,11 @@ __all__ = [
     "ItemContainer",
 ]
 import re
+from typing import Union
 import warnings
 
 import numpy as np
+import numpy.typing as npt
 
 from riptable.rt_enum import ColumnAttribute
 
@@ -23,7 +25,7 @@ class ItemAttribute:
 
     ATTRIB_EXCLUSION_LIST = "copy"
 
-    def __repr__(self, indent=2):
+    def __repr__(self, indent: int = 2):
         result = self.__class__.__name__ + "\n"
         for k, v in self._attribs():
             result += " " * indent + k + ": " + str(v)
@@ -168,16 +170,16 @@ class ItemContainer:
         return "%s(%r)" % (self.__class__.__name__, self._items.items())
 
     # -----------------------------------------
-    def copy_inplace(self, rowmask):
+    def copy_inplace(self, selector: Union[npt.NDArray[bool], npt.NDArray[np.integer], slice]) -> None:
         """
-        inplace rowmask applied
+        inplace row-selector (mask, fancy-index, or slice) applied
         """
         for v in self._items.values():
             # first item in tuple is the array
             arr = v[0]
             # preserve name when copying inplace
             name = arr.get_name()
-            arr = arr[rowmask]
+            arr = arr[selector]
             arr.set_name(name)
             v[0] = arr
 
@@ -515,6 +517,19 @@ class ItemContainer:
         self._items.clear()
         for k, v in newdict.items():
             self._items[f"{prefix}{k}"] = v
+
+    # -------------------------------------------------------
+    def item_add_suffix(self, suffix):
+        """
+        inplace operation.
+        adds suffix in front of existing item name
+
+        faster than calling rename
+        """
+        newdict = self._items.copy()
+        self._items.clear()
+        for k, v in newdict.items():
+            self._items[f"{k}{suffix}"] = v
 
     # --------------------------------------------------------
     def item_str_match(self, expression, flags=0):

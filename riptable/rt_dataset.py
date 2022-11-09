@@ -23,6 +23,7 @@ from typing import (
 )
 
 import numpy as np
+import numpy.typing as npt
 
 from . import rt_merge
 from .rt_display import DisplayDetect, DisplayString, DisplayTable
@@ -819,7 +820,7 @@ class Dataset(Struct):
         return self._copy(deep)
 
     # --------------------------------------------------------
-    def filter(self, rowfilter: np.ndarray, inplace: bool = False) -> "Dataset":
+    def filter(self, rowfilter: npt.ArrayLike, inplace: bool = False) -> "Dataset":
         """
         Return a copy of the `Dataset` containing only the rows that meet the specified
         condition.
@@ -901,28 +902,52 @@ class Dataset(Struct):
         <BLANKLINE>
         [5000000 rows x 2 columns] total bytes: 57.2 MB
         """
-        if inplace:
-            # normalize rowfilter
-            if np.isscalar(rowfilter):
-                rowfilter = np.asanyarray([rowfilter])
-            elif not isinstance(rowfilter, np.ndarray):
-                rowfilter = np.asanyarray(rowfilter)
+        # TODO: Accept slice and ellipsis for rowfilter, for parity with __getitem__().
+        # normalize rowfilter
+        if np.isscalar(rowfilter):
+            rowfilter = np.asanyarray([rowfilter])
+        elif not isinstance(rowfilter, np.ndarray):
+            rowfilter = np.asanyarray(rowfilter)
 
+        # If `rowfilter` is a mask (boolean array) for selecting rows,
+        # transform it into a fancy index. Doing this just once and applying the
+        # fancy index to multiple columns is faster than applying the mask to
+        # each individual column/array.
+        if np.issubdtype(rowfilter.dtype, bool):
+            # Check shape is compatible: must be 1D and same length as this Dataset's rowcount.
+            rowfilter: npt.NDArray[bool]
+            if rowfilter.ndim != 1:
+                raise ValueError("`Dataset.filter` only accepts 1D arrays for the row selector/mask.")
+            elif len(rowfilter) != self.get_nrows():
+                raise ValueError(
+                    f"The length of the provided selection mask ({len(rowfilter)}) does not match the rowcount of the Dataset ({self.get_nrows()})."
+                )
+
+            rowfilter = bool_to_fancy(rowfilter)
+
+        elif np.issubdtype(rowfilter.dtype, np.integer):
+            # Check shape is compatible: must be a 1D array.
+            if rowfilter.ndim != 1:
+                raise ValueError("`Dataset.filter` only accepts 1D arrays for the row selector/mask.")
+
+        else:
+            raise TypeError(f"The row filter must be a boolean mask or integer fancy index.")
+
+        if inplace:
             self._all_items.copy_inplace(rowfilter)
 
-            # check for boolean array
-            if rowfilter.dtype.char == "?":
-                newlen = np.sum(rowfilter)
-            else:
-                newlen = len(rowfilter)
-            self._nrows = newlen
+            # Update the rowcount.
+            self._nrows = len(rowfilter)
 
             return self
         else:
-            mask = bool_to_fancy(rowfilter)
-            if len(mask) == 0:
-                return self[:0, :]
-            return self[mask, :]
+            # N.B. A previous version of this code checked if the rowfilter wasn't going to select any rows
+            #      and would then use slices to create views of the underlying arrays. This was later removed
+            #      because it causes the original array data to be retained in memory. When we reach this point
+            #      in the code, it's because the caller specified inplace=False, meaning they're asking for a
+            #      deep copy of the data structure (while also applying the row selector) -- using slices breaks
+            #      that contract since it creates a view of the original array.
+            return self[rowfilter, :]
 
     def get_nrows(self):
         """
@@ -2616,60 +2641,87 @@ class Dataset(Struct):
 
     def astype(self, new_type, ignore_non_computable: bool = True):
         """
-        Return a new Dataset w/ changed types.
+        Return a new `Dataset` with values converted to the specified data type.
 
-        Will ignore string and categorical columns unless forced.
-        Do not do this unless you know they will convert nicely.
+        This method ignores string and `Categorical` columns unless forced with
+        ``ignore_non_computable = False``. Do not do this unless you know they
+        will convert nicely.
 
         Parameters
         ----------
-        new_type : a suitable type object for each row
-        ignore_non_computable : bool
-            If True then try to convert string and categoricals. Defaults to False.
+        new_type : str or Riptable dtype or NumPy dtype
+            The data type to convert values to.
+        ignore_non_computable : bool, default True
+            If True (the default), ignore string and `Categorical` values. Set
+            to False to convert them.
 
         Returns
         -------
-        Dataset
-            A new Dataset w/ changed types.
+        `Dataset`
+            A new `Dataset` with values converted to the specified data type.
+
+        See Also
+        --------
+        FastArray.astype
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': np.arange(-3,3), 'b':3*['A', 'B'], 'c':3*[True, False]})
+        >>> ds = rt.Dataset({'a': rt.arange(-2.0, 2.0), 'b': 2*['A', 'B'],
+        ...                  'c': 2*[True, False]})
         >>> ds
-        #    a   b       c
-        -   --   -   -----
-        0   -3   A    True
-        1   -2   B   False
-        2   -1   A    True
-        3    0   B   False
-        4    1   A    True
-        5    2   B   False
-        <BLANKLINE>
-        [6 rows x 3 columns] total bytes: 36.0 B
+        #       a   b       c
+        -   -----   -   -----
+        0   -2.00   A    True
+        1   -1.00   B   False
+        2    0.00   A    True
+        3    1.00   B   False
+
+        By default, string columns are ignored:
 
         >>> ds.astype(int)
         #    a   b   c
         -   --   -   -
-        0   -3   A   1
-        1   -2   B   0
-        2   -1   A   1
-        3    0   B   0
-        4    1   A   1
-        5    2   B   0
-        <BLANKLINE>
-        [6 rows x 3 columns] total bytes: 54.0 B
+        0   -2   A   1
+        1   -1   B   0
+        2    0   A   1
+        3    1   B   0
+
+        When converting numerical values to booleans, only 0 is False. All
+        other numerical values are True.
 
         >>> ds.astype(bool)
         #       a   b       c
         -   -----   -   -----
         0    True   A    True
         1    True   B   False
-        2    True   A    True
-        3   False   B   False
-        4    True   A    True
-        5    True   B   False
-        <BLANKLINE>
-        [6 rows x 3 columns] total bytes: 18.0 B
+        2   False   A    True
+        3    True   B   False
+
+        You can use ``ignore_non_computable = False`` to convert a string
+        representation of a numerical value to a numerical type that doesn't
+        truncate the value:
+
+        >>> ds = rt.Dataset({'str_floats': ['1.1', '2.2', '3.3']})
+        >>> ds.astype(float, ignore_non_computable = False)
+        #   str_floats
+        -   ----------
+        0         1.10
+        1         2.20
+        2         3.30
+
+        When you force a `Categorical` to be converted, it's replaced with
+        a conversion of its underlying integer `FastArray`:
+
+        >>> ds = rt.Dataset({'c': rt.Cat(2*['3', '4'])})
+        >>> ds2 = ds.astype(float, ignore_non_computable = False)
+        #      c
+        -   ----
+        0   1.00
+        1   2.00
+        2   1.00
+        3   2.00
+        >>> ds2.c
+        FastArray([1., 2., 1., 2.])
         """
         fval = None if ignore_non_computable else (lambda _v, _t: _v.astype(_t))
         return self.apply_cols("astype", new_type, unary=True, fill_value=fval)
@@ -4185,101 +4237,171 @@ class Dataset(Struct):
 
     def mask_or_isfinite(self) -> FastArray:
         """
-        Returns a boolean mask of all columns ORed with :meth:`~rt.rt_numpy.isfinite`.
+        Return a boolean array that's True for each `Dataset` row that has at least one
+        finite value, False otherwise.
+
+        A value is considered to be finite if it's not positive or negative infinity
+        or a NaN (Not a Number).
+
+        This method applies ``OR`` to all columns using :meth:`riptable.isfinite`.
 
         Returns
         -------
-        FastArray
+        `FastArray`
+            A `FastArray` that's True for each `Dataset` row that has at least one
+            finite value, False otherwise.
+
+        See Also
+        --------
+        riptable.isfinite, riptable.isnotfinite, riptable.isinf, riptable.isnotinf,
+        FastArray.isfinite, FastArray.isnotfinite, FastArray.isinf, FastArray.isnotinf
+        Dataset.mask_and_isfinite :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            finite values.
+        Dataset.mask_or_isinf :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one value that's positive or negative infinity.
+        Dataset.mask_and_isinf :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            infinite values.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a' : [1,2,np.inf], 'b':[0, np.inf, np.inf]})
+        >>> ds = rt.Dataset({'a': [1, 2, np.inf], 'b': [0, np.inf, rt.nan]})
         >>> ds
-        #      a     b
-        -   ----   ---
+        #      a      b
+        -   ----   ----
         0   1.00   0.00
         1   2.00    inf
-        2    inf    inf
-
-        [3 rows x 2 columns] total bytes: 48.0 B
-
+        2    inf    nan
         >>> ds.mask_or_isfinite()
-        FastArray([True, True,  False])
+        FastArray([ True,  True, False])
         """
         return self._mask_reduce(np.isfinite, True)
 
     def mask_and_isfinite(self) -> FastArray:
         """
-        Returns a boolean mask of all columns ANDed with :meth:`~rt.rt_numpy.isfinite`.
+        Return a boolean array that's True for each `Dataset` row in which all values
+        are finite, False otherwise.
+
+        A value is considered to be finite if it's not positive or negative infinity
+        or a NaN (Not a Number).
+
+        This method applies ``AND`` to all columns using :meth:`riptable.isfinite`.
 
         Returns
         -------
-        FastArray
+        `FastArray`
+            A `FastArray` that's True for each `Dataset` row in which all values are
+            finite, False otherwise.
+
+        See Also
+        --------
+        riptable.isfinite, riptable.isnotfinite, riptable.isinf, riptable.isnotinf,
+        FastArray.isfinite, FastArray.isnotfinite, FastArray.isinf, FastArray.isnotinf
+        Dataset.mask_or_isfinite :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one finite value.
+        Dataset.mask_or_isinf :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one value that's positive or negative infinity.
+        Dataset.mask_and_isinf :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            infinite values.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a' : [1,2,np.inf], 'b':[0, np.inf, np.inf]})
+        >>> ds = rt.Dataset({'a': [1.0, 2.0, 3.0], 'b': [0, rt.nan, np.inf]})
         >>> ds
-        #      a     b
-        -   ----   ---
+        #      a      b
+        -   ----   ----
         0   1.00   0.00
-        1   2.00    inf
-        2    inf    inf
-
-        [3 rows x 2 columns] total bytes: 48.0 B
-
+        1   2.00    nan
+        2   3.00    inf
         >>> ds.mask_and_isfinite()
-        FastArray([True, False,  False])
+        FastArray([ True, False, False])
         """
         return self._mask_reduce(np.isfinite, False)
 
     def mask_or_isinf(self) -> FastArray:
         """
-        returns a boolean mask of all columns ORed with isinf
+        Return a boolean array that's True for each `Dataset` row that has at least one
+        value that's positive or negative infinity, False otherwise.
+
+        This method applies ``OR`` to all columns using :meth:`riptable.isinf`.
 
         Returns
         -------
-        FastArray
+        `FastArray`
+            A `FastArray` that's True for each `Dataset` row that has at least one
+            value that's positive or negative infinity, False otherwise.
+
+        See Also
+        --------
+        riptable.isinf, riptable.isnotinf, riptable.isfinite, riptable.isnotfinite,
+        FastArray.isinf, FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite
+        Dataset.mask_and_isinf :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            infinite values.
+        Dataset.mask_or_isfinite :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one finite value.
+        Dataset.mask_and_isfinite :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            finite values.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a' : [1,2,np.inf], 'b':[0, np.inf, np.inf]})
+        >>> ds = rt.Dataset({'a': [1, 2, np.inf], 'b': [0, np.inf, rt.nan]})
         >>> ds
-        #      a     b
-        -   ----   ---
+        #      a      b
+        -   ----   ----
         0   1.00   0.00
         1   2.00    inf
-        2    inf    inf
-
-        [3 rows x 2 columns] total bytes: 48.0 B
-
+        2    inf    nan
         >>> ds.mask_or_isinf()
-        FastArray([False, True,  True])
+        FastArray([False,  True,  True])
         """
         return self._mask_reduce(np.isinf, True)
 
     def mask_and_isinf(self) -> FastArray:
         """
-        returns a boolean mask of all columns ANDed with isinf
+        Return a boolean array that's True for each `Dataset` row in which all values
+        are positive or negative infinity, False otherwise.
+
+        This method applies ``AND`` to all columns using :meth:`riptable.isinf`.
 
         Returns
         -------
-        FastArray
+        `FastArray`
+            A `FastArray` that's True for each `Dataset` row in which all values are
+            positive or negative infinity, False otherwise.
+
+        See Also
+        --------
+        riptable.isinf, riptable.isnotinf, riptable.isfinite, riptable.isnotfinite,
+        FastArray.isinf, FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite
+        Dataset.mask_or_isinf :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one value that's positive or negative infinity.
+        Dataset.mask_or_isfinite :
+            Return a boolean array that's True for each `Dataset` row that has at least
+            one finite value.
+        Dataset.mask_and_isfinite :
+            Return a boolean array that's True for each `Dataset` row that contains all
+            finite values.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a' : [1,2,np.inf], 'b':[0, np.inf, np.inf]})
+        >>> ds = rt.Dataset({'a': [1.0, np.inf, 3.0], 'b': [np.inf, np.NINF, rt.nan]})
         >>> ds
-        #      a     b
-        -   ----   ---
-        0   1.00   0.00
-        1   2.00    inf
-        2    inf    inf
-
-        [3 rows x 2 columns] total bytes: 48.0 B
-
+        #      a      b
+        -   ----   ----
+        0   1.00    inf
+        1    inf   -inf
+        2   3.00    nan
         >>> ds.mask_and_isinf()
-        FastArray([False, False,  True])
+        FastArray([False,  True, False])
         """
         return self._mask_reduce(np.isinf, False)
 

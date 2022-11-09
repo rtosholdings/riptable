@@ -38,7 +38,6 @@ class Groupby_Test(unittest.TestCase):
         result_dict = {
             "sum": [5, 10],
             "nansum": [5, 10],
-            "median": [2.5, 3],
             # TODO: add support for min / max on strings
             "min": [1, 2],
             "max": [4, 5],
@@ -79,6 +78,7 @@ class Groupby_Test(unittest.TestCase):
         result_dict = {
             "mean": [2.5, 3.333333333],
             "std": [2.121320343560, 1.527525231652],
+            "median": [2.5, 3],
             "var": [4.5, 2.333333333333],
         }
         for name, correct in result_dict.items():
@@ -379,6 +379,9 @@ class Groupby_Test(unittest.TestCase):
         result = gb.median()
         result = gb.trimbr()
         result = gb.nanmedian()
+        result = gb.nanquantile(q=0.1)
+        result = gb.nanquantile(q=[0.15, 0.45, 0.97])
+        result = gb.percentile(q=[0.0, 50.0, 0.6, 100.0])
 
     def test_projections(self):
         num_rows_trade = 1_000_000

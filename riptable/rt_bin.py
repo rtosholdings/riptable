@@ -1,12 +1,15 @@
 __all__ = ["cut", "qcut", "quantile"]
 
+from typing import (
+    Optional,
+)
 
 import numpy as np
 import riptide_cpp as rc
 
 from .rt_categorical import Categorical
 from .rt_enum import CLIPPED_LONG_NAME, NumpyCharTypes, TypeRegister
-from .rt_numpy import lexsort, unique
+from .rt_numpy import lexsort, unique, where
 
 
 # ------------------------------------------------------------------------------------
@@ -148,7 +151,7 @@ def _cut_result(fac, labels, bins, retbins):
 
 
 # ------------------------------------------------------------------------------------
-def qcut(x, q, labels=True, retbins=False, precision=3, duplicates="raise"):
+def qcut(x, q, labels=True, retbins=False, precision=3, duplicates="raise", filter: Optional[np.ndarray] = None):
     """
     Quantile-based discretization function.
 
@@ -173,6 +176,8 @@ def qcut(x, q, labels=True, retbins=False, precision=3, duplicates="raise"):
         The precision at which to store and display the bins labels
     duplicates : {default 'raise', 'drop'}, optional
         If bin edges are not unique, raise ValueError or drop non-uniques.
+    filter: ndarray of bool, default None
+        If provided, any False values will be ignored in the calculation.
 
     Returns
     -------
@@ -214,6 +219,9 @@ def qcut(x, q, labels=True, retbins=False, precision=3, duplicates="raise"):
     """
     if not isinstance(x, np.ndarray):
         x = TypeRegister.FastArray(x)
+
+    if filter is not None:
+        x = where(filter, x, np.nan)
 
     # make sure contiguous
     if not x.flags.contiguous:
@@ -400,7 +408,16 @@ def _bins_to_cuts_new(
 
 
 # ------------------------------------------------------------------------------------
-def cut(x, bins, labels=True, right=True, retbins=False, precision=3, include_lowest=False):
+def cut(
+    x,
+    bins,
+    labels=True,
+    right=True,
+    retbins=False,
+    precision=3,
+    include_lowest=False,
+    filter: Optional[np.ndarray] = None,
+):
     """
     Bin values into discrete intervals.
 
@@ -437,6 +454,8 @@ def cut(x, bins, labels=True, right=True, retbins=False, precision=3, include_lo
         The precision at which to store and display the bins labels.
     include_lowest : bool, default False
         Whether the first interval should be left-inclusive or not.
+    filter: ndarray of bool, default None
+        If provided, any False values will be ignored in the calculation.
 
     Returns
     -------
@@ -494,6 +513,9 @@ def cut(x, bins, labels=True, right=True, retbins=False, precision=3, include_lo
 
     if not isinstance(x, np.ndarray):
         x = TypeRegister.FastArray(x)
+
+    if filter is not None:
+        x = where(filter, x, np.nan)
 
     # make sure contiguous
     if not x.flags.contiguous:

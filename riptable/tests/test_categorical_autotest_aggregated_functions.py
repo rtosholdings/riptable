@@ -95,8 +95,21 @@ class categorical_test(unittest.TestCase):
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 
-    def test_aggs_sum_symb_0_10_ncols_7(self):
-        test_class = categorical_base(7, 0.10, "sum")
+    def test_aggs_quantile_symb_0_10_ncols_7(self):
+        test_class = categorical_base(7, 0.10, "quantile")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.quantile(rt.Dataset(test_class.data), q=0.33)
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).quantile(q=0.33, interpolation="midpoint")
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_sum_symb_0_10_ncols_8(self):
+        test_class = categorical_base(8, 0.10, "sum")
         cat = rt.Categorical(
             values=test_class.bin_ids,
             categories=test_class.keys,
@@ -173,8 +186,21 @@ class categorical_test(unittest.TestCase):
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 
-    def test_aggs_sum_symb_0_25_ncols_6(self):
-        test_class = categorical_base(6, 0.25, "sum")
+    def test_aggs_quantile_symb_0_25_ncols_6(self):
+        test_class = categorical_base(6, 0.25, "quantile")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.quantile(rt.Dataset(test_class.data), q=0.33)
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).quantile(q=0.33, interpolation="midpoint")
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_sum_symb_0_25_ncols_7(self):
+        test_class = categorical_base(7, 0.25, "sum")
         cat = rt.Categorical(
             values=test_class.bin_ids,
             categories=test_class.keys,
@@ -186,8 +212,8 @@ class categorical_test(unittest.TestCase):
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 
-    def test_aggs_mean_symb_0_25_ncols_7(self):
-        test_class = categorical_base(7, 0.25, "mean")
+    def test_aggs_mean_symb_0_25_ncols_8(self):
+        test_class = categorical_base(8, 0.25, "mean")
         cat = rt.Categorical(
             values=test_class.bin_ids,
             categories=test_class.keys,
@@ -251,8 +277,21 @@ class categorical_test(unittest.TestCase):
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 
-    def test_aggs_sum_symb_0_40_ncols_5(self):
-        test_class = categorical_base(5, 0.40, "sum")
+    def test_aggs_quantile_symb_0_40_ncols_5(self):
+        test_class = categorical_base(5, 0.40, "quantile")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.quantile(rt.Dataset(test_class.data), q=0.33)
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).quantile(q=0.33, interpolation="midpoint")
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_sum_symb_0_40_ncols_6(self):
+        test_class = categorical_base(6, 0.40, "sum")
         cat = rt.Categorical(
             values=test_class.bin_ids,
             categories=test_class.keys,
@@ -264,8 +303,8 @@ class categorical_test(unittest.TestCase):
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 
-    def test_aggs_mean_symb_0_40_ncols_6(self):
-        test_class = categorical_base(6, 0.40, "mean")
+    def test_aggs_mean_symb_0_40_ncols_7(self):
+        test_class = categorical_base(7, 0.40, "mean")
         cat = rt.Categorical(
             values=test_class.bin_ids,
             categories=test_class.keys,
@@ -277,8 +316,8 @@ class categorical_test(unittest.TestCase):
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 
-    def test_aggs_median_symb_0_40_ncols_7(self):
-        test_class = categorical_base(7, 0.40, "median")
+    def test_aggs_median_symb_0_40_ncols_8(self):
+        test_class = categorical_base(8, 0.40, "median")
         cat = rt.Categorical(
             values=test_class.bin_ids,
             categories=test_class.keys,
@@ -329,8 +368,21 @@ class categorical_test(unittest.TestCase):
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 
-    def test_aggs_sum_symb_0_10_ncols_4(self):
-        test_class = categorical_base(4, 0.10, "sum")
+    def test_aggs_quantile_symb_0_10_ncols_4(self):
+        test_class = categorical_base(4, 0.10, "quantile")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.quantile(rt.Dataset(test_class.data), q=0.33)
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).quantile(q=0.33, interpolation="midpoint")
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_sum_symb_0_10_ncols_5(self):
+        test_class = categorical_base(5, 0.10, "sum")
         cat = rt.Categorical(
             values=test_class.bin_ids,
             categories=test_class.keys,
@@ -339,6 +391,84 @@ class categorical_test(unittest.TestCase):
         cat = cat.sum(rt.Dataset(test_class.data))
         gb = pd.DataFrame(test_class.data)
         gb = gb.groupby(test_class.bin_ids).sum()
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_mean_symb_0_10_ncols_6(self):
+        test_class = categorical_base(6, 0.10, "mean")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.mean(rt.Dataset(test_class.data))
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).mean()
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_median_symb_0_10_ncols_7(self):
+        test_class = categorical_base(7, 0.10, "median")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.median(rt.Dataset(test_class.data))
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).median()
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_min_symb_0_10_ncols_8(self):
+        test_class = categorical_base(8, 0.10, "min")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.min(rt.Dataset(test_class.data))
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).min()
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_max_symb_0_25_ncols_1(self):
+        test_class = categorical_base(1, 0.25, "max")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.max(rt.Dataset(test_class.data))
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).max()
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_var_symb_0_25_ncols_2(self):
+        test_class = categorical_base(2, 0.25, "var")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.var(rt.Dataset(test_class.data))
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).var()
+        for k, v in test_class.data.items():
+            safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
+
+    def test_aggs_quantile_symb_0_25_ncols_3(self):
+        test_class = categorical_base(3, 0.25, "quantile")
+        cat = rt.Categorical(
+            values=test_class.bin_ids,
+            categories=test_class.keys,
+            base_index=default_base_index,
+        )
+        cat = cat.quantile(rt.Dataset(test_class.data), q=0.33)
+        gb = pd.DataFrame(test_class.data)
+        gb = gb.groupby(test_class.bin_ids).quantile(q=0.33, interpolation="midpoint")
         for k, v in test_class.data.items():
             safe_assert(remove_nan(gb[k]), remove_nan(cat[k]))
 

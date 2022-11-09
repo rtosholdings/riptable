@@ -5,7 +5,8 @@ import logging
 import warnings
 
 # import abc
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, cast, List, Any
+from collections.abc import Iterable
 
 import numpy as np
 import riptide_cpp as rc
@@ -19,7 +20,8 @@ from .rt_enum import (
     TypeRegister,
 )
 from .rt_grouping import Grouping
-from .rt_numpy import bool_to_fancy, empty_like, groupbyhash, zeros_like
+from .rt_numpy import zeros_like, bool_to_fancy, empty_like, groupbyhash, gb_np_quantile
+from .rt_groupbykeys import GroupByKeys
 
 if TYPE_CHECKING:
     from .rt_dataset import Dataset
@@ -74,6 +76,7 @@ class GroupByOps(object):
     #       with that name (per the docstring for GroupByOps).
     #       Maybe also include 'gb_keychain' and '_dataset', they're both used within this class.
     grouping: Grouping
+    gb_keychain: GroupByKeys
 
     def __init__(self):
         self._gbkeys = None
@@ -1388,6 +1391,302 @@ class GroupByOps(object):
         return self._calculate_all(GB_FUNCTIONS.GB_NANMEAN, *args, **kwargs)
 
     # ---------------------------------------------------------------
+    def _quantile(
+        self,
+        *args,
+        q=None,
+        filter=None,
+        transform=False,
+        showfilter=False,
+        col_idx=None,
+        dataset=None,
+        return_all=False,
+        computable=True,
+        accum2=False,
+        is_nan_function=None,
+        is_percentile=None,
+        **kwargs,
+    ):
+        """
+        Internal function for all (nan)quantile/percentile/median operations.
+
+        Parameters
+        ----------
+        *args :
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        q : float, list of floats
+            Quantile(s) or percentile(s) to compute
+        filter : array of bool, optional
+            Elements to include in the GroupBy Operation.
+        transform : bool
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
+        showfilter : bool
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
+        col_idx : str, list of str, optional
+            If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
+        return_all : bool
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work
+            with Accum2.
+        computable : bool
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
+        accum2 : bool
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
+        is_nan_function : bool
+            Indicates if this was called a nan-version of a function.
+        is_percentile : bool
+            Indicates if this was called a (nan)percentile.
+        """
+        if q is None:
+            raise ValueError("Argument 'q' is required for quantile/percentile functions.")
+
+        if not isinstance(q, Iterable):
+            q = [q]
+        q = cast(List[Any], q)
+
+        for quantile in q:
+            if not isinstance(quantile, (int, float, np.number)):
+                raise ValueError("Argument `q` must only contain numerics")
+
+            lower_bound = 0.0
+            upper_bound = 100.0 if is_percentile else 1.0
+
+            if quantile > upper_bound or quantile < lower_bound or np.isnan(quantile):
+                raise ValueError(
+                    f"Values in 'q' must be between {lower_bound} and {upper_bound}, but `{quantile}` is not."
+                )
+
+        if len(q) != len(np.unique(q)):
+            raise ValueError(f"Values in 'q' must be distinct.")
+
+        if is_percentile:
+            quantiles = [quantile / 100 for quantile in q]
+        else:
+            quantiles = q
+
+        answers = []
+
+        # # Aggregating min/max in accum2 is brokem, uncomment when fixed
+        # # Also uncomment in `for quantile in quantiles:` loop below
+        # max_func = self.nanmax if is_nan_function else self.max
+        # min_func = self.nanmin if is_nan_function else self.min
+
+        # for accum2 column names
+        function_names = []
+
+        for quantile in quantiles:
+
+            function_names.append(GroupByOps._gb_quantile_name(quantile, is_nan_function))
+
+            # if quantile == 1:
+            #     answers.append(max_func(*args, filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+            #         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, **kwargs))
+            #     continue
+
+            # if quantile == 0:
+            #     answers.append(min_func(*args, filter=filter, transform=transform, showfilter=showfilter, col_idx=col_idx,
+            #         dataset=dataset, return_all=return_all, computable=computable, accum2=accum2, **kwargs))
+            #     continue
+
+            funcParam = self._quantile_funcParam_from_q(q=quantile, is_nan_function=is_nan_function)
+
+            current_kwargs = self._gb_keyword_wrapper(
+                filter=filter,
+                transform=transform,
+                showfilter=showfilter,
+                col_idx=col_idx,
+                dataset=dataset,
+                return_all=return_all,
+                computable=computable,
+                accum2=accum2,
+                func_param=funcParam,
+                **kwargs,
+            )
+
+            answers.append(self._calculate_all(GB_FUNCTIONS.GB_QUANTILE_MULT, *args, **current_kwargs))
+
+            if (len(answers) == 1) and (len(q) > 1) and isinstance(answers[0], TypeRegister.Multiset):
+                raise RuntimeError(
+                    "This type of grouping and amount of data column doesn't support `q` being an iterable of size > 1.\n"
+                    + "(Cannot hstack Multisets)."
+                )
+
+        if len(answers) == 1:
+            return answers[0]
+
+        answer = answers[0]
+
+        init_footer = answer.footer_get_dict()
+        has_footer = len(init_footer) > 0
+
+        footer_name = ""
+        if has_footer:
+            footer_name = [["Quantile", "Nanquantile"], ["Percentile", "Nanpercentile"]][is_percentile][
+                is_nan_function
+            ]  # type: ignore
+            # for all min/max/median function
+            # change statistic column name to be the same for all datasets
+            for func_name, ans in zip(function_names, answers):
+                if func_name != footer_name:
+                    ans.col_rename(func_name, footer_name)
+
+        all_column_names = []
+
+        cols_to_ignore = list(self.gb_keychain.gbkeys.keys())
+
+        suffix_letter = "_p" if is_percentile else "_q"
+
+        precision = 3
+        while len(q) != len(np.unique([f"{quant:.{precision}g}" for quant in q])):
+            precision += 1
+
+        def suffix(quant):
+            return suffix_letter + f"{quant:.{precision}g}".replace(".", "_")
+
+        gb_cols = None
+        if not transform:
+            gb_cols = answer[cols_to_ignore]
+            # remove common gb_key columns from all datasets
+            for ans in answers:
+                for col in cols_to_ignore:
+                    del ans[col]
+
+        answer.col_add_suffix(suffix(q[0]))
+
+        total_footer = {}
+        if has_footer:
+            # take footer again to have updated keys with suffixes
+            init_footer = answer.footer_get_dict()
+            total_footer = list(init_footer.values())[0]
+            answer.footer_remove()
+
+        # for reordering at the end
+        all_column_names.append(answer.keys())
+
+        for i, ans in enumerate(answers[1:]):
+            ans.col_add_suffix(suffix(q[i + 1]))
+            all_column_names.append(ans.keys())
+            # for accum2
+            if has_footer:
+                # Cannot just use footer_name as key if applied maxfunc or minfunc
+                footer = list(ans.footer_get_dict().values())[0]
+                total_footer.update(footer)
+                ans.footer_remove()
+
+        # bring back gb_key columns
+        if not transform:
+            answers.append(gb_cols)
+
+        total_answer = TypeRegister.Dataset.concat_columns(answers, do_copy=False)
+
+        if has_footer:
+            total_answer.footer_set_values(footer_name, total_footer)
+        # reorder the columns
+        all_column_names = [c for column_set in zip(*all_column_names) for c in column_set]
+        total_answer.col_move_to_front(all_column_names)
+
+        # make gb_key columns display as labels
+        if not transform:
+            total_answer.label_set_names(cols_to_ignore)
+
+        # for accum2, make the columns with aggregated results to be summary columns
+        if has_footer:
+            summary_names = [footer_name + suffix(quant) for quant in q]
+            total_answer.summary_set_names(summary_names)
+
+        return total_answer
+
+    QUANTILE_MULTIPLIER = 1e9
+
+    @staticmethod
+    def _quantile_funcParam_from_q(q, is_nan_function):
+        """
+        Returns a funcParam to be passed to a cpp level.
+        Multiplier is needed because functions only take interger funcParams
+        See GroupByBase::AccumQuantile1e9Mult function in riptide_cpp/src/GroupBy.cpp
+        """
+        quantile_with_multiplier = int(q * GroupByOps.QUANTILE_MULTIPLIER)
+
+        # Add flag (for cpp level) whether it is a nan-version of a function
+        funcParam = quantile_with_multiplier + is_nan_function * int((GroupByOps.QUANTILE_MULTIPLIER + 1))
+
+        return funcParam
+
+    @staticmethod
+    def _quantile_q_from_funcParam(funcParam):
+        """
+        Decodes a quantile q and a nan-flag from funcParam used for cpp level.
+        """
+        is_nan_function = funcParam >= (GroupByOps.QUANTILE_MULTIPLIER + 1)
+
+        if is_nan_function:
+            quantile_with_multiplier = funcParam - (GroupByOps.QUANTILE_MULTIPLIER + 1)
+        else:
+            quantile_with_multiplier = funcParam
+
+        q = quantile_with_multiplier / GroupByOps.QUANTILE_MULTIPLIER
+
+        return q, is_nan_function
+
+    @staticmethod
+    def np_quantile_mult(a, funcParam):
+        """
+        Applies a correct numpy function for aggregation, used in accum2
+        Takes funcParam as an argument
+        """
+        q, is_nan_function = GroupByOps._quantile_q_from_funcParam(funcParam)
+
+        return gb_np_quantile(a, q, is_nan_function)
+
+    @staticmethod
+    def quantile_name_from_param(funcParam):
+        """
+        Returns a correct name of a quantile function given funParam, used in accum2
+        """
+        q, is_nan_function = GroupByOps._quantile_q_from_funcParam(funcParam)
+
+        return GroupByOps._gb_quantile_name(q, is_nan_function)
+
+    @staticmethod
+    def _gb_quantile_name(q, is_nan_function):
+        """
+        Returns a correct name of a quantile function given q and nan-flag
+        """
+        if q == 0.5:
+            if is_nan_function:
+                # This should be Nanmedian
+                # Left if as "Median" to avoid breaking existing things
+                return "Median"
+            else:
+                return "Median"
+        elif q == 0:
+            if is_nan_function:
+                return "Nanmin"
+            else:
+                return "Min"
+        elif q == 1:
+            if is_nan_function:
+                return "Nanmax"
+            else:
+                return "Max"
+        else:
+            if is_nan_function:
+                return "Nanquantile"
+            else:
+                return "Quantile"
+
+    # ---------------------------------------------------------------
     def nanmedian(
         self,
         *args,
@@ -1399,11 +1698,11 @@ class GroupByOps(object):
         return_all=False,
         computable=True,
         accum2=False,
-        func_param=0,
         **kwargs,
     ):
         """
         Compute median of group, excluding missing values
+        For multiple groupings, the result will be a MultiSet
 
         Parameters
         ----------
@@ -1436,10 +1735,7 @@ class GroupByOps(object):
         accum2 : bool
             Not recommended for use. If accum2 is True, the result is returned
             as a dictionary.
-        func_param :
-            Not recommended for use.
         """
-
         kwargs = self._gb_keyword_wrapper(
             filter=filter,
             transform=transform,
@@ -1449,11 +1745,158 @@ class GroupByOps(object):
             return_all=return_all,
             computable=computable,
             accum2=accum2,
-            func_param=func_param,
             **kwargs,
         )
 
-        return self._calculate_all(GB_FUNCTIONS.GB_MEDIAN, *args, **kwargs)
+        kwargs["is_nan_function"] = True
+        kwargs["is_percentile"] = False
+        kwargs["q"] = 0.5
+
+        return self._quantile(*args, **kwargs)
+
+    # ---------------------------------------------------------------
+    def nanquantile(
+        self,
+        *args,
+        q=None,
+        filter=None,
+        transform=False,
+        showfilter=False,
+        col_idx=None,
+        dataset=None,
+        return_all=False,
+        computable=True,
+        accum2=False,
+        **kwargs,
+    ):
+        """
+        Compute quantile of groups, excluding missing values
+        For multiple groupings, the result will be a MultiSet
+
+        Parameters
+        ----------
+        *args :
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        q : float, list of floats
+            Quantile(s) to compute. Must be value(s) between 0. and 1.
+        filter : array of bool, optional
+            Elements to include in the GroupBy Operation.
+        transform : bool
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
+        showfilter : bool
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
+        col_idx : str, list of str, optional
+            If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
+        return_all : bool
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work
+            with Accum2.
+        computable : bool
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
+        accum2 : bool
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
+        is_nan_function : bool
+            Not recommended for use. Indicates if this is a nan-version of a function.
+        """
+        kwargs = self._gb_keyword_wrapper(
+            filter=filter,
+            transform=transform,
+            showfilter=showfilter,
+            col_idx=col_idx,
+            dataset=dataset,
+            return_all=return_all,
+            computable=computable,
+            accum2=accum2,
+            **kwargs,
+        )
+
+        kwargs["is_nan_function"] = True
+        kwargs["is_percentile"] = False
+        kwargs["q"] = q
+
+        return self._quantile(*args, **kwargs)
+
+    # ---------------------------------------------------------------
+    def nanpercentile(
+        self,
+        *args,
+        q,
+        filter=None,
+        transform=False,
+        showfilter=False,
+        col_idx=None,
+        dataset=None,
+        return_all=False,
+        computable=True,
+        accum2=False,
+        **kwargs,
+    ):
+        """
+        Compute percentile of groups, excluding missing values
+        For multiple groupings, the result will be a MultiSet
+
+        Parameters
+        ----------
+        *args :
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        q : float/int or list of floats/ints
+            Percentile(s) to compute. Must be value(s) between 0 and 100
+        filter : array of bool, optional
+            Elements to include in the GroupBy Operation.
+        transform : bool
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
+        showfilter : bool
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
+        col_idx : str, list of str, optional
+            If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
+        return_all : bool
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work
+            with Accum2.
+        computable : bool
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
+        accum2 : bool
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
+        """
+        kwargs = self._gb_keyword_wrapper(
+            filter=filter,
+            transform=transform,
+            showfilter=showfilter,
+            col_idx=col_idx,
+            dataset=dataset,
+            return_all=return_all,
+            computable=computable,
+            accum2=accum2,
+            **kwargs,
+        )
+
+        kwargs["is_nan_function"] = True
+        kwargs["is_percentile"] = True
+        kwargs["q"] = q
+
+        return self._quantile(*args, **kwargs)
 
     # ---------------------------------------------------------------
     def nanmin(
@@ -1907,7 +2350,6 @@ class GroupByOps(object):
         return_all=False,
         computable=True,
         accum2=False,
-        func_param=0,
         **kwargs,
     ):
         """
@@ -1945,10 +2387,7 @@ class GroupByOps(object):
         accum2 : bool
             Not recommended for use. If accum2 is True, the result is returned
             as a dictionary.
-        func_param :
-            Not recommended for use.
         """
-
         kwargs = self._gb_keyword_wrapper(
             filter=filter,
             transform=transform,
@@ -1958,11 +2397,156 @@ class GroupByOps(object):
             return_all=return_all,
             computable=computable,
             accum2=accum2,
-            func_param=func_param,
             **kwargs,
         )
 
-        return self._calculate_all(GB_FUNCTIONS.GB_MEDIAN, *args, **kwargs)
+        kwargs["is_nan_function"] = False
+        kwargs["is_percentile"] = False
+        kwargs["q"] = 0.5
+
+        return self._quantile(*args, **kwargs)
+
+    # ---------------------------------------------------------------
+    def quantile(
+        self,
+        *args,
+        q,
+        filter=None,
+        transform=False,
+        showfilter=False,
+        col_idx=None,
+        dataset=None,
+        return_all=False,
+        computable=True,
+        accum2=False,
+        **kwargs,
+    ):
+        """
+        Compute quantile of groups. Returns nan for data that contains nans.
+        For multiple groupings, the result will be a MultiSet
+
+        Parameters
+        ----------
+        *args :
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        q : float or list of floats
+            Quantile(s) to compute. Must be value(s) between 0. and 1.
+        filter : array of bool, optional
+            Elements to include in the GroupBy Operation.
+        transform : bool
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
+        showfilter : bool
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
+        col_idx : str, list of str, optional
+            If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
+        return_all : bool
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work
+            with Accum2.
+        computable : bool
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
+        accum2 : bool
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
+        """
+        kwargs = self._gb_keyword_wrapper(
+            filter=filter,
+            transform=transform,
+            showfilter=showfilter,
+            col_idx=col_idx,
+            dataset=dataset,
+            return_all=return_all,
+            computable=computable,
+            accum2=accum2,
+            **kwargs,
+        )
+
+        kwargs["is_nan_function"] = False
+        kwargs["is_percentile"] = False
+        kwargs["q"] = q
+
+        return self._quantile(*args, **kwargs)
+
+    # ---------------------------------------------------------------
+    def percentile(
+        self,
+        *args,
+        q,
+        filter=None,
+        transform=False,
+        showfilter=False,
+        col_idx=None,
+        dataset=None,
+        return_all=False,
+        computable=True,
+        accum2=False,
+        **kwargs,
+    ):
+        """
+        Compute percentile of groups. Returns nan for data that contains nans.
+        For multiple groupings, the result will be a MultiSet
+
+        Parameters
+        ----------
+        *args :
+            Elements to apply the GroupBy Operation to. Typically a FastArray or Dataset.
+        q : float/int or list of floats/ints
+            Percentile(s) to compute. Must be value(s) between 0 and 100
+        filter : array of bool, optional
+            Elements to include in the GroupBy Operation.
+        transform : bool
+            If transform = True, the output will have the same shape as `args`.
+            If transform = False, the output will typically have the same shape
+            as the categorical.
+        showfilter : bool
+            If showfilter is True, there will be an extra row in the output
+            representing the GroupBy Operation applied to all those elements that
+            were filered out.
+        col_idx : str, list of str, optional
+            If the input is a Dataset, col_idx specifies which columns to keep.
+        dataset : Dataset, optional
+            If a dataset is specified, the GroupBy Operation will also be applied to
+            the dataset. If there is an `args` argument and dataset is specified then
+            the result will be appended to the dataset.
+        return_all : bool
+            If return_all is True, will return all columns, even those where
+            the GroupBy Operation does not make sense. If return_all is False, it
+            will not return columns it cannot apply the GroupBy to. Does not work
+            with Accum2.
+        computable : bool
+            If computable is True, will not try to apply the GroupBy Operation to
+            non-computable datatypes.
+        accum2 : bool
+            Not recommended for use. If accum2 is True, the result is returned
+            as a dictionary.
+        """
+        kwargs = self._gb_keyword_wrapper(
+            filter=filter,
+            transform=transform,
+            showfilter=showfilter,
+            col_idx=col_idx,
+            dataset=dataset,
+            return_all=return_all,
+            computable=computable,
+            accum2=accum2,
+            **kwargs,
+        )
+
+        kwargs["is_nan_function"] = False
+        kwargs["is_percentile"] = True
+        kwargs["q"] = q
+
+        return self._quantile(*args, **kwargs)
 
     # ---------------------------------------------------------------
     def std(
@@ -2975,6 +3559,7 @@ CPP_GB_TABLE = [
     (GBF.GB_LAST, "last", GB_PACKUNPACK.PACK, GroupByOps.last, None, None, None, False),
     # requires parallel qsort
     (GBF.GB_MEDIAN, "median", GB_PACKUNPACK.PACK, GroupByOps.median, None, None, None, False),  # auto handles nan
+    (GBF.GB_QUANTILE_MULT, "quantile", GB_PACKUNPACK.PACK, GroupByOps.quantile, None, None, None, False),
     (GBF.GB_MODE, "mode", GB_PACKUNPACK.PACK, GroupByOps.mode, None, None, None, False),  # auto handles nan
     (GBF.GB_TRIMBR, "trimbr", GB_PACKUNPACK.PACK, GroupByOps.trimbr, None, None, None, False),  # auto handles nan
     # All int/uints output upgraded to INT64

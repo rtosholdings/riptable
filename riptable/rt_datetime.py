@@ -1327,12 +1327,90 @@ class Date(DateBase, TimeStampBase):
 
     # ------------------------------------------------------------
     def isnan(self):
-        """Both NaN date (0) and integer sentinel value are considered NaN."""
+        """
+        Return a boolean array that's True for each `Date` element that's
+        a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
+        considered to be NaN.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each NaN element, False
+            otherwise.
+
+        See Also
+        --------
+        Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that
+            contains at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+
+        Notes
+        -----
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> d = rt.Date.range('20190201', days = 3, step = 2)
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d
+        Date(['Inv', 'Inv', '2019-02-05'])
+        >>> d.isnan()
+        FastArray([ True,  True, False])
+        """
         return self._fa.isnanorzero()
 
     # ------------------------------------------------------------
     def isnotnan(self):
-        """Both NaN date (0) and integer sentinel value are considered NaN."""
+        """
+        Return a boolean array that's True for each `Date` element that's
+        not a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
+        considered to be NaN.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each non-NaN element,
+            False otherwise.
+
+        See Also
+        --------
+        Date.isnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that
+            contains at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+
+        Notes
+        -----
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> d = rt.Date.range('20190201', days = 3, step = 2)
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d
+        Date(['Inv', 'Inv', '2019-02-05'])
+        >>> d.isnotnan()
+        FastArray([False, False,  True])
+        """
         return ~self.isnan()
 
     # ------------------------------------------------------------
@@ -1362,12 +1440,36 @@ class Date(DateBase, TimeStampBase):
     @property
     def year(self):
         """
-        Returns integer array of year value
-        Currently limited to 1970 - 2099, add to UTC_1970_DAY_SPLITS table to expand range.
+        The year of each `Date` element.
 
-        >>> d = Date(['2016-02-01', '2017-02-01', '2018-02-01'])
+        Years are currently limited to 1970-2099. To expand the range, add
+        to the UTC_1970_DAY_SPLITS table.
+
+        NaN or invalid `Date` values return Riptable's int32 sentinel value
+        (-MAXINT).
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of integers representing the year of each `Date` element.
+
+        See Also
+        --------
+        Date.month, Date.monthyear, Date.day_of_year, Date.day_of_month,
+        Date.day_of_week
+
+        Examples
+        --------
+        >>> d = rt.Date(['2016-02-01', '2017-02-01', '2018-02-01'])
         >>> d.year
         FastArray([2016, 2017, 2018])
+
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.year
+        FastArray([-2147483648, -2147483648,        2018])
         """
         year = self._year(self._fa, fix_dst=False)
         return _apply_inv_mask(self, year)
@@ -1376,11 +1478,36 @@ class Date(DateBase, TimeStampBase):
     @property
     def month(self, arr=None):
         """
-        Returns zero-based integer array of month value 1=Jan, 2=Feb, etc.
+        The month of each `Date` element.
 
-        >>> d = Date(['2000-02-29', '2018-12-25'])
+        Months are represented as integers: 1 = Jan, 2 = Feb, etc.
+
+        NaN or invalid `Date` values return Riptable's int32 sentinel value
+        (-MAXINT).
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of integers representing the month of each `Date`
+            element.
+
+        See Also
+        --------
+        Date.monthyear, Date.year, Date.day_of_year, Date.day_of_month,
+        Date.day_of_week
+
+        Examples
+        --------
+        >>> d = rt.Date(['2016-02-01', '2017-03-01', '2018-04-01'])
         >>> d.month
-        FastArray([ 2, 12])
+        FastArray([2, 3, 4])
+
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.month
+        FastArray([-2147483648, -2147483648,           4])
         """
         return _apply_inv_mask(self, self._month())
 
@@ -1388,13 +1515,37 @@ class Date(DateBase, TimeStampBase):
     @property
     def monthyear(self, arr=None):
         """
-        Returns a string with three letter month + 4 digit year
+        The month and year of each `Date` element.
+
+        Each month-year value is a byte string with a three-letter month
+        abbreviation concatenated with a four-digit year.
+
+        NaN or invalid `Date` values return Riptable's int32 sentinel value
+        (-MAXINT) as a byte string.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of byte strings containing the month and year of
+            each `Date` element.
+
+        See Also
+        --------
+        Date.year, Date.month, Date.day_of_year, Date.day_of_month,
+        Date.day_of_week
 
         Examples
         --------
-        >>> d = Date(['2000-02-29', '2018-12-25'])
+        >>> d = rt.Date(['2000-02-29', '2018-12-25', '2019-03-18'])
         >>> d.monthyear
-        FastArray([ 'Feb2000','Dec2018'])
+        FastArray([b'Feb2000', b'Dec2018', b'Mar2019'], dtype='|S14')
+
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.monthyear
+        FastArray([b'-2147483648', b'-2147483648', b'Mar2019'], dtype='|S14')
         """
         month = self.month
         yearstr = self.year.astype("S")
@@ -1404,11 +1555,33 @@ class Date(DateBase, TimeStampBase):
     @property
     def is_leapyear(self):
         """
-        Returns boolean array, True when date was during a leap year.
+        Return a boolean array that's True for each `Date` element that's
+        in a leap year, False otherwise.
 
-        >>> d = Date(['2000-01-01', '2001-01-01'])
+        NaN or invalid `Date` values return False.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each `Date` element
+            that's in a leap year, False otherwise.
+
+        See Also
+        --------
+        Date.is_weekend, Date.is_weekday
+
+        Examples
+        --------
+        >>> d = rt.Date(['1996-01-01', '2000-01-01', '2004-01-01', '2022-01-01'])
         >>> d.is_leapyear
-        FastArray([ True, False])
+        FastArray([ True,  True,  True, False])
+
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.is_leapyear
+        FastArray([False, False,  True, False])
         """
         year = self._year(self._fa, fix_dst=False)
         arr = self._fa - self._year_splits[year - 1970]
@@ -1419,12 +1592,36 @@ class Date(DateBase, TimeStampBase):
     @property
     def day_of_year(self):
         """
-        Returns one-based integer array where January 1st = 1
+        The day of the year of each `Date` element.
 
-        >>> d = Date(['2019-01-01', '2019-02-14'])
+        Days are represented as integers: 1 = Jan 1, 32 = Feb 1, etc.
+
+        NaN or invalid `Date` values return Riptable's int32 sentinel value
+        (-MAXINT).
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of integers representing the day of the year of
+            each `Date` element.
+
+        See Also
+        --------
+        Date.day_of_month, Date.day_of_week, Date.year, Date.month,
+        Date.monthyear
+
+        Examples
+        --------
+        >>> d = rt.Date(['2019-01-01', '2020-02-29', '2021-12-31'])
         >>> d.day_of_year
+        FastArray([  1,  60, 365])
 
-        FastArray([ 1, 45])
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.day_of_year
+        FastArray([-2147483648, -2147483648,         365])
         """
         year = self._year(self._fa, fix_dst=False)
         arr = self._fa - self._year_splits[year - 1970]
@@ -1434,6 +1631,38 @@ class Date(DateBase, TimeStampBase):
     # ------------------------------------------------------------
     @property
     def day_of_month(self):
+        """
+        The day of the month of each `Date` element.
+
+        Days are represented as integers: 1 = Jan 1, 31 = Jan 31, etc.
+
+        NaN or invalid `Date` values return Riptable's int32 sentinel value
+        (-MAXINT).
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of integers representing the day of the month of
+            each `Date` element.
+
+        See Also
+        --------
+        Date.day_of_year, Date.day_of_week, Date.year, Date.month,
+        Date.monthyear
+
+        Examples
+        --------
+        >>> d = rt.Date(['2019-01-01', '2020-02-29', '2021-12-31'])
+        >>> d.day_of_month
+        FastArray([ 1, 29, 31])
+
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.day_of_month
+        FastArray([-2147483648, -2147483648,          31])
+        """
         year = self._year(self._fa, fix_dst=False)
 
         # subtract the days from start of year so all times are in MM-DD, etc.
@@ -1457,12 +1686,39 @@ class Date(DateBase, TimeStampBase):
     @property
     def day_of_week(self):
         """
-        Returns array of integers from Monday (0) -> Sunday (6)
+        The day of the week of each `Date` element.
 
-        >>> d = Date(['2019-02-11', '2019-02-12', '2019-02-13', '2019-02-14', '2019-02-15', '2019-02-16', '2019-02-17'])
+        Days are represented as integers: 0 = Monday, 1 = Tuesday, ...,
+        6 = Sunday.
+
+        NaN or invalid `Date` values return Riptable's int32 sentinel value
+        (-MAXINT).
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of integers representing the day of the week of
+            each `Date` element.
+
+        See Also
+        --------
+        Date.day_of_year, Date.day_of_month, Date.year, Date.month,
+        Date.monthyear
+
+        Examples
+        --------
+        >>> d = rt.Date(['2019-02-11', '2019-02-12', '2019-02-13',
+        ...              '2019-02-14', '2019-02-15', '2019-02-16', '2019-02-17'])
         >>> d.day_of_week
         FastArray([0, 1, 2, 3, 4, 5, 6])
 
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.day_of_week
+        FastArray([-2147483648, -2147483648,           2,           3,
+                     4,           5,           6])
         """
         arr = (self._fa + EPOCH_DAY_OF_WEEK) % 7
         return _apply_inv_mask(self, arr)
@@ -1471,12 +1727,34 @@ class Date(DateBase, TimeStampBase):
     @property
     def is_weekend(self):
         """
-        Returns boolean array, True when day of week is Saturday or Sunday
+        Return a boolean array that's True for each `Date` element that's
+        a Saturday or Sunday, False otherwise.
 
-        >>> d = Date(['2019-02-11', '2019-02-12', '2019-02-13', '2019-02-14', '2019-02-15', '2019-02-16', '2019-02-17'])
+        NaN or invalid `Date` values return False.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each `Date` element
+            that's a Saturday or Sunday, False otherwise.
+
+        See Also
+        --------
+        Date.is_weekday, Date.is_leapyear
+
+        Examples
+        --------
+        >>> d = rt.Date(['2019-02-09', '2019-02-10', '2019-02-11', '2019-02-12',
+        ...              '2019-02-13', '2019-02-14', '2019-02-15', '2019-02-16', '2019-02-17'])
         >>> d.is_weekend
-        FastArray([False, False, False, False, False,  True,  True])
+        FastArray([ True,  True, False, False, False, False, False,  True,  True])
 
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.is_weekend
+        FastArray([False, False, False, False, False, False, False,  True,  True])
         """
         return _apply_inv_mask(self, self.day_of_week > 4)
 
@@ -1484,12 +1762,34 @@ class Date(DateBase, TimeStampBase):
     @property
     def is_weekday(self):
         """
-        Returns boolean array, True when day of week is Monday-Friday
+        Return a boolean array that's True for each `Date` element that's
+        a weekday (Monday-Friday), False otherwise.
 
-        >>> d = Date(['2019-02-11', '2019-02-12', '2019-02-13', '2019-02-14', '2019-02-15', '2019-02-16', '2019-02-17'])
+        NaN or invalid `Date` values return False.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each `Date` element
+            that's a weekday, False otherwise.
+
+        See Also
+        --------
+        Date.is_weekend, Date.is_leapyear
+
+        Examples
+        --------
+        >>> d = rt.Date(['2019-02-11', '2019-02-12', '2019-02-13',
+        ...              '2019-02-14', '2019-02-15', '2019-02-16', '2019-02-17'])
         >>> d.is_weekday
         FastArray([ True,  True,  True,  True,  True, False, False])
 
+        With NaN and invalid values:
+
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d.is_weekday
+        FastArray([False, False,  True,  True,  True, False, False])
         """
         return _apply_inv_mask(self, self.day_of_week < 5)
 
@@ -4316,32 +4616,90 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def isnan(self):
         """
-        Boolean array, True where DateTimeNano == NaN time or int64 sentinel (min int)
+        Return a boolean array that's True for each `DateTimeNano` element
+        that's a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
+        considered to be NaN.
 
         Returns
         -------
-        bool array
-            True where object == NaN time or int64 sentinel (min int), otherwise False.
+        `FastArray`
+            A `FastArray` of booleans that's True for each NaN element, False
+            otherwise.
+
+        See Also
+        --------
+        DateTimeNano.isnotnan, Date.isnan, Date.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that contains
+            at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
 
         Notes
         -----
-        Currently using 0 for NaN time. This constant is held in the DateTimeBase class.
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
+        ...                        '20210713 02:44:19'], from_tz = 'NYC')
+        >>> dtn[0] = 0
+        >>> dtn[1] = dtn.inv
+        >>> dtn
+        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        >>> dtn.isnan()
+        FastArray([ True,  True, False])
         """
         return self._fa.isnanorzero()
 
     # -------------------------------------------------------------
     def isnotnan(self):
         """
-        Boolean array, True where DateTimeNano != NaN time or int64 sentinel (min int).
+        Return a boolean array that's True for each `DateTimeNano` element
+        that's not a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
+        considered to be NaN.
 
         Returns
         -------
-        bool array
-            True where object != NaN time or int64 sentinel (min int), otherwise False.
+        `FastArray`
+            A `FastArray` of booleans that's True for each non-NaN element,
+            False otherwise.
+
+        See Also
+        --------
+        DateTimeNano.isnan, Date.isnan, Date.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that
+            contains at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
 
         Notes
         -----
-        Currently using 0 for NaN time. This constant is held in the DateTimeBase class.
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
+        ...                        '20210713 02:44:19'], from_tz = 'NYC')
+        >>> dtn[0] = 0
+        >>> dtn[1] = dtn.inv
+        >>> dtn
+        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        >>> dtn.isnotnan()
+        FastArray([False, False,  True])
         """
         return ~self.isnan()
 

@@ -11,14 +11,17 @@ functions_str = [
     "max",
     # 'prod',
     "var",
-    # 'quantile',
+    "quantile",
     # 'cumsum',
     # 'cumprod',
     # 'cummax',
     # 'cummin'
 ]
 
-VAL_COLUMNS_MAX = 8
+# dictionary of {func_name : (rt_cat_kwargs, pd_gb_kwargs)}
+functions_with_kwargs = {"quantile": (", q=0.33", "q=0.33, interpolation='midpoint'")}
+
+VAL_COLUMNS_MAX = 9
 VAL_COLUMNS_MIN = 1
 VAL_COLUMNS_INC = 1
 
@@ -56,12 +59,17 @@ class categorical_parameters:
         self.aggs = ""
         self.bin_ids = []
         self.aggs_id = 0
+        self.kwargs = ("", "")
 
         self.update("aggs")
 
     def update(self, parameter=None, increment=None):
         def update_aggs(self):
             self.aggs = functions_str[self.aggs_id % len(functions_str)]
+            if self.aggs in functions_with_kwargs:
+                self.kwargs = functions_with_kwargs[self.aggs]
+            else:
+                self.kwargs = ("", "")
             self.aggs_id += 1
 
         def update_symbs(self):

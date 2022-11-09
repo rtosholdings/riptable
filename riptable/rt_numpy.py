@@ -527,13 +527,49 @@ def searchsorted(a, v, side="left", sorter=None) -> int:
 
 
 # -------------------------------------------------------
-def issorted(*args, **kwargs) -> bool:
+def issorted(*args) -> bool:
     """
+    Return True if the array is sorted, False otherwise.
+
+    NaNs at the end of an array are considered sorted.
+
+    Parameters
+    ----------
+    *args : ndarray
+        The array to check. It must be one-dimensional and contiguous.
+
+    Returns
+    -------
+    bool
+        True if the array is sorted, False otherwise.
+
+    See Also
+    --------
+    FastArray.issorted
+
     Examples
     --------
-    rt.arange(10).issorted()
+    >>> a = rt.FastArray(['a', 'c', 'b'])
+    >>> rt.issorted(a)
+    False
+
+    >>> a = rt.FastArray([1.0, 2.0, 3.0, rt.nan])
+    >>> rt.issorted(a)
+    True
+
+    >>> cat = rt.Categorical(['a', 'a', 'a', 'b', 'b'])
+    >>> rt.issorted(cat)
+    True
+
+    >>> dt = rt.Date.range('20190201', '20190208')
+    >>> rt.issorted(dt)
+    True
+
+    >>> dtn = rt.DateTimeNano(['6/30/19', '1/30/19'], format='%m/%d/%y', from_tz='NYC')
+    >>> rt.issorted(dtn)
+    False
     """
-    return LedgerFunction(rc.IsSorted, *args, **kwargs)
+    return LedgerFunction(rc.IsSorted, *args)
 
 
 # -------------------------------------------------------
@@ -3295,6 +3331,110 @@ def nanstd(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     return np.nanstd(*args, **kwargs)
 
 
+# keyword argument for interpolation method in np.(nan)quantile was changed in 1.22.0
+import pkg_resources
+
+if pkg_resources.parse_version(np.__version__) >= pkg_resources.parse_version("1.22.0"):
+    QUANTILE_METHOD_NP_KW = "method"
+else:
+    QUANTILE_METHOD_NP_KW = "interpolation"
+
+
+def gb_np_quantile(a, q, is_nan_function):
+    """
+    Applies a correct numpy function for aggregation, used in accum2.
+    Only uses "midpoint" interpolation method, because this is the one
+    used in the quantile function on cpp level.
+    Handles undesired behaviour of np.quantile when infs are present in a
+
+    Parameters
+    ----------
+    a : rt.FastArray
+        Data to compute quantile for
+    q : float, must be between 0. and 1.
+        Quantile to compute
+    is_nan_function : bool
+        flag indicating if apply nan- or non-nan- verison of a function
+    Returns
+    -------
+    Statistic (quantile) computed with a corresponding numpy function
+    """
+
+    # np.min/max are overwritten for FA, so convert to np.arrays
+
+    if q == 0.5:
+        if is_nan_function:
+            return np.nanmedian(a._np)
+        else:
+            return np.median(a._np)
+    elif q == 0.0:
+        if is_nan_function:
+            return np.nanmin(a._np)
+        else:
+            return np.min(a._np)
+    elif q == 1.0:
+        if is_nan_function:
+            return np.nanmax(a._np)
+        else:
+            return np.max(a._np)
+    else:
+        with_infs = np.isinf(a).any()
+        if not with_infs:
+            kwargs = {QUANTILE_METHOD_NP_KW: "midpoint"}
+            if is_nan_function:
+                return np.nanquantile(a._np, q, **kwargs)
+            else:
+                return np.quantile(a._np, q, **kwargs)
+        else:
+            return gb_np_quantile_infs(a._np, q, is_nan_function)
+
+
+def gb_np_quantile_infs(a, q, is_nan_function, **kwargs):
+    """
+    Function for handling +/-infs in np.(nan)quantile
+
+    np.quantile doesn't give desired results when infs are present,
+    due to abmiguities with arithmetic operations with infs. See for instance:
+    https://github.com/numpy/numpy/issues/21932
+    https://github.com/numpy/numpy/issues/21091
+    Example:
+    np.quantile([np.inf, np.inf], q=0.5, method="midpoint") returns np.nan,
+    while
+    np.median([np.inf, np.inf]) returns np.inf,
+    although arguably these should give the same result. The behaviour of
+    np.median is also more expected.
+    the following will always give the same result as np.median(a):
+    (np.quantile(a, q=0.5, method="lower") + np.quantile(a, q=0.5, method="higher")) / 2
+    It is also clear that this essentially is the same as method="midpoint".
+
+    Parameters
+    ----------
+    a : array-like
+        Data to compute quantile for, which might contains +/-inf values
+    q : float, must be between 0. and 1.
+        Quantile to compute
+    is_nan_function : bool
+        flag indicating if apply nan- or non-nan- verison of a function
+    Returns
+    -------
+    Statistic (quantile) computed with a corresponding numpy function while
+    handling +/-infs in a mroe expected way.
+
+    """
+    if is_nan_function:
+        np_function = np.nanquantile
+    else:
+        np_function = np.quantile
+
+    kwargs[QUANTILE_METHOD_NP_KW] = "lower"
+    lower_quantile = np_function(a, q, **kwargs)
+    kwargs[QUANTILE_METHOD_NP_KW] = "higher"
+    higher_quantile = np_function(a, q, **kwargs)
+
+    midpoint_quantile = (lower_quantile + higher_quantile) / 2
+    return midpoint_quantile
+
+
 # -------------------------------------------------------
 def percentile(*args, **kwargs) -> np.number:
     args = _convert_cat_args(args)
@@ -3513,6 +3653,51 @@ def isfinite(*args, **kwargs) -> FastArray | bool:
 
 # -------------------------------------------------------
 def isnotfinite(*args, **kwargs) -> FastArray | bool:
+    """
+    Return True for each non-finite element, False otherwise.
+
+    A value is considered to be finite if it's not positive or negative infinity
+    or a NaN (Not a Number).
+
+    Parameters
+    ----------
+    *args :
+        See :py:data:`numpy.isfinite`.
+    **kwargs :
+        See :py:data:`numpy.isfinite`.
+
+    Returns
+    -------
+    `FastArray` or bool
+        For array input, a `FastArray` of booleans is returned that's True for each
+        non-finite element, False otherwise. For scalar input, a boolean is returned.
+
+    See Also
+    --------
+    riptable.isfinite, riptable.isinf, riptable.isnotinf, FastArray.isfinite,
+    FastArray.isnotfinite, FastArray.isinf, FastArray.isnotinf
+    Dataset.mask_or_isfinite :
+        Return a boolean array that's True for each `Dataset` row that has at least
+        one finite value.
+    Dataset.mask_and_isfinite :
+        Return a boolean array that's True for each `Dataset` row that contains all
+        finite values.
+    Dataset.mask_or_isinf :
+        Return a boolean array that's True for each `Dataset` row that has at least
+        one value that's positive or negative infinity.
+    Dataset.mask_and_isinf :
+        Return a boolean array that's True for each `Dataset` row that contains all
+        infinite values.
+
+    Examples
+    --------
+    >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+    >>> rt.isnotfinite(a)
+    FastArray([ True,  True,  True, False])
+
+    >>> rt.isnotfinite(1)
+    False
+    """
     try:
         return args[0].isnotfinite(**kwargs)
     except:
@@ -3521,6 +3706,49 @@ def isnotfinite(*args, **kwargs) -> FastArray | bool:
 
 # -------------------------------------------------------
 def isinf(*args, **kwargs) -> FastArray | bool:
+    """
+    Return True for each element that's positive or negative infinity, False otherwise.
+
+    Parameters
+    ----------
+    *args :
+        See :py:data:`numpy.isinf`.
+    **kwargs :
+        See :py:data:`numpy.isinf`.
+
+    Returns
+    -------
+    `FastArray` or bool
+        For array input, a `FastArray` of booleans is returned that's True for each
+        element that's positive or negative infinity, False otherwise. For scalar
+        input, a boolean is returned.
+
+    See Also
+    --------
+    riptable.isnotinf, riptable.isfinite, riptable.isnotfinite, FastArray.isinf,
+    FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite
+    Dataset.mask_or_isfinite :
+        Return a boolean array that's True for each `Dataset` row that has at least
+        one finite value.
+    Dataset.mask_and_isfinite :
+        Return a boolean array that's True for each `Dataset` row that contains all
+        finite values.
+    Dataset.mask_or_isinf :
+        Return a boolean array that's True for each `Dataset` row that has at least
+        one value that's positive or negative infinity.
+    Dataset.mask_and_isinf :
+        Return a boolean array that's True for each `Dataset` row that contains all
+        infinite values.
+
+    Examples
+    --------
+    >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+    >>> rt.isinf(a)
+    FastArray([ True,  True, False, False])
+
+    >>> rt.isinf(1)
+    False
+    """
     try:
         return args[0].isinf(**kwargs)
     except:
@@ -3529,6 +3757,50 @@ def isinf(*args, **kwargs) -> FastArray | bool:
 
 # -------------------------------------------------------
 def isnotinf(*args, **kwargs) -> FastArray | bool:
+    """
+    Return True for each element that's not positive or negative infinity,
+    False otherwise.
+
+    Parameters
+    ----------
+    *args :
+        See :py:data:`numpy.isinf`.
+    **kwargs :
+        See :py:data:`numpy.isinf`.
+
+    Returns
+    -------
+    `FastArray` or bool
+        For array input, a `FastArray` of booleans is returned that's True for each
+        element that's not positive or negative infinity, False otherwise. For scalar
+        input, a boolean is returned.
+
+    See Also
+    --------
+    riptable.isinf, FastArray.isnotinf, FastArray.isinf, riptable.isfinite,
+    riptable.isnotfinite, FastArray.isfinite, FastArray.isnotfinite
+    Dataset.mask_or_isfinite :
+        Return a boolean array that's True for each `Dataset` row that has at least
+        one finite value.
+    Dataset.mask_and_isfinite :
+        Return a boolean array that's True for each `Dataset` row that contains all
+        finite values.
+    Dataset.mask_or_isinf :
+        Return a boolean array that's True for each `Dataset` row that has at least
+        one value that's positive or negative infinity.
+    Dataset.mask_and_isinf :
+        Return a boolean array that's True for each `Dataset` row that contains all
+        infinite values.
+
+    Examples
+    --------
+    >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+    >>> rt.isnotinf(a)
+    FastArray([False, False,  True,  True])
+
+    >>> rt.isnotinf(1)
+    True
+    """
     try:
         return args[0].isnotinf(**kwargs)
     except:

@@ -79,6 +79,10 @@ class Cut_Test(unittest.TestCase):
         c = cut(x, knots)
         self.assertTrue((c._fa == FA([1, 1, 2, 4, 2])).all())
 
+        x = np.array([6, 3, 5, 2, 4, 1])
+        c = cut(x, 2, filter=x < 5)
+        self.assertTrue((c._fa == FA([0, 2, 0, 1, 2, 1])).all())
+
     def test_qcut(self):
         c = qcut(arange(10), 3)
         self.assertTrue(sum(c._np - FA([2, 2, 2, 2, 3, 3, 3, 4, 4, 4])) == 0)
@@ -135,6 +139,10 @@ class Cut_Test(unittest.TestCase):
         c = qcut(range(5), 4, labels=False)
         self.assertIsInstance(c, FastArray)
         self.assertTrue(sum(c._np - FA([2, 2, 3, 4, 5])) == 0)
+
+        x = np.array([6, 3, 5, 2, 4, 1])
+        c = qcut(x, 4, filter=x < 5)
+        self.assertTrue((c._fa == FA([0, 4, 0, 3, 5, 2])).all())
 
     def test_cut_errors(self):
         with self.assertRaises(ValueError):
