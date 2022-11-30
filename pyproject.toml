@@ -31,3 +31,11 @@ profile = "black"
 
 [pytest]
 xfail_strict = true
+
+[tool.pydocstyle]
+convention = "numpy"
+
+[tool.validate_docstrings]
+#errors = "GL"
+#not_errors = "EX01"
+#format = "json"

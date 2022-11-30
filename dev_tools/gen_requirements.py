@@ -60,16 +60,47 @@ tests_reqs = [
     "hypothesis",
     "ipykernel",
     "ipython",
+    "matplotlib",
     "nose",
     "pyarrow",
     "pytest",
 ]
 
 # Sphinx requirements for docs generation.
-sphinx_reqs = ["sphinx_rtd_theme>=0.5.1", "sphinx-autoapi", "nbsphinx"] + runtime_reqs + tests_reqs
+sphinx_reqs = (
+    [
+        "sphinx_rtd_theme>=0.5.1",
+        "sphinx-autoapi",
+        "nbsphinx",
+    ]
+    + runtime_reqs
+    + tests_reqs
+)
+
+# Docstrings validation requirements.
+# Validation requires complete riptable for iteration and evaluating examples.
+docstrings_reqs = (
+    [
+        "numpydoc",
+        "tomli",
+    ]
+    + runtime_reqs
+    + tests_reqs
+)
 
 # Complete developer requirements.
-developer_reqs = ["black", "setuptools_scm"] + conda_reqs + pypi_reqs + runtime_reqs + tests_reqs + toolchain_reqs
+developer_reqs = (
+    [
+        "black",
+        "pydocstyle",
+        "setuptools_scm",
+    ]
+    + conda_reqs
+    + pypi_reqs
+    + runtime_reqs
+    + tests_reqs
+    + toolchain_reqs
+)
 
 target_reqs = {
     "conda": conda_reqs,
@@ -79,6 +110,7 @@ target_reqs = {
     "sphinx": sphinx_reqs,
     "tests": tests_reqs,
     "toolchain": toolchain_reqs,
+    "docstrings": docstrings_reqs,
 }
 
 parser = argparse.ArgumentParser()

@@ -12,6 +12,7 @@ from numpy.testing import assert_array_compare, assert_array_equal
 import riptable as rt
 from riptable import FA, Cat, arange, stack_rows
 from riptable.rt_utils import normalize_keys
+from riptable.testing.array_assert import assert_array_or_cat_equal
 
 # TODO: Implement test for merge2 that uses collections.Counter to check the gbkeys in the 'on' cols of the output Dataset
 #       have the correct multiplicity. Use np.nditer(keycol) for iterating over the key column array (to pass to the Counter constructor)?
@@ -6435,6 +6436,31 @@ def test_merge2_outer_on_multikey_with_string(on):
     # returning None; the None was passed into get_or_create_keygroup(), which then choked
     # when trying to call .copy() on the None.
     _ = ds1.merge2(ds2, on=on, how="outer")
+
+
+def test_merge2_int_overflow_bug():
+    leftds = rt.Dataset()
+    leftds.idx_L = rt.arange(1000)
+    leftds.letter = b" "
+    for i in range(1, 27):
+        leftds.letter[(leftds.idx_L - i) % 26 == 0] = chr(64 + i)
+
+    rightds = rt.Dataset()
+    rightds.letter_upper = [chr(64 + i) for i in range(0, 32)] * 10
+    rightds.letter_lower = [chr(96 + i) for i in range(0, 32)] * 10
+    rightds.idx_R = rt.arange(rightds.shape[0])
+
+    mergedds = rt.merge2(leftds, rightds, left_on="letter", right_on="letter_upper", how="outer")
+
+    # Easiest (and strongest) assertions for the result examine the "left merge"
+    # part of the results and the "right-only" part of the results separately.
+    mergedds_top = mergedds[:10_000, :]
+    mergedds_rightonly = mergedds[10_000:, :]
+
+    assert rt.issorted(mergedds_top["idx_L"])
+    assert_array_equal(mergedds_top["letter"], mergedds_top["letter_upper"])
+
+    assert_array_equal(mergedds_rightonly["idx_L"].inv, mergedds_rightonly["idx_L"]._np)
 
 
 def test_lookup_copy_when_right_already_unique():
