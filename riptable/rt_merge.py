@@ -1462,7 +1462,8 @@ def _create_merge_fancy_indices(
                 # with a value that covers the total number of rows, then overwriting the entries representing
                 # the right-only rows with the invalid value.
                 left_rowcount = len(left_keygroup.ikey)
-                left_fancy_index = arange(left_rowcount + len(right_only_group_rows), dtype=left_keygroup.ikey.dtype)
+                extended_left_rowcount = left_rowcount + len(right_only_group_rows)
+                left_fancy_index = arange(extended_left_rowcount, dtype=int_dtype_from_len(extended_left_rowcount))
                 left_fancy_index[left_rowcount:] = left_fancy_index.inv
 
             else:
@@ -1479,7 +1480,9 @@ def _create_merge_fancy_indices(
 
                 # Create an extended version of the fancy index for 'left'; for the new elements representing
                 # rows with right-only keys, write invalid/NA values into them since they don't match any left rows.
-                extended_left_fancy_index = empty(extended_left_rowcount, dtype=left_keygroup.ikey.dtype)
+                extended_left_fancy_index = empty(
+                    extended_left_rowcount, dtype=int_dtype_from_len(extended_left_rowcount)
+                )
                 extended_left_fancy_index[: len(left_fancy_index)] = left_fancy_index
                 extended_left_fancy_index[len(left_fancy_index) :] = extended_left_fancy_index.inv
                 left_fancy_index = extended_left_fancy_index
@@ -1488,7 +1491,8 @@ def _create_merge_fancy_indices(
                 # Similar to the approach for 'left' above, except w.r.t. how we fill in the elements
                 # representing rows with right-only keys.
                 right_rowcount = len(right_keygroup.ikey)
-                right_fancy_index = arange(right_rowcount + len(right_only_group_rows))
+                extended_right_rowcount = right_rowcount + len(right_only_group_rows)
+                right_fancy_index = arange(extended_right_rowcount, dtype=int_dtype_from_len(extended_right_rowcount))
                 right_fancy_index[right_rowcount:] = right_only_group_rows
 
             else:
@@ -1499,7 +1503,9 @@ def _create_merge_fancy_indices(
 
                 # Create an extended version of the fancy index for 'right'; for the new elements representing
                 # rows with right-only keys, we write in the indices of those rows (which we extracted earlier).
-                extended_right_fancy_index = empty(extended_right_rowcount, dtype=right_keygroup.ikey.dtype)
+                extended_right_fancy_index = empty(
+                    extended_right_rowcount, dtype=int_dtype_from_len(extended_right_rowcount)
+                )
                 extended_right_fancy_index[: len(right_fancy_index)] = right_fancy_index
                 extended_right_fancy_index[len(right_fancy_index) :] = right_only_group_rows
                 right_fancy_index = extended_right_fancy_index

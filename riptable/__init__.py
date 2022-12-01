@@ -53,7 +53,6 @@ import riptide_cpp as rc
 from numpy import nan
 from numpy import ndarray as NPA
 
-from .benchmarks import *
 from .rt_bin import cut, qcut, quantile
 from .rt_categorical import Categorical as Cat
 from .rt_csv import load_csv_as_dataset
@@ -281,12 +280,17 @@ except ModuleNotFoundError:
 
 # if environment is IPython/Jupyter, force config options here
 try:
+    from IPython import get_ipython
+
+    ipconfig = get_ipython()
+except ModuleNotFoundError:
+    ipconfig = None
+
+if ipconfig is not None:
     # disable outputcache only for ipython by default
-    __IPYTHON__
     output_cache_none()
 
     # turn greedy on for better autocompletions on riptable classes
-    ipconfig = get_ipython()
     ipconfig.Completer.greedy = True
 
     # as of Dec 16, 2019 we let user control jedi
@@ -298,5 +302,3 @@ try:
 
     # If DisplayOptions.CUSTOM_COMPLETION is toggled then use custom attribute completion for riptable data objects.
     from .Utils import ipython_utils
-except Exception:
-    pass

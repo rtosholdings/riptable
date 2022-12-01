@@ -2284,12 +2284,101 @@ def lexsort(*args, **kwargs) -> FastArray:
 
 
 # -------------------------------------------------------
-def ones(*args, **kwargs) -> "FastArray":
-    return LedgerFunction(np.ones, *args, **kwargs)
+def ones(shape, dtype=None, order="C", *, like=None) -> "FastArray":
+    """
+    Return a new array of the specified shape and data type, filled with ones.
+
+    Parameters
+    ----------
+    shape : int or sequence of int
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``. Note that although
+        multi-dimensional arrays are technically supported by Riptable,
+        you may get unexpected results when working with them.
+
+    dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
+        The desired data type for the array.
+
+    order: {'C', 'F'}, default 'C'
+        Whether to store multi-dimensional data in row-major (C-style) or
+        column-major (Fortran-style) order in memory.
+
+    like : array_like, default None
+        Reference object to allow the creation of arrays that are not NumPy
+        arrays. If an array-like passed in as `like` supports the
+        ``__array_function__`` protocol, the result will be defined by it.
+        In this case, it ensures the creation of an array object compatible
+        with that passed in via this argument.
+
+    Returns
+    -------
+    `FastArray`
+        A new `FastArray` of the specified shape and type, filled with ones.
+
+    See Also
+    --------
+    riptable.ones_like, riptable.zeros, riptable.zeros_like,
+    riptable.empty, riptable.empty_like, riptable.full
+
+    Examples
+    --------
+    >>> rt.ones(5)
+    FastArray([1., 1., 1., 1., 1.])
+
+    >>> rt.ones(5, dtype='int8')
+    FastArray([1, 1, 1, 1, 1], dtype=int8)
+    """
+    return LedgerFunction(np.ones, shape, dtype=dtype, order=order, like=like)
 
 
-def ones_like(*args, **kwargs) -> "FastArray":
-    return LedgerFunction(np.ones_like, *args, **kwargs)
+def ones_like(a, dtype=None, order="K", subok=True, shape=None) -> "FastArray":
+    """
+    Return an array of ones with the same shape and data type as the specified array.
+
+    Parameters
+    ----------
+    a : array
+        The shape and data type of `a` define the same attributes of the
+        returned array. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+    dtype : str or NumPy dtype or Riptable dtype, optional
+        Overrides the data type of the result.
+    order : {'C', 'F', 'A', or 'K'}, default 'K'
+        Overrides the memory layout of the result. 'C' means row-major (C-style),
+        'F' means column-major (Fortran-style), 'A' means 'F' if `a` is
+        Fortran-contiguous, 'C' otherwise. 'K' means match the layout of `a` as
+        closely as possible.
+    subok : bool, default True
+        If True (the default), then the newly created array will use the sub-class
+        type of `a`, otherwise it will be a base-class array.
+    shape : int or sequence of int, optional
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, it will try to keep the same order; otherwise,
+        order='C' is implied. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+
+    Returns
+    -------
+    `FastArray`
+        A `FastArray` with the same shape and data type as the specified array,
+        filled with ones.
+
+    See Also
+    --------
+    riptable.ones, riptable.zeros, riptable.zeros_like, riptable.empty,
+    riptable.empty_like, riptable.full
+
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3, 4])
+    >>> rt.ones_like(a)
+    FastArray([1, 1, 1, 1])
+
+    >>> rt.ones_like(a, dtype = float)
+    FastArray([1., 1., 1., 1.])
+    """
+    return LedgerFunction(np.ones_like, a, dtype=dtype, order=order, subok=subok, shape=shape)
 
 
 # -------------------------------------------------------
@@ -2297,8 +2386,55 @@ def zeros(*args, **kwargs) -> "FastArray":
     return LedgerFunction(np.zeros, *args, **kwargs)
 
 
-def zeros_like(*args, **kwargs) -> "FastArray":
-    return LedgerFunction(np.zeros_like, *args, **kwargs)
+def zeros_like(a, dtype=None, order="k", subok=True, shape=None) -> "FastArray":
+    """
+    Return an array of zeros with the same shape and data type as the specified array.
+
+    Parameters
+    ----------
+    a : array
+        The shape and data type of `a` define the same attributes of the
+        returned array. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+    dtype : str or NumPy dtype or Riptable dtype, optional
+        Overrides the data type of the result.
+    order : {'C', 'F', 'A', or 'K'}, default 'K'
+        Overrides the memory layout of the result. 'C' means row-major (C-style),
+        'F' means column-major (Fortran-style), 'A' means 'F' if `a` is
+        Fortran-contiguous, 'C' otherwise. 'K' means match the layout of `a` as
+        closely as possible.
+    subok : bool, default True
+        If True (the default), then the newly created array will use the sub-class
+        type of `a`, otherwise it will be a base-class array.
+    shape : int or sequence of int, optional
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, it will try to keep the same order; otherwise,
+        order='C' is implied. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+
+    Returns
+    -------
+    `FastArray`
+        A `FastArray` with the same shape and data type as the specified array,
+        filled with zeros.
+
+    See Also
+    --------
+    riptable.zeros, riptable.ones, riptable.ones_like, riptable.empty,
+    riptable.empty_like, riptable.full
+
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3, 4])
+    >>> rt.zeros_like(a)
+    FastArray([0, 0, 0, 0])
+
+    >>> rt.zeros_like(a, dtype = float)
+    FastArray([1., 1., 1., 1.])
+    """
+    return LedgerFunction(np.zeros_like, a, dtype=dtype, order=order, subok=subok, shape=shape)
 
 
 # -------------------------------------------------------
@@ -4603,6 +4739,12 @@ def _mask_op(bool_list, funcNum, inplace=False):
     # check if nothing to do because just one boolean array in list
     if lenbool == 1:
         return bool_list[0]
+
+    # check all boolean arrays are same size - cpp code seems to fail
+    size = len(bool_list[0])
+    for i in range(lenbool):
+        if len(bool_list[i]) != size:
+            raise ValueError(f"Boolean arrays must be the same length")
 
     # we could support all int types here as well
     dtype = 0

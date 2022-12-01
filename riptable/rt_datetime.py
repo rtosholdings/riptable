@@ -2758,22 +2758,54 @@ class DateTimeCommon:
     # ------------------------------------------------------------
     def nanos_since_midnight(self):
         """
-        Nanosecond since midnight of the current day.
+        The number of nanoseconds since midnight for each `DateTimeNano`
+        element.
 
-        Examples
-        --------
-        >>> dtn = DateTimeNano(['2018-01-01 00:00:00.000123456'],from_tz='NYC')
-        >>> dtn.nanos_since_midnight()
-        FastArray([123456], dtype=int64)
+        The results are adjusted for the timezone specified in the `to_tz`
+        parameter when the `DateTimeNano` is created. The default `to_tz`
+        value is 'NYC'.
+
+        This method can be called on `DateTimeNano` arrays and
+        `DateTimeNanoScalar` objects.
 
         Returns
         -------
-        int64 array
+        `FastArray` or scalar
+            When this method is called on a `DateTimeNano` array, it returns a
+            `FastArray` of int64 integers representing the number of
+            nanoseconds since midnight for each `DateTimeNano` element. When
+            called on a `DateTimeNanoScalar`, a scalar (int64) is returned.
 
         See Also
         --------
-        DateTimeNano.time_since_midnight
+        DateTimeNano.days_since_epoch, DateTimeNano.seconds_since_epoch,
+        DateTimeNano.nanos_since_start_of_year, DateTimeNano.time_since_start_of_year,
+        DateTimeNano.time_since_midnight, DateTimeNano.millis_since_midnight
 
+        Examples
+        --------
+        With the same `from_tz` and `to_tz`:
+
+        >>> dtn = rt.DateTimeNano(['2022-01-01 00:00:00.000123456',
+        ...                        '2022-01-02 12:00:00.000456789'],
+        ...                        from_tz = 'NYC', to_tz = 'NYC')
+        >>> dtn.nanos_since_midnight()
+        FastArray([        123456, 43200000456789], dtype=int64)
+
+        Results adjusted for a `to_tz` that differs from the `from_tz`:
+
+        >>> dtn = rt.DateTimeNano(['2022-01-01 00:00:00.000123456',
+        ...                        '2022-01-02 12:00:00.000456789'],
+        ...                        from_tz = 'GMT', to_tz = 'NYC')
+        >>> dtn
+        DateTimeNano(['20211231 19:00:00.000123456', '20220102 07:00:00.000456789'], to_tz='NYC')
+        >>> dtn.nanos_since_midnight()
+        FastArray([68400000123456, 25200000456789], dtype=int64)
+
+        When it's called on a `DateTimeNanoScalar` object, a scalar is returned:
+
+        >>> dtn[0].nanos_since_midnight()
+        68400000123456
         """
         arr = self._timezone.fix_dst(self)
         arr = arr % NANOS_PER_DAY
