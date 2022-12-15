@@ -2855,7 +2855,6 @@ class Dataset(Struct):
 
         Parameters
         ----------
-
         as_type : {'Dataset', 'Struct', 'dict', 'OrderedDict', 'namedtuple', 'tuple', 'list', 'array', 'iter'}
             A string selector which determines return type of iteration, defaults to 'Dataset'.
         dtype : str or np.dtype, optional
@@ -3559,7 +3558,6 @@ class Dataset(Struct):
 
         Parameters
         ----------
-
         axis : int, optional
             * axis=0 (dflt.) -> over columns          (returns Struct (or Dataset) of bools)
                                 string synonyms: c, C, col, COL, column, COLUMN

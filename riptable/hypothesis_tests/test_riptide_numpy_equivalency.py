@@ -33,6 +33,7 @@ from hypothesis.strategies import (
 from numpy.testing import assert_allclose
 
 import riptable as rt
+from riptable.rt_numpy import QUANTILE_METHOD_NP_KW
 from riptable import FA, FastArray
 from riptable.Utils.rt_testing import (
     _NDARRAY_FASTARRAY_COMMON_AND_DIFF,
@@ -1134,7 +1135,7 @@ class TestRiptableNumpyEquivalency:
             if "std" in func or "var" in func:
                 kwargs["ddof"] = 1
             if "percentile" in func:
-                kwargs["interpolation"] = "linear"
+                kwargs[QUANTILE_METHOD_NP_KW] = "linear"
                 kwargs["q"] = 50
             if "argsort" == func:
                 kwargs["kind"] = "stable"
@@ -1218,8 +1219,9 @@ class TestRiptableNumpyEquivalency:
         interpolations = ["linear", "lower", "higher", "midpoint", "nearest"]
         for interpolation in interpolations:
             # todo - rt_nanpercentile should come from riptable
-            rt_nanpercentile = np.nanpercentile(arr, q=q, interpolation=interpolation)
-            np_nanpercentile = np.nanpercentile(arr, q=q, interpolation=interpolation)
+            kwargs = {QUANTILE_METHOD_NP_KW: interpolation}
+            rt_nanpercentile = np.nanpercentile(arr, q=q, **kwargs)
+            np_nanpercentile = np.nanpercentile(arr, q=q, **kwargs)
             assert_allclose(rt_nanpercentile, np_nanpercentile)
 
     # @given(arr=arrays(shape=ndarray_shape_strategy(), dtype=floating_dtypes()), q=floats(min_value=0, max_value=100))
@@ -1243,9 +1245,10 @@ class TestRiptableNumpyEquivalency:
     def test_nanpercentile_array(self, arr, q):
         interpolations = ["linear", "lower", "higher", "midpoint", "nearest"]
         for interpolation in interpolations:
+            kwargs = {QUANTILE_METHOD_NP_KW: interpolation}
             # todo - rt_nanpercentile should come from riptable
-            rt_output = np.nanpercentile(arr, q=q, interpolation=interpolation)
-            np_output = np.nanpercentile(arr, q=q, interpolation=interpolation)
+            rt_output = np.nanpercentile(arr, q=q, **kwargs)
+            np_output = np.nanpercentile(arr, q=q, **kwargs)
 
             assert_allclose(rt_output, np_output)
             if len(arr.shape) > 1:
@@ -1440,9 +1443,10 @@ class TestRiptableNumpyEquivalency:
     def test_percentile_single(self, arr, q):
         interpolations = ["linear", "lower", "higher", "midpoint", "nearest"]
         for interpolation in interpolations:
+            kwargs = {QUANTILE_METHOD_NP_KW: interpolation}
             # todo - rt_percentile should come from riptable
-            rt_output = np.percentile(arr, q=q, interpolation=interpolation, axis=None)
-            np_output = np.percentile(arr, q=q, interpolation=interpolation, axis=None)
+            rt_output = np.percentile(arr, q=q, axis=None, **kwargs)
+            np_output = np.percentile(arr, q=q, axis=None, **kwargs)
             assert_allclose(rt_output, np_output)
 
     @pytest.mark.xfail(
@@ -1458,8 +1462,9 @@ class TestRiptableNumpyEquivalency:
         arr, axis = array_and_axis
         interpolations = ["linear", "lower", "higher", "midpoint", "nearest"]
         for interpolation in interpolations:
-            rt_output = rt.percentile(arr, q=q, interpolation=interpolation, axis=axis)
-            np_output = np.percentile(arr, q=q, interpolation=interpolation, axis=axis)
+            kwargs = {QUANTILE_METHOD_NP_KW: interpolation}
+            rt_output = rt.percentile(arr, q=q, axis=axis, **kwargs)
+            np_output = np.percentile(arr, q=q, axis=axis, **kwargs)
             assert_allclose(rt_output, np_output)
             if axis and len(arr.shape) > 1:
                 assert isinstance(rt_output, FastArray)

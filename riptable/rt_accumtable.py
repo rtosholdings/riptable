@@ -510,8 +510,7 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
                     cat, temp_cat, val[0], val[1], filt, filt, func_name, func_name, remove_blanks=False
                 )
         else:
-            # must pass multiple input params as list now
-            curr_data = func([accum, val], filter=filt)
+            curr_data = func(val, filter=filt)
         try:
             results[name] = curr_data["NotGrouped"]
         except NameError:

@@ -156,6 +156,7 @@ def jedi_completions(text, offset):
     """
     autocomplete() must be called first.
     Not used yet. Returns the same completions jedi would.
+
     Examples
     --------
     from riptable.rt_misc import jedi_completions
@@ -334,7 +335,6 @@ def profile_func(func, sortby="time"):
     --------
     This will time how long the __repr__ function to print out a dataset
 
-    >>> import riptable as rt
     >>> import riptable_docdata as rtd
     >>> trips = rt.Dataset(rtd.get_bike_trips_data('trips'))
     >>> profile_func(trips.__repr__)

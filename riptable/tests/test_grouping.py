@@ -221,7 +221,7 @@ class Grouping_Test(unittest.TestCase):
 
         c = Categorical(["a", "a", "b", "c", "a"])
         f = FastArray([True, True, False, True, True])
-        cfilter = c.filter(f)
+        cfilter = c.set_valid(f)
         ifirst = makeifirst(cfilter, 2)
         assert_array_equal(ifirst[1:], FA([0, 3]))
         assert isnan(ifirst)[0]
@@ -265,7 +265,7 @@ class Grouping_Test(unittest.TestCase):
 
         c = Categorical(["a", "a", "b", "c", "a"])
         f = FastArray([True, True, False, True, True])
-        cfilter = c.filter(f)
+        cfilter = c.set_valid(f)
         ilast = makeilast(cfilter, 2)
         assert_array_equal(ilast[1:], FA([4, 3]))
         assert isnan(ilast)[0]

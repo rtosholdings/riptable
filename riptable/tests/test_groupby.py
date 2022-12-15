@@ -380,6 +380,7 @@ class Groupby_Test(unittest.TestCase):
         result = gb.trimbr()
         result = gb.nanmedian()
         result = gb.nanquantile(q=0.1)
+        result = gb.rolling_quantile(q=0.71)
         result = gb.nanquantile(q=[0.15, 0.45, 0.97])
         result = gb.percentile(q=[0.0, 50.0, 0.6, 100.0])
 

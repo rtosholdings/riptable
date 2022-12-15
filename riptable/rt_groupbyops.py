@@ -22,6 +22,7 @@ from .rt_enum import (
 from .rt_grouping import Grouping
 from .rt_numpy import zeros_like, bool_to_fancy, empty_like, groupbyhash, gb_np_quantile
 from .rt_groupbykeys import GroupByKeys
+from .rt_utils import rolling_quantile_funcParam
 
 if TYPE_CHECKING:
     from .rt_dataset import Dataset
@@ -2887,6 +2888,95 @@ class GroupByOps(object):
         return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_NANMEAN, *args, func_param=(window), **kwargs)
 
     # ---------------------------------------------------------------
+    def rolling_quantile(self, *args, q, window=3, **kwargs):
+        """rolling nan quantile for each group
+
+        Parameters
+        ----------
+        q: float, quantile to compute
+        window: optional, window size, defaults to 3
+
+        Returns
+        -------
+        Dataset same rows as original dataset
+        """
+
+        if not isinstance(q, Iterable):
+            q = [q]
+        q = cast(List[Any], q)
+
+        for quantile in q:
+            if not isinstance(quantile, (int, float, np.number)):
+                raise ValueError("Argument `q` must only contain numerics")
+
+            lower_bound = 0.0
+            upper_bound = 1.0
+
+            if quantile > upper_bound or quantile < lower_bound or np.isnan(quantile):
+                raise ValueError(
+                    f"Values in 'q' must be between {lower_bound} and {upper_bound}, but `{quantile}` is not."
+                )
+
+        if len(q) != len(np.unique(q)):
+            raise ValueError(f"Values in 'q' must be distinct.")
+
+        answers = []
+
+        window = min(window, len(self.grouping._iKey))
+
+        for quantile in q:
+            funcParam = rolling_quantile_funcParam(quantile, window)
+            answers.append(
+                self._calculate_all(GB_FUNCTIONS.GB_ROLLING_QUANTILE, *args, func_param=(funcParam), **kwargs)
+            )
+
+        if len(answers) == 1:
+            return answers[0]
+
+        suffix_letter = "_q"
+
+        precision = 3
+        while len(q) != len(np.unique([f"{quant:.{precision}g}" for quant in q])):
+            precision += 1
+
+        def suffix(quant):
+            return suffix_letter + f"{quant:.{precision}g}".replace(".", "_")
+
+        answer = answers[0]
+
+        answer.col_add_suffix(suffix(q[0]))
+
+        all_column_names = []
+        all_column_names.append(answer.keys())
+
+        for i, ans in enumerate(answers[1:]):
+            ans.col_add_suffix(suffix(q[i + 1]))
+            all_column_names.append(ans.keys())
+
+        total_answer = TypeRegister.Dataset.concat_columns(answers, do_copy=False)
+
+        all_column_names = [c for column_set in zip(*all_column_names) for c in column_set]
+        total_answer.col_move_to_front(all_column_names)
+
+        return total_answer
+
+    # ---------------------------------------------------------------
+    def rolling_median(self, *args, window=3, **kwargs):
+        """rolling nan median for each group
+
+        Parameters
+        ----------
+        window: optional, window size, defaults to 3
+
+        Returns
+        -------
+        Dataset same rows as original dataset
+        """
+        kwargs["q"] = 0.5
+        kwargs["window"] = window
+        return self.rolling_quantile(*args, **kwargs)
+
+    # ---------------------------------------------------------------
     def rolling_count(self, *args, window=3, **kwargs):
         """rolling count for each group
 
@@ -3454,7 +3544,7 @@ class GroupByOps(object):
             Compute percentage rank of data within each group
 
         Returns
-        -----
+        -------
         DataFrame with ranking of values within each group
         """
         raise NotImplementedError
@@ -3572,6 +3662,16 @@ CPP_GB_TABLE = [
     (GBF.GB_ROLLING_COUNT, "rolling_count", GB_PACKUNPACK.PACK, GroupByOps.rolling_count, None, None, None, True),
     (GBF.GB_ROLLING_MEAN, "rolling_mean", GB_PACKUNPACK.PACK, GroupByOps.rolling_mean, None, None, None, True),
     (GBF.GB_ROLLING_NANMEAN, "rolling_nanmean", GB_PACKUNPACK.PACK, GroupByOps.rolling_nanmean, None, None, None, True),
+    (
+        GBF.GB_ROLLING_QUANTILE,
+        "rolling_quantile",
+        GB_PACKUNPACK.PACK,
+        GroupByOps.rolling_quantile,
+        None,
+        None,
+        None,
+        True,
+    ),
     # In ema.cpp
     (GBF.GB_CUMSUM, "cumsum", GB_PACKUNPACK.PACK, GroupByOps.cumsum, None, None, None, True),
     (GBF.GB_CUMPROD, "cumprod", GB_PACKUNPACK.PACK, GroupByOps.cumprod, None, None, None, True),

@@ -550,8 +550,8 @@ def _possibly_add_concat_gap(coldim: int, inv_count, col, column_list, types):
     Column existed in calling loop's current dataset, might need to create/add an invalid column
     before adding an existing column. If invalid was added, reset the invalid count.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     coldim      : dimensions of column (1 or 2)
     inv_count   : running count of invalid gap. will be single int value for 1dim length or tuple of 2dim shape
     col         : existing column, used to generate the correct invalid value for the gap

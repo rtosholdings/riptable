@@ -1100,3 +1100,18 @@ def crc_match(arrlist: List[np.ndarray]) -> bool:
     #       accounts for this, but we need to check dtype explicitly to account for bool vs. int8 and signed vs. unsigned int.
     crcs = {(arr.shape, crc32c(arr)) for arr in arrlist}
     return len(crcs) == 1
+
+
+def rolling_quantile_funcParam(q, window):
+    """
+    Returns a funcParam to be passed to a cpp level for rolling_quantile.
+    Multiplier is needed because functions only take interger funcParams
+    See GroupByBase::AccumRollingQuantile1e6Mult function in riptide_cpp/src/GroupBy.cpp
+    """
+    ROLLING_QUANTILE_MULTIPLIER = 1e9
+    quantile_with_multiplier = int(q * ROLLING_QUANTILE_MULTIPLIER)
+
+    # encode window information
+    funcParam = quantile_with_multiplier + window * int((ROLLING_QUANTILE_MULTIPLIER + 1))
+
+    return funcParam

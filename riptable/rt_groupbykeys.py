@@ -32,7 +32,6 @@ class GroupByKeys:
 
     Notes
     -----
-
     **Constructor**
 
     GroupByKeys has two main ways of initialization:

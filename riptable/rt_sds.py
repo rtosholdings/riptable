@@ -688,7 +688,7 @@ def save_sds(
     append: Optional[str] = None,
     complevel: Optional[int] = None,
 ) -> None:
-    """
+    r"""
     Datasets and arrays will be saved into a single .sds file.
     Structs will create a directory of ``.sds`` files for potential nested structures.
 
@@ -927,8 +927,8 @@ def sds_tree(filepath: AnyPath, threads: Optional[int] = None):
     filepath : str or bytes or os.PathLike
     threads : int, optional
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> ds = Dataset({'col_'+str(i):arange(5) for i in range(5)})
     >>> ds.save(r'D:\junk\treeds')
     >>> sds_tree(r'D:\junk\treeds')
@@ -1786,7 +1786,6 @@ def load_sds(
 
     Examples
     --------
-
     Stacking multiple files together while loading:
 
     >>> files = [ r'D:\dir1\ds1.sds' r'D:\dir2\ds1.sds' ]
@@ -2727,7 +2726,7 @@ def _load_sds(
         however the _build_schema routine will be able to pull it generically.
 
     Returns
-    ------
+    -------
     Struct or Dataset
         When a `Struct` is returned, it may have nested data from all SDS files.
     """
@@ -3093,9 +3092,8 @@ def _sds_load_from_schema(
     Recursive function for loading data or info from .sds directory.
     Nested structures are stored:
 
-    Example:
-    --------
-
+    Example
+    -------
     >>> st = Struct({ 'a': Struct({ 'arr' : arange(10),
                                     'a2'  : Dataset({ 'col1': arange(5) }) }),
 
@@ -3414,7 +3412,7 @@ def _read_sds(
     Wrapper around a single .sds file load. Will return the appropriate item type based on the file header.
 
     Parameters
-    -----------
+    ----------
     path : str
         full path to .sds file or filename in shared memory (will always be trimmed to name.sds in shared)
     sharename : str, optional

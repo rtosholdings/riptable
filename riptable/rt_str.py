@@ -1027,7 +1027,7 @@ class FAString(FastArray):
     def extract(
         self, regex: str, expand: Optional[bool] = None, fillna: str = "", names=None, apply_unique: bool = True
     ) -> Union[FastArray, "Dataset"]:
-        """
+        r"""
         Extract one or more pattern groups from each element of an array into a
         `FastArray` or `Dataset`.
 

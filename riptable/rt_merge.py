@@ -1215,6 +1215,22 @@ class JoinIndices(NamedTuple):
             return len(index_arr)
 
 
+def _gbkeys_extract(g: "Grouping") -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+    """
+    Extract unique groupby-keys values from a Grouping object for passing to ismember.
+
+    Returns
+    -------
+    np.ndarray or tuple of np.ndarray
+    """
+    # TODO: Use g.unique_dict here instead of g.gbkeys?
+    gbkeys = g.gbkeys.values()
+    if len(gbkeys) == 1:
+        return next(iter(gbkeys))
+    else:
+        return tuple(gbkeys)
+
+
 def _create_merge_fancy_indices(
     left_keygroup: "Grouping",
     right_keygroup: "Grouping",
@@ -1266,21 +1282,6 @@ def _create_merge_fancy_indices(
     SQL ``GROUP BY`` rather than ``JOIN`` semantics -- which is what `right_groupby_keygroup` provides.
     """
 
-    def gbkeys_extract(g: "Grouping") -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
-        """
-        Extract unique groupby-keys values from a Grouping object for passing to ismember.
-
-        Returns
-        -------
-        np.ndarray or tuple of np.ndarray
-        """
-        # TODO: Use g.unique_dict here instead of g.gbkeys?
-        gbkeys = g.gbkeys.values()
-        if len(gbkeys) == 1:
-            return next(iter(gbkeys))
-        else:
-            return tuple(gbkeys)
-
     def left_or_inner_join(
         left_keygroup: "Grouping",
         right_keygroup: "Grouping",
@@ -1292,8 +1293,8 @@ def _create_merge_fancy_indices(
         #       -- that would need to be implemented first in order to get the same result here.
 
         # Get the unique values from the Groupings.
-        left_grouping_gbkey = gbkeys_extract(left_keygroup)
-        right_grouping_gbkey = gbkeys_extract(right_keygroup)
+        left_grouping_gbkey = _gbkeys_extract(left_keygroup)
+        right_grouping_gbkey = _gbkeys_extract(right_keygroup)
 
         # Which keys in 'left' are also in 'right'?
         # N.B. we do this operation on the gbkeys of each grouping; the number of uniques in each
@@ -1354,8 +1355,8 @@ def _create_merge_fancy_indices(
         # Get the unique values from the Groupings.
         # The algorithm below assumes that the unique values here are exactly the set of
         # those values used within the data (i.e. the data here doesn't contain any _unused_ values).
-        left_grouping_gbkey = gbkeys_extract(left_keygroup)
-        right_grouping_gbkey = gbkeys_extract(right_keygroup)
+        left_grouping_gbkey = _gbkeys_extract(left_keygroup)
+        right_grouping_gbkey = _gbkeys_extract(right_keygroup)
 
         # Which keys in 'left' are also in 'right'?
         # N.B. we do this operation on the gbkeys of each grouping; the number of uniques in each
@@ -3174,7 +3175,6 @@ def merge_asof(
 
     Examples
     --------
-
     >>> left = rt.Dataset({'a': [1, 5, 10], 'left_val': ['a', 'b', 'c']})
     >>> left
     #    a   left_val

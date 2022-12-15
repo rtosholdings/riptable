@@ -1,6 +1,14 @@
 import numpy as np
-
 import riptable as rt
+import pandas as pd
+import itertools
+from numpy.random import default_rng
+
+try:
+    import bottleneck as bn
+except ModuleNotFoundError:
+    bn = None
+
 
 arithmetic_functions = [
     "__add__",
@@ -108,6 +116,8 @@ from numpy.testing import (
     assert_array_equal,
     assert_equal,
 )
+
+from ..rt_numpy import np_rolling_nanquantile
 
 
 @pytest.mark.parametrize(
@@ -445,26 +455,26 @@ class test_numpy_functions(unittest.TestCase):
     #     x = rt.FastArray(copy.copy(A_array))
     #     y = rt.FastArray(copy.copy(B_array))
     #
-    #     WINDOW_SZ = 3
+    #     window = 3
     #
-    #     roll_a = a.rolling(WINDOW_SZ).sum()
-    #     roll_x = x.rolling_sum(WINDOW_SZ)
+    #     roll_a = a.rolling(window).sum()
+    #     roll_x = x.rolling_sum(window)
     #
     #     print('output type is ', print(type(roll_x)))
     #
-    #     self.assert_equal(roll_a[WINDOW_SZ:], roll_x[WINDOW_SZ:])
+    #     self.assert_equal(roll_a[window:], roll_x[window:])
     #
-    #     roll_a = a.rolling(WINDOW_SZ).mean()
-    #     roll_x = x.rolling_mean(WINDOW_SZ)
-    #     self.assert_equal(roll_a[WINDOW_SZ:], roll_x[WINDOW_SZ:])
+    #     roll_a = a.rolling(window).mean()
+    #     roll_x = x.rolling_mean(window)
+    #     self.assert_equal(roll_a[window:], roll_x[window:])
     #
-    #     roll_a = a.rolling(WINDOW_SZ).var()
-    #     roll_x = x.rolling_std(WINDOW_SZ)
-    #     self.assert_equal(roll_a[WINDOW_SZ:], roll_x[WINDOW_SZ:])
+    #     roll_a = a.rolling(window).var()
+    #     roll_x = x.rolling_std(window)
+    #     self.assert_equal(roll_a[window:], roll_x[window:])
     #
-    #     roll_a = a.rolling(WINDOW_SZ).std()
-    #     roll_x = x.rolling_std(WINDOW_SZ)
-    #     self.assert_equal(roll_a[WINDOW_SZ:], roll_x[WINDOW_SZ:])
+    #     roll_a = a.rolling(window).std()
+    #     roll_x = x.rolling_std(window)
+    #     self.assert_equal(roll_a[window:], roll_x[window:])
 
     # TODO pytest parameterize type_list
     def test_reductions(self):
@@ -590,6 +600,196 @@ class test_numpy_functions(unittest.TestCase):
         self.test_reductions()
         rt.FastArray._TON()
         rt.FastArray._RON()
+
+
+def rolling_quantile_params_generator(dtypes, max_N, with_nans, with_infs):
+    for dtype in dtypes:
+
+        # N = 1 case
+        N = 1
+        window = 1
+        for quantile in [0.81, 0.44, 0.321]:
+            curr_frac_options = [(0, 0, 0)]
+            if with_nans:
+                curr_frac_options += [(1, 0, 0)]
+            if with_infs:
+                curr_frac_options += [(0, 1, 0), (0, 0, 1)]
+            for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                yield N, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        frac_lists = [
+            [0.0, 0.24, 1],
+            [0.0, 0.14, 0.9, 1.0],
+            [0.0, 0.2, 0.87, 1.0],
+        ]
+
+        frac_options = [element for element in itertools.product(*frac_lists) if sum(element) <= 1]
+        frac_options_only_nans = [(x, 0, 0) for x in frac_lists[0]]
+
+        curr_frac_options = [(0, 0, 0)]
+        if with_nans:
+            curr_frac_options = frac_options_only_nans
+        if with_infs:
+            curr_frac_options = frac_options
+
+        # window = 1 case
+        N = 500
+        window = 1
+        for quantile in [0.13, 0.814]:
+            for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                yield N, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        # window > N case
+        N = 500
+        window = 700
+        for quantile in [0.512, 0.90]:
+            for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                yield N, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        # quantile = 0., 1. cases
+        N = 666
+        window = 111
+        for quantile in [0.0, 1.0]:
+            for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                yield N, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        for N, window in [(20, 2), (50, 5), (154, 51), (812, 761), (1_001, 43), (10_000, 6_000), (10_000, 431)]:
+            if N > max_N:
+                continue
+            for quantile in [0.17, 0.435, 0.82]:
+                for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                    yield N, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+
+from .test_groupbyops import quantile_params_generator
+
+
+@pytest.mark.parametrize(
+    "N, dummy, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype",
+    quantile_params_generator(
+        [np.int64, np.float64], max_N=11_000, windowed=True, with_cats=False, with_nans=True, with_infs=False, seed=150
+    ),
+)
+def test_rolling_quantile(N, dummy, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype):
+    this_seed = (N * window * int(quantile * 1000) * int(nan_fraction * 1000)) % 10_000
+    rng = default_rng(this_seed)
+
+    def err_msg():
+        return f"""
+quantile = {quantile}
+N = {N}
+window = {window}
+nan_fraction = {nan_fraction}
+dtype = {dtype}"""
+
+    window = min(window, N)
+
+    # tests with pandas rolling series (without NaNs)
+    A_array = rng.random(N)
+
+    a = pd.DataFrame(copy.copy(A_array))
+
+    x = rt.FastArray(copy.copy(A_array))
+    z = copy.copy(A_array)
+
+    roll_a = a.rolling(window).quantile(quantile=quantile, interpolation="midpoint")
+    roll_x = x.rolling_quantile(q=quantile, window=window)
+
+    assert_array_almost_equal(roll_a[0].values[window:], roll_x[window:], err_msg=err_msg())
+
+    # cases when there are NaNs are harder to test
+    # Here, test median only (using bottleneck.move_median, which handles NaNs)
+    # more full tests in test_rolling_quantile_infs
+    if bn is not None:
+        B_array = rng.random(N)
+        B_array[rng.random(N) < nan_fraction] = np.nan
+
+        y = rt.FastArray(copy.copy(B_array))
+
+        roll_b = bn.move_median(copy.copy(B_array), window=window, min_count=1)
+        roll_x = y.rolling_quantile(q=0.5, window=window)
+
+        assert_array_almost_equal(roll_b, roll_x, err_msg=err_msg())
+
+
+@pytest.mark.parametrize(
+    "N, dummy, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype",
+    quantile_params_generator(
+        [np.float64], max_N=1_001, windowed=True, with_cats=False, with_nans=True, with_infs=True, seed=250
+    ),
+)
+def test_rolling_quantile_infs(N, dummy, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype):
+    this_seed = (
+        (N * window * int(quantile * 1000) * int(nan_fraction * 1000))
+        * int(inf_fraction * 1000)
+        * int(minus_inf_fraction * 1000)
+        % 10_000
+    )
+    rng = default_rng(this_seed)
+
+    def err_msg():
+        return f"""
+N = {N}
+window = {window}
+quantile = {quantile}
+nan_fraction = {nan_fraction}
+inf_fraction = {inf_fraction}
+minus_inf_fraction = {minus_inf_fraction}
+dtype = {dtype}"""
+
+    window = min(window, N)
+
+    # use very slow strided np function for full testing
+
+    C_array = rng.uniform(-10_000, 10_000, size=N).astype(dtype)
+    rand_idxs = rng.random(size=N)
+    C_array[rand_idxs < (inf_fraction + minus_inf_fraction + nan_fraction)] = np.nan
+    if dtype not in [np.int32, np.int64]:
+        # infs only work for non-intergal
+        C_array[rand_idxs < (inf_fraction + minus_inf_fraction)] = -np.inf
+        C_array[rand_idxs < (inf_fraction)] = np.inf
+    np_data = copy.copy(C_array)
+    rt_data = rt.FA(copy.copy(C_array)).astype(dtype)
+
+    roll_np = np_rolling_nanquantile(a=np_data, q=quantile, window=window)
+    roll_rt = rt_data.rolling_quantile(q=quantile, window=window)
+
+    assert_array_almost_equal(roll_rt[window - 1 :], roll_np, err_msg=err_msg())
+
+
+@pytest.mark.parametrize(
+    "N, dummy, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype",
+    quantile_params_generator(
+        [np.int32, np.int64], max_N=1_001, windowed=True, with_cats=False, with_nans=True, with_infs=False, seed=350
+    ),
+)
+def test_rolling_quantile_integral(N, dummy, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype):
+    this_seed = (N * window * int(quantile * 1000) * int(nan_fraction * 1000)) % 10_000
+    rng = default_rng(this_seed)
+
+    def err_msg():
+        return f"""
+N = {N}
+window = {window}
+quantile = {quantile}
+nan_fraction = {nan_fraction}
+dtype = {dtype}"""
+
+    window = min(window, N)
+
+    # use very slow strided np function for full testing
+
+    C_array = rng.uniform(-10_000, 10_000, size=N).astype(dtype).astype(np.float64)
+    rand_idxs = rng.random(size=N)
+    C_array[rand_idxs < nan_fraction] = np.nan
+
+    np_data = copy.copy(C_array)
+    rt_data = rt.FA(copy.copy(C_array)).astype(dtype)
+
+    roll_np = np_rolling_nanquantile(a=np_data, q=quantile, window=window)
+    roll_rt = rt_data.rolling_quantile(q=quantile, window=window)
+
+    assert_array_almost_equal(roll_rt[window - 1 :], roll_np, err_msg=err_msg())
 
 
 if __name__ == "__main__":

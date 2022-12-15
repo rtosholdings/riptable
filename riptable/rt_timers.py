@@ -167,7 +167,7 @@ def tocf(dataset=True):
     Call ticf() followed by code followed by tocf() to time fastarrays
 
     Parameters
-    ----------------
+    ----------
     dataset: bool, defaults to True.
         If specified, returns a Dataset. Set to False to print out instead.
     """
@@ -208,7 +208,7 @@ def tocp(dataset=True, logfile=None, sort="time", strip=True, stats=False, calls
     ticp(); ds.sort_copy(by='Symbol'); tocp(False, sort='cumtime');
 
     Parameters
-    ----------------
+    ----------
     dataset=False.  set to True to return a Dataset otherwise use pstats output
     logfile=None.   set to filename to save the Dataset in SDS format
                     NOTE: consider pickling the result when stats=True to save for later analysis
@@ -478,7 +478,8 @@ def tt(expression: str, loops=1, return_time=False):
     """
     tictoc time an expression in nanoseconds.  use ; to separate lines
 
-    Args:
+    Args
+    ----
         arg1 is a string of code to execute
         arg2 is optional and is how many loops to execute
 
@@ -522,7 +523,8 @@ def ttx(expression: str, loops=1):
     """
     tictoc time an expression in TSC (time stamp counters).  use ; to separate lines
 
-    Args:
+    Args
+    ----
         arg1 is a string of code to execute
         arg2 is optional and is how many loops to execute
 

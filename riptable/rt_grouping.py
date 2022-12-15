@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Mapping, Optional, Tuple
 
 import numba as nb
 import numpy as np
+import numpy.typing as npt
 import riptide_cpp as rc
 
 from .config import get_global_settings
@@ -441,8 +442,8 @@ class Grouping:
 
     (See `Grouping._calculate_all`)
 
-    Parameters:
-
+    Parameters
+    ----------
     * `origdict`: a dictionary of all data to perform the operation on
     * `funcNum`: a unique code for each math operation
     * `func_param`: 0 extra parameter for operations that take more than one argument - will be a tuple if used
@@ -702,13 +703,15 @@ class Grouping:
         """
         # -------------------------------------------------
         def data_as_dict(grouping, name_def: Optional[str] = None) -> dict:
-            # flip all input to dictionary, preserve names
-            grouping_dict = {}
             if not isinstance(grouping, list):
                 grouping = [grouping]
+
             if len(grouping) != 1:
                 # cannot set name for multiple keys
                 name_def = None
+
+            # flip all input to dictionary, preserve names
+            grouping_dict = {}
             for idx, arr in enumerate(grouping):
                 try:
                     name = arr.get_name()
@@ -727,6 +730,9 @@ class Grouping:
 
         # -------------------------------------------------
         def data_as_fastarray(grouping, unicode: bool) -> Tuple[dict, int]:
+            if len(grouping) < 1:
+                raise ValueError(f"Cannot create an empty grouping.")
+
             # return dict and length of the array(s)
             # --------
             def object_to_string(arr, unicode: bool):
@@ -892,7 +898,7 @@ class Grouping:
                     # it has been disabled since filter is None on this branch
                     if verbose:
                         print("refiltering categorical", list_values)
-                    cat = cat.filter(filter)
+                    cat = cat.set_valid(filter)
                     grp = cat.grouping
                 self.copy_from(grp)
                 return
@@ -3465,10 +3471,6 @@ class Grouping:
     def as_filter(self, index):
         """
         Returns an index filter for a given unique key
-
-        Examples
-        -------
-
         """
         first = self.ifirstgroup[index]
         last = first + self.ncountgroup[index]

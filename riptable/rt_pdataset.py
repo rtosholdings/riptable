@@ -404,7 +404,7 @@ class PDataset(Dataset):
         A list with the names of the partitions
 
         Example
-        --------
+        -------
         Example below assumes 3 filenames date encoded with datasets
 
         >>> pds = load_sds([file1, file2, file3], stack=True)

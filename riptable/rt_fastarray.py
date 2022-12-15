@@ -19,6 +19,7 @@ from typing import (
 )
 
 import numpy as np
+import numpy.typing as npt
 import riptide_cpp as rc
 from numpy.core.numeric import ScalarType
 
@@ -62,7 +63,7 @@ from .rt_numpy import (
 )
 from .rt_sds import save_sds
 from .rt_stats import statx
-from .rt_utils import describe, sample
+from .rt_utils import describe, sample, rolling_quantile_funcParam
 from .Utils.common import cached_weakref_property
 from .Utils.rt_display_properties import (
     DisplayConvert,
@@ -1212,7 +1213,7 @@ class FastArray(np.ndarray):
                 sequence can be list, tuple, np.ndarray, FastArray
 
         Raises
-        -------
+        ------
         IndexError
 
         """
@@ -1685,6 +1686,72 @@ class FastArray(np.ndarray):
         save_sds(filepath, self, share=share, compress=compress, overwrite=overwrite, name=name)
 
     # --------------------------------------------------------------------------
+    def filter(self, filter: npt.ArrayLike) -> "FastArray":
+        """
+        Return a copy of the `FastArray` containing only the elements that meet the specified
+        condition.
+
+        Parameters
+        ----------
+        filter : array: fancy index or Boolean mask
+            A fancy index specifies both the desired elements and their order in the
+            returned `FastArray`. When a Boolean mask is passed, only rows that meet the
+            specified condition are in the returned `FastArray`.
+
+        Returns
+        -------
+        `FastArray`
+
+        Notes
+        -----
+        If you want to perform an operation on a filtered FastArray, it's more efficient to
+        perform the operation using the ``filter`` keyword argument. For example,
+        ``my_fa.sum(filter = boolean_mask)``.
+
+        Examples
+        --------
+        Create a `FastArray`:
+
+        >>> fa = rt.FastArray(np.linspace(0, 1, 11))
+        >>> fa
+        FastArray([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1. ])
+
+        Filter using a fancy index:
+
+        >>> fa.filter([5, 0, 1])
+        FastArray([0.5, 0. , 0.1])
+
+        Filter using a condition that creates a Boolean mask array:
+
+        >>> fa.filter(fa > 0.75)
+        FastArray([0.8, 0.9, 1. ])
+
+        """
+
+        # normalize rowfilter
+        if np.isscalar(filter):
+            filter = np.asanyarray([filter])
+        elif not isinstance(filter, np.ndarray):
+            filter = np.asanyarray(filter)
+
+        # Ensure filter is boolean or integers
+        if not (np.issubdtype(filter.dtype, np.integer) or np.issubdtype(filter.dtype, bool)):
+            raise TypeError(f"The filter must be a boolean mask or integer fancy index.")
+
+        # Ensure `filter` is the right shape.
+        # Unlike `Dataset.filter` we don't convert bool to fancy,  because we're not reusing the fancy indices.
+        if filter.ndim != 1:
+            raise ValueError("`FastArray.filter` only accepts 1D arrays for the element selector/mask.")
+        # Boolean array needs to be the right length as well.
+        if np.issubdtype(filter.dtype, bool) and (len(filter) != self.shape[0]):
+            raise ValueError(
+                f"The length of the provided selection mask ({len(filter)}) does not match the length of the FastArray({self.shape[0]})."
+            )
+
+        # Perform filter and return
+        return self[filter]
+
+    # --------------------------------------------------------------------------
     def reshape(self, *args, **kwargs) -> FastArray:
         result = super(FastArray, self).reshape(*args, **kwargs)
         # this warning happens too much now
@@ -2128,6 +2195,11 @@ class FastArray(np.ndarray):
 
     def rolling_nanmean(self, window: int = 3) -> FastArray:
         return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_NANMEAN, window)
+
+    def rolling_quantile(self, q, window: int = 3) -> FastArray:
+        window = min(window, len(self))
+        windowParam = rolling_quantile_funcParam(q, window)
+        return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_QUANTILE, windowParam)
 
     def rolling_var(self, window: int = 3) -> FastArray:
         return rc.Rolling(self, ROLLING_FUNCTIONS.ROLLING_VAR, window)
@@ -3351,7 +3423,6 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-
         can be used to compare two arrays for structural equality
         >>> a = arange(100)
         >>> b = arange(100.0)
@@ -3400,7 +3471,6 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-
         Float with nan:
 
         >>> a = FastArray([1.,2.,3.,np.nan])
