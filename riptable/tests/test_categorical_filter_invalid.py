@@ -111,7 +111,7 @@ class TestCategoricalFilterInvalid:
 
         c = Categorical(["a", "a", "b", "c", "a"])
         assert c.unique_count == 3
-        d = c.filter(filter=f)
+        d = c.set_valid(filter=f)
         assert pre_c.unique_count == d.unique_count
         assert arr_eq(pre_c._fa, d._fa)
 
@@ -122,7 +122,7 @@ class TestCategoricalFilterInvalid:
 
         c = Categorical([FA(["a", "a", "b", "c", "a"]), arange(5)])
         assert c.unique_count == 5
-        d = c.filter(filter=f)
+        d = c.set_valid(filter=f)
         assert pre_c.unique_count == d.unique_count
         assert arr_eq(pre_c._fa, d._fa)
 
@@ -130,21 +130,21 @@ class TestCategoricalFilterInvalid:
         c = Categorical(zeros(10, dtype=np.int8), ["a", "b", "c"])
         assert c.unique_count == 3
 
-        d = c.filter()
+        d = c.set_valid()
         assert d.unique_count == 0
         assert len(d.category_array) == 0
 
     def test_categorical_full(self):
         f = full(5, True)
         c = Categorical([FA(["a", "a", "b", "c", "a"]), arange(5)])
-        d = c.filter(filter=f)
+        d = c.set_valid(filter=f)
         assert arr_eq(c._fa, d._fa)
 
     def test_filter_deep_copy(self):
         f = FA([True, True, False, True, False])
         c = Categorical([FA(["a", "a", "b", "c", "a"]), arange(5)])
         assert c.unique_count == 5
-        d = c.filter(filter=f)
+        d = c.set_valid(filter=f)
         assert d.unique_count == 3
         assert c.unique_count == 5
 
@@ -153,7 +153,7 @@ class TestCategoricalFilterInvalid:
         c = Categorical(["a", "a", "b", "c", "a"], filter=f)
         c_zero = Categorical(["a", "a", "b", "c", "a"], base_index=0)
         with pytest.warns(UserWarning):
-            d = c_zero.filter(filter=f)
+            d = c_zero.set_valid(filter=f)
         assert arr_eq(c._fa, d._fa)
         assert c.unique_count == d.unique_count
 
@@ -163,7 +163,7 @@ class TestCategoricalFilterInvalid:
         filter = arr != "b"
         c = Categorical(arr)
         c_pre = Categorical(arr, filter=filter)
-        c_post = c.filter(filter=filter)
+        c_post = c.set_valid(filter=filter)
         c_copy = Categorical(c, filter=filter)
 
         assert arr_eq(c_pre.category_array, c_post.category_array)
@@ -178,7 +178,7 @@ class TestCategoricalFilterInvalid:
         filter[:5] = False
         c = Categorical(arr)
         c_pre = Categorical(arr, filter=filter)
-        c_post = c.filter(filter=filter)
+        c_post = c.set_valid(filter=filter)
         c_copy = Categorical(c, filter=filter)
 
         assert arr_eq(c_pre.category_array, c_post.category_array)
@@ -190,7 +190,7 @@ class TestCategoricalFilterInvalid:
     def test_expand_array_empty(self):
         arr = np.random.choice(["a", "b", "c"], 50)
         c = Categorical(arr)
-        c2 = c.filter(filter=full(50, False))
+        c2 = c.set_valid(filter=full(50, False))
         assert c2.unique_count == 0
         assert len(c2.category_array) == 0
         expanded = c2.expand_array
@@ -198,7 +198,7 @@ class TestCategoricalFilterInvalid:
 
     def test_expand_dict_empty(self):
         c = Categorical([arange(5), np.array(["a", "b", "c", "d", "e"])])
-        c2 = c.filter(filter=full(5, False))
+        c2 = c.set_valid(filter=full(5, False))
         assert c2.unique_count == 0
 
         d = list(c2.expand_dict.values())
@@ -240,7 +240,7 @@ class TestCategoricalFilterInvalid:
         assert reg.equals(app)
 
         # keep enum as enum
-        as_arr = c.filter(None)
+        as_arr = c.set_valid(None)
 
         for i in range(len(as_arr)):
             assert c[i] == as_arr[i]
@@ -251,14 +251,14 @@ class TestCategoricalFilterInvalid:
         f = FA([True, True, False, True, True])
         c = Categorical(codes, d)
 
-        c2 = c.as_singlekey().filter(f)
+        c2 = c.as_singlekey().set_valid(f)
         assert c2.unique_count == 2
         c2.filtered_set_name("FLT")
         assert c2.unique_count == 2
         assert c2[2] == "FLT"
 
         c = Cat([10, 20, 30] * 3, {10: "A", 20: "B", 30: "C"})
-        count = c.filter(c == "A").count()["Count"]
+        count = c.set_valid(c == "A").count()["Count"]
         assert np.all(count == [3, 6])
 
     def test_gbc_filter(self):

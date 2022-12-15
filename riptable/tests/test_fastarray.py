@@ -30,6 +30,7 @@ from riptable.rt_numpy import (
 )
 from riptable.rt_utils import mbget
 from riptable.tests.utils import new_array_function
+from riptable.testing.array_assert import assert_array_or_cat_equal
 
 NP_ARRAY_FUNCTION_PARAMS: List[Callable] = [
     np.argmax,
@@ -1483,6 +1484,43 @@ class FastArray_Test(unittest.TestCase):
         self.assertFalse(arr_view.flags.owndata)
         self.assertEqual(arr.get_name(), arr_view.get_name())
         self.assertTrue((arr == arr_view).all())
+
+    def test_FA_filter(self) -> None:
+        """Test filter method for FastArrays"""
+
+        # Instantiate
+        arr = FastArray([1, 2, 3, 4, 5, 6])
+        filt = FastArray([True, False, True, False, True, True])
+
+        # Basic filter
+        assert_array_or_cat_equal(arr.filter(filt), FastArray([1, 3, 5, 6]))
+
+        # Direct filter comparison
+        assert_array_or_cat_equal(arr.filter(filt), arr[filt])
+
+        # Fancy index
+        assert_array_or_cat_equal(arr.filter([4, 2, 0]), FastArray([5, 3, 1]))
+
+        # Fancy index with repeats and longer than FA
+        assert_array_or_cat_equal(arr.filter(rt.FA([2, 2, 2, 1, 1, 0, 0])), FastArray([3, 3, 3, 2, 2, 1, 1]))
+
+        # Boolean too long/short
+        with pytest.raises(ValueError):
+            _ = arr.filter([True] * 10)
+        with pytest.raises(ValueError):
+            _ = arr.filter([True] * 2)
+
+        # Too many dimensions
+        with pytest.raises(ValueError):
+            _ = arr.filter(filter=[[True, True], [False, False]])
+
+        # Make sure Categorical filter is working in the new style
+        cat = rt.Categorical(["a", "a", "b", "b", "a", "b"])
+        assert_array_or_cat_equal(cat.filter(filt), rt.Categorical(["a", "b", "a", "b"]))
+
+        # Make sure Categorical filter doesn't rebase categories even if one disappears
+        filtered_cat = cat.filter([True, True, False, False, True, False])
+        assert_array_or_cat_equal(cat.categories(), filtered_cat.categories())
 
 
 # TODO: Extend the tests in the TestFastArrayNanmax / TestFastArrayNanmin classes below to cover the following cases:

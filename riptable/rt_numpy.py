@@ -47,6 +47,7 @@ __all__ = [
     "empty_like",
     "floor",
     "full",
+    "full_like",
     "get_dtype",
     "get_common_dtype",
     "groupby",
@@ -143,6 +144,7 @@ from typing import (
 )
 
 import numpy as np
+import numpy.typing as npt
 import riptide_cpp as rc
 from riptide_cpp import LedgerFunction
 
@@ -191,7 +193,7 @@ def _args_to_fast_arrays(*arg_names) -> Callable:
     thereof.
 
     Parameters
-    __________
+    ----------
     arg_names: tuple[str]
         Specifies the arguments to which we apply _cast_to_fa
     """
@@ -717,16 +719,16 @@ def unique(
 
     if isinstance(arr, TypeRegister.Categorical):
         # NOTE if the categorical is not dirty, filter should do nothing
-        # TODO: need to set dirty flag g=arr.filter().grouping
+        # TODO: need to set dirty flag g=arr.set_valid().grouping
         g = arr.grouping
 
         # check for Dictionary mode
         if arr.category_mode == CategoryMode.Dictionary:
             if filter is not None:
-                arr = arr.filter(filter)
+                arr = arr.set_valid(filter)
             else:
                 if g.isdirty:
-                    arr = arr.filter(filter)
+                    arr = arr.set_valid(filter)
                 else:
                     mark_readonly = True
 
@@ -2258,7 +2260,97 @@ def diff(*args, **kwargs) -> FastArray:
 
 # -------------------------------------------------------
 def full(shape, fill_value, dtype=None, order="C") -> FastArray:
+    """
+    Return a new array of given shape and type, filled with `fill_value`.
+
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    fill_value : scalar or array_like
+        Fill value.
+    dtype : data-type, optional
+        The desired data-type for the array  The default, None, means
+         ``np.array(fill_value).dtype``.
+    order : {'C', 'F'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory.
+
+    Returns
+    -------
+    `FastArray`
+        A new `FastArray` of the specified shape and type, filled with `fill_value`.
+
+    See Also
+    --------
+    full_like : Return a new array with shape of input filled with value.
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    zeros : Return a new array setting values to zero.
+    """
     result = LedgerFunction(np.full, shape, fill_value, dtype=dtype, order=order)
+    if hasattr(fill_value, "newclassfrominstance"):
+        result = fill_value.newclassfrominstance(result, fill_value)
+    return result
+
+
+def full_like(
+    a, fill_value, dtype: Optional[npt.DTypeLike] = None, order="K", subok: bool = True, shape=None
+) -> "FastArray":
+    """
+    Return a full array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : array
+        The shape and data type of `a` define the same attributes of the
+        returned array. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+    fill_value : scalar or array_like
+        Fill value.
+    dtype : str or NumPy dtype or Riptable dtype, optional
+        Overrides the data type of the result.
+    order : {'C', 'F', 'A', or 'K'}, default 'K'
+        Overrides the memory layout of the result. 'C' means row-major (C-style),
+        'F' means column-major (Fortran-style), 'A' means 'F' if `a` is
+        Fortran-contiguous, 'C' otherwise. 'K' means match the layout of `a` as
+        closely as possible.
+    subok : bool, default True
+        If True (the default), then the newly created array will use the sub-class
+        type of `a`, otherwise it will be a base-class array.
+    shape : int or sequence of int, optional
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, it will try to keep the same order; otherwise,
+        order='C' is implied. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+
+    Returns
+    -------
+    `FastArray`
+        A `FastArray` with the same shape and data type as the specified array,
+        filled with `fill_value`.
+
+    See Also
+    --------
+    riptable.ones
+    riptable.zeros
+    riptable.zeros_like
+    riptable.empty,
+    riptable.empty_like
+    riptable.full
+
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3, 4])
+    >>> rt.full_like(a, 9)
+    FastArray([9, 9, 9, 9])
+
+    >>> rt.ones_like(a, dtype = float)
+    FastArray([1., 1., 1., 1.])
+    """
+    result = LedgerFunction(np.full_like, a, fill_value, dtype=dtype, order=order, subok=subok, shape=shape)
     if hasattr(fill_value, "newclassfrominstance"):
         result = fill_value.newclassfrominstance(result, fill_value)
     return result
@@ -2294,14 +2386,11 @@ def ones(shape, dtype=None, order="C", *, like=None) -> "FastArray":
         Shape of the new array, e.g., ``(2, 3)`` or ``2``. Note that although
         multi-dimensional arrays are technically supported by Riptable,
         you may get unexpected results when working with them.
-
     dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
         The desired data type for the array.
-
     order: {'C', 'F'}, default 'C'
         Whether to store multi-dimensional data in row-major (C-style) or
         column-major (Fortran-style) order in memory.
-
     like : array_like, default None
         Reference object to allow the creation of arrays that are not NumPy
         arrays. If an array-like passed in as `like` supports the
@@ -2383,6 +2472,48 @@ def ones_like(a, dtype=None, order="K", subok=True, shape=None) -> "FastArray":
 
 # -------------------------------------------------------
 def zeros(*args, **kwargs) -> "FastArray":
+    """
+    Return a new array of the specified shape and data type, filled with zeros.
+
+    Parameters
+    ----------
+    shape : int or sequence of int
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``. Note that although
+        multi-dimensional arrays are technically supported by Riptable,
+        you may get unexpected results when working with them.
+
+    dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
+        The desired data type for the array.
+
+    order: {'C', 'F'}, default 'C'
+        Whether to store multi-dimensional data in row-major (C-style) or
+        column-major (Fortran-style) order in memory.
+
+    like : array_like, default None
+        Reference object to allow the creation of arrays that are not NumPy
+        arrays. If an array-like passed in as `like` supports the
+        ``__array_function__`` protocol, the result will be defined by it.
+        In this case, it ensures the creation of an array object compatible
+        with that passed in via this argument.
+
+    Returns
+    -------
+    `FastArray`
+        A new `FastArray` of the specified shape and type, filled with zeros.
+
+    See Also
+    --------
+    riptable.zeros_like, riptable.ones, riptable.ones_like, riptable.empty,
+    riptable.empty_like, riptable.full
+
+    Examples
+    --------
+    >>> rt.zeros(5)
+    FastArray([0., 0., 0., 0., 0.])
+
+    >>> rt.zeros(5, dtype = 'int8')
+    FastArray([0, 0, 0, 0, 0], dtype=int8)
+    """
     return LedgerFunction(np.zeros, *args, **kwargs)
 
 
@@ -3569,6 +3700,15 @@ def gb_np_quantile_infs(a, q, is_nan_function, **kwargs):
 
     midpoint_quantile = (lower_quantile + higher_quantile) / 2
     return midpoint_quantile
+
+
+def np_rolling_nanquantile(a, q, window):
+    def strided_array(a, window):
+        nrows = a.size - window + 1
+        n = a.strides[0]
+        return np.lib.stride_tricks.as_strided(a, shape=(nrows, window), strides=(n, n))
+
+    return gb_np_quantile_infs(a=strided_array(a, window), q=q, is_nan_function=True, axis=-1)
 
 
 # -------------------------------------------------------

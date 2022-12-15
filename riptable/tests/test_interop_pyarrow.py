@@ -275,7 +275,7 @@ class TestPyarrowConvertCategorical:
             # riptable's filtering/masking uses a valid mask (where False means null/NA).
             indices = np.arange(len(rt_cat))
             valid_mask = indices % 3 != 1
-            rt_cat = rt_cat.filter(valid_mask)
+            rt_cat = rt_cat.set_valid(valid_mask)
             assert rt_cat.shape == orig_cat_shape
 
             # isfiltered() doesn't work as expected for Dictionary/IntEnum-mode Categorical as of riptable 1.1.0.

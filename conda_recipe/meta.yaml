@@ -16,11 +16,12 @@ requirements:
     - setuptools_scm
   run:
     - python
-    - riptide_cpp >=1.9,<2 # run with any (compatible) version in this range
+    - riptide_cpp >=1.11,<2 # run with any (compatible) version in this range
     - pandas >=0.24,<2.0
     - ansi2html >=1.5.2
-    - numpy >=1.21
-    - numba >=0.55.2
+    - ipykernel
+    - numpy >=1.22
+    - numba >=0.56.2
     - python-dateutil
 
 test:

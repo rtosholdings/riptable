@@ -683,7 +683,7 @@ class Categories:
         Valid return will be adjusted for the base index of the categorical (currently always 1 for multikey)
 
         Parameters
-        ---------
+        ----------
         multikey: tuple of items to search for in multiple columns
 
         Returns
@@ -2689,7 +2689,7 @@ class Categorical(GroupByOps, FastArray):
 
         # categories object will be copied within filtered routine
         if filter is not None:
-            return self.filter(filter=filter)
+            return self.set_valid(filter=filter)
 
         # TODO: copy grouping object and pass to new categorical
         # unless filter is provided, don't trim unused categories
@@ -2717,71 +2717,6 @@ class Categorical(GroupByOps, FastArray):
         )
 
         return cat_copy
-
-    # ------------------------------------------------------------------------------
-    def filter(self, filter: Optional[np.ndarray] = None) -> "Categorical":
-        """
-        **To Be Deprecated In Favor Of The Identical set_valid Method. Please Use set_valid Instead**
-
-        Apply a filter to the categorical's values. If values no longer occur in the uniques,
-        the uniques will be reduced, and the index will be recalculated.
-
-        Parameters
-        ----------
-        filter : boolean array, optional
-            If provided, must be the same size as the categorical's underlying array. Will be used
-            to mask non-unique values.
-            If not provided, categorical may still reduce its unique values to the unique occuring values.
-
-        Returns
-        -------
-        c : Categorical
-            New categorical with possibly reduced uniques.
-        """
-
-        warnings.warn(
-            "filter will be deprecated / changed in the future. Please use the set_valid method which has the identical behavior."
-        )
-
-        # mapped categoricals will be flipped to array
-        if self.isenum:
-            ikey = self._fa
-            if filter is not None:
-                if filter.dtype.char == "?":
-                    # set the invalids (technically filtering not allowed on an enum)
-                    ikey[~filter] = ikey.inv
-                else:
-                    mask = ones(len(ikey), dtype="?")
-                    mask[filter] = False
-                    ikey[mask] = ikey.inv
-
-            # get the uniques
-            uniques = unique(ikey, sorted=False)
-
-            # now get expected uniques
-            unumbers = FastArray(list(self.categories().keys()))
-            ustrings = FastArray(list(self.categories().values()))
-
-            # find out which values still remain
-            mask, index = ismember(unumbers, uniques)
-            newdict = {k: v for k, v in zip(unumbers[mask], ustrings[mask])}
-
-            if filter is not None:
-                # add filtered into the dict
-                newdict[ikey.inv] = "Filtered"
-
-            result = Categorical(ikey, newdict, ordered=False, sort_gb=self._sort_gb)
-            # need to unset new grouping's dirty flag
-
-        # all others will be flipped to base index 1
-        else:
-            newgroup = self.grouping.regroup(filter=filter, ikey=self._fa)
-            if self.base_index == 0:
-                warnings.warn(f"Base index was 0, returned categorical will use 1-based indexing.")
-            result = Categorical(newgroup)
-
-        self._copy_extra(result)
-        return result
 
     def set_valid(self, filter: Optional[np.ndarray] = None) -> "Categorical":
         """
@@ -4380,7 +4315,7 @@ class Categorical(GroupByOps, FastArray):
         See Grouping.apply for examples.
         Categorical needs remove unused bins from its uniques before an apply.
         """
-        clean_c = self.filter(None)
+        clean_c = self.set_valid(None)
         result = super(Categorical, clean_c).apply(
             userfunc, *args, dataset=dataset, label_keys=clean_c.gb_keychain, **kwargs
         )
@@ -4395,7 +4330,7 @@ class Categorical(GroupByOps, FastArray):
         See GroupByOps.apply_nonreduce for examples.
         Categorical needs remove unused bins from its uniques before an apply.
         """
-        clean_c = self.filter(None)
+        clean_c = self.set_valid(None)
         result = super(Categorical, clean_c).apply_nonreduce(
             userfunc, *args, dataset=dataset, label_keys=clean_c.gb_keychain, **kwargs
         )

@@ -205,7 +205,8 @@ class GroupbyNumba(GroupByOps):
         For each group defined by the grouping arguments, sets 'ret' to a true EMA of the 'data'
         argument using the time argument as the time and the 'decayRate' as the decay rate.
 
-        Arguments:
+        Arguments
+        ---------
         iGroup, iFirstGroup, nCountGroup:  from a groupby object's 'get_groupings' method
         data:  the original data to be opperated on
         ret:  a blank array the same size as 'data' which will return the processed data
@@ -248,7 +249,8 @@ class GroupbyNumba(GroupByOps):
         For each group defined by the grouping arguments, sets 'ret' to be a copy of the 'data'
         with elements below the 'x'th percentile or above the 'y'th percentile of the group set to nan.
 
-        Arguments:
+        Arguments
+        ---------
         iGroup, iFirstGroup, nCountGroup:  from a groupby object's 'get_groupings' method
         data:  the original data to be opperated on
         ret:  a blank array the same size as 'data' which will return the processed data
@@ -271,12 +273,15 @@ class GroupbyNumba(GroupByOps):
         For each column, for each group, determine the x'th and y'th percentile of the data
         and set data below the x'th percentile or above the y'th percentile to nan.
 
-        Arguments:
+        Arguments
+        ---------
         grp:  a groupby object
         x:  lower percentile
         y:  uppper percentile
 
-        Return:  a dataset with the values outside the given percentiles set to np.nan
+        Return
+        ------
+        A dataset with the values outside the given percentiles set to np.nan
 
         TODO:  Test column types to make sure that the numba code will work nicely
         """

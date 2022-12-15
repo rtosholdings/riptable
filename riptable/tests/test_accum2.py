@@ -329,10 +329,10 @@ class Accum2_Test(unittest.TestCase):
                 return "Quantile"
 
         # large N to check multithreading
-        for N in [200, 2345, 123_985]:
+        for N in [2345, 123_985]:
             ds = Dataset({"time": arange(N)})
             ds.symbol = Cat(1 + arange(N) % 5, symbols)
-            for _ in range(5):
+            for _ in range(2):
                 ds.data = np.random.randint(-15, 15, size=N)
                 ds.data2 = np.random.randn(N)
                 for q in [0.0, 0.154, 0.482, 0.5, 0.91, 1.0]:
@@ -372,11 +372,11 @@ class Accum2_Test(unittest.TestCase):
                 return "Nanquantile"
 
         # large N to check multithreading
-        for N in [222, 6539, 78_013]:
+        for N in [1_045, 78_013]:
             # TODO: fix this for integer types. Min (nanmin) puts `Inv` as the smallest value
             ds = Dataset({"time": arange(N).astype(float)})
             ds.symbol = Cat(1 + arange(N) % 5, symbols)
-            for _ in range(5):
+            for _ in range(2):
                 ds.data = np.random.randint(-10, 20, size=N)
                 ds.data2 = np.random.random(size=N)
                 # N.B. make a copy here for testing

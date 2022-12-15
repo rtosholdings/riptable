@@ -13,7 +13,7 @@ def is_windows() -> bool:
     return platform.system() == "Windows"
 
 
-_NUMPY_REQ = "numpy>=1.21"
+_NUMPY_REQ = "numpy>=1.22"
 _TBB_DEVEL_REQ = "tbb-devel==2021.6.*"
 
 # Host toolchain requirements to build riptable.
@@ -45,7 +45,8 @@ pypi_reqs = [
 runtime_reqs = [
     # No riptide_cpp as that must be handled separately
     "ansi2html>=1.5.2",
-    "numba>=0.55.2",
+    "ipykernel",
+    "numba>=0.56.2",
     _NUMPY_REQ,
     "pandas>=0.24,<2.0",
     "python-dateutil",
@@ -55,10 +56,10 @@ runtime_reqs = [
 # Complete test requirements for riptable tests.
 tests_reqs = [
     "arrow",
+    "bokeh",
     "bottleneck",
     "flake8",
     "hypothesis",
-    "ipykernel",
     "ipython",
     "matplotlib",
     "nose",
@@ -121,7 +122,11 @@ args = parser.parse_args()
 reqs = list({r for t in args.targets for r in target_reqs[t]})
 reqs.sort()
 
-with open(args.out, "w") if args.out else open(sys.stdout.fileno(), closefd=False) as out:
-    print(f"# Requirements for targets: {args.targets}", file=out)
+# Emit plain list to enable usage like: conda install $(gen_requirements.py developer)
+out = open(args.out, "w") if args.out else sys.stdout
+try:
     for req in reqs:
         print(req, file=out)
+finally:
+    if args.out:
+        out.close()

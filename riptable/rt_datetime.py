@@ -468,7 +468,6 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz="NYC"):
 
     Examples
     --------
-
     Return TimeSpan:
 
     >>> ts = FA(['1:23:45', '12:34:56.000100', '       14:00:00'])
@@ -517,6 +516,7 @@ def parse_epoch(etime, to_tz="NYC"):
         This routine didn't used to take a timezone, so it defaults to the previous setting.
 
     Used in the phonyx data loader.
+
     Returns
     -------
     days : array (int32)
@@ -863,23 +863,49 @@ class DateBase(FastArray):
     # ------------------------------------------------------------
     def strftime(self, format, dtype="O"):
         """
-        Converts Date, etc. to an array of object strings or a scalar string.
+        Convert each `Date` element to a formatted string representation.
+
+        For `DateSpan` objects, see the Notes below.
+
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.date.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-and-strptime-format-codes`.
+        dtype : {"O", "S", "U"}, default "O"
+            The data type of the returned array.
+
+            - "O": object string
+            - "S": byte string
+            - "U": unicode string
+
+        Returns
+        -------
+        `ndarray`
+            An `ndarray` of strings.
+
+        See Also
+        --------
+        DateScalar.strftime, Date.strftime, DateSpan.strftime,
+        DateTimeNano.strftime, DateTimeNanoScalar.strftime, TimeSpan.strftime,
+        TimeSpanScalar.strftime
+
+        Notes
+        -----
         This routine has not been sped up yet.
 
-        Other Parameters
-        ----------------
-        dtype: defaults to 'O', can change to 'S' or 'U'
+        This method is available for `DateSpan` objects, but because they are
+        converted to timestamps relative to the epoch (for example, a `DateSpan`
+        of "2 days" is converted to "01/03/70"), you may need to adjust the
+        data before calling this method.
 
         Examples
         --------
-        >>> rt.Date(rt.utcnow(4)).strftime('%D')
-        array(['11/04/19', '11/04/19', '11/04/19', '11/04/19'], dtype=object)
-
-        See Also
-        ---------
-        http://strftime.org  for format strings
-        datetime.datetime.strftime
-
+        >>> d = rt.Date(['20210101', '20210519', '20220308'])
+        >>> d.strftime('%D')
+        array(['01/01/21', '05/19/21', '03/08/22'], dtype=object)
         """
         if isinstance(self, np.ndarray):
             return np.asarray(
@@ -1272,7 +1298,6 @@ class Date(DateBase, TimeStampBase):
 
         Parameters
         ----------
-
         arr      : array of matlab datenums (1 is 1-Jan-0000)
         timezone : TimeZone object from DateTimeNano constructor
 
@@ -2778,9 +2803,9 @@ class DateTimeCommon:
 
         See Also
         --------
-        DateTimeNano.days_since_epoch, DateTimeNano.seconds_since_epoch,
-        DateTimeNano.nanos_since_start_of_year, DateTimeNano.time_since_start_of_year,
-        DateTimeNano.time_since_midnight, DateTimeNano.millis_since_midnight
+        DateTimeNano.nanos_since_midnight, DateTimeNanoScalar.nanos_since_midnight,
+        DateTimeNano.time_since_midnight, DateTimeNanoScalar.time_since_midnight,
+        DateTimeNano.millis_since_midnight, DateTimeNanoScalar.millis_since_midnight
 
         Examples
         --------
@@ -2794,17 +2819,17 @@ class DateTimeCommon:
 
         Results adjusted for a `to_tz` that differs from the `from_tz`:
 
-        >>> dtn = rt.DateTimeNano(['2022-01-01 00:00:00.000123456',
-        ...                        '2022-01-02 12:00:00.000456789'],
-        ...                        from_tz = 'GMT', to_tz = 'NYC')
-        >>> dtn
+        >>> dtn2 = rt.DateTimeNano(['2022-01-01 00:00:00.000123456',
+        ...                         '2022-01-02 12:00:00.000456789'],
+        ...                         from_tz = 'GMT', to_tz = 'NYC')
+        >>> dtn2
         DateTimeNano(['20211231 19:00:00.000123456', '20220102 07:00:00.000456789'], to_tz='NYC')
-        >>> dtn.nanos_since_midnight()
+        >>> dtn2.nanos_since_midnight()
         FastArray([68400000123456, 25200000456789], dtype=int64)
 
         When it's called on a `DateTimeNanoScalar` object, a scalar is returned:
 
-        >>> dtn[0].nanos_since_midnight()
+        >>> dtn2[0].nanos_since_midnight()
         68400000123456
         """
         arr = self._timezone.fix_dst(self)
@@ -2814,23 +2839,55 @@ class DateTimeCommon:
     # ------------------------------------------------------------
     def millis_since_midnight(self):
         """
-        Milliseconds since midnight of the current day.
+        The number of milliseconds since midnight for each `DateTimeNano`
+        element.
 
-        Examples
-        --------
-        >>> dtn = DateTimeNano(['1992-02-01 00:00:01.002003004'], from_tz='NYC')
-        >>> dtn.millis_since_midnight()
-        FastArray([1002.003004])
+        The results are adjusted for the timezone specified in the `to_tz`
+        parameter when the `DateTimeNano` is created. The default `to_tz`
+        value is 'NYC'.
+
+        This method can be called on `DateTimeNano` arrays and
+        `DateTimeNanoScalar` objects. Unlike similar methods, this returns
+        floating point numbers.
 
         Returns
         -------
-        float64 array
+        `FastArray` or scalar
+            When this method is called on a `DateTimeNano` array, it returns a
+            `FastArray` of float64s representing the number of milliseconds
+            since midnight for each `DateTimeNano` element. When called on a
+            `DateTimeNanoScalar`, a scalar (float64) is returned.
 
-        Note
-        ----
-        Unlike similar methods, this returns floating point, similar to common columns
-        in Matlab datasets.
+        See Also
+        --------
+        DateTimeNano.millis_since_midnight, DateTimeNanoScalar.millis_since_midnight,
+        DateTimeNano.time_since_midnight, DateTimeNanoScalar.time_since_midnight,
+        DateTimeNano.nanos_since_midnight, DateTimeNanoScalar.nanos_since_midnight
 
+        Examples
+        --------
+        With the same `from_tz` and `to_tz`:
+
+        >>> dtn = rt.DateTimeNano(['2022-01-01 00:00:01.000123456',
+        ...                        '2022-01-02 00:00:01.000456789'],
+        ...                        from_tz = 'NYC', to_tz = 'NYC')
+        >>> dtn.millis_since_midnight()
+        FastArray([1000.123456, 1000.456789])
+
+        Results adjusted for a `to_tz` that differs from the `from_tz`:
+
+        >>> dtn2 = rt.DateTimeNano(['2022-01-01 00:00:01.000123456',
+        ...                         '2022-01-02 00:00:01.000456789'],
+        ...                         from_tz = 'GMT', to_tz = 'NYC')
+        >>> dtn2
+        DateTimeNano(['20211231 19:00:01.000123456', '20220101 19:00:01.000456789'], to_tz='NYC')
+        >>> dtn2.millis_since_midnight()
+        FastArray([68401000.123456, 68401000.456789])
+
+        When it's called on a `DateTimeNanoScalar` object, a scalar is returned:
+
+        >>> dtn2[0].millis_since_midnight()
+        68401000.123456
         """
         arr = self._timezone.fix_dst(self)
         arr = arr % NANOS_PER_DAY
@@ -2944,7 +3001,7 @@ class DateTimeCommon:
         The year value for each entry in the array
 
         Examples
-        ---------
+        --------
         >>> dtn = DateTimeNano(['1984-02-01', '1992-02-01', '2018-02-01'], from_tz='NYC')
         >>> dtn.year()
         FastArray([1984, 1992, 2018])
@@ -3591,22 +3648,48 @@ class DateTimeCommon:
     # ------------------------------------------------------------
     def time_since_midnight(self):
         """
-        Elapsed time since midnight as a TimeSpan object.
+        The time since midnight for each `DateTimeNano` element, returned as a
+        `TimeSpan` object.
 
-        Examples
-        --------
-        >>> dtn = DateTimeNano(['2000-02-29 00:00:00.000000100','2000-02-29 00:00:00.000123456'], from_tz='NYC')
-        >>> dtn.nanos_since_midnight()
-        TimeSpan([00:00:00.000000100, 00:00:00.000123456])
+        This is useful for splitting the time from a `DateTimeNano`. This
+        method can be called on `DateTimeNano` arrays and `DateTimeNanoScalar`
+        objects.
+
+        The results are adjusted for the timezone specified in the `to_tz`
+        parameter when the `DateTimeNano` is created. The default `to_tz`
+        value is 'NYC'.
 
         Returns
         -------
-        obj:`TimeSpan`
+        `TimeSpan`
+            A `TimeSpan` object containing the time since midnight
+            (as HH:MM:SS.nanoseconds) for each `DateTimeNano` element.
 
         See Also
         --------
-        DateTimeNano.nanos_since_midnight, DateTimeNano.millis_since_midnight
+        DateTimeNano.time_since_midnight, DateTimeNanoScalar.time_since_midnight,
+        DateTimeNano.nanos_since_midnight, DateTimeNanoScalar.nanos_since_midnight,
+        DateTimeNano.millis_since_midnight, DateTimeNanoScalar.millis_since_midnight
 
+        Examples
+        --------
+        With the same `from_tz` and `to_tz`:
+
+        >>> dtn = rt.DateTimeNano(['2022-01-01 00:00:00.000123456',
+        ...                        '2022-01-02 12:00:00.000456789'],
+        ...                        from_tz = 'NYC', to_tz = 'NYC')
+        >>> dtn.time_since_midnight()
+        TimeSpan(['00:00:00.000123456', '12:00:00.000456789'])
+
+        Results adjusted for a `to_tz` that differs from the `from_tz`:
+
+        >>> dtn = rt.DateTimeNano(['2022-01-01 00:00:00.000123456',
+        ...                        '2022-01-02 12:00:00.000456789'],
+        ...                        from_tz = 'GMT', to_tz = 'NYC')
+        >>> dtn
+        DateTimeNano(['20211231 19:00:00.000123456', '20220102 07:00:00.000456789'], to_tz='NYC')
+        >>> dtn.time_since_midnight()
+        TimeSpan(['19:00:00.000123456', '07:00:00.000456789'])
         """
         return self.hour_span
 
@@ -3676,7 +3759,7 @@ class DateTimeCommon:
                '15:03:04.697687'], dtype='<U15')
 
         See Also
-        ---------
+        --------
         http://strftime.org  for format strings
         datetime.datetime.strftime
 
@@ -3871,8 +3954,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                       as nanoseconds.
         (gmt **deprecated**)
 
-        Notes:
-        ------
+        Notes
+        -----
         - If the integer data in a DateTimeNano object is extracted, it is in GMT time. To initialize another
           DateTimeNano with the same underlying array, need to set from_tz='GMT' or 'UTC'
         - the gmt keyword is no longer used, need to add a deprication warning at some point
@@ -3880,7 +3963,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         Examples
         --------
-
         >>> dtn = DateTimeNano(['20180201 12:34'], from_tz='NYC')
         >>> dtn
         DateTimeNano([20180201 12:34:00.000000000])
@@ -4361,7 +4443,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         Parameters
         ----------
-
         name : item's name in the calling container, or the classname 'DateTimeNano' by default
         arr  : underlying integer FastArray in UTC nanoseconds
         cols : empty list (not used for this class)
@@ -4463,7 +4544,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         Examples
         --------
-
         >>> dtn1 = DateTimeNano(['2019-01-01', '2019-01-02'], from_tz='NYC')
         >>> dtn2 = DateTimeNano(['2019-01-03', '2019-01-04'], from_tz='NYC')
         >>> DateTimeNano.hstack([dtn1, dtn2])
@@ -5512,7 +5592,7 @@ class TimeSpanBase:
         array(['11/04/19', '11/04/19', '11/04/19', '11/04/19'], dtype=object)
 
         See Also
-        ---------
+        --------
         http://strftime.org  for format strings
         datetime.datetime.strftime
 
@@ -5548,6 +5628,7 @@ class TimeSpanBase:
     @property
     def days(self):
         """Timespan as float64 array of days.
+
         Note
         ----
         Loss of nanosecond precision at ~52 days.
@@ -6089,7 +6170,6 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
 
     Parameters
     ----------
-
     values : numeric or string array or scalar
         If string, interpreted as HH:MM:SS.ffffff ( seconds/second fractions optional )
         If numeric, interpreted as nanoseconds, unless `unit` provided.
@@ -6099,7 +6179,7 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         Valid units: 'Y', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns'
 
     Examples
-    ---------
+    --------
     From single string:
     >>> dts = TimeSpan('12:34')
     >>> dts
@@ -6465,7 +6545,7 @@ class DateScalar(np.int32):
         '11/04/19'
 
         See Also
-        ---------
+        --------
         http://strftime.org  for format strings
         datetime.datetime.strftime
         """

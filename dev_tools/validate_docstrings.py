@@ -47,7 +47,6 @@ from numpydoc.validate import (
     validate,
 )
 import pandas
-
 import riptable
 
 # With template backend, matplotlib plots nothing
@@ -60,9 +59,9 @@ ERROR_MSGS = {
     "GL97": "Use 'array-like' rather than 'array_like' in docstrings.",
     "SA99": "{reference_name} in `See Also` section does not need `riptable` " "prefix, use {right_reference} instead.",
     "EX99": "Examples do not pass tests:\n{doctest_log}",
-    "EX98": "flake8 error: {error_code} {error_message}{times_happening}",
-    "EX97": "Do not import {imported_library}, as it is imported "
-    "automatically for the examples (numpy as np, riptable as rt)",
+    "EX98": "flake8 error {error_code}: {error_message}{times_happening}",
+    "EX97": "Do not import {imported_library}, as it is imported automatically for the examples",
+    "EX96": "flake8 warning {error_code}: {error_message}{times_happening}",
 }
 
 OUT_FORMAT_OPTS = "default", "json", "actions"
@@ -84,6 +83,12 @@ PRIVATE_CLASSES = [
     # "NDFrame",
     # "IndexOpsMixin",
 ]
+
+IMPORT_CONTEXT = {
+    "np": numpy,
+    "pd": pandas,
+    "rt": riptable,
+}
 
 
 def riptable_error(code, **kwargs):
@@ -188,10 +193,9 @@ class RiptableDocstring(Validator):
         flags = doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
         finder = doctest.DocTestFinder()
         runner = doctest.DocTestRunner(optionflags=flags)
-        context = {"np": numpy, "pd": pandas, "rt": riptable}
         error_msgs = ""
         current_dir = set(os.listdir())
-        for test in finder.find(self.raw_doc, self.name, globs=context):
+        for test in finder.find(self.raw_doc, self.name, globs=IMPORT_CONTEXT):
             f = io.StringIO()
             runner.run(test, out=f.write)
             error_msgs += f.getvalue()
@@ -218,26 +222,27 @@ class RiptableDocstring(Validator):
             return
 
         # F401 is needed to not generate flake8 errors in examples
-        # that do not user numpy or riptable
-        content = "".join(
-            (
-                "import numpy as np  # noqa: F401\n",
-                "import riptable as rt  # noqa: F401\n",
-                *self.examples_source_code,
-            )
-        )
+        # that do not use the imported context
+        content = ""
+        for k, v in IMPORT_CONTEXT.items():
+            content += f"import {v.__name__} as {k}  # noqa: F401\n"
+        content += "".join((*self.examples_source_code,))
 
         error_messages = []
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as file:
+        try:
+            fd, fname = tempfile.mkstemp(prefix="val-", suffix=".py")
+            file = os.fdopen(fd, mode="w", encoding="utf-8")
             file.write(content)
-            file.flush()
-            cmd = ["python", "-m", "flake8", "--quiet", "--statistics", file.name]
+            file.close()
+            cmd = ["python", "-m", "flake8", "--quiet", "--statistics", fname]
             response = subprocess.run(cmd, capture_output=True, text=True)
             stdout = response.stdout
-            stdout = stdout.replace(file.name, "")
+            stdout = stdout.replace(fname, "")
             messages = stdout.strip("\n")
             if messages:
                 error_messages.append(messages)
+        finally:
+            os.remove(fname)
 
         for error_message in error_messages:
             error_count, error_code, message = error_message.split(maxsplit=2)
@@ -251,6 +256,7 @@ def riptable_validate(
     func_name: str,
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
+    flake8_errors: typing.Optional(list[str]) = None,
 ):
     """
     Call the numpydoc validation, and add the errors specific to riptable.
@@ -292,6 +298,12 @@ def riptable_validate(
                     )
                 )
 
+    def matches(test: str, matches: list[str]):
+        for match in matches:
+            if test.startswith(match):
+                return True
+        return False
+
     result["examples_errs"] = ""
     if doc.examples:
         result["examples_errs"] = doc.examples_errors
@@ -302,15 +314,15 @@ def riptable_validate(
             times_happening = f" ({error_count} times)" if error_count > 1 else ""
             result["errors"].append(
                 riptable_error(
-                    "EX98",
+                    "EX98" if flake8_errors and matches(error_code, flake8_errors) else "EX96",
                     error_code=error_code,
                     error_message=error_message,
                     times_happening=times_happening,
                 )
             )
         examples_source_code = "".join(doc.examples_source_code)
-        for wrong_import in ("numpy", "riptable"):
-            if f"import {wrong_import}" in examples_source_code:
+        for wrong_import in [v.__name__ for v in IMPORT_CONTEXT.values()]:
+            if re.search(f"import {wrong_import}\W+", examples_source_code):
                 result["errors"].append(riptable_error("EX97", imported_library=wrong_import))
 
     if doc.non_hyphenated_array_like():
@@ -319,13 +331,6 @@ def riptable_validate(
     plt.close("all")
 
     if errors or not_errors:
-
-        def matches(test, matches):
-            for match in matches:
-                if test.startswith(match):
-                    return True
-            return False
-
         filtered_errors = []
         for err_code, err_desc in result["errors"]:
             if not (errors and not matches(err_code, errors) or not_errors and matches(err_code, not_errors)):
@@ -372,6 +377,7 @@ def validate_all(
     names_from: str = NAMES_FROM_OPTS[0],
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
+    flake8_errors: typing.Optional(list[str]) = None,
     ignore_deprecated: bool = False,
     verbose: int = 0,
 ) -> dict:
@@ -419,7 +425,12 @@ def validate_all(
             continue
         if verbose:
             print(f"Validating {func_name}... ", end="", flush=True)
-        doc_info = riptable_validate(func_name, errors=errors, not_errors=not_errors)
+        doc_info = riptable_validate(
+            func_name,
+            errors=errors,
+            not_errors=not_errors,
+            flake8_errors=flake8_errors,
+        )
         if ignore_deprecated and doc_info["deprecated"]:
             if verbose > 1:
                 print(f"Ignoring deprecated {func_name}")
@@ -451,6 +462,7 @@ def print_validate_all_results(
     names_from: str = NAMES_FROM_OPTS[0],
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
+    flake8_errors: typing.Optional(list[str]) = None,
     out_format: str = OUT_FORMAT_OPTS[0],
     ignore_deprecated: bool = False,
     outfile: typing.IO = sys.stdout,
@@ -465,6 +477,7 @@ def print_validate_all_results(
         names_from=names_from,
         errors=errors,
         not_errors=not_errors,
+        flake8_errors=flake8_errors,
         ignore_deprecated=ignore_deprecated,
         verbose=verbose,
     )
@@ -496,6 +509,7 @@ def print_validate_one_results(
     func_name: str,
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
+    flake8_errors: typing.Optional(list[str]) = None,
     outfile: typing.IO = sys.stdout,
     verbose: int = 0,
 ):
@@ -509,7 +523,12 @@ def print_validate_one_results(
 
     if verbose:
         print(f"Validating {func_name}...")
-    result = riptable_validate(func_name, errors=errors, not_errors=not_errors)
+    result = riptable_validate(
+        func_name,
+        errors=errors,
+        not_errors=not_errors,
+        flake8_errors=flake8_errors,
+    )
 
     outfile.write(header(f"Docstring ({func_name})"))
     outfile.write(f"{result['docstring']}\n")
@@ -615,6 +634,11 @@ def main():
         help="If this flag is set, deprecated objects are ignored when validating all docstrings.",
     )
     argparser.add_argument(
+        "--flake8-errors",
+        default=None,
+        help="Comma separated list of flake8 error codes to treat as EX98 errors. Others are treated as warnings.",
+    )
+    argparser.add_argument(
         "--out",
         "-o",
         default=None,
@@ -646,6 +670,7 @@ def main():
     ) as outfile:
         errors = args.errors.split(",") if args.errors is not None else None
         not_errors = args.not_errors.split(",") if args.not_errors is not None else None
+        flake8_errors = args.flake8_errors.split(",") if args.flake8_errors is not None else None
 
         if args.function is None:
             return print_validate_all_results(
@@ -654,6 +679,7 @@ def main():
                 names_from=args.names_from,
                 errors=errors,
                 not_errors=not_errors,
+                flake8_errors=flake8_errors,
                 out_format=args.format,
                 ignore_deprecated=args.ignore_deprecated,
                 outfile=outfile,
@@ -664,6 +690,7 @@ def main():
                 args.function,
                 errors=errors,
                 not_errors=not_errors,
+                flake8_errors=flake8_errors,
                 outfile=outfile,
                 verbose=args.verbose,
             )

@@ -1,7 +1,9 @@
 import unittest
 import pytest
+import itertools
+from numpy.random import default_rng
 from riptable import *
-from riptable.rt_numpy import QUANTILE_METHOD_NP_KW, gb_np_quantile
+from riptable.rt_numpy import QUANTILE_METHOD_NP_KW, gb_np_quantile, np_rolling_nanquantile
 
 from numpy.testing import (
     assert_array_equal,
@@ -230,22 +232,113 @@ class GroupByOps_Test(unittest.TestCase):
                 self.assertTrue(bool(np.all(d[colname] == idx)))
 
 
+def quantile_params_generator(dtypes, max_N, windowed, with_cats, with_nans, with_infs, seed, scrunity_level=1):
+
+    rng = default_rng(seed)
+
+    for dtype in dtypes:
+
+        # N = 1 case
+        N = 1
+        N_cat = 1
+        window = 1
+        for quantile in [round(x, 4) for x in rng.random(3 * scrunity_level)]:
+            curr_frac_options = [(0, 0, 0)]
+            if with_nans:
+                curr_frac_options += [(1, 0, 0)]
+            if with_infs:
+                curr_frac_options += [(0, 1, 0), (0, 0, 1)]
+            for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                yield N, N_cat, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        frac_lists = [
+            [0.0, 1] + [round(x, 4) for x in rng.random(1 * scrunity_level)],
+            [0.0, 1] + [round(x, 4) for x in rng.random(1 * scrunity_level)],
+            [0.0, 1] + [round(x, 4) for x in rng.random(1 * scrunity_level)],
+        ]
+
+        frac_options = [element for element in itertools.product(*frac_lists) if sum(element) <= 1]
+        frac_options_only_nans = [(x, 0, 0) for x in frac_lists[0]]
+
+        curr_frac_options = [(0, 0, 0)]
+        if with_nans:
+            curr_frac_options = frac_options_only_nans
+        if with_infs:
+            curr_frac_options = frac_options
+
+        if with_cats:
+            # N_cat = 1 case
+            N = rng.integers(400, 600)
+            N_cat = 1
+            window = rng.integers(100, 200)
+            for quantile in [round(x, 3) for x in rng.random(2 * scrunity_level)]:
+                for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                    yield N, N_cat, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        # window = 1 case
+        N = rng.integers(400, 600)
+        N_cat = rng.integers(30, 50)
+        window = 1
+        for quantile in [round(x, 3) for x in rng.random(2 * scrunity_level)]:
+            for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                yield N, N_cat, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        # window > N case
+        N = rng.integers(400, 600)
+        N_cat = rng.integers(30, 50)
+        window = rng.integers(700, 900)
+        for quantile in [round(x, 3) for x in rng.random(1 * scrunity_level)]:
+            for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                yield N, N_cat, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        # quantile = 0., 1. cases
+        N = rng.integers(400, 600)
+        N_cat = rng.integers(10, 40)
+        window_list = [1, 3, rng.integers(10, 40)]
+        if not windowed:
+            window_list = [1]
+        for window in window_list:
+            for quantile in [0.0, 1.0]:
+                for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                    yield N, N_cat, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+        for N in (
+            rng.integers(20, 1000, size=3 * scrunity_level).tolist()
+            + rng.integers(10_000, 50_000, size=2 * scrunity_level).tolist()
+        ):
+            if N > max_N:
+                continue
+            window_list = rng.integers(15, N, size=1 * scrunity_level)
+            if not windowed:
+                window_list = [1]
+            for window in window_list:
+                cat_list = rng.integers(2, N, size=1 * scrunity_level)
+                if not with_cats:
+                    cat_list = [1]
+                for N_cat in cat_list:
+                    for quantile in [round(x, 3) for x in rng.random(2 * scrunity_level)]:
+                        for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
+                            yield N, N_cat, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+
 class TestGoupByOps_functions:
     @pytest.mark.parametrize("N", [1, 2, 5, 100, 3467, 60_000, 120_000])
-    @pytest.mark.parametrize("N_cat", [1, 2, 3, 10, 200, 5_000, 20_000])
+    @pytest.mark.parametrize("N_cat", [1, 2, 3, 10, 1_000, 20_000])
     @pytest.mark.parametrize("nan_fraction", [0.0, 0.1, 0.3, 0.7, 0.9, 0.9999999, 1.0])
-    @pytest.mark.parametrize("rep", [1, 2, 3])
+    @pytest.mark.parametrize("rep", [1])
     def test_groupbyops_all_min_max(self, N, N_cat, nan_fraction, rep):
-        np.random.seed((N * N_cat * rep * int(nan_fraction * 1000)) % 10_000)
-        ds = Dataset({"categ": np.random.randint(0, N_cat, size=N)})
+        this_seed = (N * N_cat * rep * int(nan_fraction * 1000)) % 10_000
+        rng = default_rng(this_seed)
+
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
         ds["categ"] = Cat(ds["categ"])
         categories = ds.categ._grouping.uniquelist[0]
-        ds.data = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N)
-        ds.data[np.random.random(size=N) < nan_fraction] = np.nan
+        ds.data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.data[rng.random(size=N) < nan_fraction] = np.nan
 
-        ds.int_data = np.random.randint(-10_000, 10_000, size=N)
+        ds.int_data = rng.integers(-10_000, 10_000, size=N)
 
-        int_nan_idxs = np.random.random(size=N) < nan_fraction
+        int_nan_idxs = rng.random(size=N) < nan_fraction
         ds.int_data[int_nan_idxs] = np.nan
 
         # transform into float and then into np.array to have proper np.nans there
@@ -273,13 +366,13 @@ class TestGoupByOps_functions:
             return f"""
 N = {N}
 N_cat = {N_cat}
-nan_frac = {nan_fraction}
+nan_fraction = {nan_fraction}
 column = {column}
 category = {category}"""
 
         for column in cols:
             dtype = ds[column].dtype
-            for category in np.random.choice(categories, min(len(categories), 60)):
+            for category in rng.choice(categories, min(len(categories), 60)):
                 data_res_min = dsmin[column][dsmin.categ == category]
                 data_res_max = dsmax[column][dsmax.categ == category]
                 data_res_nanmin = dsnanmin[column][dsnanmin.categ == category]
@@ -298,13 +391,21 @@ category = {category}"""
                 assert_almost_equal(data_res_nanmin.astype(float)[0], data_res_nanmin_np, err_msg=err_msg())
                 assert_almost_equal(data_res_nanmax.astype(float)[0], data_res_nanmax_np, err_msg=err_msg())
 
-    @pytest.mark.parametrize("N", [1, 10, 123, 4_861, 89_931])
-    @pytest.mark.parametrize("N_cat", [1, 3, 9, 391])
-    @pytest.mark.parametrize("q", [0.0, 0.1298753, 0.5, 0.78, 1.0])
-    @pytest.mark.parametrize("nan_fraction", [0.0, 0.15, 0.65, 1.0])
-    @pytest.mark.parametrize("dtype", [np.int32, np.float64])
-    def test_groupbyops_quantile(self, N, N_cat, q, nan_fraction, dtype):
-        np.random.seed((N * N_cat * int(q * 1000) * int(nan_fraction * 1000)) % 10_000)
+    @pytest.mark.parametrize(
+        "N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype",
+        quantile_params_generator(
+            [np.int32, np.float64],
+            max_N=100_000,
+            windowed=False,
+            with_cats=True,
+            with_nans=True,
+            with_infs=False,
+            seed=100,
+        ),
+    )
+    def test_groupbyops_quantile(self, N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype):
+        this_seed = (N * N_cat * int(q * 1000) * int(nan_fraction * 1000)) % 10_000
+        rng = default_rng(this_seed)
         kwargs = {QUANTILE_METHOD_NP_KW: "midpoint"}
 
         def err_msg():
@@ -315,18 +416,14 @@ N_cat = {N_cat}
 nan_fraction = {nan_fraction}
 dtype = {dtype}"""
 
-        ds = Dataset({"categ": np.random.randint(0, N_cat, size=N)})
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
         categories = np.unique(ds.categ)
         ds["categ"] = Cat(ds["categ"])
 
-        ds.data = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N).astype(
-            dtype
-        )
-        ds.data2 = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N).astype(
-            dtype
-        )
+        ds.data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N).astype(dtype)
+        ds.data2 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N).astype(dtype)
 
-        nan_idxs = np.random.random(size=N) < nan_fraction
+        nan_idxs = rng.random(size=N) < nan_fraction
         # need to convert to float for numpy to understand nans.
         # np_data_copy will only be used for numpy operations for checks.
         np_data_copy = ds.data.copy().astype(np.float64)
@@ -340,7 +437,7 @@ dtype = {dtype}"""
         assert_array_almost_equal(data_quant.data, both_quant.data, err_msg=err_msg())
         assert_array_almost_equal(data2_quant.data2, both_quant.data2, err_msg=err_msg())
 
-        for category in np.random.choice(categories, min(len(categories), 15)):
+        for category in rng.choice(categories, min(len(categories), 15)):
             curr_filter = ds.categ == category
             curr_slice = ds.filter(curr_filter)
             data_res = data_quant.filter(data_quant.categ == category).data
@@ -366,7 +463,7 @@ dtype = {dtype}"""
         assert_array_almost_equal(data_nanquant.data, both_nanquant.data, err_msg=err_msg())
         assert_array_almost_equal(data2_nanquant.data2, both_nanquant.data2, err_msg=err_msg())
 
-        for category in np.random.choice(categories, min(len(categories), 15)):
+        for category in rng.choice(categories, min(len(categories), 15)):
             curr_filter = ds.categ == category
             curr_slice = ds.filter(curr_filter)
             data_res = data_nanquant.filter(data_nanquant.categ == category).data
@@ -383,16 +480,13 @@ dtype = {dtype}"""
         assert_array_almost_equal(both_nanquant.data, both_nanpercentiles.data, err_msg=err_msg())
         assert_array_almost_equal(both_nanquant.data2, both_nanpercentiles.data2, err_msg=err_msg())
 
-    @pytest.mark.parametrize("N", [1, 5_678, 70_000])
-    @pytest.mark.parametrize("N_cat", [1, 3, 9, 40])
-    @pytest.mark.parametrize("q", [0.0, 0.3, 0.5, 0.7, 1.0])
-    @pytest.mark.parametrize("nan_fraction", [0.0, 0.3])
-    @pytest.mark.parametrize("inf_fraction", [0.0, 0.4, 1.0])
-    @pytest.mark.parametrize("minus_inf_fraction", [0.0, 0.4, 1.0])
-    def test_groupbyops_quantile_infs(self, N, N_cat, q, nan_fraction, inf_fraction, minus_inf_fraction):
-        if nan_fraction + inf_fraction + minus_inf_fraction > 1:
-            return
-
+    @pytest.mark.parametrize(
+        "N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype",
+        quantile_params_generator(
+            [np.float64], max_N=100_000, windowed=False, with_cats=True, with_nans=True, with_infs=True, seed=200
+        ),
+    )
+    def test_groupbyops_quantile_infs(self, N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype):
         def err_msg():
             return f"""
 q = {q}
@@ -402,19 +496,20 @@ nan_fraction = {nan_fraction}
 inf_fraction = {inf_fraction}
 minus_inf_fraction = {minus_inf_fraction}"""
 
-        np.random.seed((N * N_cat * int(q * 1000) * int(nan_fraction * 1000)) % 10_000)
-        ds = Dataset({"categ": np.random.randint(0, N_cat, size=N)})
+        this_seed = (N * N_cat * int(q * 1000) * int(nan_fraction * 1000)) % 10_000
+        rng = default_rng(this_seed)
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
         categories = np.unique(ds.categ)
         ds["categ"] = Cat(ds["categ"])
 
         # infs and integers don't work normally, only check floats
-        ds.data = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N)
-        ds.data2 = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N)
+        ds.data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.data2 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
 
         # notice that np.nanquantile doesn't handle infs properly
         # use gb_np_quantile for comparison
 
-        rand_idxs = np.random.random(size=N)
+        rand_idxs = rng.random(size=N)
         ds.data[rand_idxs < (nan_fraction + inf_fraction + minus_inf_fraction)] = -np.inf
         ds.data[rand_idxs < (nan_fraction + inf_fraction)] = np.inf
         ds.data[rand_idxs < (nan_fraction)] = np.nan
@@ -426,7 +521,7 @@ minus_inf_fraction = {minus_inf_fraction}"""
         assert_array_almost_equal(data_quant.data, both_quant.data, err_msg=err_msg())
         assert_array_almost_equal(data2_quant.data2, both_quant.data2, err_msg=err_msg())
 
-        for category in np.random.choice(categories, min(len(categories), 15)):
+        for category in rng.choice(categories, min(len(categories), 15)):
             curr_filter = ds.categ == category
             curr_slice = ds.filter(curr_filter)
             data_res = data_quant.filter(data_quant.categ == category).data
@@ -449,7 +544,7 @@ minus_inf_fraction = {minus_inf_fraction}"""
         assert_array_almost_equal(data_nanquant.data, both_nanquant.data, err_msg=err_msg())
         assert_array_almost_equal(data2_nanquant.data2, both_nanquant.data2, err_msg=err_msg())
 
-        for category in np.random.choice(categories, min(len(categories), 15)):
+        for category in rng.choice(categories, min(len(categories), 15)):
             curr_filter = ds.categ == category
             curr_slice = ds.filter(curr_filter)
             data_res = data_nanquant.filter(data_nanquant.categ == category).data
@@ -464,7 +559,7 @@ minus_inf_fraction = {minus_inf_fraction}"""
         assert_array_almost_equal(both_nanquant.data2, both_nanpercentiles.data2, err_msg=err_msg())
 
     @pytest.mark.parametrize("N", [1, 300])
-    @pytest.mark.parametrize("N_cat", [1, 5, 100])
+    @pytest.mark.parametrize("N_cat", [20])
     @pytest.mark.parametrize("q", [[0.0, 0.34, 0.81], [0.0, 0.5, 1.0, 0.2], [0.123, 0.12345, 0.1], 0.734])
     def test_groupbyops_quantile_multi_params(self, N, N_cat, q):
         def err_msg():
@@ -473,17 +568,19 @@ q = {q}
 N = {N}
 N_cat = {N_cat}"""
 
-        np.random.seed((N * N_cat * int(np.sum(q) * 1000) % 10_000))
-        ds = Dataset({"categ": np.random.randint(0, N_cat, size=N)})
+        this_seed = N * N_cat * int(np.sum(q) * 1000) % 10_000
+        rng = default_rng(this_seed)
+
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
         categories = np.unique(ds.categ)
         ds["categ"] = Cat(ds["categ"])
 
-        ds.data = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N)
-        ds.data2 = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N)
-        ds.col_0 = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N)
-        ds.col_1 = np.random.normal(np.random.uniform(-10_000, 10_000), np.random.uniform(0.00, 10_000), size=N)
-        ds.int_data = np.random.randint(-10_000, 10_000, size=N)
-        ds.int_data2 = np.random.randint(0, 100, size=N)
+        ds.data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.data2 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.col_0 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.col_1 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.int_data = rng.integers(-10_000, 10_000, size=N)
+        ds.int_data2 = rng.integers(0, 100, size=N)
 
         cols = ["data", "data2", "col_0", "col_1", "int_data", "int_data2"]
 
@@ -513,7 +610,7 @@ N_cat = {N_cat}"""
         for i_col, column in enumerate(cols):
             for i_q, quantile in enumerate(q):
                 quant_col = q_cols[i_col * len(q) + i_q]
-                for category in np.random.choice(categories, min(len(categories), 15)):
+                for category in rng.choice(categories, min(len(categories), 15)):
                     curr_filter = ds.categ == category
                     curr_slice = ds.filter(curr_filter)
                     data_res = quant_ds[quant_col][quant_ds.categ == category]
@@ -522,9 +619,9 @@ N_cat = {N_cat}"""
 
         # multi-key
 
-        ds.cat2 = np.random.randint(0, N_cat, size=N)
+        ds.cat2 = rng.integers(0, N_cat, size=N)
         del ds.categ
-        ds.categ = np.random.randint(0, N_cat, size=N)
+        ds.categ = rng.integers(0, N_cat, size=N)
         mk_cat = Cat([ds.categ, ds.cat2])
         categories = np.unique(mk_cat._fa)
         fa_cat_aligned = mk_cat.first(mk_cat._fa)["col_0"]
@@ -555,7 +652,7 @@ N_cat = {N_cat}"""
         for i_col, column in enumerate(cols):
             for i_q, quantile in enumerate(q):
                 quant_col = q_cols[i_col * len(q) + i_q]
-                for category in np.random.choice(categories, min(len(categories), 15)):
+                for category in rng.choice(categories, min(len(categories), 15)):
                     curr_filter = mk_cat._fa == category
                     curr_slice = ds.filter(curr_filter)
                     data_res = quant_ds[quant_col][fa_cat_aligned == category]
@@ -563,6 +660,302 @@ N_cat = {N_cat}"""
                     assert_array_almost_equal(
                         data_res, data_res_np, err_msg=err_msg() + f"\n{column} {quant_col}\n{q_cols}"
                     )
+
+    @pytest.mark.parametrize("N", [1, 10_000])
+    @pytest.mark.parametrize("N_cat", [1, 100])
+    @pytest.mark.parametrize("dtype", [np.int32, np.int64, np.float32, np.float64])
+    def test_groupbyops_basic_functions(self, N, N_cat, dtype):
+        def err_msg():
+            return f"""
+N = {N}
+N_cat = {N_cat}
+dtype = {dtype}
+gb_function = {gb_function}
+np_function = {np_function}"""
+
+        this_seed = N * N_cat
+        rng = default_rng(this_seed)
+
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
+        categories = np.unique(ds.categ)
+        ds["categ"] = Cat(ds["categ"])
+
+        ds.data = rng.uniform(-100, 100, size=N).astype(dtype)
+
+        if dtype in [np.int32, np.int64]:
+            np_data_copy = np.array(ds.data.copy().astype(np.float64))
+        else:
+            np_data_copy = np.array(ds.data.copy())
+
+        # np_data_copy[nan_idxs] = np.nan
+        # ds.data[nan_idxs] = np.nan
+
+        gb_functions = [
+            ds.categ.sum,
+            ds.categ.mean,
+            ds.categ.var,
+            ds.categ.std,
+            ds.categ.nansum,
+            ds.categ.nanmean,
+            ds.categ.nanvar,
+            ds.categ.nanstd,
+        ]
+        np_functions = [
+            np.sum,
+            np.mean,
+            lambda x: np.var(x, ddof=1),
+            lambda x: np.std(x, ddof=1),
+            np.nansum,
+            np.nanmean,
+            lambda x: np.nanvar(x, ddof=1),
+            lambda x: np.nanstd(x, ddof=1),
+        ]
+
+        def test_categories(ds, gb_result):
+            for category in rng.choice(categories, min(len(categories), 7)):
+                curr_filter = ds.categ == category
+                if not curr_filter.sum():
+                    return
+                np_result = np_function(np_data_copy[curr_filter])
+
+                if dtype in [np.int32, np.int64]:
+                    categ_result = gb_result.data.astype(np.float64)[gb_result.categ == category][0]
+                else:
+                    categ_result = gb_result.data[gb_result.categ == category][0]
+
+                if dtype not in [np.float32]:
+                    assert_almost_equal(np_result, categ_result, err_msg=err_msg())
+                else:
+                    assert_almost_equal(np_result, categ_result, err_msg=err_msg(), decimal=3)
+
+        for gb_function, np_function in zip(gb_functions, np_functions):
+            gb_result = gb_function(ds.data)
+            test_categories(ds, gb_result)
+
+            nan_idxs = rng.random(N) < 0.5
+            ds.data[nan_idxs] = np.nan
+            np_data_copy[nan_idxs] = np.nan
+
+            gb_result = gb_function(ds.data)
+            test_categories(ds, gb_result)
+
+    @pytest.mark.parametrize(
+        "N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype",
+        quantile_params_generator(
+            [np.int32, np.float64],
+            max_N=1_000,
+            windowed=True,
+            with_cats=True,
+            with_nans=True,
+            with_infs=False,
+            seed=500,
+        ),
+    )
+    def test_groupbyops_rolling_quantile(
+        self, N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+    ):
+        this_seed = (N * N_cat * int(q * 1000) * int(nan_fraction * 1000)) % 10_000
+        rng = default_rng(this_seed)
+
+        def err_msg():
+            return f"""
+N = {N}
+N_cat = {N_cat}
+window = {window}
+q = {q}
+nan_fraction = {nan_fraction}
+dtype = {dtype}"""
+
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
+        categories = np.unique(ds.categ)
+        ds["categ"] = Cat(ds["categ"])
+
+        ds.data = rng.normal(rng.uniform(-100, 100), rng.uniform(0.00, 100), size=N).astype(dtype)
+        ds.data2 = rng.normal(rng.uniform(-100, 100), rng.uniform(0.00, 100), size=N).astype(dtype)
+
+        nan_idxs = rng.random(size=N) < nan_fraction
+        # need to convert to float for numpy to understand nans.
+        # np_data_copy will only be used for numpy operations for checks.
+        np_data_copy = ds.data.copy().astype(np.float64)
+        np_data_copy[nan_idxs] = np.nan
+        ds.data[nan_idxs] = np.nan
+
+        np_data2_copy = ds.data2.copy().astype(np.float64)
+        np_data2_copy[nan_idxs] = np.nan
+        ds.data2[nan_idxs] = np.nan
+
+        data_quant = ds.categ.rolling_quantile(ds.data, q=q, window=window)
+        data2_quant = ds.categ.rolling_quantile(ds.data2, q=q, window=window)
+        both_quant = ds.categ.rolling_quantile((ds.data, ds.data2), q=q, window=window)
+        gb_quant = ds.groupby("categ").rolling_quantile(q=q, window=window)
+
+        assert_array_almost_equal(data_quant.data, both_quant.data, err_msg=err_msg())
+        assert_array_almost_equal(data2_quant.data2, both_quant.data2, err_msg=err_msg())
+        assert_array_almost_equal(data_quant.data, gb_quant.data, err_msg=err_msg())
+
+        for category in rng.choice(categories, min(len(categories), 15)):
+            curr_filter = ds.categ == category
+            curr_window = min(window, curr_filter.sum())
+            if curr_window == 0:
+                continue
+
+            data_res = data_quant.filter(curr_filter).data
+            curr_np_data = np.array(np_data_copy[curr_filter])
+            data_res_np = np_rolling_nanquantile(a=curr_np_data, q=q, window=curr_window)
+            assert_almost_equal(data_res[curr_window - 1 :], data_res_np, err_msg=err_msg())
+
+            data2_res = data2_quant.filter(curr_filter).data2
+            curr_np_data2 = np.array(np_data2_copy[curr_filter])
+            data2_res_np = np_rolling_nanquantile(a=curr_np_data2, q=q, window=curr_window)
+            assert_almost_equal(data2_res[curr_window - 1 :], data2_res_np, err_msg=err_msg())
+
+    @pytest.mark.parametrize(
+        "N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype",
+        quantile_params_generator(
+            [np.float64], max_N=1_000, windowed=True, with_cats=True, with_nans=True, with_infs=True, seed=600
+        ),
+    )
+    def test_groupbyops_rolling_quantile_infs(
+        self, N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+    ):
+        def err_msg():
+            return f"""
+N = {N}
+N_cat = {N_cat}
+q = {q}
+window = {window}
+nan_fraction = {nan_fraction}
+inf_fraction = {inf_fraction}
+minus_inf_fraction = {minus_inf_fraction}"""
+
+        this_seed = (N * N_cat * int(q * 1000) * int(nan_fraction * 1000)) % 10_000
+        rng = default_rng(this_seed)
+
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
+        categories = np.unique(ds.categ)
+        ds["categ"] = Cat(ds["categ"])
+
+        data_quant = Dataset()
+        # check that works fine with multiple data columns
+        for i in range(6):
+            ds[f"data{i}"] = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+
+            rand_idxs = rng.random(size=N)
+            ds[f"data{i}"][rand_idxs < (nan_fraction + inf_fraction + minus_inf_fraction)] = -np.inf
+            ds[f"data{i}"][rand_idxs < (nan_fraction + inf_fraction)] = np.inf
+            ds[f"data{i}"][rand_idxs < (nan_fraction)] = np.nan
+
+            data_quant[f"data{i}"] = ds.categ.rolling_quantile(ds[f"data{i}"], q=q, window=window)[f"data{i}"]
+
+        all_quant = ds.categ.rolling_quantile([ds[f"data{i}"] for i in range(6)], q=q, window=window)
+        gb_quant = ds.groupby("categ").rolling_quantile(q=q, window=window)
+
+        for i in range(6):
+            assert_array_almost_equal(data_quant[f"data{i}"], all_quant[f"data{i}"], err_msg=err_msg())
+            assert_array_almost_equal(data_quant[f"data{i}"], gb_quant[f"data{i}"], err_msg=err_msg())
+
+        for i in range(6):
+            for category in rng.choice(categories, min(len(categories), 1)):
+                curr_filter = ds.categ == category
+                curr_window = min(window, curr_filter.sum())
+                if curr_window == 0:
+                    continue
+
+                data_res = data_quant.filter(curr_filter)[f"data{i}"]
+                curr_np_data = np.array(ds[f"data{i}"][curr_filter])
+                data_res_np = np_rolling_nanquantile(a=curr_np_data, q=q, window=curr_window)
+                assert_almost_equal(data_res[curr_window - 1 :], data_res_np, err_msg=err_msg())
+
+    @pytest.mark.parametrize("N", [300])
+    @pytest.mark.parametrize("N_cat", [10])
+    @pytest.mark.parametrize("q", [[0.0, 0.34, 0.81], [0.0, 0.5, 1.0, 0.24], [0.123, 0.314, 0.1], 0.734])
+    @pytest.mark.parametrize("window", [20])
+    def test_groupbyops_rolling_quantile_multi_params(self, N, N_cat, q, window):
+        def err_msg():
+            return f"""
+N = {N}
+N_cat = {N_cat}
+q = {q}
+window = {window}"""
+
+        this_seed = N * N_cat * int(np.sum(q) * 1000) % 10_000
+        rng = default_rng(this_seed)
+
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
+        categories = np.unique(ds.categ)
+        ds["categ"] = Cat(ds["categ"])
+
+        ds.data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.data2 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.col_0 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.col_1 = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+        ds.int_data = rng.integers(-10_000, 10_000, size=N)
+        ds.int_data2 = rng.integers(0, 100, size=N)
+
+        cols = ["data", "data2", "col_0", "col_1", "int_data", "int_data2"]
+
+        quant_ds = ds.categ.rolling_quantile(ds, q=q, window=window)
+        quant_sep = ds.categ.rolling_quantile(
+            (ds.data, ds.data2, ds.col_0, ds.col_1, ds.int_data, ds.int_data2), q=q, window=window
+        )
+
+        assert_array_equal(quant_ds.imatrix_make(), quant_sep.imatrix_make())
+
+        q_cols = quant_ds.keys()
+
+        if np.isscalar(q):
+            q = [q]
+            q_cols = cols
+
+        # columns are ordered like [col + quantile for quantile in q for col in cols] if len(q) > 1
+
+        for i_col, column in enumerate(cols):
+            for i_q, quantile in enumerate(q):
+                quant_col = q_cols[i_col * len(q) + i_q]
+                for category in rng.choice(categories, min(len(categories), 15)):
+                    curr_filter = ds.categ == category
+                    curr_window = min(window, curr_filter.sum())
+                    if curr_window == 0:
+                        continue
+                    data_res = quant_ds.filter(curr_filter)[quant_col]
+                    curr_np_data = np.array(ds[column][curr_filter])
+                    data_res_np = np_rolling_nanquantile(a=curr_np_data, q=quantile, window=curr_window)
+                    assert_almost_equal(data_res[curr_window - 1 :], data_res_np, err_msg=err_msg())
+
+        # multi-key
+
+        ds.cat2 = rng.integers(0, N_cat, size=N)
+        del ds.categ
+        ds.categ = rng.integers(0, N_cat, size=N)
+        mk_cat = Cat([ds.categ, ds.cat2])
+        categories = np.unique(mk_cat._fa)
+        fa_cat_aligned = mk_cat.first(mk_cat._fa)["col_0"]
+
+        quant_ds = mk_cat.rolling_quantile(ds, q=q, window=window)
+        quant_sep = mk_cat.rolling_quantile(
+            (ds.data, ds.data2, ds.col_0, ds.col_1, ds.int_data, ds.int_data2), q=q, window=window
+        )
+
+        assert_array_almost_equal(quant_ds.imatrix_make(), quant_sep.imatrix_make())
+
+        q_cols = quant_ds.keys()
+
+        if np.isscalar(q):
+            q = [q]
+            q_cols = cols
+
+        for i_col, column in enumerate(cols):
+            for i_q, quantile in enumerate(q):
+                quant_col = q_cols[i_col * len(q) + i_q]
+                for category in rng.choice(categories, min(len(categories), 15)):
+                    curr_filter = mk_cat._fa == category
+                    curr_window = min(window, curr_filter.sum())
+                    if curr_window == 0:
+                        continue
+                    data_res = quant_ds[quant_col][curr_filter]
+                    curr_np_data = np.array(ds[column][curr_filter])
+                    data_res_np = np_rolling_nanquantile(a=curr_np_data, q=quantile, window=curr_window)
+                    assert_almost_equal(data_res[curr_window - 1 :], data_res_np, err_msg=err_msg())
 
 
 if __name__ == "__main__":

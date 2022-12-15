@@ -1522,12 +1522,12 @@ def test_merge_create_fancy_indices_with_invalids(
     filtered_on = f"{on}_filtered"
 
     left[filtered_on] = (
-        left_on.filter(left_filt)
+        left_on.set_valid(left_filt)
         if isinstance(left_on, rt.Categorical)
         else rt.where(left_filt, left_on, rt.INVALID_DICT[left_on.dtype.num])
     )
     right[filtered_on] = (
-        right_on.filter(right_filt)
+        right_on.set_valid(right_filt)
         if isinstance(right_on, rt.Categorical)
         else rt.where(right_filt, right_on, rt.INVALID_DICT[right_on.dtype.num])
     )
@@ -1640,12 +1640,12 @@ def test_merge2_handles_invalids(
     filtered_on = f"{on}_filtered"
 
     left[filtered_on] = (
-        left_on.filter(left_filt)
+        left_on.set_valid(left_filt)
         if isinstance(left_on, rt.Categorical)
         else rt.where(left_filt, left_on, rt.INVALID_DICT[left_on.dtype.num])
     )
     right[filtered_on] = (
-        right_on.filter(right_filt)
+        right_on.set_valid(right_filt)
         if isinstance(right_on, rt.Categorical)
         else rt.where(right_filt, right_on, rt.INVALID_DICT[right_on.dtype.num])
     )

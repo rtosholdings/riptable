@@ -3,12 +3,13 @@ from setuptools import setup
 package_name = "riptable"
 
 install_requires = [
-    "riptide_cpp >=1.8,<2",
-    "pandas >=0.24,<2.0",
     "ansi2html >=1.5.2",
-    "numpy >=1.21",
-    "numba >=0.55.2",
+    "ipykernel",
+    "numba >=0.56.2",
+    "numpy >=1.22",
+    "pandas >=0.24,<2.0",
     "python-dateutil",
+    "riptide_cpp >=1.11,<2",
 ]
 
 setup(

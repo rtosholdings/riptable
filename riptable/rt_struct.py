@@ -298,10 +298,10 @@ class Struct:
 
     # ------------------------------------------------------------
     def _escape_invalid_file_chars(self, name):
-        """
+        r"""
         Certain characters will cause problems in item names if a Struct needs to name an
         SDS file.
-        ('\\', ':', '<', '>', '!', '|', '*', '?')
+        ('\', ':', '<', '>', '!', '|', '*', '?')
 
         """
         if not isinstance(name, str):
@@ -2751,7 +2751,6 @@ class Struct:
 
         Examples
         --------
-
         >>> ds
          #   col_7   col_8   col_9   keycol
         --   -----   -----   -----   --------------
@@ -3625,7 +3624,6 @@ class Struct:
         --------
         This is useful if, for whatever reason, a riptable Dataset needs to go into a pandas DataFrame:
 
-        >>> import pandas as pd
         >>> ds = rt.Dataset({'col_'+str(i): rt.arange(5) for i in range(5)})
         >>> df = pd.DataFrame(ds.asdict())
         >>> df
