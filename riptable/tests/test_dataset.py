@@ -1772,13 +1772,13 @@ class TestDataset(unittest.TestCase):
         assert_array_equal(ds["a"], np.array(["Okay", "Namé"]))
 
     def test_to_pandas_timespan(self):
-        dt_list = [11096000000000, 86401000000000]
+        dt_list = [np.nan, 11096000000000, 86401000000000]
         ds = Dataset({"a": TimeSpan(dt_list)})
         df = ds.to_pandas()
         assert_array_equal(df["a"], pd.to_timedelta(dt_list))
 
     def test_from_pandas_timespan(self):
-        dt_list = [11096000000000, 86401000000000]
+        dt_list = [np.nan, 11096000000000, 86401000000000]
         df = pd.DataFrame({"a": pd.to_timedelta(dt_list)})
         ds = Dataset.from_pandas(df)
         assert_array_equal(ds["a"], TimeSpan(dt_list))

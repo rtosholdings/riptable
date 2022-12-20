@@ -830,7 +830,7 @@ def describe_helper(arr: Optional[np.ndarray], q: Optional[List[float]] = None) 
             # pick a subset removing the invalid
             notvalid = count - cvalid
             if arr_sort.dtype.char in NumpyCharTypes.Integer:
-                valid = arr_sort[notvalid:-1]
+                valid = arr_sort[notvalid:]
             else:
                 valid = arr_sort[0:cvalid]
 

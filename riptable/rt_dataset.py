@@ -2987,7 +2987,7 @@ class Dataset(Struct):
                 tz_datetime = utc_datetime.tz_convert(tz)
                 data[key] = tz_datetime
             elif isinstance(col, TypeRegister.TimeSpan):
-                data[key] = pd.to_timedelta(col)
+                data[key] = pd.to_timedelta(col._np)
             # TODO: riptable.DateSpan doesn't have a counterpart in pandas, what do we want to do?
             elif use_nullable and np.issubdtype(dtype, np.integer):
                 # N.B. Has to use the same dtype for `isin` otherwise riptable will convert the dtype
@@ -3107,7 +3107,9 @@ class Dataset(Struct):
                     _tz = tz
                 data[key] = TypeRegister.DateTimeNano(np.asarray(col, dtype="i8"), from_tz="UTC", to_tz=_tz)
             elif dtype_kind == "m":
-                data[key] = TypeRegister.TimeSpan(np.asarray(col, dtype="i8"))
+                arr = np.asarray(col, dtype="i8")
+                data[key] = TypeRegister.TimeSpan(arr)
+                data[key][arr == pd.NaT.value] = data[key].inv
             elif dtype_kind == "O":
                 if len(col) > 0:
                     first_element = col.iloc[0]
