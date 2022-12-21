@@ -1327,6 +1327,8 @@ class FastArray_Test(unittest.TestCase):
         self.assertTrue(x.issorted() == False)
         x = np.random.randint(0, 10, 100_000)
         self.assertTrue(issorted(x) == False)
+        x = rt.FA([], dtype=np.int32)
+        self.assertTrue(issorted(x))
 
     def test_allnans(self):
         allnans = FastArray([np.nan] * 5)
@@ -1484,6 +1486,24 @@ class FastArray_Test(unittest.TestCase):
         self.assertFalse(arr_view.flags.owndata)
         self.assertEqual(arr.get_name(), arr_view.get_name())
         self.assertTrue((arr == arr_view).all())
+
+    def test_count(self) -> None:
+        a = rt.FastArray([0, 2, 1, 3, 3, 2, 2])
+
+        c = a.count()
+        self.assertEqual(c.shape, (4, 2))
+        self.assertTrue((c.Unique == [0, 1, 2, 3]).all())
+        self.assertTrue((c.Count == [1, 1, 3, 2]).all())
+
+        c = a.count(sorted=False)
+        self.assertEqual(c.shape, (4, 2))
+        self.assertTrue((c.Unique == [0, 2, 1, 3]).all())
+        self.assertTrue((c.Count == [1, 3, 1, 2]).all())
+
+        c = a.count(filter=(a <= 2))
+        self.assertEqual(c.shape, (3, 2))
+        self.assertTrue((c.Unique == [0, 1, 2]).all())
+        self.assertTrue((c.Count == [1, 1, 3]).all())
 
     def test_FA_filter(self) -> None:
         """Test filter method for FastArrays"""

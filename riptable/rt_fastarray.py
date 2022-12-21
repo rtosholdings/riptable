@@ -2130,7 +2130,7 @@ class FastArray(np.ndarray):
     def where(self, condition, y=np.nan, **kwargs) -> FastArray:
         return where(condition, self, y, **kwargs)
 
-    def count(self, sorted=True) -> Dataset:
+    def count(self, sorted=True, filter=None) -> Dataset:
         """
         The count of each unique value.
 
@@ -2142,6 +2142,8 @@ class FastArray(np.ndarray):
         sorted : bool, default True
             When True (the default), unique values are returned in sorted order. Set to
             False to return them in order of first appearance.
+        filter: ndarray of bool, default None
+            If provided, any False values will be ignored in the calculation.
 
         Returns
         -------
@@ -2173,7 +2175,7 @@ class FastArray(np.ndarray):
               1       1
               3       2
         """
-        unique_counts = unique(self, sorted=sorted, return_counts=True)
+        unique_counts = unique(self, sorted=sorted, return_counts=True, filter=filter)
         name = self.get_name()
         if name is None:
             name = "Unique"

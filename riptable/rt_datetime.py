@@ -1061,32 +1061,78 @@ class DateBase(FastArray):
     # -------------------------------------------------------------
     def min(self, **kwargs):
         """
-        Earliest date / datespan in array.
+        The earliest `Date` or shortest `DateSpan` in an array.
 
         Returns
         -------
-        obj:`Date`
-            An array with length 1.
+        `Date` or `DateSpan`
+            When called on a `Date`, returns a `Date`. When called on a
+            `DateSpan`, returns a `DateSpan`.
 
-        Note
-        ----
-        This returns an array, not a scalar. However, broadcasting rules will apply to operations with it.
+        See Also
+        --------
+        Date.max, Date.min, DateSpan.max, DateSpan.min,
+        DateTimeNano.max, DateTimeNano.min
+
+        Notes
+        -----
+        This returns an array, not a scalar. However, broadcasting rules will
+        apply to operations with it.
+
+        Examples
+        --------
+        Called on a `Date`:
+
+        >>> d = rt.Date(['20210103', '20210104', '20210105'])
+        >>> d.min()
+        Date(['2021-01-03'])
+
+        Called on a `DateSpan`:
+
+        >>> ds = d - rt.Date('20210101')
+        >>> ds
+        DateSpan(['2 days', '3 days', '4 days'])
+        >>> ds.min()
+        DateSpan(['2 days'])
         """
         return self.__class__([self._fa.min()])
 
     # -------------------------------------------------------------
     def max(self, **kwargs):
         """
-        Latest date / datespan in array.
+        The latest `Date` or longest `DateSpan` in an array.
 
         Returns
         -------
-        obj:`Date`
-            An array with length 1.
+        `Date` or `DateSpan`
+            When called on a `Date`, returns a `Date`. When called on a
+            `DateSpan`, returns a `DateSpan`.
 
-        Note
-        ----
-        This returns an array, not a scalar. However, broadcasting rules will apply to operations with it.
+        See Also
+        --------
+        Date.min, Date.max, DateSpan.min, DateSpan.max,
+        DateTimeNano.min, DateTimeNano.max
+
+        Notes
+        -----
+        This returns an array, not a scalar. However, broadcasting rules will
+        apply to operations with it.
+
+        Examples
+        --------
+        Called on a `Date`:
+
+        >>> d = rt.Date(['20210103', '20210104', '20210105'])
+        >>> d.max()
+        Date(['2021-01-05'])
+
+        Called on a `DateSpan`:
+
+        >>> ds = d - rt.Date('20210101')
+        >>> ds
+        DateSpan(['2 days', '3 days', '4 days'])
+        >>> ds.max()
+        DateSpan(['4 days'])
         """
         return self.__class__([self._fa.max()])
 
