@@ -6,7 +6,7 @@ from numpy.testing import assert_array_equal
 
 from riptable import *
 from riptable.rt_enum import INVALID_DICT, TypeRegister
-from riptable.rt_numpy import arange, ismember
+from riptable.rt_numpy import arange, ismember, assoc_copy
 
 
 # TODO: Use pytest.mark.parametrize() here to iterate over the different dtypes
@@ -571,6 +571,22 @@ def test_is_member_casting_uints():
     assert (res == 2).all()
 
 
+def test_ismember_empty_key():
+    a = []
+    b = [1, 2, 3]
+    ismem, ix = ismember(a, b)
+    assert_array_equal(ismem, FA([], dtype=bool))
+    assert_array_equal(ix, FA([], dtype="int32"))
+
+
+def test_ismember_empty_multi_key():
+    a = [[], []]
+    b = [[1, 2, 3], [4, 5, 6]]
+    ismem, ix = ismember(a, b)
+    assert_array_equal(ismem, FA([], dtype=bool))
+    assert_array_equal(ix, FA([], dtype="int32"))
+
+
 def test_is_member_casting_big_uints():
     # RIP-254
     n = 2**63
@@ -583,6 +599,28 @@ def test_is_member_casting_big_uints():
     assert_array_equal(res, FastArray([-128, 0], dtype="int8"))
     res = ismember(a, b)[1]
     assert (res == 1).all()
+
+
+@pytest.mark.parametrize(
+    "values, expected",
+    [
+        ([1, 2, 3], [INVALID_DICT[9], 2, INVALID_DICT[9]]),
+        ([1.0, 2.0, 3.0], [np.nan, 2, np.nan]),
+        (np.array([1.0, 2.0, 3.0]), [np.nan, 2, np.nan]),
+    ],
+)
+def test_assoc_copy_array_input(values, expected):
+    result = assoc_copy([0, 2, 4], [1, 2, 3], values)
+    assert_array_equal(result, FastArray(expected))
+
+
+def test_assoc_copy_dataset_input():
+    values = Dataset({"a": [1, 2, 3, 4], "b": [0.1, 0.2, 0.3, 0.4]})
+    result = assoc_copy([0, 2, 4], [1, 2, 3, 4], values)
+    expected = Dataset({"a": [INVALID_DICT[9], 2, 4], "b": [np.nan, 0.2, 0.4]})
+    assert list(result) == list(expected)
+    for k in result:
+        assert_array_equal(result[k], FastArray(expected[k]))
 
 
 if __name__ == "__main__":
