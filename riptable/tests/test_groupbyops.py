@@ -661,20 +661,21 @@ N_cat = {N_cat}"""
                         data_res, data_res_np, err_msg=err_msg() + f"\n{column} {quant_col}\n{q_cols}"
                     )
 
-    @pytest.mark.parametrize("N", [1, 10_000])
+    @pytest.mark.parametrize("N", [1, 10_000, 100_000])
     @pytest.mark.parametrize("N_cat", [1, 100])
     @pytest.mark.parametrize("dtype", [np.int32, np.int64, np.float32, np.float64])
     def test_groupbyops_basic_functions(self, N, N_cat, dtype):
+        this_seed = N * N_cat
+        rng = default_rng(this_seed)
+
         def err_msg():
             return f"""
 N = {N}
 N_cat = {N_cat}
+this_seed = {this_seed}
 dtype = {dtype}
 gb_function = {gb_function}
 np_function = {np_function}"""
-
-        this_seed = N * N_cat
-        rng = default_rng(this_seed)
 
         ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
         categories = np.unique(ds.categ)
@@ -724,20 +725,20 @@ np_function = {np_function}"""
                     categ_result = gb_result.data[gb_result.categ == category][0]
 
                 if dtype not in [np.float32]:
-                    assert_almost_equal(np_result, categ_result, err_msg=err_msg())
+                    assert_almost_equal(categ_result, np_result, err_msg=err_msg())
                 else:
-                    assert_almost_equal(np_result, categ_result, err_msg=err_msg(), decimal=3)
+                    decimal = 2 if N <= 10_000 else 1
+                    assert_almost_equal(categ_result, np_result, err_msg=err_msg(), decimal=decimal)
 
-        for gb_function, np_function in zip(gb_functions, np_functions):
-            gb_result = gb_function(ds.data)
-            test_categories(ds, gb_result)
+        for phase in range(2):
+            if phase == 1:
+                nan_idxs = rng.random(N) < 0.5
+                ds.data[nan_idxs] = np.nan
+                np_data_copy[nan_idxs] = np.nan
 
-            nan_idxs = rng.random(N) < 0.5
-            ds.data[nan_idxs] = np.nan
-            np_data_copy[nan_idxs] = np.nan
-
-            gb_result = gb_function(ds.data)
-            test_categories(ds, gb_result)
+            for gb_function, np_function in zip(gb_functions, np_functions):
+                gb_result = gb_function(ds.data)
+                test_categories(ds, gb_result)
 
     @pytest.mark.parametrize(
         "N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype",

@@ -164,8 +164,11 @@ if TYPE_CHECKING:
     from .rt_struct import Struct
 
 
+ArraysOrDataset = Union[np.ndarray, List[np.ndarray], TypeRegister.Dataset]
+
+
 def _is_array_container(arg):
-    return isinstance(arg, (tuple, list)) and not np.isscalar(arg[0])
+    return isinstance(arg, (tuple, list)) and len(arg) and not np.isscalar(arg[0])
 
 
 def _cast_to_fa(
@@ -1007,7 +1010,9 @@ def _ismember_align_multikey(a, b):
 
 
 @_args_to_fast_arrays("a", "b")
-def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[int, "FastArray"], "FastArray"]:
+def ismember(
+    a: ArraysOrDataset, b: ArraysOrDataset, h=2, hint_size: int = 0, base_index: int = 0
+) -> Tuple[Union[int, "FastArray"], "FastArray"]:
     """
     The ismember function is meant to mimic the ismember function in MATLab. It takes two sets of data
     and returns two - a boolean array and array of indices of the first occurrence of an element in `a` in
@@ -1132,6 +1137,8 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
         if not (a_is_multi and b_is_multi):
             raise ValueError("ismember found a multi-key in exactly one argument, must be both or neither")
         is_multikey = True
+        if all(len(x) == 0 for x in a):
+            return ismember([], [])
 
     # different number of key columns
     if is_multikey:
@@ -1216,14 +1223,14 @@ def ismember(a, b, h=2, hint_size: int = 0, base_index: int = 0) -> Tuple[Union[
         raise ValueError(f"base_index must be 0, 1, or None not {base_index!r}")
 
 
-def assoc_index(key1: List[np.ndarray], key2: List[np.ndarray]) -> "FastArray":
+def assoc_index(key1: ArraysOrDataset, key2: ArraysOrDataset) -> "FastArray":
     """
     Parameters
     ----------
-    key1 : list of ndarray
-        List of numpy arrays to match against; all arrays must be same length.
-    key2 : list of ndarray
-        List of numpy arrays that will be matched with `key1`; all arrays must be same length.
+    key1 : ndarray / list thereof or a Dataset
+        Numpy arrays to match against; all arrays must be same length.
+    key2 : ndarray / list thereof or a Dataset
+        Numpy arrays that will be matched with `key1`; all arrays must be same length.
 
     Returns
     -------
@@ -1244,22 +1251,27 @@ def assoc_index(key1: List[np.ndarray], key2: List[np.ndarray]) -> "FastArray":
     return ismember(key1, key2)[1]
 
 
-def assoc_copy(key1: List[np.ndarray], key2: List[np.ndarray], arr: np.ndarray) -> np.ndarray:
+def assoc_copy(
+    key1: ArraysOrDataset, key2: ArraysOrDataset, arr: Union[np.ndarray, TypeRegister.Dataset]
+) -> Union[FastArray, Dataset]:
     """
     Parameters
     ----------
-    key1 : list of ndarray
-        List of numpy arrays to match against; all arrays must be same length.
-    key2 : list of ndarray
-        List of numpy arrays that will be matched with `key1`; all arrays must be same length.
-    arr : ndarray
-        An array the same length as key2 arrays which will be mapped to the size of `key1`
+    key1 : ndarray / list thereof or a Dataset
+        Numpy arrays to match against; all arrays must be same length.
+    key2 : ndarray / list thereof or a Dataset
+        Numpy arrays that will be matched with `key1`; all arrays must be same length.
+    arr : ndarray / Dataset
+        An array or Dataset the same length as key2 arrays which will be mapped to the size of `key1`
+        In the case of an array, the output will be cast to FastArray to accomodate support of fancy-indexing with sentinel values
 
     Returns
     -------
     array_like
         A new array the same length as `key1` arrays which has mapped the input `arr` from `key2` to `key1`
         the array's dtype will match the dtype of the input array (3rd parameter).
+        However, outputs will be FastArrays when the input array is a numpy arrays such that
+        fancy indexing with sentinels works correctly.
 
     Examples
     --------
@@ -1272,7 +1284,10 @@ def assoc_copy(key1: List[np.ndarray], key2: List[np.ndarray], arr: np.ndarray) 
     FastArray([13.,  5., 46., ...,  5., 11., 24.])
     """
     fancyindex = assoc_index(key1, key2)
-    return arr[fancyindex]
+    if isinstance(arr, TypeRegister.Dataset):
+        return arr[fancyindex, :]
+    else:
+        return TypeRegister.FastArray(arr)[fancyindex]
 
 
 def unique32(list_keys: List[np.ndarray], hintSize: int = 0, filter: Optional[np.ndarray] = None) -> np.ndarray:
