@@ -65,6 +65,7 @@ tests_reqs = [
     "nose",
     "pyarrow",
     "pytest",
+    "pytest-cov",
 ]
 
 # Sphinx requirements for docs generation.
@@ -95,6 +96,7 @@ developer_reqs = (
         "black",
         "pydocstyle",
         "setuptools_scm",
+        "toml",
     ]
     + conda_reqs
     + pypi_reqs

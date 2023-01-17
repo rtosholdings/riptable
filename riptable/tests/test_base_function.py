@@ -164,7 +164,6 @@ class TestSearchSorted:
 
 
 class TestStd:
-    @pytest.mark.xfail(reason="RIP-350 - std not returning the correct result for some inputs")
     @pytest.mark.parametrize(
         "a",
         # ACTUAL:  0.5345224838248488
@@ -219,7 +218,6 @@ class TestSum:
 
 
 class TestWhere:
-    @pytest.mark.xfail(reason="rt.where returns FastArray([None]), should be FastArray([])")
     def test_where(self):
         arr = np.array([0], dtype=np.int64)
         min = arr.min()
@@ -230,12 +228,6 @@ class TestWhere:
             rt_gt_min,
             err_msg=f"array elements greater than the minimum {min}",
         )
-        # E       AssertionError:
-        # E       Arrays are not equal
-        # E       array elements greater than the minimum 0
-        # E       (shapes (1, 0), (1,) mismatch)
-        # E        x: array([], shape=(1, 0), dtype=int64)
-        # E        y: FastArray([None], dtype=object)
 
     @pytest.mark.xfail(reason="expected dtype of the original type")
     def test_where_dtype_demoting(self):

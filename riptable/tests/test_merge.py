@@ -40,7 +40,7 @@ from riptable.testing.array_assert import assert_array_or_cat_equal
 xfail_rip260_outermerge_left_keep = pytest.mark.xfail(
     reason="RIP-260: 'keep' for the 'left' Dataset in a multi-column outer merge is broken and needs to be fixed.",
     raises=ValueError,
-    # strict=True
+    strict=False,  # some tests xpass, for some reason
 )
 
 

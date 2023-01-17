@@ -160,9 +160,6 @@ class Accum2_Test(unittest.TestCase):
             arr = result[full_colname]
             self.assertEqual(arr[i], sorted_data[i])
 
-    @pytest.mark.xfail(
-        reason="20200416 This test was previously overridden by a later test in the file with the same name. Need to revisit and get back in a working state."
-    )
     def test_multikey_cats_filter_accum_sorted(self):
         unsorted_str = FastArray(["c", "e", "b", "d", "a"])
         ints = arange(1, 6) * 10

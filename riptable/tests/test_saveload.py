@@ -1450,10 +1450,7 @@ def test_sds_stack(data, stack, stack_count, tmpdir):
         Struct(Struct()),
         Struct(Multiset()),
         Struct({"s": Struct()}),
-        pytest.param(
-            Struct({"d": Dataset({})}),
-            marks=pytest.mark.xfail(reason="_sds_from_tree: 'NoneType' object cannot be interpreted as an integer"),
-        ),
+        Struct({"d": Dataset({})}),
         pytest.param(
             Struct({"m": Multiset()}),
             marks=pytest.mark.xfail(reason="_sds_from_tree: 'NoneType' object cannot be interpreted as an integer"),

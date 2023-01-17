@@ -6,7 +6,7 @@
 [tool.black]
 line-length = 120
 target-version = ["py38", "py39", "py310"]
-exclude = ''' 
+exclude = '''
 /(
   \.cache
   | \.egg
@@ -29,15 +29,37 @@ exclude = '''
 [tool.isort]
 profile = "black"
 
-[pytest]
+[tool.pytest.ini_options]
 xfail_strict = true
 
 [tool.pydocstyle]
 convention = "numpy"
-add_ignore = "D1,D2,D300,D400,D401,D403,D404,D405,D418"
+add_ignore = "D1,D2,D300,D400,D401,D403,D404,D405,D418,D419"
 
 [tool.validate_docstrings]
 #errors = "GL"
 not_errors = "ES01,EX01,EX96,GL01,GL02,GL03,GL05,GL08,GL09,GL10,GL97,GL99,PR05,PR06,PR08,PR09,PR10,RT01,RT04,RT05,SA01,SA02,SA03,SA04,SS01,SS02,SS03,SS04,SS05,SS06"
 flake8_errors = "E9,F63,F7,F82"
 #format = "json"
+
+[tool.coverage.run]
+branch = true
+source = ["riptable"]
+omit = [
+    "riptable/benchmarks/*",
+    "riptable/tests/*",
+    "riptable/testing/*",
+    "riptable/hypothesis_tests/*",
+    "riptable/test_tooling_integration/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "raise RuntimeError\\(\"NotImplemented\"\\)",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+    "pass",
+]

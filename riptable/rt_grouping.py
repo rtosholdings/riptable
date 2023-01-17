@@ -3305,6 +3305,8 @@ class Grouping:
 
         filter = kwargs.get("filter", None)
 
+        inplace = False
+
         mustpack = False
         lookup = None
         # pack for certain operations if not already packed
@@ -3379,6 +3381,9 @@ class Grouping:
                     if func_param == 0:
                         func_param = []
 
+                    if lookup["return_full"]:
+                        inplace = kwargs.get("inplace", False)
+
                     if lookup["packing"] == GB_PACKUNPACK.PACK:
                         accum = func_gb(
                             values,
@@ -3390,6 +3395,7 @@ class Grouping:
                             funcList,
                             binLowList,
                             binHighList,
+                            inplace,
                             func_param,
                         )
                     else:
