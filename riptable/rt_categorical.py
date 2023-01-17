@@ -48,7 +48,6 @@ from .rt_enum import (
     int_dtype_from_len,
 )
 from .rt_fastarray import FastArray
-from .rt_fastarraynumba import fill_backward, fill_forward
 from .rt_groupbykeys import GroupByKeys
 
 # groupby imports
@@ -2043,7 +2042,7 @@ class Categorical(GroupByOps, FastArray):
         return self.isnotnan()
 
     # ------------------------------------------------------------
-    def fill_forward(self, *args, limit: int = 0, fill_val=None, inplace: bool = False) -> Dataset:
+    def fill_forward(self, *args, limit: int = 0, fill_val=None, inplace: bool = False) -> "Categorical":
         """
         Replace NaN and invalid array values by propagating the last encountered valid
         group value forward.
@@ -2115,16 +2114,12 @@ class Categorical(GroupByOps, FastArray):
         >>> cat.fill_forward(x, limit = 1)[0]
         FastArray([ 0.,  1.,  0.,  1., nan, nan])
         """
-        result = self.apply_nonreduce(fill_forward, *args, fill_val=fill_val, limit=limit, inplace=True)
-        if inplace is True:
-            for i in range(len(args)):
-                x = args[i]
-                # copy inplace
-                x[...] = result[i]
+        result = super().nb_fill_forward(*args, limit=limit, fill_val=fill_val, inplace=inplace)
+        self._attach_self_as_key_column(result)
         return result
 
     # ------------------------------------------------------------
-    def fill_backward(self, *args, limit: int = 0, fill_val=None, inplace: bool = False) -> Dataset:
+    def fill_backward(self, *args, limit: int = 0, fill_val=None, inplace: bool = False) -> "Categorical":
         """
         Replace NaN and invalid array values by propagating the next encountered valid
         group value backward.
@@ -2196,12 +2191,8 @@ class Categorical(GroupByOps, FastArray):
         >>> cat.fill_backward(x, limit = 1)[0]
         FastArray([nan, nan,  4.,  5.,  4.,  5.])
         """
-        result = self.apply_nonreduce(fill_backward, *args, fill_val=fill_val, limit=limit, inplace=True)
-        if inplace is True:
-            for i in range(len(args)):
-                x = args[i]
-                # copy inplace
-                x[...] = result[i]
+        result = super().nb_fill_backward(*args, limit=limit, fill_val=fill_val, inplace=inplace)
+        self._attach_self_as_key_column(result)
         return result
 
     # ------------------------------------------------------------

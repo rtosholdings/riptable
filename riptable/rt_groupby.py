@@ -7,7 +7,6 @@ import numpy as np
 import riptide_cpp as rc
 
 from .rt_enum import GB_FUNC_COUNT, GB_FUNCTIONS, GB_STRING_ALLOWED, CategoryMode
-from .rt_fastarraynumba import fill_backward, fill_forward
 from .rt_groupbykeys import GroupByKeys
 from .rt_groupbyops import GroupByOps
 from .rt_numpy import (
@@ -394,7 +393,7 @@ class GroupBy(GroupByOps):
         return self._dataset.as_ordered_dictionary()
 
     # -------------------------------------------------------
-    def pad(self, limit=0, fill_val=None, **kwargs):
+    def pad(self, limit=0, fill_val=None, inplace=False):
         """
         Forward fill the values
 
@@ -409,10 +408,10 @@ class GroupBy(GroupByOps):
         fill_backward
         fill_invalid
         """
-        return self.fill_forward(fill_val=fill_val, limit=limit, **kwargs)
+        return self.fill_forward(fill_val=fill_val, limit=limit, inplace=inplace)
 
     # -------------------------------------------------------
-    def fill_forward(self, limit=0, fill_val=None, **kwargs):
+    def fill_forward(self, limit=0, fill_val=None, inplace=False):
         """
         Replace NaN and invalid array values by propagating the last encountered valid
         group value forward.
@@ -428,8 +427,10 @@ class GroupBy(GroupByOps):
             The value to use where there is no valid group value to propagate forward.
             If `fill_val` is not specified, NaN and invalid values aren't replaced where
             there is no valid group value to propagate forward.
-        **kwargs
-            Additional keyword arguments.
+        inplace : bool, default False
+            If False, return a copy of the array. If True, modify original data. This
+            will modify any other views on this object. This fails if the array is
+            locked.
 
         Returns
         -------
@@ -494,10 +495,10 @@ class GroupBy(GroupByOps):
         4    nan
         5    nan
         """
-        return self.apply_nonreduce(fill_forward, fill_val=fill_val, limit=limit, inplace=True)
+        return super().nb_fill_forward(fill_val=fill_val, limit=limit, inplace=inplace)
 
     # -------------------------------------------------------
-    def backfill(self, limit=0, fill_val=None, **kwargs):
+    def backfill(self, limit=0, fill_val=None, inplace=False):
         """
         Backward fill the values
 
@@ -513,10 +514,10 @@ class GroupBy(GroupByOps):
         fill_invalid
         """
         # stub for pandas
-        return self.fill_backward(fill_val=fill_val, limit=limit, **kwargs)
+        return self.fill_backward(fill_val=fill_val, limit=limit, inplace=inplace)
 
     # -------------------------------------------------------
-    def fill_backward(self, limit=0, fill_val=None, **kwargs):
+    def fill_backward(self, limit=0, fill_val=None, inplace=False):
         """
         Replace NaN and invalid array values by propagating the next encountered valid
         group value backward.
@@ -597,7 +598,7 @@ class GroupBy(GroupByOps):
         4   4.00
         5   5.00
         """
-        return self.apply_nonreduce(fill_backward, fill_val=fill_val, limit=limit, inplace=True)
+        return super().nb_fill_backward(fill_val=fill_val, limit=limit, inplace=inplace)
 
     # -------------------------------------------------------
     def expanding(self, **kwargs):

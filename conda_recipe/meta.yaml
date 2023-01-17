@@ -48,7 +48,7 @@ test:
     - riptable
   commands:
     # Assumes RECIPE_DIR={root}/conda_recipe, to output report into {root}/test-output.
-    - pytest -v riptable/tests --junitxml {{RECIPE_DIR}}/../test-output/report.xml
+    - pytest -v riptable/tests --junitxml={{RECIPE_DIR}}/../test-output/report.xml
 
 about:
   home: https://github.com/rtosholdings/riptable

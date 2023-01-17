@@ -4,7 +4,6 @@ import os
 
 import numpy as np
 from IPython.display import HTML, display
-from sotpath import path2platform
 
 from riptable import Dataset, Struct
 
@@ -30,10 +29,10 @@ def write_dset_to_np(ds: Dataset, outdir: str, fname: str) -> None:
     os.makedirs(os.path.join(outdir, fname))
     fname = os.path.join(outdir, fname)
     fname = os.path.join(fname, "columns")
-    os.makedirs(path2platform(fname))
+    os.makedirs(fname)
     for name, value in ds.items():
         fname_col = os.path.join(fname, str(name))
-        np.save(path2platform(fname_col), value)
+        np.save(fname_col, value)
 
 
 def read_dset_from_np(outdir: str, fname: str, mmap: bool = False) -> Dataset:
@@ -63,9 +62,9 @@ def read_dset_from_np(outdir: str, fname: str, mmap: bool = False) -> Dataset:
     fname = os.path.join(outdir, fname)
     fname = os.path.join(fname, "columns")
     col_dict = dict()
-    col_names = os.listdir(path2platform(fname))
+    col_names = os.listdir(fname)
     for i in range(len(col_names)):
-        fname_col = path2platform(os.path.join(fname, col_names[i]))
+        fname_col = os.path.join(fname, col_names[i])
         curr_col_name = col_names[i].replace(".npy", "")
         col_dict[curr_col_name] = np.load(fname_col, mmap_mode=mmap_mode)
     return Dataset(col_dict)

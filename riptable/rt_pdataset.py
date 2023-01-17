@@ -750,12 +750,7 @@ class PDataset(Dataset):
         # final loader will check if dates exist, kill warnings?
         pnames = TypeRegister.Date.range(str(start), str(end)).yyyymmdd.astype("U")
 
-        try:
-            import sotpath
-
-            files = [sotpath.path2platform(path.format(*[d] * fmtcount)) for d in pnames]
-        except:
-            files = [path.format(*[d] * fmtcount) for d in pnames]
+        files = [path.format(*[d] * fmtcount) for d in pnames]
 
         pds = load_sds(files, include=include, stack=True, threads=threads, folders=folders)
 

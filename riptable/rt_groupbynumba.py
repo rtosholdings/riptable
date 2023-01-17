@@ -1,8 +1,9 @@
 __all__ = ["GroupbyNumba"]
 
+import functools
 import numba as nb
 import numpy as np
-
+from typing import Any
 from .config import get_global_settings
 from .rt_enum import (
     GB_FUNC_NUMBA,
@@ -13,7 +14,8 @@ from .rt_enum import (
 )
 from .rt_groupbyops import GroupByOps
 from .rt_numpy import empty, empty_like
-
+from .numba.invalid_values import get_invalid, is_valid
+from .rt_fastarraynumba import _check_fill_values
 
 # NOTE YOU MUST INSTALL tbb
 # conda install tbb
@@ -99,6 +101,7 @@ class GroupbyNumba(GroupByOps):
         funcList,  # support aggregation
         binLowList,  # start bin to work on for prange
         binHighList,  # high bin to work on for prange
+        inplace,  # if to apply function inplace
         func_param,
     ):  # parameters
 
@@ -119,13 +122,18 @@ class GroupbyNumba(GroupByOps):
             else:
                 dtype = dtypefunc(inputdata.dtype)
 
-            # allocate for numba
-            ret = empty(len(inputdata), dtype=dtype)
+            ret = None
+            if not inplace:
+                # allocate for numba
+                ret = empty(len(inputdata), dtype=dtype)
 
-            # print("sending data", inputdata)
-            # print("binlow", binLowList[0])
             nbfunc(iGroup, iFirstGroup, nCountGroup, binLowList[0], binHighList[0], inputdata, ret, *func_param)
-            results.append(ret)
+
+            if inplace:
+                results.append(inputdata)
+            else:
+                results.append(ret)
+
         return results
 
     # -------------------------------------------------------------------------------------------------
@@ -299,10 +307,191 @@ class GroupbyNumba(GroupByOps):
                 retData[colName] = ret
         return retData
 
-    # -------------------------------------------------------------------------------------------------#
-
     # FillForward
     # -------------------------------------------------------------------------------------------------#
+
+    def nb_fill_forward(self, *args, limit=0, fill_val=None, inplace=False):
+        """
+        Replace NaN and invalid array values by propagating the last encountered valid
+        group value forward.
+
+        Optionally, you can modify the original array if it's not locked.
+
+        Parameters
+        ----------
+        *args : array or list of arrays
+            The array or arrays that contain NaN or invalid values you want to replace.
+        limit : int, default 0 (disabled)
+            The maximium number of consecutive NaN or invalid values to fill. If there
+            is a gap with more than this number of consecutive NaN or invalid values,
+            the gap will be only partially filled. If no `limit` is specified, all
+            consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default None
+            The value to use where there is no valid group value to propagate forward.
+            If `fill_val` is not specified, NaN and invalid values aren't replaced where
+            there is no valid group value to propagate forward.
+        inplace: bool, default False
+            If False, return a copy of the array. If True, modify original data. This
+            will modify any other views on this object. This fails if the array is
+            locked.
+
+        Returns
+        -------
+        Dataset-like object
+            The dataset (categorical) will be the same size and have the same dtypes as the
+            original input.
+        """
+        # Lookup our function to get a function_number
+        return self._calculate_all(
+            NUMBA_REVERSE_FUNC[GroupbyNumba.nb_fill_forward], *args, func_param=(fill_val, limit), inplace=inplace
+        )
+
+    def nb_fill_backward(self, *args, fill_val, limit=0, inplace=False):
+        """
+        Replace NaN and invalid array values by propagating the next encountered valid
+        group value backward.
+
+        Optionally, you can modify the original array if it's not locked.
+
+        Parameters
+        ----------
+        *args : array or list of arrays
+            The array or arrays that contain NaN or invalid values you want to replace.
+        limit : int, default 0 (disabled)
+            The maximium number of consecutive NaN or invalid values to fill. If there
+            is a gap with more than this number of consecutive NaN or invalid values,
+            the gap will be only partially filled. If no `limit` is specified, all
+            consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default None
+            The value to use where there is no valid group value to propagate backward.
+            If `fill_val` is not specified, NaN and invalid values aren't replaced where
+            there is no valid group value to propagate backward.
+        inplace: bool, default False
+            If False, return a copy of the array. If True, modify original data. This
+            will modify any other views on this object. This fails if the array is
+            locked.
+
+        Returns
+        -------
+        Dataset-like object
+            The dataset (categorical) will be the same size and have the same dtypes as the
+            original input.
+        """
+        # Lookup our function to get a function_number
+        return self._calculate_all(
+            NUMBA_REVERSE_FUNC[GroupbyNumba.nb_fill_backward], *args, func_param=(fill_val, limit), inplace=inplace
+        )
+
+    @staticmethod
+    def _nb_fill_backend(iGroup, iFirstGroup, nCountGroup, binLow, binHigh, data, ret, fill_val, limit, direction):
+        """
+        Numba backend implementation for grouped fill_forward and fill_backward for all aplicable dtypes.
+
+        Arguments
+        ---------
+        iGroup, iFirstGroup, nCountGroup : np.ndarray
+            Arrays from a groupby object's 'get_groupings' method
+        binLow, binHigh : int
+            Indexes corresponding to the first and the last groups in iFirstGroup and nCountGroup
+        data :  array
+            The original data to be opperated on
+        ret :  array
+            An empty array the same size as 'data' which will contain the processed data.
+            Must be `None` for inplace operation
+        fill_val, limit : parameters for nb_fill_forward/nb_fill_backward
+            The value to use where there is no valid group value to propagate forward/backward.
+            If `fill_val` is not specified, NaN and invalid values aren't replaced where
+            there is no valid group value to propagate forward/backward.
+        direction:  int (-1 or 1)
+            direction = 1 corresponds to fill_forward, -1 corresponds to fill_backward
+        """
+
+        dtype = data.dtype
+        if not np.issubdtype(dtype, np.floating) and not np.issubdtype(dtype, np.integer):
+            raise TypeError(f"Filling for type `{dtype}` is currently not supported.")
+
+        if fill_val is None:
+            fill_val = get_invalid(data)
+
+        fill_val = dtype.type(fill_val)
+
+        if ret is None:
+            # inplace, just pass data as ret itself
+            ret = data
+
+        if limit is None:
+            limit = 0
+        elif limit < 0:
+            raise TypeError(f"The limit kwarg cannot be less than 0.")
+
+        direction = np.int8(direction)
+        limit = np.int64(limit)
+        binLow = np.int64(binLow)
+        binHigh = np.int64(binHigh)
+
+        GroupbyNumba._numba_fill_direction(
+            direction,
+            iGroup,
+            iFirstGroup,
+            nCountGroup,
+            binLow,
+            binHigh,
+            data,
+            ret,
+            fill_val,
+            limit,
+        )
+
+        return
+
+    @staticmethod
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
+    def _numba_fill_direction(
+        direction: np.int8,
+        iGroup: np.ndarray,
+        iFirstGroup: np.ndarray,
+        nCountGroup: np.ndarray,
+        binLow: np.int64,
+        binHigh: np.int64,
+        data: np.ndarray,
+        ret: np.ndarray,
+        fill_val: Any,
+        limit: np.int64,
+    ):
+        for grpIdx in nb.prange(binLow, binHigh):
+            start = iFirstGroup[grpIdx]
+            last = start + nCountGroup[grpIdx]
+
+            if direction == 1:
+                idx_range = range(start, last)
+            else:
+                idx_range = range(last - 1, start - 1, -1)
+
+            last_valid = fill_val
+            if limit <= 0:
+                for index in idx_range:
+                    rowIdx = iGroup[index]
+                    if is_valid(data[rowIdx]):
+                        last_valid = data[rowIdx]
+                    ret[rowIdx] = last_valid
+
+            else:
+                counter = limit
+                for index in idx_range:
+                    rowIdx = iGroup[index]
+                    if not is_valid(data[rowIdx]):
+                        if counter > 0:
+                            ret[rowIdx] = last_valid
+                            counter -= 1
+                        else:
+                            # copy invalid value
+                            ret[rowIdx] = data[rowIdx]
+                    else:
+                        counter = limit
+                        last_valid = data[rowIdx]
+                        ret[rowIdx] = last_valid
+        return
+
     @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache, nogil=True)
     def _numbaFillForward(iGroup, iFirstGroup, nCountGroup, data, ret):
         """
@@ -468,6 +657,22 @@ CALC_UNPACK = GroupbyNumba._nb_groupbycalculateall
 #     ------      -------------------   ------------------------         ------------------     -----------   ----------------    ------------------
 NUMBA_GB_TABLE = {
     "nb_ema": (GB_PACKUNPACK.PACK, GroupbyNumba.nb_ema, GroupbyNumba._numbaEMA, CALC_PACK, NUMBA_DTYPE_FLOATS, True),
+    "nb_fill_forward": (
+        GB_PACKUNPACK.PACK,
+        GroupbyNumba.nb_fill_forward,
+        functools.partial(GroupbyNumba._nb_fill_backend, direction=1),
+        CALC_PACK,
+        None,
+        True,
+    ),
+    "nb_fill_backward": (
+        GB_PACKUNPACK.PACK,
+        GroupbyNumba.nb_fill_backward,
+        functools.partial(GroupbyNumba._nb_fill_backend, direction=-1),
+        CALC_PACK,
+        None,
+        True,
+    ),
     "nb_sum": (GB_PACKUNPACK.UNPACK, GroupbyNumba.nb_sum, GroupbyNumba._numbasum, CALC_UNPACK, NUMBA_DTYPE_SUM, False),
     "nb_min": (GB_PACKUNPACK.UNPACK, GroupbyNumba.nb_min, GroupbyNumba._numbamin, CALC_UNPACK, None, False),
     "nb_sum_punt": (GB_PACKUNPACK.UNPACK, GroupbyNumba.nb_sum_punt_test, None, None, None, False),

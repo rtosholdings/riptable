@@ -3,6 +3,7 @@ import pytest
 import itertools
 from numpy.random import default_rng
 from riptable import *
+import riptable as rt
 from riptable.rt_numpy import QUANTILE_METHOD_NP_KW, gb_np_quantile, np_rolling_nanquantile
 
 from numpy.testing import (
@@ -319,6 +320,68 @@ def quantile_params_generator(dtypes, max_N, windowed, with_cats, with_nans, wit
                     for quantile in [round(x, 3) for x in rng.random(2 * scrunity_level)]:
                         for nan_fraction, inf_fraction, minus_inf_fraction in curr_frac_options:
                             yield N, N_cat, window, quantile, nan_fraction, inf_fraction, minus_inf_fraction, dtype
+
+
+def fills_params_generator():
+    float_types = [np.float32, np.float64]
+    integral_types = [
+        np.int8,
+        np.uint8,
+        np.int16,
+        np.uint16,
+        np.int32,
+        np.uint32,
+        np.int64,
+        np.uint64,
+    ]
+
+    all_types = float_types + integral_types
+
+    common_types = [np.int64, np.float64]
+
+    # N = 1 case
+    N = 1
+    N_cat = 1
+    limit = 0
+    fill_values = [None, 0, 15]
+    nan_fractions = [0.5, 0.95]
+    types = common_types
+
+    for fill_val in fill_values:
+        for nan_fraction in nan_fractions:
+            yield N, N_cat, nan_fraction, types, limit, fill_val
+
+    # types
+    N = 1_000
+    N_cat = 200
+    limits = [0, 2]
+    nan_fraction = 0.5
+    types = all_types
+    fill_val = None
+    for limit in limits:
+        yield N, N_cat, nan_fraction, types, limit, fill_val
+
+    # limits
+    N = 1_020
+    N_cat = 210
+    limits = [0, 1, 2, 4, 6, 10]
+    nan_fractions = [0.5, 0.95]
+    types = common_types
+    fill_val = None
+    for limit in limits:
+        for nan_fraction in nan_fractions:
+            yield N, N_cat, nan_fraction, types, limit, fill_val
+
+    # fill_vals
+    N = 965
+    N_cat = 300
+    limits = [0, 2]
+    nan_fraction = 0.5
+    types = common_types
+    fill_values = [None, 0, -15, 100]
+    for limit in limits:
+        for fill_val in fill_values:
+            yield N, N_cat, nan_fraction, types, limit, fill_val
 
 
 class TestGoupByOps_functions:
@@ -957,6 +1020,303 @@ window = {window}"""
                     curr_np_data = np.array(ds[column][curr_filter])
                     data_res_np = np_rolling_nanquantile(a=curr_np_data, q=quantile, window=curr_window)
                     assert_almost_equal(data_res[curr_window - 1 :], data_res_np, err_msg=err_msg())
+
+    @pytest.mark.skip("Old fill functions were replaced by numba implementations")
+    @pytest.mark.parametrize("N", [1, 100, 1_000])
+    @pytest.mark.parametrize("N_cat", [1, 10, 300])
+    @pytest.mark.parametrize("limit", [0, 3, 10])
+    @pytest.mark.parametrize("nan_fraction", [0.5, 0.95])
+    @pytest.mark.parametrize("fill_value", [0, -15, 100, None])
+    def test_groupbyops_compare_fill_nb_fill(self, N, N_cat, limit, nan_fraction, fill_value):
+        def err_msg():
+            return f"""
+N = {N}
+N_cat = {N_cat}
+limit = {limit}"""
+
+        this_seed = N * N_cat * np.sum(limit) % 10_000
+        rng = default_rng(this_seed)
+
+        ds = rt.Dataset()
+        ds.categ = rt.Cat(rng.integers(0, N_cat, size=N))
+        ds.categ2 = rng.integers(0, N_cat, size=N)
+        multi_cat = rt.Cat([ds["categ"], ds["categ2"]])
+
+        ds.gb_key1 = rng.integers(0, N_cat, size=N)
+        ds.gb_key2 = rng.integers(0, N_cat, size=N)
+        single_gb = ds.groupby("gb_key1")
+        multi_gb = ds.groupby(["gb_key1", "gb_key2"])
+
+        for data_type in [
+            np.int8,
+            np.uint8,
+            np.int16,
+            np.uint16,
+            np.int32,
+            np.uint32,
+            np.int64,
+            np.uint64,
+            np.float32,
+            np.float64,
+        ]:
+            temp_data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+            if type in [np.uint8, np.uint16, np.uint32, np.uint64]:
+                temp_data = np.abs(temp_data)
+
+            ds[f"data_{data_type.__name__}"] = rt.FA(temp_data).astype(data_type)
+            ds[f"data_{data_type.__name__}"][rng.random(N) < nan_fraction] = np.nan
+
+        # Cat
+
+        old_cat_fill_f = ds.categ.fill_forward(ds, limit=limit, fill_val=fill_value)
+        new_cat_fill_f = ds.categ.nb_fill_forward(ds, limit=limit, fill_val=fill_value)
+
+        old_multi_cat_fill_f = multi_cat.fill_forward(ds, limit=limit, fill_val=fill_value)
+        new_multi_cat_fill_f = multi_cat.nb_fill_forward(ds, limit=limit, fill_val=fill_value)
+
+        assert old_cat_fill_f.equals(new_cat_fill_f, exact=True)
+        assert old_multi_cat_fill_f.equals(new_multi_cat_fill_f)
+
+        old_cat_fill_b = ds.categ.fill_backward(ds, limit=limit, fill_val=fill_value)
+        new_cat_fill_b = ds.categ.nb_fill_backward(ds, limit=limit, fill_val=fill_value)
+
+        old_multi_cat_fill_b = multi_cat.fill_backward(ds, limit=limit, fill_val=fill_value)
+        # because of weirdness of names when doing operations on multi-key categoricals
+        # exact=True always fails for multi-key categoricals if the keys have the same name
+        old_multi_cat_fill_b.col_rename("gb_key_1", "gb_key_0")
+        new_multi_cat_fill_b = multi_cat.nb_fill_backward(ds, limit=limit, fill_val=fill_value)
+
+        assert old_cat_fill_b.equals(new_cat_fill_b, exact=True)
+        assert old_multi_cat_fill_b.equals(new_multi_cat_fill_b)
+
+        # GB
+
+        old_gb_fill_f = single_gb.fill_forward(limit=limit, fill_val=fill_value)
+        new_gb_fill_f = single_gb.nb_fill_forward(limit=limit, fill_val=fill_value)
+
+        old_multi_gb_fill_f = multi_gb.fill_forward(limit=limit, fill_val=fill_value)
+        new_multi_gb_fill_f = multi_gb.nb_fill_forward(limit=limit, fill_val=fill_value)
+
+        assert old_gb_fill_f.equals(new_gb_fill_f, exact=True)
+        assert old_multi_gb_fill_f.equals(new_multi_gb_fill_f, exact=True)
+
+        old_gb_fill_b = single_gb.fill_backward(limit=limit, fill_val=fill_value)
+        new_gb_fill_b = single_gb.nb_fill_backward(limit=limit, fill_val=fill_value)
+
+        old_multi_gb_fill_b = multi_gb.fill_backward(limit=limit, fill_val=fill_value)
+        new_multi_gb_fill_b = multi_gb.nb_fill_backward(limit=limit, fill_val=fill_value)
+
+        assert old_gb_fill_b.equals(new_gb_fill_b, exact=True)
+        assert old_multi_gb_fill_b.equals(new_multi_gb_fill_b, exact=True)
+
+        # Make sure names are the same for multi-key categoricals
+        ds = rt.Dataset()
+        ds.categ = rt.Cat(rng.integers(0, N_cat, size=N))
+        ds.categ2 = rng.integers(0, N_cat, size=N)
+        multi_cat = rt.Cat([ds["categ"], ds["categ2"]])
+
+        for data_type in [
+            np.int64,
+            np.float64,
+        ]:
+            temp_data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+            if type in [np.uint8, np.uint16, np.uint32, np.uint64]:
+                temp_data = np.abs(temp_data)
+
+            ds[f"data_{data_type.__name__}"] = rt.FA(temp_data).astype(data_type)
+            ds[f"data_{data_type.__name__}"][rng.random(N) < nan_fraction] = np.nan
+
+        # make copy of a categorical, as multiple applications of method to a categorical changes names of columns
+        multi_cat2 = rt.Cat([ds["categ"], ds["categ2"]])
+
+        # old
+        old_multi_cat_fill_f = multi_cat.fill_forward(ds, limit=limit, fill_val=fill_value)
+        old_multi_cat_fill_f_second_call = multi_cat.fill_forward(ds, limit=limit, fill_val=fill_value)
+
+        # new
+        new_multi_cat_fill_f = multi_cat2.fill_forward(ds, limit=limit, fill_val=fill_value)
+        new_multi_cat_fill_f_second_call = multi_cat2.fill_forward(ds, limit=limit, fill_val=fill_value)
+
+        # just check that column names are exactly the same, we checked that the values are equal in tests above
+        assert old_multi_cat_fill_f.keys() == new_multi_cat_fill_f.keys()
+        assert old_multi_cat_fill_f_second_call.keys() == new_multi_cat_fill_f_second_call.keys()
+
+    @pytest.mark.parametrize(
+        "N, N_cat, nan_fraction, types, limit, fill_val",
+        fills_params_generator(),
+    )
+    def test_groupbyops_fills(self, N, N_cat, nan_fraction, types, limit, fill_val):
+
+        this_seed = N * N_cat * int(nan_fraction * 1000) % 10_000
+        rng = default_rng(this_seed)
+
+        def err_msg(**kwargs):
+            base = f"""
+seed = {this_seed}
+N = {N}
+N_cat = {N_cat}
+nan_fraction = {nan_fraction}
+limit = {limit}
+fill_val = {fill_val}"""
+            for k, v in kwargs.items():
+                base += f"""
+{k} = {v}
+"""
+            return base
+
+        ds = rt.Dataset()
+        ds.categ = rt.Cat(rng.integers(0, N_cat, size=N))
+        ds.categ2 = rng.integers(0, N_cat, size=N)
+        multi_cat = rt.Cat([ds["categ"], ds["categ2"]])
+
+        ds.gb_key1 = rng.integers(0, N_cat, size=N)
+        ds.gb_key2 = rng.integers(0, N_cat, size=N)
+        single_gb = ds.groupby("gb_key1")
+        multi_gb = ds.groupby(["gb_key1", "gb_key2"])
+
+        data_column_names = []
+
+        for data_type in types:
+            temp_data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+            if type in [np.uint8, np.uint16, np.uint32, np.uint64]:
+                temp_data = np.abs(temp_data)
+
+            col_name = f"data_{data_type.__name__}"
+            ds[col_name] = rt.FA(temp_data).astype(data_type)
+            ds[col_name][rng.random(N) < nan_fraction] = np.nan
+            data_column_names.append(col_name)
+
+        # Cat
+
+        cat_ff = ds.categ.fill_forward(ds, limit=limit, fill_val=fill_val)
+        cat_fb = ds.categ.fill_backward(ds, limit=limit, fill_val=fill_val)
+
+        single_cat_result = {"ff": cat_ff, "fb": cat_fb}
+
+        multi_cat_ff = multi_cat.fill_forward(ds, limit=limit, fill_val=fill_val)
+        multi_cat_fb = multi_cat.fill_backward(ds, limit=limit, fill_val=fill_val)
+
+        multi_cat_result = {"ff": multi_cat_ff, "fb": multi_cat_fb}
+
+        for categorical, ds_result in zip([ds.categ, multi_cat], [single_cat_result, multi_cat_result]):
+            unique_categories = np.unique(categorical._fa)
+            for category in rng.choice(unique_categories, min(len(unique_categories), 8)):
+                for col in data_column_names:
+                    curr_filter = categorical._fa == category
+                    curr_data = ds[col][curr_filter]
+                    fa_ff = curr_data.fill_forward(limit=limit, fill_val=fill_val)
+                    fa_fb = curr_data.fill_backward(limit=limit, fill_val=fill_val)
+
+                    ds_ff = ds_result["ff"][col][curr_filter]
+                    ds_fb = ds_result["fb"][col][curr_filter]
+
+                    assert_array_equal(ds_ff, fa_ff, err_msg=err_msg(curr_data=curr_data))
+                    assert_array_equal(ds_fb, fa_fb, err_msg=err_msg(curr_data=curr_data))
+
+        # GB
+
+        gb_ff = single_gb.fill_forward(limit=limit, fill_val=fill_val)
+        gb_fb = single_gb.fill_backward(limit=limit, fill_val=fill_val)
+
+        single_gb_result = {"ff": gb_ff, "fb": gb_fb}
+
+        multi_cat_ff = multi_gb.fill_forward(limit=limit, fill_val=fill_val)
+        multi_cat_fb = multi_gb.fill_backward(limit=limit, fill_val=fill_val)
+
+        multi_gb_result = {"ff": multi_cat_ff, "fb": multi_cat_fb}
+
+        for gb, ds_result in zip([single_gb, multi_gb], [single_gb_result, multi_gb_result]):
+            unique_categories = np.unique(gb.grouping._iKey.unique())
+            for category in rng.choice(unique_categories, min(len(unique_categories), 8)):
+                for col in data_column_names:
+                    curr_filter = gb.grouping._iKey == category
+                    curr_data = ds[col][curr_filter]
+                    fa_ff = curr_data.fill_forward(limit=limit, fill_val=fill_val)
+                    fa_fb = curr_data.fill_backward(limit=limit, fill_val=fill_val)
+
+                    ds_ff = ds_result["ff"][col][curr_filter]
+                    ds_fb = ds_result["fb"][col][curr_filter]
+
+                    assert_array_equal(ds_ff, fa_ff)
+                    assert_array_equal(ds_fb, fa_fb)
+
+    def test_groupbyops_fills_inplace(self):
+        N = 1234
+        N_cat = 56
+        types = [
+            np.float32,
+            np.float64,
+            np.int8,
+            np.uint8,
+            np.int16,
+            np.uint16,
+            np.int32,
+            np.uint32,
+            np.int64,
+            np.uint64,
+        ]
+        nan_fraction = 0.5
+
+        this_seed = N * N_cat * int(nan_fraction * 1000) % 10_000
+        rng = default_rng(this_seed)
+
+        ds = rt.Dataset()
+        ds.categ = rt.Cat(rng.integers(0, N_cat, size=N))
+        ds.categ2 = rng.integers(0, N_cat, size=N)
+        multi_cat = rt.Cat([ds["categ"], ds["categ2"]])
+
+        ds.gb_key1 = rng.integers(0, N_cat, size=N)
+        ds.gb_key2 = rng.integers(0, N_cat, size=N)
+        single_gb = ds.groupby("gb_key1")
+        multi_gb = ds.groupby(["gb_key1", "gb_key2"])
+
+        data_column_names = []
+
+        for data_type in types:
+            temp_data = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+            if type in [np.uint8, np.uint16, np.uint32, np.uint64]:
+                temp_data = np.abs(temp_data)
+
+            col_name = f"data_{data_type.__name__}"
+            ds[col_name] = rt.FA(temp_data).astype(data_type)
+            ds[col_name][rng.random(N) < nan_fraction] = np.nan
+            data_column_names.append(col_name)
+
+        ds_copy = ds.copy(deep=True)
+
+        for cat_object in [ds.categ, multi_cat]:
+            # not inplace
+            ds = ds_copy.copy(deep=True)
+            ds_ff = cat_object.fill_forward(ds[data_column_names])
+            assert ds.equals(ds_copy)
+
+            # inplace
+            cat_object.fill_forward(ds[data_column_names], inplace=True)
+            assert not ds.equals(ds_copy)
+            assert (ds[data_column_names]).equals(ds_ff[data_column_names])
+
+        # not inplace
+        ds = ds_copy.copy(deep=True)
+        single_gb = ds.groupby("gb_key1")
+        ds_ff = single_gb.fill_forward()
+        assert ds.equals(ds_copy)
+
+        # inplace
+        single_gb.fill_forward(inplace=True)
+        assert not ds.equals(ds_copy)
+        assert (ds[data_column_names]).equals(ds_ff[data_column_names])
+
+        # not inplace
+        ds = ds_copy.copy(deep=True)
+        multi_gb = ds.groupby(["gb_key1", "gb_key2"])
+
+        ds_ff = multi_gb.fill_forward()
+        assert ds.equals(ds_copy)
+
+        # inplace
+        multi_gb.fill_forward(inplace=True)
+        assert not ds.equals(ds_copy)
+        assert (ds[data_column_names]).equals(ds_ff[data_column_names])
 
 
 if __name__ == "__main__":

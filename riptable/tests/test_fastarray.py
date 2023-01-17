@@ -1599,9 +1599,6 @@ class TestFastArrayNanmax:
             pytest.param(
                 rt.FastArray([], dtype=np.float32),
                 id="float",
-                marks=pytest.mark.xfail(
-                    reason="RIP-417: The call to riptide_cpp via the ledger returns None, which then causes the isnan() to raise a TypeError. This needs to be fixed so we raise an error like numpy (either by checking for this and raising the exception, or fixing the way the function punts to numpy."
-                ),
             )
             # TODO: Add cases for integer, string; consider just extending the test to cover all
             #  float/integer dtypes + a bytestring example + unicode example.

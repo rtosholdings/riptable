@@ -2055,9 +2055,9 @@ class Dataset(Struct):
             Method to use to propagate valid values within each column.
 
             * backfill/bfill: Propagates the next encountered valid value backward.
-              Calls `FastArray.fill_backward <https://eot.gitlab.ds.susq.com/sigpydata/riptable/riptable/autoapi/riptable/rt_fastarraynumba/index.html#riptable.rt_fastarraynumba.fill_backward>`_.
+              Calls :meth:`FastArray.fill_backward`.
             * pad/ffill: Propagates the last encountered valid value forward. Calls
-              `FastArray.fill_forward <https://eot.gitlab.ds.susq.com/sigpydata/riptable/riptable/autoapi/riptable/rt_fastarraynumba/index.html#riptable.rt_fastarraynumba.fill_forward>`_.
+              :meth:`FastArray.fill_forward`.
             * None: A replacement value is required if ``method = None``. Calls
               :meth:`FastArray.replacena`.
             If there's not a valid value to propagate forward or backward, the NaN or
