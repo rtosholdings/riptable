@@ -1063,6 +1063,8 @@ class DateBase(FastArray):
         """
         The earliest `Date` or shortest `DateSpan` in an array.
 
+        Note that until a reported bug is fixed, this method is not NaN-aware.
+
         Returns
         -------
         `Date` or `DateSpan`
@@ -4904,16 +4906,31 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def min(self, **kwargs):
         """
-        Earliest timestamp in array.
+        The earliest `DateTimeNano` in an array.
+
+        Note that until a reported bug is fixed, this method is not NaN-aware.
 
         Returns
         -------
-        obj:`DateTimeNano`
-            An array with length 1.
+        `DateTimeNano`
+            A `DateTimeNano` array containing the earliest `DateTimeNano`
+            from the input array.
 
-        Note
-        ----
-        This returns an array, not a scalar. However, broadcasting rules will apply to operations with it.
+        See Also
+        --------
+        DateTimeNano.max, Date.min, Date.max, DateSpan.min, Datespan.max
+
+        Notes
+        -----
+        This returns an array, not a scalar. However, broadcasting rules will
+        apply to operations with it.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'],
+        ...                        from_tz='NYC', to_tz='NYC')
+        >>> dtn.min()
+        DateTimeNano(['20210101 09:31:15.000000000'], to_tz='NYC')
         """
         return DateTimeNano([self._fa.min()], from_tz="GMT", to_tz=self._timezone._to_tz)
         # return DateTimeNanoScalar(self._fa.min(), timezone=self._timezone)
@@ -4921,16 +4938,29 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def max(self, **kwargs):
         """
-        Latest timestamp in array.
+        The latest `DateTimeNano` in an array.
 
         Returns
         -------
-        obj:`DateTimeNano`
-            An array with length 1.
+        `DateTimeNano`
+            A `DateTimeNano` array containing the latest `DateTimeNano`
+            from the input array.
 
-        Note
-        ----
-        This returns an array, not a scalar. However, broadcasting rules will apply to operations with it.
+        See Also
+        --------
+        DateTimeNano.min, Date.min, Date.max, DateSpan.min, Datespan.max
+
+        Notes
+        -----
+        This returns an array, not a scalar. However, broadcasting rules will
+        apply to operations with it.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'],
+        ...                        from_tz='NYC', to_tz='NYC')
+        >>> dtn.max()
+        DateTimeNano(['20210101 09:31:15.000000000'], to_tz='NYC')
         """
         return DateTimeNano([self._fa.max()], from_tz="GMT", to_tz=self._timezone._to_tz)
         # return DateTimeNanoScalar(self._fa.max(), timezone=self._timezone)

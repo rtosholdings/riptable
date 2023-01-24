@@ -13,7 +13,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../riptable/"))
+sys.path.insert(0, os.path.abspath("../../"))
 
 
 # -- Project information -----------------------------------------------------
@@ -86,11 +86,21 @@ master_doc = "index"
 # Autoapi settings
 
 autoapi_dirs = ["../../riptable"]
-autoapi_ignore = ["*test*"]
+autoapi_ignore = ["*test*", "*benchmarks*"]
+
+# Remove typehints from html
+autodoc_typehints = "none"
 
 # Suppress Sphinx build warnings
 
 suppress_warnings = ["autodoc"]
+
+# Default role -- defines what to do with text surrounded by single backticks:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-default_role
+# py:obj references Python objects:
+# https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#python-roles
+
+default_role = "py:obj"
 
 # --Intersphinx configuration--------------------------------------------------
 

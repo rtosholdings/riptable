@@ -467,6 +467,46 @@ def _find_lossless_common_array_type(arr1: np.array, arr2: np.array) -> Union[np
 
 
 def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = "C") -> "FastArray":
+    """
+    Return a new array of specified shape and type, without initializing entries.
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        Shape of the empty array, e.g., ``(2, 3)`` or ``2``. Note that although
+        multi-dimensional arrays are technically supported by Riptable,
+        you may get unexpected results when working with them.
+    dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
+        The desired data type for the array.
+    order : {'C', 'F'}, default 'C'
+        Whether to store multi-dimensional data in row-major (C-style) or
+        column-major (Fortran-style) order in memory.
+
+    Returns
+    -------
+    `FastArray`
+        A new `FastArray` of uninitialized (arbitrary) data of the specified
+        shape and type.
+
+    See Also
+    --------
+    riptable.empty_like, riptable.ones, riptable.ones_like, riptable.zeros,
+    riptable.zeros_like, riptable.empty, riptable.full, Categorical.full
+
+    Notes
+    -----
+    Unlike `zeros`, `empty` doesn't set the array values to zero, so it may
+    be marginally faster. On the other hand, it requires the user to manually
+    set all the values in the array, so it should be used with caution.
+
+    Examples
+    --------
+    >>> rt.empty(5)
+    FastArray([0.  , 0.25, 0.5 , 0.75, 1.  ])  # uninitialized
+
+    >>> rt.empty(5, dtype = int)
+    FastArray([80288976,        0,        0,        0,        1])  # uninitialized
+    """
     # return LedgerFunction(np.empty, shape, dtype=dtype, order=order)
 
     # make into list of ints
@@ -492,6 +532,54 @@ def empty_like(
     subok: bool = True,
     shape: Optional[Union[int, Sequence[int]]] = None,
 ) -> "FastArray":
+    """
+    Return a new array with the same shape and type as the specified array,
+    without initializing entries.
+
+    Parameters
+    ----------
+    array : array
+        The shape and data type of `array` define the same attributes of the
+        returned array. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+    dtype : str or NumPy dtype or Riptable dtype, optional
+        Overrides the data type of the result.
+    order : {'K', C', 'F', or 'A'}, default 'K'
+        Overrides the memory layout of the result. 'K' (the default) means
+        match the layout of `array` as closely as possible. 'C' means
+        row-major (C-style); 'F' means column-major (Fortran-style); 'A'
+        means 'F' if `array` is Fortran-contiguous, 'C' otherwise.
+    subok : bool, default True
+        If True (the default), then the newly created array will use the
+        sub-class type of `array`, otherwise it will be a base-class array.
+    shape : int or sequence of ints, optional
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, it will try to keep the same order; otherwise,
+        order='C' is implied. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when
+        working with them.
+
+    Returns
+    -------
+    `FastArray`
+        A new `FastArray` of uninitialized (arbitrary) data with the same shape
+        and type as `array`.
+
+    See Also
+    --------
+    riptable.empty, riptable.ones, riptable.ones_like, riptable.zeros,
+    riptable.zeros_like, riptable.full, Categorical.full
+
+    Examples
+    --------
+    >>> a = rt.FastArray([1, 2, 3, 4])
+    >>> rt.empty_like(a)
+    FastArray([ 1814376192,  1668069856, -1994737310,   746250422])  # uninitialized
+
+    >>> rt.empty_like(a, dtype = float)
+    FastArray([0.25, 0.5 , 0.75, 1.  ])  # uninitialized
+    """
     # TODO: call recycler
 
     # NOTE: np.empty_like preserves the subclass
@@ -2276,32 +2364,47 @@ def diff(*args, **kwargs) -> FastArray:
 # -------------------------------------------------------
 def full(shape, fill_value, dtype=None, order="C") -> FastArray:
     """
-    Return a new array of given shape and type, filled with `fill_value`.
+    Return a new array of a specified shape and type, filled with a specified value.
 
     Parameters
     ----------
-    shape : int or sequence of ints
-        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
-    fill_value : scalar or array_like
-        Fill value.
-    dtype : data-type, optional
-        The desired data-type for the array  The default, None, means
-         ``np.array(fill_value).dtype``.
-    order : {'C', 'F'}, optional
-        Whether to store multidimensional data in C- or Fortran-contiguous
-        (row- or column-wise) order in memory.
+    shape : int or sequence of int
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``. Note that although
+        multi-dimensional arrays are technically supported by Riptable,
+        you may get unexpected results when working with them.
+    fill_value : scalar or array
+        Fill value. For 1-dimensional arrays, only scalar values are accepted.
+    dtype : str or NumPy dtype or Riptable dtype, optional
+        The desired data type for the array. The default is the data type that
+        would result from creating a `FastArray` with the specified `fill_value`:
+        ``rt.FastArray(fill_value).dtype``.
+    order : {'C', 'F'}, default 'C'
+        Whether to store multi-dimensional data in row-major (C-style) or
+        column-major (Fortran-style) order in memory.
 
     Returns
     -------
     `FastArray`
-        A new `FastArray` of the specified shape and type, filled with `fill_value`.
+       A new `FastArray` of the specified shape and type, filled with the
+       specified value.
 
     See Also
     --------
-    full_like : Return a new array with shape of input filled with value.
-    empty : Return a new uninitialized array.
-    ones : Return a new array setting values to one.
-    zeros : Return a new array setting values to zero.
+    Categorical.full, riptable.ones, riptable.ones_like, riptable.zeros,
+    riptable.zeros_like, riptable.empty, riptable.empty_like
+
+    Examples
+    --------
+    >>> rt.full(5, 2)
+    FastArray([2, 2, 2, 2, 2])
+
+    >>> rt.full(5, 2.0)
+    FastArray([2., 2., 2., 2., 2.])
+
+    Specify a data type:
+
+    >>> rt.full(5, 2, dtype = float)
+    FastArray([2., 2., 2., 2., 2.])
     """
     result = LedgerFunction(np.full, shape, fill_value, dtype=dtype, order=order)
     if hasattr(fill_value, "newclassfrominstance"):
@@ -4208,7 +4311,54 @@ def vstack(arrlist, dtype=None, order="C"):
 
 # ------------------------------------------------------------
 def repeat(a, repeats, axis=None):
-    """see np.repeat"""
+    """
+    Construct an array in which each element of a specified array is repeated
+    consecutively a specified number of times.
+
+    Parameters
+    ----------
+    a : array or scalar
+        The input array or scalar. Each element will be repeated consecutively
+        `repeats` times. If no `axis` is specified, multi-dimensional arrays are
+        flattened and a flattened array is returned.
+    repeats : int or array of int
+        The number of consecutive repetitions for each element of `a`. If an
+        `axis` is specified, the elements are repeated along that axis.
+    axis : int, optional
+        The axis along which to repeat the values. If no axis is specified, the
+        input array is flattened and a flattened array is returned. For examples
+        of repeats of multi-dimensional arrays, see :py:func:`numpy.repeat`. Note that
+        although multi-dimensional arrays are technically supported by Riptable,
+        you may get unexpected results when working with them.
+
+    Returns
+    -------
+    `FastArray`
+        A new `FastArray` that has the same shape as `a`, except along the given
+        axis.
+
+    See Also
+    --------
+    riptable.tile : Construct an array by repeating a specified array.
+
+    Examples
+    --------
+    Repeat a scalar:
+
+    >>> rt.repeat(2, 5)
+    FastArray([2, 2, 2, 2, 2])
+
+    Repeat each element of an array:
+
+    >>> x = rt.FastArray([1, 2, 3, 4])
+    >>> rt.repeat(x, 2)
+    FastArray([1, 1, 2, 2, 3, 3, 4, 4])
+
+    Use an array for `repeats`:
+
+    >>> rt.repeat(x, [1, 2, 3, 4])
+    FastArray([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    """
     # similar bug as tile, calls reshape which maintains class, but kills attributes
     if isinstance(a, TypeRegister.FastArray):
         result = np.repeat(a._np, repeats, axis=axis).view(TypeRegister.FastArray)
@@ -4218,7 +4368,43 @@ def repeat(a, repeats, axis=None):
 
 # ------------------------------------------------------------
 def tile(arr, reps):
-    """see np.tile"""
+    """
+    Construct an array by repeating a specified array a specified number of
+    times.
+
+    Parameters
+    ----------
+    a : array or scalar
+        The input array or scalar.
+    reps: int or array of int
+        The number of repetitions of `a` along each axis. For examples of `tile`
+        used with multi-dimensional arrays, see :py:func:`numpy.tile`. Note that
+        although multi-dimensional arrays are technically supported by Riptable,
+        you may get unexpected results when working with them.
+
+    Returns
+    -------
+    `FastArray`
+        A new `FastArray` of the repeated input arrays.
+
+    See Also
+    --------
+    riptable.repeat :
+        Construct an array by repeating each element of a specified array.
+
+    Examples
+    --------
+    Tile a scalar:
+
+    >>> rt.tile(2, 5)
+    FastArray([2, 2, 2, 2, 2])
+
+    Tile an array:
+
+    >>> x = rt.FA([1, 2, 3, 4])
+    >>> rt.tile(x, 2)
+    FastArray([1, 2, 3, 4, 1, 2, 3, 4])
+    """
     if isinstance(arr, TypeRegister.FastArray):
         # bug in tile, have to flip to normal numpy array first)
         result = np.tile(arr._np, reps).view(TypeRegister.FastArray)

@@ -64,6 +64,7 @@ tests_reqs = [
     "matplotlib",
     "nose",
     "pyarrow",
+    "pymoo",
     "pytest",
     "pytest-cov",
 ]
