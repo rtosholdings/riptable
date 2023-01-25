@@ -187,7 +187,7 @@ For example::
     >>> a = rt.FastArray([1.0, 3.0, 5.0, 7.0])
     >>> rt.sum(a)
     16.0
-    File:      c:\\miniconda3\\envs\\johnsonc_py39\\lib\\site-packages\\riptable-1.3.6-py3.9.egg\\riptable\\rt_numpy.py
+    File:      c:\\riptable\\rt_numpy.py
     Type:      function
 
 
@@ -297,7 +297,7 @@ You can access the source code with ``??``::
         if hasattr(args[0], 'sum'):
             return args[0].sum(*args[1:], **kwargs)
         return builtins.sum(*args,**kwargs)
-    File:      c:\\miniconda3\\envs\\johnsonc_py39\\lib\\site-packages\\riptable-1.3.6-py3.9.egg\\riptable\\rt_numpy.py
+    File:      c:\\riptable\\rt_numpy.py
     Type:      function
 
 Dataset Display Options

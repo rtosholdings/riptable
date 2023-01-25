@@ -209,22 +209,37 @@ class Struct:
     # ------------------------------------------------------------
     def is_valid_colname(self, name):
         """
-        Checks if item's name is a valid column name.
-        Restricted names include python keywords and class method names.
+        Check whether a string is a valid column name.
+
+        Python keywords and `Struct` or `.Dataset` class method names are not
+        valid column names.
+
+        To see a list of invalid column names, use `get_restricted_names`.
 
         Parameters
         ----------
-        name: String
-            to be checked for validity as a Struct 'column' name.
+        name: str
+            The string to be checked.
 
         Returns
         -------
         bool
-            True of `name` is valid, otherwise False.
+            True if `name` is valid, otherwise False.
 
         See Also
         --------
-        Struct.get_restricted_names
+        get_restricted_names : Get a list of invalid column names.
+
+        Examples
+        --------
+        >>> ds.is_valid_colname('yield')  # Python keyword
+        False
+        >>> ds.is_valid_colname('sample')  # Dataset method
+        False
+        >>> ds.is_valid_colname('Yield')  # OK because keywords are case-sensitive
+        True
+        >>> ds.is_valid_colname('Sample')  # Method names are also case-sensitive
+        True
         """
         if len(name) < 1:
             return False
@@ -249,19 +264,35 @@ class Struct:
     # ------------------------------------------------------------
     def get_restricted_names(self):
         """
-        Returns list of tokens which are ineligible for use as 'column' names;
-        for example, python keywords and class method names.
-        This method only generates the result once. Afterwards, it is stored as a class variable.
+        Return a list of invalid column names.
+
+        Invalid column names are Python keywords and `Struct` or `.Dataset`
+        class method names.
+
+        This method generates the result only once. Afterward, it is stored as
+        a class variable.
 
         Returns
         -------
-        obj:`set`
-            All invalid name tokens.
+        set
+            A set of strings that are invalid column names.
 
         See Also
         --------
-        Struct.is_valid_colname
+        is_valid_colname : Check whether a string is a valid column name.
 
+        Examples
+        --------
+        >>> # Limit and format the output.
+        >>> print("Some of the restricted names include: ")
+        >>> print(", ".join(list(ds.get_restricted_names())[::10]))
+        Some of the restricted names include: mask_or_isinf, __reduce_ex__,
+        imatrix_xy, __weakref__, dtypes, _get_columns, from_arrow, elif,
+        __imul__, _deleteitem, __rsub__, _index_from_row_labels, as_matrix,
+        putmask, _as_meta_data, shape, cat, __invert__, try, _init_columns_as_dict,
+        label_as_dict, col_str_replace, _replaceitem, label_set_names, __contains__,
+        __floordiv__, _row_numbers, filter, __init__, sorts_on, flatten_undo,
+        col_str_match, __dict__, size, __rand__, info, col_remove, as, or
         """
         try:
             rnames = self.__class__._restricted_names[self.__class__.__name__]
@@ -3197,6 +3228,17 @@ class Struct:
         """
         Rename a single column.
 
+        The new name must be a valid column name; that is, it must not be a
+        Python keyword or a `Struct` or `.Dataset` class method name.
+
+        To check whether a name is valid, use `is_valid_colname`. To see a list
+        of invalid column names, use `get_restricted_names`.
+
+        Note that column names that don't meet Python's rules for well-formed
+        variable names can't be accessed using attribute access. For example,
+        a column named 'my-column' can't be accessed with ``ds.my-column``, but
+        can be accessed with ``ds['my-column']``.
+
         Parameters
         ----------
         old : str
@@ -3208,28 +3250,27 @@ class Struct:
         -------
         None
 
+        See Also
+        --------
+        is_valid_colname : Check whether a string is a valid column name.
+        get_restricted_names : Get a list of invalid column names.
+
         Examples
         --------
-        >>> ds = rt.Dataset({'a': np.random.rand(5), 'b': rt.arange(5)})
-        >>> ds.sort_view('a')
-        #      a   b
-        -   ----   -
-        0   0.20   2
-        1   0.48   3
-        2   0.53   4
-        3   0.66   1
-        4   0.83   0
-
+        >>> ds = rt.Dataset({'a': [1, 2, 3]), 'b': [4.0, 5.0, 6.0]})
+        >>> ds
+        #   a      b
+        -   -   ----
+        0   1   4.00
+        1   2   5.00
+        2   3   6.00
         >>> ds.col_rename('a', 'new_a')
         >>> ds
-        #   new_a   b
-        -   -----   -
-        0    0.20   2
-        1    0.48   3
-        2    0.53   4
-        3    0.66   1
-        4    0.83   0
-
+        #   new_a      b
+        -   -----   ----
+        0       1   4.00
+        1       2   5.00
+        2       3   6.00
         """
         if old == new:
             return

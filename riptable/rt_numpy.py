@@ -2283,6 +2283,71 @@ def any(*args, **kwargs) -> bool:
 
 # -------------------------------------------------------
 def arange(*args, **kwargs) -> "FastArray":
+    """
+    Return an array of evenly spaced values within a specified interval.
+
+    The half-open interval includes `start` but excludes `stop`: ``[start, stop)``.
+
+    For integer arguments the function is roughly equivalent to the Python
+    built-in :py:obj:`range`, but returns a `FastArray` rather than a
+    :py:obj:`range` instance.
+
+    When using a non-integer step, such as 0.1, it's often better to use
+    :py:func:`numpy.linspace`.
+
+    For additional warnings, see :py:func:`numpy.arange`.
+
+    Parameters
+    ----------
+    start : int or float, default 0
+        Start of interval. The interval includes this value.
+    stop : int or float
+        End of interval. The interval does not include this value, except in
+        some cases where `step` is not an integer and floating point round-off
+        affects the length of the output.
+    step : int or float, default 1
+        Spacing between values. For any output `out`, this is the distance
+        between two adjacent values: ``out[i+1] - out[i]``. If `step`
+        is specified as a positional argument, `start` must also be given.
+    dtype : str or NumPy dtype or Riptable dtype, optional
+        The type of the output array. If `dtype` is not given, the data type
+        is inferred from the other input arguments.
+    like : array_like, optional
+        Reference object to allow the creation of arrays that are not NumPy
+        arrays. If an array-like passed in as `like` supports the
+        ``__array_function__`` protocol, the result will be defined by it.
+        In this case, it ensures the creation of an array object compatible
+        with that passed in via this argument.
+
+    Returns
+    -------
+    `FastArray`
+        A `FastArray` of evenly spaced numbers within the specified interval.
+        For floating point arguments, the length of the result is
+        ``ceil((stop - start)/step)``. Because of floating point overflow,
+        this rule may result in the last element of the output being greater
+        than `stop`.
+
+    See Also
+    --------
+    numpy.arange, riptable.ones, riptable.ones_like, riptable.zeros,
+    riptable.zeros_like, riptable.empty, riptable.empty_like, riptable.full,
+    riptable.arange, Categorical.full
+
+    Examples
+    --------
+    >>> rt.arange(3)
+    FastArray([0, 1, 2])
+
+    >>> rt.arange(3.0)
+    FastArray([ 0.,  1.,  2.])
+
+    >>> rt.arange(3, 7)
+    FastArray([3, 4, 5, 6])
+
+    >>> rt.arange(3, 7, 2)
+    FastArray([3, 5])
+    """
     return LedgerFunction(np.arange, *args, **kwargs)
 
 
