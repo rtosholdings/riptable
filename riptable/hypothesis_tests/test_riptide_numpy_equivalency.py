@@ -79,7 +79,7 @@ Commonalities between riptable and numpy
 
 
 class TestRiptableNumpyEquivalency:
-    @pytest.mark.xfail(reason="https://jira/browse/SOQTEST-6479 abs calls np.abs instead of rt.absolute")
+    @pytest.mark.xfail(reason="SOQTEST-6479 abs calls np.abs instead of rt.absolute")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(arr_and_where=generate_array_and_where(shape=ndarray_shape_strategy(), dtype=ints_or_floats_dtypes()))
     def test_abs(self, arr_and_where):
@@ -115,7 +115,7 @@ class TestRiptableNumpyEquivalency:
         # TODO: Add assertions for rt_output and np_output -- what are they expected to return when the 'out' parameter is specified?
         # assert isinstance(rt_output, FastArray, msg="riptable.abs() did not return a FastArray")
 
-    @pytest.mark.xfail(reason="https://jira/browse/RIP-357 discrepency between rt.absolute and np.absolute")
+    @pytest.mark.xfail(reason="RIP-357 discrepency between rt.absolute and np.absolute")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(arr_and_where=generate_array_and_where(shape=ndarray_shape_strategy(), dtype=ints_or_floats_dtypes()))
     def test_absolute(self, arr_and_where):
@@ -226,7 +226,7 @@ class TestRiptableNumpyEquivalency:
             assert isinstance(rt_arange, FastArray)
 
     # TODO: Delete this test once SOQTEST-6495 is resolved. This way arange's main functionality can still be tested
-    @pytest.mark.xfail(reason="https://jira/browse/SOQTEST-6495 kwargs not implemented in riptable.arange()")
+    @pytest.mark.xfail(reason="SOQTEST-6495 kwargs not implemented in riptable.arange()")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(start_stop_step_strategy())
     def test_arange_kwargs(self, start_stop_step):
@@ -272,9 +272,7 @@ class TestRiptableNumpyEquivalency:
                 assert isinstance(rt_argsort, FastArray)
                 assert_array_equal_(np.array(rt_argsort), np_argsort)
 
-    @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6497 riptable.bincount returns numpy array instead of FastArray"
-    )
+    @pytest.mark.xfail(reason="SOQTEST-6497 riptable.bincount returns numpy array instead of FastArray")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         arr=arrays(dtype=integer_dtypes(), shape=ndarray_shape_strategy(max_rank=1)),
@@ -305,7 +303,7 @@ class TestRiptableNumpyEquivalency:
             assert_array_equal_(np.array(rt_bincount), np_bincount)
             assert isinstance(rt_bincount, FastArray)
 
-    @pytest.mark.xfail(reason="Related to https://jira/browse/SOQTEST-6478 different endiannesses not handled")
+    @pytest.mark.xfail(reason="Related to SOQTEST-6478 different endiannesses not handled")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         data=data(),
@@ -534,7 +532,7 @@ class TestRiptableNumpyEquivalency:
             assert not np.isfortran(rt_empty)
 
     # TODO pull the non-subok parts so these are running tests
-    @pytest.mark.xfail(reason="https://jira/browse/SOQTEST-6563 riptable does not implement subok")
+    @pytest.mark.xfail(reason="SOQTEST-6563 riptable does not implement subok")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         arr=arrays(shape=ndarray_shape_strategy(), dtype=ints_floats_datetimes_and_timedeltas()),
@@ -621,7 +619,7 @@ class TestRiptableNumpyEquivalency:
             assert_equal_(rt_sqrt, np_sqrt)
             assert isinstance(rt_sqrt, type(np_sqrt))
 
-    @pytest.mark.xfail(reason="Related to https://jira/browse/SOQTEST-6478 different endiannesses not handled")
+    @pytest.mark.xfail(reason="Related to SOQTEST-6478 different endiannesses not handled")
     @given(
         data=data(),
         arr=arrays(shape=ndarray_shape_strategy(), dtype=floating_dtypes(sizes=(32, 64))),
@@ -705,7 +703,7 @@ class TestRiptableNumpyEquivalency:
         assert np.isfortran(rt_full) == np.isfortran(np_full)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6495 kwargs not implemented in riptable.full()",
+        reason="SOQTEST-6495 kwargs not implemented in riptable.full()",
         raises=ValueError,
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1192,7 +1190,7 @@ class TestRiptableNumpyEquivalency:
         # assert isinstance(rt_output, FastArray)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6497 Riptable.nan_to_num() does not return a FastArray",
+        reason="SOQTEST-6497 Riptable.nan_to_num() does not return a FastArray",
         raises=AssertionError,
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1234,7 +1232,7 @@ class TestRiptableNumpyEquivalency:
     #         assert_allclose(rt_nanpercentile, np_nanpercentile)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6497 Riptable.nanpercentile() does not return a FastArray",
+        reason="SOQTEST-6497 Riptable.nanpercentile() does not return a FastArray",
         raises=AssertionError,
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1255,8 +1253,8 @@ class TestRiptableNumpyEquivalency:
                 assert isinstance(rt_output, FastArray)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nanstd will be an available attribute\n"
-        "https://jira/browse/SOQTEST-6497 Riptable.nanstd() does not return a FastArray",
+        reason="SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nanstd will be an available attribute\n"
+        "SOQTEST-6497 Riptable.nanstd() does not return a FastArray",
         raises=(AttributeError, AssertionError),
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1278,7 +1276,7 @@ class TestRiptableNumpyEquivalency:
             assert isinstance(rt_output, FastArray)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nansum will be an available attribute\n"
+        reason="SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nansum will be an available attribute\n"
         "nansum does not implement the axis argument either",
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1302,7 +1300,7 @@ class TestRiptableNumpyEquivalency:
         if axis:
             assert isinstance(rt_output, FastArray)
 
-    # The floats should have the same byte-order as the machine at the moment (https://jira/browse/SOQTEST-6478) -> endianness="="
+    # The floats should have the same byte-order as the machine at the moment (SOQTEST-6478) -> endianness="="
     # and riptable only officially supports float32 and float64 floating-point datatypes, so using other ones occasionally
     # leads to errors.
     # Split up ints and floats to ensure the same datatypes for widening. (int->int64, float->float64)
@@ -1322,11 +1320,9 @@ class TestRiptableNumpyEquivalency:
         np_output = np.nansum(arr, axis=None, dtype=np.float64)
         assert_allclose(rt_output, np_output)
 
-    # The floats should have the same byte-order as the machine at the moment (https://jira/browse/SOQTEST-6478) -> endianness="="
+    # The floats should have the same byte-order as the machine at the moment (SOQTEST-6478) -> endianness="="
     # Split up ints and floats to ensure the same datatypes for widening. (int->int64, float->float64)
-    @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6670 Nansum does not follow the dtype argument and returns a float64"
-    )
+    @pytest.mark.xfail(reason="SOQTEST-6670 Nansum does not follow the dtype argument and returns a float64")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         arr=arrays(
@@ -1343,8 +1339,8 @@ class TestRiptableNumpyEquivalency:
         assert_allclose(rt_output, np_output)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nanvar will be an available attribute\n"
-        "https://jira/browse/SOQTEST-6497 Riptable.nanvar() does not return a FastArray",
+        reason="SOQTEST-6637 Riptable does not convert the array to a FastArray, so it does not guarantee nanvar will be an available attribute\n"
+        "SOQTEST-6497 Riptable.nanvar() does not return a FastArray",
         raises=(AttributeError, AssertionError),
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1381,7 +1377,7 @@ class TestRiptableNumpyEquivalency:
         else:
             assert not np.isfortran(rt_ones)
 
-    @pytest.mark.xfail(reason="https://jira/browse/SOQTEST-6495 kwargs not implemented in riptable.ones")
+    @pytest.mark.xfail(reason="SOQTEST-6495 kwargs not implemented in riptable.ones")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         shape=ndarray_shape_strategy(),
@@ -1403,7 +1399,7 @@ class TestRiptableNumpyEquivalency:
         else:
             assert not np.isfortran(rt_ones)
 
-    @pytest.mark.xfail(reason="https://jira/browse/SOQTEST-6563 riptable does not implement subok")
+    @pytest.mark.xfail(reason="SOQTEST-6563 riptable does not implement subok")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         arr=arrays(shape=ndarray_shape_strategy(), dtype=ints_floats_datetimes_and_timedeltas()),
@@ -1450,7 +1446,7 @@ class TestRiptableNumpyEquivalency:
             assert_allclose(rt_output, np_output)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6497 Riptable.percentile() does not return a FastArray",
+        reason="SOQTEST-6497 Riptable.percentile() does not return a FastArray",
         raises=AssertionError,
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1470,7 +1466,7 @@ class TestRiptableNumpyEquivalency:
                 assert isinstance(rt_output, FastArray)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6497 Riptable.putmask does not cast input to a FastArray",
+        reason="SOQTEST-6497 Riptable.putmask does not cast input to a FastArray",
         raises=AssertionError,
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
@@ -1510,7 +1506,7 @@ class TestRiptableNumpyEquivalency:
         # 1) np.quantile would need to support riptable's fraction method
         # 2) rt.quantile would need to support numpy's linear, midpoint, and nearest methods
         # Numpy quantile reference https://docs.scipy.org/doc/numpy/reference/generated/numpy.quantile.html
-        # Tracked in Jira https://jira/browse/RIP-344
+        # Tracked in Jira RIP-344
         interpolations = ["lower", "higher"]
         for interpolation in interpolations:
             q = random.random()
@@ -1561,12 +1557,12 @@ class TestRiptableNumpyEquivalency:
             assert isinstance(rt_reshape, FastArray)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6530 riptable.round() does not return FastArray and decimals arg not yet implemented"
+        reason="SOQTEST-6530 riptable.round() does not return FastArray and decimals arg not yet implemented"
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(arr=arrays(shape=ndarray_shape_strategy(), dtype=floating_dtypes(sizes=(32, 64))))
     def test_round_array(self, arr):
-        # TODO: Use range of decimals once https://jira/browse/SOQTEST-6530 is addressed
+        # TODO: Use range of decimals once SOQTEST-6530 is addressed
         decimals = [0]
         # decimals = range(-5, 100)
 
@@ -1579,12 +1575,12 @@ class TestRiptableNumpyEquivalency:
             assert isinstance(rt_output, FastArray)
 
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6530 should fail on +/-inf, and [-0.5,-0], since riptable.round calls builtin round. Decimals arg also not yet implemented"
+        reason="SOQTEST-6530 should fail on +/-inf, and [-0.5,-0], since riptable.round calls builtin round. Decimals arg also not yet implemented"
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(scalar=floating_scalar())
     def test_round_scalar(self, scalar):
-        # TODO: Use range of decimals once https://jira/browse/SOQTEST-6530 is addressed
+        # TODO: Use range of decimals once SOQTEST-6530 is addressed
         decimals = [0]
         # decimals = range(-5, 100)
         for decimal in decimals:
@@ -1674,7 +1670,7 @@ class TestRiptableNumpyEquivalency:
         rt_result = rt.tile(arr, shape)
         assert_array_equal_(rt_result, np_result)
 
-    @pytest.mark.xfail(reason="https://jira/browse/RIP-358 discrepency between rt.trunc and np.trunc")
+    @pytest.mark.xfail(reason="RIP-358 discrepency between rt.trunc and np.trunc")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         data=data(),
@@ -1811,7 +1807,7 @@ class TestRiptableNumpyEquivalency:
 
     @hypothesis.settings(suppress_health_check=[HealthCheck.too_slow])
     @pytest.mark.xfail(
-        reason="https://jira/browse/SOQTEST-6548 Riptable.vstack transposes arrays with shape (x,) and multiple (1,1)s. vstack also does not convert non-numbers to a FastArray"
+        reason="SOQTEST-6548 Riptable.vstack transposes arrays with shape (x,) and multiple (1,1)s. vstack also does not convert non-numbers to a FastArray"
     )
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(tuple_of_arrays=generate_tuples_of_arrays(all_same_width=True))
@@ -1887,7 +1883,7 @@ class TestRiptableNumpyEquivalency:
         else:
             assert not np.isfortran(rt_zeros)
 
-    @pytest.mark.xfail(reason="https://jira/browse/SOQTEST-6495 kwargs not implemented in riptable.zeros")
+    @pytest.mark.xfail(reason="SOQTEST-6495 kwargs not implemented in riptable.zeros")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         shape=ndarray_shape_strategy(),
@@ -1909,7 +1905,7 @@ class TestRiptableNumpyEquivalency:
         else:
             assert not np.isfortran(rt_zeros)
 
-    @pytest.mark.xfail(reason="https://jira/browse/SOQTEST-6563 riptable does not implement subok")
+    @pytest.mark.xfail(reason="SOQTEST-6563 riptable does not implement subok")
     @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
     @given(
         arr=arrays(shape=ndarray_shape_strategy(), dtype=ints_floats_datetimes_and_timedeltas()),

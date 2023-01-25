@@ -147,7 +147,7 @@ def ints_floats_and_complex_numbers(draw):
 @composite
 def ints_floats_or_complex_dtypes(draw):
     # Endianness needs to be specified for now, otherwise the byte-order may get flipped
-    # https://jira/browse/SOQTEST-6478
+    # SOQTEST-6478
     dtypes = (
         unsigned_integer_dtypes(endianness="="),
         integer_dtypes(endianness="="),
@@ -160,7 +160,7 @@ def ints_floats_or_complex_dtypes(draw):
 @composite
 def ints_or_floats_dtypes(draw):
     # Endianness needs to be specified for now, otherwise the byte-order may get flipped
-    # https://jira/browse/SOQTEST-6478
+    # SOQTEST-6478
     # Half floats are not supported.
     dtypes = (
         unsigned_integer_dtypes(endianness="="),

@@ -3,10 +3,9 @@ from __future__ import annotations
 __all__ = ["GroupByOps"]
 import logging
 import warnings
-
-# import abc
-from typing import TYPE_CHECKING, Optional, cast, List, Any
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 import numpy as np
 import riptide_cpp as rc
@@ -19,9 +18,9 @@ from .rt_enum import (
     ApplyType,
     TypeRegister,
 )
-from .rt_grouping import Grouping
-from .rt_numpy import zeros_like, bool_to_fancy, empty_like, groupbyhash, gb_np_quantile
 from .rt_groupbykeys import GroupByKeys
+from .rt_grouping import Grouping
+from .rt_numpy import bool_to_fancy, empty_like, gb_np_quantile, groupbyhash, zeros_like
 from .rt_utils import rolling_quantile_funcParam
 
 if TYPE_CHECKING:
@@ -30,16 +29,14 @@ if TYPE_CHECKING:
 
 # =====================================================================================================
 # =====================================================================================================
-class GroupByOps(object):
+class GroupByOps(ABC):
     """
     Holds all the functions for groupby
 
     Only used when inherited
-    Child class must have self.grouping
 
-    Child class must override apply() func --> internal_apply
-    Child class must override count()
-    Child class must have its own _calculate_all
+    Child class must set self.grouping and self._dataset
+    Child class must also override methods; count, _calculate_all, and the property; gb_keychain
     """
 
     DebugMode = False
@@ -71,17 +68,17 @@ class GroupByOps(object):
         "amax": "max",
     }
 
-    # TODO: Consider making GroupByOps an abc, and defining .grouping as a property;
-    #       that'll be a bit cleaner and more robust than using a type annotation here
-    #       to indicate the derived classes are expected to have a property/attribute
-    #       with that name (per the docstring for GroupByOps).
-    #       Maybe also include 'gb_keychain' and '_dataset', they're both used within this class.
-    grouping: Grouping
-    gb_keychain: GroupByKeys
+    grouping: Grouping  # must be set in any child instances.  mypy could be used to verify this.
+    _dataset: Optional[Dataset]
 
     def __init__(self):
         self._gbkeys = None
         self._groups = None
+
+    @property
+    @abstractmethod
+    def gb_keychain(self) -> GroupByKeys:
+        pass
 
     # ---------------------------------------------------------------
     @classmethod
@@ -506,8 +503,9 @@ class GroupByOps(object):
         return list(gbkeys.values())[0]
 
     # ---------------------------------------------------------------
+    @abstractmethod
     def _calculate_all(self, funcNum, *args, func_param=0, gbkeys=None, isortrows=None, **kwargs) -> Dataset:
-        raise TypeError("_calculate_all should have been overriden!")
+        pass
 
     # ---------------------------------------------------------------
     @staticmethod
@@ -1043,12 +1041,10 @@ class GroupByOps(object):
         return kwargs
 
     # ---------------------------------------------------------------
+    @abstractmethod
     def count(self):
         """Compute count of group"""
-        raise ValueError("subclass must take over count")
-        # make a new dataset with the same number of rows
-        # origdict = self._dataset.as_ordered_dictionary()
-        # return self.grouping.count(gbkeys, isortrows)
+        pass
 
     # ---------------------------------------------------------------
     def sum(

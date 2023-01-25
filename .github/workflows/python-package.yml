@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.x"
       - name: Install dependencies
@@ -105,7 +105,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install setuptools wheel twine
       - name: Download build artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build-artifacts
           path: dist/
@@ -186,7 +186,7 @@ jobs:
         run: |
           conda install anaconda-client -q -y
       - name: Download build artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: conda-build-artifacts
           path: conda_pkgs_output/

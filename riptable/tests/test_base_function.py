@@ -47,7 +47,7 @@ class TestCat2Keys:
 
 class TestQuantile:
     def test_unsupported_half_float_dtype(self):
-        # Related Jira issue: https://jira/browse/RIP-341
+        # Related Jira issue: RIP-341
         arr = np.zeros(shape=(2,), dtype=np.float16)
         with pytest.raises(SystemError):
             rt.quantile(arr, 0, "lower")
