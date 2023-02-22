@@ -3029,6 +3029,10 @@ class GroupByOps(ABC):
         A single array, same size as the original grouping dict/categorical.
         If a filter was applied, integer sentinels will appear in those slots.
         """
+
+        if kwargs.get("transform", False):
+            raise (ValueError("You can't pass transform=True to cumcount."))
+
         param = 1
 
         if not ascending:
@@ -3056,6 +3060,9 @@ class GroupByOps(ABC):
         if filter is None:
             filter = self._filter
 
+        if kwargs.get("transform", False):
+            raise (ValueError("You can't pass transform=True to cumsum."))
+
         return self._calculate_all(
             GB_FUNCTIONS.GB_CUMSUM, *args, func_param=(0.0, None, filter, reset_filter), **kwargs
         )
@@ -3075,6 +3082,9 @@ class GroupByOps(ABC):
         """
         if filter is None:
             filter = self._filter
+
+        if kwargs.get("transform", False):
+            raise (ValueError("You can't pass transform=True to cumprod."))
 
         return self._calculate_all(
             GB_FUNCTIONS.GB_CUMPROD, *args, func_param=(0.0, None, filter, reset_filter), **kwargs

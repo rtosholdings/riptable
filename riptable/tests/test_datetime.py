@@ -2712,6 +2712,20 @@ def test_new_from_template(obj):
     assert len(missing) == 0, f"Not found: {missing}"
 
 
+def test_random_start_end():
+    start = 1980
+    end = 1990
+    dtn = DateTimeNano.random(5, from_tz="NYC", to_tz="NYC", start=start, end=end)
+    result_lower_bound = DateTimeNano(((start - 1970) * NANOS_PER_YEAR), from_tz="NYC", to_tz="NYC")
+    result_upper_bound = DateTimeNano(((end - 1970) * NANOS_PER_YEAR), from_tz="NYC", to_tz="NYC")
+    assert bool(
+        np.all(dtn >= result_lower_bound)
+    ), f"The returned DateTimeNano contains at least one date that's earlier than {result_lower_bound}."
+    assert bool(
+        np.all(dtn < result_upper_bound)
+    ), f"The returned DateTimeNano contains at least one date that's equal to or later than {result_upper_bound}."
+
+
 @pytest.mark.parametrize(
     "cls,arr",
     [

@@ -861,9 +861,12 @@ class DateBase(FastArray):
         self._display_length = obj._display_length if from_peer else DisplayLength.Long
 
     # ------------------------------------------------------------
-    def strftime(self, format, dtype="O"):
+    # DateBase
+    # For Date and DateSpan (though DateSpan will be deprecated)
+    def _strftime(self, format, dtype="O"):
         """
-        Convert each `Date` element to a formatted string representation.
+        Convert each `Date` or `DateSpan` element to a formatted string
+        representation.
 
         For `DateSpan` objects, see the Notes below.
 
@@ -873,9 +876,9 @@ class DateBase(FastArray):
             One or more format codes supported by the
             :py:meth:`datetime.date.strftime` function of the standard
             Python distribution. For codes, see
-            :ref:`python:strftime-and-strptime-format-codes`.
+            :ref:`python:strftime-strptime-behavior`.
         dtype : {"O", "S", "U"}, default "O"
-            The data type of the returned array.
+            The data type of the returned array:
 
             - "O": object string
             - "S": byte string
@@ -888,24 +891,35 @@ class DateBase(FastArray):
 
         See Also
         --------
-        DateScalar.strftime, Date.strftime, DateSpan.strftime,
+        Date.strftime, DateSpan.strftime, DateScalar.strftime
         DateTimeNano.strftime, DateTimeNanoScalar.strftime, TimeSpan.strftime,
         TimeSpanScalar.strftime
 
         Notes
         -----
-        This routine has not been sped up yet.
+        This routine has not been sped up yet. It's also not NaN-aware: NaNs
+        are converted to the date of the epoch (01-01-1970), then formatted.
 
-        This method is available for `DateSpan` objects, but because they are
-        converted to timestamps relative to the epoch (for example, a `DateSpan`
-        of "2 days" is converted to "01/03/70"), you may need to adjust the
-        data before calling this method.
+        `DateSpan` objects are converted to timestamps relative to the epoch
+        before they're formatted (for example, a `DateSpan` of "2 days" is
+        converted to 01-03-1970), so you may need to adjust the data before
+        calling this method on them. Negative `DateSpan` values (for example,
+        "-10 days") can't be formatted with this method.
 
         Examples
         --------
         >>> d = rt.Date(['20210101', '20210519', '20220308'])
         >>> d.strftime('%D')
         array(['01/01/21', '05/19/21', '03/08/22'], dtype=object)
+
+        `DateSpan` objects are converted to timestamps relative to the epoch
+        (01-01-70) before they're formatted, so use with caution.
+
+        >>> ds = d - rt.Date('20201230')
+        >>> ds
+        DateSpan(['1 day', '139 days', '432 days'])
+        >>> ds.strftime('%D')
+        array(['01/02/70', '05/20/70', '03/09/71'], dtype=object)
         """
         if isinstance(self, np.ndarray):
             return np.asarray(
@@ -1308,6 +1322,49 @@ class Date(DateBase, TimeStampBase):
     # ------------------------------------------------------------
     def __init__(self, arr, from_matlab=False, format=None):
         pass
+
+    # ------------------------------------------------------------
+    # Date
+    def strftime(self, format, dtype="O"):
+        """
+        Convert each `Date` element to a formatted string representation.
+
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.date.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+        dtype : {"O", "S", "U"}, default "O"
+            The data type of the returned array elements:
+
+            - "O": object string
+            - "S": byte string
+            - "U": unicode string
+
+        Returns
+        -------
+        `ndarray`
+            An `ndarray` of strings.
+
+        See Also
+        --------
+        DateScalar.strftime, DateTimeNano.strftime, DateTimeNanoScalar.strftime,
+        TimeSpan.strftime, TimeSpanScalar.strftime
+
+        Notes
+        -----
+        This routine has not been sped up yet. It's also not NaN-aware: NaNs
+        are converted to the timestamp of the epoch (01-01-1970), then formatted.
+
+        Examples
+        --------
+        >>> d = rt.Date(['20210101', '20210519', '20220308'])
+        >>> d.strftime('%D')
+        array(['01/01/21', '05/19/21', '03/08/22'], dtype=object)
+        """
+        return self._strftime(format, dtype=dtype)
 
     # ------------------------------------------------------------
     def get_scalar(self, scalarval):
@@ -1900,43 +1957,80 @@ class Date(DateBase, TimeStampBase):
     @classmethod
     def range(cls, start, end=None, days=None, step=1, format=None, closed=None):
         """
-        Returns a Date object of dates from start date to end date.
+        Return a `Date` object of dates within a given interval, spaced
+        by `step`.
+
+        Note: Either `end` or `days` must be provided, but providing both
+        results in unexpected behavior. In future versions, an error will be
+        raised.
 
         Parameters
         ----------
-        start : str or int
-            Start date in int format YYYYMMDD, or string in ``format``.
-        end : str or int, optional
-            Start date in int format YYYYMMDD, or string in ``format``.
-            If not specified, days is required.
-        days : int, optional (required if ``end`` is None)
-            Number of days to generate.
-        step : int, optional, default 1
-            Spacing between date values.
+        start : int or str
+            Start date as an integer (YYYYMMDD) or string. If the string is not
+            in 'YYYYMMDD' format, `format` is required.
+        end : int or str, optional
+            End date as an integer (YYYYMMDD) or string. If the string is not
+            in 'YYYYMMDD' format, `format` is required. If `end` is not
+            provided, the number of dates to generate must be specified
+            with `days`.
+        days : int, optional
+            Instead of using `end`, use `days` to specify the number of
+            dates to generate. Required if `end` isn't provided. Providing
+            both `end` and `days` results in unexpected behavior.
+        step : int, default 1
+            The number of days between generated dates.
         format : str, optional
-            Format to convert start/end values if they are string
-        closed : `left`, `right`, or None (default)
-            If `left`, omit the end date.
-            If `right`, omit the start date.
-            If None, include both.
-            Only applies when constructing from start, end date with step of 1.
+            For a string `start` or `end` value, one or more format codes
+            supported by the :py:meth:`datetime.strptime` function of the
+            standard Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`. The format code is used
+            to parse the string representation and convert it to a `Date`
+            element.
+        closed : {None, 'left', 'right'}, default None
+            Determines whether the `start` and `end` dates are included in the
+            result. Applies only when `start` and `end` are specified and ``step=1``.
 
-        Examples
-        --------
-        >>> Date.range('2019-02-01', '2019-02-07')
-        Date([2019-02-01, 2019-02-02, 2019-02-03, 2019-02-04, 2019-02-05, 2019-02-06, 2019-02-07])
-
-        >>> Date.range('2019-02-01', '2019-02-07', step=2)
-        Date([2019-02-01, 2019-02-03, 2019-02-05])
-
-        >>> Date.range('2019-02-01', '2019-02-07', closed='right')
-        Date([2019-02-02, 2019-02-03, 2019-02-04, 2019-02-05, 2019-02-06, 2019-02-07])
+              - `left`: Start date is included, end date is excluded.
+              - `right`: End date is included, start date is excluded.
+              - None (the default): Both the start and end dates are included.
 
         Returns
         -------
         `Date`
-            Range of dates in given interval spaced by `step`.
+            A `Date` object of dates within a given interval, spaced by `step`.
 
+        See Also
+        --------
+        DateTimeNano.random : Return an array of randomly generated `DateTimeNano` values.
+        .riptable.arange : Return an array of evenly spaced values within a specified interval.
+
+        Examples
+        --------
+        With integer `start` and `end` dates:
+
+        >>> rt.Date.range(20230101, 20230105)
+        Date(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'])
+
+        With string `start` and `end` dates, and a format code:
+
+        >>> rt.Date.range('01 January, 2023', '05 January, 2023', format='%d %B, %Y')
+        Date(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'])
+
+        If `end` isn't specified, `days` is required:
+
+        >>> rt.Date.range(20230101, days=5)
+        Date(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'])
+
+        Changing the `step`:
+
+        >>> rt.Date.range(20230101, 20230105, step=2)
+        Date(['2023-01-01', '2023-01-03'])
+
+        A left-inclusive, right-exclusive range:
+
+        >>> rt.Date.range(20230101, 20230105, closed='left')
+        Date(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04'])
         """
         if isinstance(start, (int, np.integer)):
             start = str(start)
@@ -2512,6 +2606,65 @@ class DateSpan(DateBase):
     # ------------------------------------------------------------
     def get_scalar(self, scalarval):
         return DateSpanScalar(scalarval, _from=self)
+
+    # ------------------------------------------------------------
+    # DateSpan
+    def strftime(self, format, dtype="O"):
+        """
+        Convert each `DateSpan` element to a formatted string representation.
+
+        .. deprecated:: 1.3
+                  `DateSpan.strftime` is deprecated will be removed in the future.
+
+        Note that because each `DateSpan` element is converted to a timestamp
+        relative to the epoch before it is formatted (for example, a `DateSpan`
+        of "2 days" is converted to 01-03-1970), you may need to adjust the data
+        before calling this method.
+
+        Negative `DateSpan` values (for example, "-10 days") can't be formatted
+        with this method.
+
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.date.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+        dtype : {"O", "S", "U"}, default "O"
+            The data type of the returned array elements.
+
+            - "O": object string
+            - "S": byte string
+            - "U": unicode string
+
+        Returns
+        -------
+        `ndarray`
+            An `ndarray` of strings.
+
+        See Also
+        --------
+        DateScalar.strftime, Date.strftime, DateSpan.strftime,
+        DateTimeNano.strftime, DateTimeNanoScalar.strftime, TimeSpan.strftime,
+        TimeSpanScalar.strftime
+
+        Notes
+        -----
+        This routine has not been sped up yet. It's also not NaN-aware: NaNs
+        are converted to the timestamp of the epoch (01-01-1970), then formatted.
+
+        Examples
+        --------
+        >>> d = rt.Date(['20210101', '20210519', '20220308'])
+        >>> ds = d - rt.Date('20201201')
+        >>> ds
+        DateSpan(['31 days', '169 days', '462 days'])
+        >>> ds.strftime('%D')
+        array(['02/01/70', '06/19/70', '04/08/71'], dtype=object)
+        """
+        warnings.warn("DateSpan.strftime will be removed in the future.", DeprecationWarning)
+        return self._strftime(format, dtype=dtype)
 
     # ------------------------------------------------------------
     @staticmethod
@@ -3788,29 +3941,53 @@ class DateTimeCommon:
             return result[0]
         return result
 
-    def strftime(self, format, dtype="O"):
+    # ------------------------------------------------------------
+    # DateTimeCommon class
+    # For DateTimeNano and DateTimeNanoScalar
+    def _strftime(self, format, dtype="O"):
         """
-        Converts DateTimeNano to an array of object strings or a scalar string.
-        This routine has not been sped up yet.
+        Convert each `DateTimeNano` or `DateTimeNanoScalar` to a formatted
+        string representation.
 
-        Other Parameters
-        ----------------
-        dtype: defaults to 'O', can change to 'S' or 'U'
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.datetime.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+        dtype : {"O", "S", "U"}, default "O"
+            For `DateTimeNano` input, the data type of the returned array:
 
-        Examples
-        --------
-        >>> rt.utcnow(4).strftime('%c')
-        array(['Thu Oct 31 14:55:14 2019', 'Thu Oct 31 14:55:14 2019',
-               'Thu Oct 31 14:55:14 2019', 'Thu Oct 31 14:55:14 2019'], dtype='<U24')
-        >>> rt.utcnow(4).strftime('%X.%f')
-        array(['15:03:04.697686', '15:03:04.697687', '15:03:04.697687',
-               '15:03:04.697687'], dtype='<U15')
+            - "O": object string
+            - "S": byte string
+            - "U": unicode string
+
+        Returns
+        -------
+        `ndarray` or str
+            For `DateTimeNano` input, returns an `ndarray` of strings. For
+            `DateTimeNanoScalar` input, returns a scalar string.
 
         See Also
         --------
-        http://strftime.org  for format strings
-        datetime.datetime.strftime
+        DateTimeNano.strftime, DateTimeNanoScalar.strftime, Date.strftime,
+        DateScalar.strftime, TimeSpan.strftime, TimeSpanScalar.strftime
 
+        Notes
+        -----
+        This routine has not been sped up yet. It also raises an error on NaNs.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'], from_tz='NYC')
+        >>> dtn
+        DateTimeNano(['20210101 09:31:15.000000000', '20210519 05:21:17.000000000'], to_tz='NYC')
+        >>> dtn.strftime('%c')
+        array(['Fri Jan  1 09:31:15 2021', 'Wed May 19 05:21:17 2021'], dtype=object)
+
+        >>> dtn[0].strftime('%c')
+        'Fri Jan  1 09:31:15 2021'
         """
         in_seconds = self / NANOS_PER_SECOND
         to_tz = self._timezone._to_tz
@@ -4145,6 +4322,50 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # ------------------------------------------------------------
     def __init__(self, arr, from_matlab=False, from_tz=None, to_tz=None, format=None, start_date=None, gmt=None):
         pass
+
+    # ------------------------------------------------------------
+    # DateTimeNano
+    def strftime(self, format, dtype="O"):
+        """
+        Convert each `DateTimeNano` element to a formatted string representation.
+
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.datetime.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+        dtype : {"O", "S", "U"}, default "O"
+            The data type of the returned array:
+
+            - "O": object string
+            - "S": byte string
+            - "U": unicode string
+
+        Returns
+        -------
+        `ndarray`
+            An `ndarray` of strings.
+
+        See Also
+        --------
+        DateTimeNanoScalar.strftime, Date.strftime, DateScalar.strftime,
+        TimeSpan.strftime, TimeSpanScalar.strftime
+
+        Notes
+        -----
+        This routine has not been sped up yet. It also raises an error on NaNs.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'], from_tz='NYC')
+        >>> dtn
+        DateTimeNano(['20210101 09:31:15.000000000', '20210519 05:21:17.000000000'], to_tz='NYC')
+        >>> dtn.strftime('%c')
+        array(['Fri Jan  1 09:31:15 2021', 'Wed May 19 05:21:17 2021'], dtype=object)
+        """
+        return self._strftime(format, dtype=dtype)
 
     # ------------------------------------------------------------
     def get_classname(self):
@@ -5277,6 +5498,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             if end is None:
                 # maybe test if leap year?
                 end = start + NANOS_PER_YEAR
+            else:
+                end = (end - 1970) * NANOS_PER_YEAR
 
         arr = np.random.randint(start, end, sz, dtype=np.int64)
         if inv is not None:
@@ -5286,73 +5509,103 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     @classmethod
     def random(cls, sz, to_tz="NYC", from_tz="NYC", inv=None, start=None, end=None):
         """
-        Returns a random DateTimeNano object.
-        Times will range from from 1971 -> 2021 unless `start` and `end` are specified.
+        Return an array of randomly generated `DateTimeNano` values.
+
+        If `start` and `end` are not provided, years range from 1971 to 2020.
 
         Parameters
         ----------
         sz : int
-            Length of generated array
-        to_tz : str, optional, default 'NYC'
-            Timezone string for display
-        from_tz : str, optional, default 'NYC'
-            Timezone string for timezone of origin
-        inv : bool array, optional, default None
-            An invalid mask True where invalid times should be inserted
-        start : int, optional, default None
-            Start year for range of random times. If no end year provided, all times will be within start year
-        end : int, optional, default None
-            End year for range of random times. Only used if `start` provided.
-
-        Examples
-        --------
-        >>> DateTimeNano.random(3)
-        DateTimeNano([19980912 15:31:08.025189457, 19931121 15:48:32.855425859, 19930915 14:58:31.376750294])
+            The length of the generated array.
+        to_tz : str, default 'NYC'
+            The timezone for display. For valid timezone options, see
+            :py:attr:`.TimeZone.valid_timezones`.
+        from_tz : str, default 'NYC'
+            The timezone of origin. For valid timezone options, see
+            :py:attr:`.TimeZone.valid_timezones`.
+        inv : array of bool, optional
+            Where True, an invalid `DateTimeNano` is in the returned array.
+        start : int, optional
+            The start year for the range. If no end year is provided, all times
+            are within the start year.
+        end : int, optional
+            The end year for the range. Used only if `start` is provided.
 
         Returns
         -------
-        obj:`DateTimeNano`
+        DateTimeNano
+            A `DateTimeNano` with randomly generated values.
 
         See Also
         --------
-        DateTimeNano.random_invalid
+        DateTimeNano.random_invalid :
+            Return a randomly generated `DateTimeNano` array with randomly placed invalid values.
+        Date.range : Return a `Date` object of dates within a given interval, spaced by `step`.
+        .riptable.arange :
+            Return an array of evenly spaced values within a given interval.
 
+        Examples
+        --------
+        >>> rt.DateTimeNano.random(3)
+        DateTimeNano([19980912 15:31:08.025189457, 19931121 15:48:32.855425859, 19930915 14:58:31.376750294])  # random
+
+        If `start` is provided but `end` is not, all times are within the start year:
+
+        >>> rt.DateTimeNano.random(3, start=2015)
+        DateTimeNano(['20151011 12:15:45.588049363', '20150207 14:54:33.649991888', '20150131 18:58:13.543792210'], to_tz='NYC')  # random
+
+        With an `inv` mask. Where True, an invalid `DateTimeNano` is in the returned
+        array:
+
+        >>> i = rt.FastArray([True, False, True])
+        >>> rt.DateTimeNano.random(3, inv=i)
+        DateTimeNano(['Inv', '19930915 02:39:29.621051630', 'Inv'], to_tz='NYC')
         """
         return cls._random(sz, to_tz=to_tz, from_tz=from_tz, inv=inv, start=start, end=end)
 
     @classmethod
     def random_invalid(cls, sz, to_tz="NYC", from_tz="NYC", start=None, end=None):
         """
-        Returns a random DateTimeNano object. Inserts invalids using a random boolean mask.
-        Times will range from from 1971 -> 2021 unless `start` and `end` are specified.
+        Return a randomly generated `DateTimeNano` object with randomly placed
+        invalid values.
+
+        This method is the same as `DateTimeNano.random`, except that a mask is
+        randomly generated to place the invalid values.
+
+        If `start` and `end` are not provided, years for valid `DateTimeNano`
+        values range from 1971 to 2020.
 
         Parameters
         ----------
         sz : int
-            Length of generated array
-        to_tz : str, optional, default 'NYC'
-            Timezone string for display
-        from_tz : str, optional, default 'NYC'
-            Timezone string for timezone of origin
-        start : int, optional, default None
-            Start year for range of random times. If no end year provided, all times will be within start year
-        end : int, optional, default None
-            End year for range of random times. Only used if `start` provided.
-
-        Same as DateTimeNano.random(), but random invalid mask is also generated.
-
-        Examples
-        --------
-        >>> DateTimeNano.random_invalid(3)
-        DateTimeNano([19920830 16:17:24.935335183, Inv, Inv])
+            The length of the generated array.
+        to_tz : str, default 'NYC'
+            The timezone for display. For valid timezone options, see
+            :py:attr:`.TimeZone.valid_timezones`.
+        from_tz : str, default 'NYC'
+            The timezone of origin. For valid timezone options, see
+            :py:attr:`.TimeZone.valid_timezones`.
+        start : int, optional
+            The start year for the range. If no end year is provided, all times
+            are within the start year.
+        end : int, optional
+            The end year for the range. Used only if `start` is provided.
 
         Returns
         -------
-        obj:`DateTimeNano`
+        DateTimeNano
+            A `DateTimeNano` with randomly placed invalid values.
 
         See Also
         --------
-        DateTimeNano.random
+        DateTimeNano.random : Return an array of randomly generated `DateTimeNano` values.
+        Date.range : Return a `Date` object of dates within a given interval, spaced by `step`.
+        .riptable.arange : Return an array of evenly spaced values within a specified interval.
+
+        Examples
+        --------
+        >>> rt.DateTimeNano.random_invalid(3)
+        DateTimeNano(['Inv', '19830405 15:24:01.815771855', 'Inv'], to_tz='NYC')  # random
         """
         # TODO: Use np.random.default_rng() here instead.
         inv = np.random.randint(0, 2, sz, dtype=bool)
@@ -5653,25 +5906,51 @@ class TimeSpanBase:
         return __class__.__name__
 
     # ------------------------------------------------------------
-    def strftime(self, format, dtype="U"):
+    # TimeSpanBase
+    # For TimeSpan and TimeSpanScalar
+    def _strftime(self, format, dtype="U"):
         """
-        Converts TimeSpan to an array of object strings or a scalar string.
-        This routine has not been sped up yet.
+        Convert each `TimeSpan` or `TimeSpanScalar` to a formatted
+        string representation.
 
-        Other Parameters
-        ----------------
-        dtype: defaults to 'U', can change to 'S' or 'U'
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.datetime.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+        dtype : {"U", "S", "O"}, default "U"
+            For `TimeSpan` input, the data type of the returned array:
 
-        Examples
-        --------
-        >>> rt.Date(rt.utcnow(4)).strftime('%D')
-        array(['11/04/19', '11/04/19', '11/04/19', '11/04/19'], dtype=object)
+            - "U": unicode string
+            - "S": byte string
+            - "O": object string
+
+        Returns
+        -------
+        `ndarray` or str
+            For `TimeSpan` input, returns an `ndarray` of strings. For
+            `TimeSpanScalar` input, returns a scalar string.
 
         See Also
         --------
-        http://strftime.org  for format strings
-        datetime.datetime.strftime
+        TimeSpan.strftime, TimeSpanScalar.strftime, Date.strftime,
+        DateScalar.strftime, DateTimeNano.strftime, DateTimeNanoScalar.strftime
 
+        Notes
+        -----
+        This routine has not been sped up yet. It also raises an error on NaNs.
+
+        Examples
+        --------
+        >>> ts = rt.TimeSpan(['09:00', '10:45', '02:30'])
+        >>> ts
+        TimeSpan(['09:00:00.000000000', '10:45:00.000000000', '02:30:00.000000000'])
+        >>> ts.strftime('%X')
+        array(['09:00:00', '10:45:00', '02:30:00'], dtype='<U8')
+        >>> ts[0].strftime('%X')
+        '09:00:00'
         """
         # get negative mask since strftime does not handle negative
         isnegative = self._fa < 0
@@ -6320,6 +6599,50 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         return instance
 
     # ------------------------------------------------------------
+    # TimeSpan
+    def strftime(self, format, dtype="U"):
+        """
+        Convert each `TimeSpan` element to a formatted string representation.
+
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.datetime.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+        dtype : {"U", "S", "O"}, default "U"
+            The data type of the returned array:
+
+            - "U": unicode string
+            - "S": byte string
+            - "O": object string
+
+        Returns
+        -------
+        `ndarray`
+            An `ndarray` of strings.
+
+        See Also
+        --------
+        TimeSpanScalar.strftime, Date.strftime, DateScalar.strftime,
+        DateTimeNano.strftime, DateTimeNanoScalar.strftime
+
+        Notes
+        -----
+        This routine has not been sped up yet. It also raises an error on NaNs.
+
+        Examples
+        --------
+        >>> ts = rt.TimeSpan(['09:00', '10:45', '02:30'])
+        >>> ts
+        TimeSpan(['09:00:00.000000000', '10:45:00.000000000', '02:30:00.000000000'])
+        >>> ts.strftime('%X')
+        array(['09:00:00', '10:45:00', '02:30:00'], dtype='<U8')
+        """
+        return self._strftime(format, dtype=dtype)
+
+    # ------------------------------------------------------------
     def get_classname(self):
         return __class__.__name__
 
@@ -6606,24 +6929,38 @@ class DateScalar(np.int32):
         return Date.format_date_num(self._np, itemformat)
 
     # ------------------------------------------------------------
-    def strftime(self, format, dtype="O"):
+    # DateScalar
+    def strftime(self, format):
         """
-        Converts Date to an array of object strings or a scalar string.
-        This routine has not been sped up yet.
+        Convert a `DateScalar` to a formatted string representation.
 
-        Other Parameters
-        ----------------
-        dtype: defaults to 'O', can change to 'S' or 'U'
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.date.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
 
-        Examples
-        --------
-        >>> rt.Date(rt.utcnow(4))[0].strftime('%D')
-        '11/04/19'
+        Returns
+        -------
+        str
+            A string representation of the reformatted `DateScalar`.
 
         See Also
         --------
-        http://strftime.org  for format strings
-        datetime.datetime.strftime
+        Date.strftime, DateTimeNano.strftime, DateTimeNanoScalar.strftime,
+        TimeSpan.strftime, TimeSpanScalar.strftime
+
+        Notes
+        -----
+        This routine has not been sped up yet. It also raises an error on NaNs.
+
+        Examples
+        --------
+        >>> d = rt.Date(['20210101', '20210519', '20220308'])
+        >>> d[0].strftime('%D')
+        '01/01/21'
         """
         return dt.strftime(dt.utcfromtimestamp(self.astype(np.int64) * SECONDS_PER_DAY), format)
 
@@ -6755,6 +7092,44 @@ class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
         return item_format
 
     # ------------------------------------------------------------
+    # DateTimeNanoScalar
+    def strftime(self, format):
+        """
+        Convert a `DateTimeNanoScalar` to a formatted string representation.
+
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.datetime.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+
+        Returns
+        -------
+        str
+            A string representation of the reformatted `DateTimeNanoScalar`.
+
+        See Also
+        --------
+        DateTimeNano.strftime, Date.strftime, DateScalar.strftime,
+        TimeSpan.strftime, TimeSpanScalar.strftime
+
+        Notes
+        -----
+        This routine has not been sped up yet. It also raises an error on NaNs.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'], from_tz='NYC')
+        >>> dtn
+        DateTimeNano(['20210101 09:31:15.000000000', '20210519 05:21:17.000000000'], to_tz='NYC')
+        >>> dtn[0].strftime('%c')
+        'Fri Jan  1 09:31:15 2021'
+        """
+        return self._strftime(format)
+
+    # ------------------------------------------------------------
     def isnan(self):
         return self <= 0
 
@@ -6848,6 +7223,44 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
     @property
     def _np(self):
         return self.view(np.float64)
+
+    # ------------------------------------------------------------
+    # TimeSpanScalar
+    def strftime(self, format):
+        """
+        Convert a `TimeSpanScalar` to a formatted string representation.
+
+        Parameters
+        ----------
+        format : str
+            One or more format codes supported by the
+            :py:meth:`datetime.datetime.strftime` function of the standard
+            Python distribution. For codes, see
+            :ref:`python:strftime-strptime-behavior`.
+
+        Returns
+        -------
+        str
+            A string representation of the reformatted `TimeSpanScalar`.
+
+        See Also
+        --------
+        TimeSpan.strftime, Date.strftime, DateScalar.strftime,
+        DateTimeNano.strftime, DateTimeNanoScalar.strftime
+
+        Notes
+        -----
+        This routine has not been sped up yet. It also raises an error on NaNs.
+
+        Examples
+        --------
+        >>> ts = rt.TimeSpan(['09:00', '10:45', '02:30'])
+        >>> ts
+        TimeSpan(['09:00:00.000000000', '10:45:00.000000000', '02:30:00.000000000'])
+        >>> ts[0].strftime('%X')
+        '09:00:00'
+        """
+        return self._strftime(format)
 
     # ------------------------------------------------------------
     def get_classname(self):

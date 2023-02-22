@@ -201,7 +201,7 @@ To keep the column data from the first Dataset, use
 names, but the concatenation is performed::
 
     >>> rt.Dataset.concat_columns([ds7, ds8], do_copy=True, on_duplicate='first')
-    C:\Miniconda3\envs\johnsonc_py39\lib\site-packages\riptable-1.3.6-py3.9.egg\riptable\rt_dataset.py:5628: UserWarning: concat_columns() duplicate column mismatch: {'A'}
+    C:\\riptable\\rt_dataset.py:5628: UserWarning: concat_columns() duplicate column mismatch: {'A'}
     warnings.warn(f'concat_columns() duplicate column mismatch: {dups!r}')
     #   A    B    C    D 
     -   --   --   --   --
