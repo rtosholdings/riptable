@@ -46,6 +46,7 @@ jobs:
           conda config --set unsatisfiable_hints_check_depth 0 # setting unsatisfiable_hints=False is broken
       - name: Install dependencies
         run: |
+          set -ex
           python dev_tools/gen_requirements.py --out pypi_reqs.txt pypi
           conda install -q -y --file pypi_reqs.txt
       - name: Install core dependencies
