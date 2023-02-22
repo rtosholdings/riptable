@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           python dev_tools/gen_requirements.py --out pypi_reqs.txt pypi
-          conda install -q -y --file pypi_reqs.txt
+          conda create -q -y -n pypi_build python=${{ matrix.python-version }} --file pypi_reqs.txt
       - name: Install core dependencies
         # Needed for pip install of riptide_cpp from sdist
         run: |
@@ -147,7 +147,7 @@ jobs:
         run: |
           set -ex
           python dev_tools/gen_requirements.py --out conda_reqs.txt conda
-          conda install -q -y --file conda_reqs.txt
+          conda create -q -y -n conda_build python=${{ env.python-version }} --file conda_reqs.txt
       - name: Build Package
         shell: bash -l {0}
         run: |
