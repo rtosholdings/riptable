@@ -190,7 +190,7 @@ you try to work with one::
 
     >>> a = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
     >>> a_fa = rt.FastArray(a)
-    C:\Miniconda\envs\johnsonc_py39\lib\site-packages\riptable\rt_fastarray.py:561: UserWarning: FastArray contains two or more dimensions greater than one - shape:(3, 4).  Problems may occur.
+    C:\\riptable\\rt_fastarray.py:561: UserWarning: FastArray contains two or more dimensions greater than one - shape:(3, 4).  Problems may occur.
       warnings.warn(warning_string)
 
 If you don’t specify the dtype, Riptable makes its best guess::

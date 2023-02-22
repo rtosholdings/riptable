@@ -2780,7 +2780,102 @@ def transpose(*args, **kwargs):
 
 # -------------------------------------------------------
 def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
+    """
+    Return a new `FastArray` or `Categorical` with elements from `x` or `y`
+    depending on whether `condition` is True.
 
+    For 1-dimensional arrays, this function is equivalent to::
+
+        [xv if c else yv
+         for c, xv, yv in zip(condition, x, y)]
+
+    If only `condition` is provided, this function returns a tuple containing
+    an integer `FastArray` with the indices where the condition is True. Note
+    that this usage of `where` is not supported for `FastArray` objects of more
+    than one dimension.
+
+    Note also that this case of `where` uses `.riptable.bool_to_fancy()`. Using
+    `bool_to_fancy` directly is preferred, as it behaves correctly for
+    subclasses.
+
+    Parameters
+    ----------
+    condition : bool or array of bool
+        Where True, yield `x`, otherwise yield `y`.
+    x : scalar, array, or callable, optional
+        The value to use where `condition` is True. If `x` is provided, `y`
+        must also be provided, and `x` and `y` should be the same type. If `x`
+        is an array, a callable that returns an array, or a `Categorical`, it
+        must be the same length as `condition`. The value of `x` that corresponds
+        to the True value is used.
+    y : scalar, array, or callable, optional
+        The value to use where `condition` is False. If `y` is provided, `x`
+        must also be provided, and `x` and `y` should be the same type. If `y`
+        is an array, a callable that returns an array, or a `Categorical`, it
+        must be the same length as `condition`. The value of `y` that corresponds
+        to the False value is used.
+
+    Returns
+    -------
+    FastArray or Categorical or tuple
+        If `x` and `y` are `Categorical` objects, a `Categorical` is returned.
+        Otherwise, if `x` and `y` are provided a `FastArray` is returned. When
+        only `condition` is provided, a tuple is returned containing an integer
+        `FastArray` with the indices where the condition is True.
+
+    See Also
+    --------
+    .FastArray.where : Replace values where a given condition is False.
+    riptable.bool_to_fancy : The function called when `x` and `y` are omitted.
+
+    Examples
+    --------
+    `condition` is a comparison that creates an array of booleans, and `x`
+    and `y` are scalars:
+
+    >>> a = rt.FastArray(rt.arange(5))
+    >>> a
+    FastArray([0, 1, 2, 3, 4])
+    >>> rt.where(a < 2, 100, 200)
+    FastArray([100, 100, 200, 200, 200])
+
+    `condition` and `x` are same-length arrays, and `y` is a
+    scalar:
+
+    >>> condition = rt.FastArray([False, False, True, True, True])
+    >>> x = rt.FastArray([100, 101, 102, 103, 104])
+    >>> y = 200
+    >>> rt.where(condition, x, y)
+    FastArray([200, 200, 102, 103, 104])
+
+    When `x` and `y` are `Categorical` objects, a `Categorical` is returned:
+
+    >>> primary_traders = rt.Cat(['John', 'Mary', 'John', 'Mary', 'John', 'Mary'])
+    >>> secondary_traders = rt.Cat(['Chris', 'Duncan', 'Chris', 'Duncan', 'Duncan', 'Chris'])
+    >>> is_primary = rt.FA([True, True, False, True, False, True])
+    >>> rt.where(is_primary, primary_traders, secondary_traders)
+    Categorical([John, Mary, Chris, Mary, Duncan, Mary]) Length: 6
+      FastArray([3, 4, 1, 4, 2, 4], dtype=int8) Base Index: 1
+      FastArray([b'Chris', b'Duncan', b'John', b'Mary'], dtype='|S6') Unique count: 4
+
+    When `x` and `y` are `Date` objects, a `FastArray` of integers is returned
+    that can be converted to a `Date` (other datetime objects are similar):
+
+    >>> x = rt.Date(['20230101', '20220101', '20210101'])
+    >>> y = rt.Date(['20190101', '20180101', '20170101'])
+    >>> condition = x > rt.Date(['20211231'])
+    >>> rt.where(condition, x, y)
+    >>> FastArray([19358, 18993, 17167])
+    >>> rt.Date(_)
+    Date(['2023-01-01', '2022-01-01', '2017-01-01'])
+
+    When only a condition is provided, a tuple is returned containing a `FastArray`
+    with the indices where the condition is True:
+
+    >>> a = rt.FastArray([10, 20, 30, 40, 50])
+    >>> rt.where(a < 40)
+    (FastArray([0, 1, 2]),)
+    """
     if isinstance(x, TypeRegister.Categorical) and isinstance(y, TypeRegister.Categorical):
         z = TypeRegister.Categorical.hstack([x, y])
         my_fa = where(condition, x=z._fa[: len(x)], y=z._fa[len(x) :])

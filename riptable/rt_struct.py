@@ -2420,7 +2420,33 @@ class Struct:
     # -------------------------------------------------------
     @property
     def shape(self):
-        """tuple of int: Number of rows and columns."""
+        """
+        Return the number of rows and columns.
+
+        Returns
+        -------
+        tuple of int
+            Number of rows, columns.
+
+        See Also
+        --------
+        riptable.reshape
+            Return an array containing the same data with a new shape.
+        FastArray.reshape
+            Return an array containing the same data with a new shape.
+
+        Examples
+        --------
+        >>> ds = rt.Dataset({"one": rt.arange(3), "two": rt.arange(3) % 2})
+        >>> ds
+        #   one   two
+        -   ---   ---
+        0     0     0
+        1     1     1
+        2     2     0
+        >>> ds.shape
+        (3, 2)
+        """
         if hasattr(self, "_nrows") and self._nrows is not None:
             return self._nrows, self._ncols
         return 0, self._ncols
@@ -2669,55 +2695,88 @@ class Struct:
         return self._all_items.item_exists(name)
 
     # -------------------------------------------------------
-    def col_filter(self, items=None, like=None, regex: Optional["re.Pattern"] = None, axis=None):
+    def col_filter(self, items=None, like=None, regex: Optional["re.Pattern"] = None):
         """
-        Subset rows or columns of dataset according to labels in the specified index.
+        Return the columns specified by indices or matches on column names.
 
-        Note that this routine does not filter a dataset on its
-        contents. The filter is applied to the column names.
+        Note that this method doesn't filter a `.Dataset` or `Struct` on
+        its contents, only on the column index or name.
 
         Parameters
         ----------
-        items : list-like
-            List of axis to restrict to (must not all be present).
-        like : string, optional
-            Keep axis where "arg in col == True".
-        regex : str, optional
-            Regular expression string. Keep axis with re.search(regex, col) == True.
-        axis : int, optional
+        items : list, default None
+            Names or indices of columns. If `items` is used, neither `like`
+            nor `regex` can be used.
+        like : str, default None
+            Substring to match in column names.
+        regex : str, default None
+            Regular expression string to match in column names.
 
         Returns
         -------
-        same type as input object
+        `.Dataset` or `Struct`
+            Same type as the input object.
 
         See Also
         --------
-        Dataset.__get_item__
-
-        Notes
-        -----
-        The `items`, like`, and regex` parameters are enforced to be mutually exclusive.
+        Struct.__getitem__
+        .Dataset.__getitem__
 
         Examples
         --------
-        Select columns by name
+        Select columns by name:
 
-        >>> ds = rt.Dataset({'one': rt.arange(3), 'two': rt.arange(3) % 2, 'three': rt.arange(3) % 3})
-        >>> ds.col_filter(items=['one', 'three'])
+        >>> ds = rt.Dataset({"one": rt.arange(3), "two": rt.arange(3) % 2, "three": rt.arange(3) % 3})
+        >>> ds.col_filter(items=["one", "three"])
         #   one   three
         -   ---   -----
         0     0       0
         1     1       1
         2     2       2
 
-        Select columns by regular expression
+        Select columns by index:
 
-        >>> ds.col_filter(regex='e$')
+        >>> ds.col_filter(items = [0, 1])
+        #   one   two
+        -   ---   ---
+        0     0     0
+        1     1     1
+        2     2     0
+
+        Select columns by substring:
+
+        >>> ds.col_filter(like = "thr")
+        #   three
+        -   -----
+        0       0
+        1       1
+        2       2
+
+        Select columns by regular expression:
+
+        >>> ds.col_filter(regex = "e$")
         #   one   three
         -   ---   -----
         0     0       0
         1     1       1
         2     2       2
+
+        Select `.Dataset` and `.FastArray` objects from a `Struct`:
+
+        >>> ds2 = rt.Dataset({"four": rt.arange(3), "five": rt.arange(3) % 2})
+        >>> fa = rt.FastArray([1, 2, 3])
+        >>> s = rt.Struct()
+        >>> s.ds = ds
+        >>> s.ds2 = ds2
+        >>> s.fa = fa
+        >>> s.col_filter([0])
+        #   Name   Type      Size              0   1   2
+        -   ----   -------   ---------------   -   -   -
+        0   ds     Dataset   3 rows x 3 cols
+        >>> s.col_filter("fa")
+        #   Name   Type    Size   0   1   2
+        -   ----   -----   ----   -   -   -
+        0   fa     int32   3      1   2   3
         """
         import re
 
@@ -3881,7 +3940,38 @@ class Struct:
     @property
     def _T(self):
         """
-        Display transposed view of table; all columns will be shown as rows, will not be abbreviated.
+        Display a transposed view of the `.Dataset` or `Struct`.
+
+        All columns are shown as rows and vice-versa. Strings up to 32
+        characters are fully displayed.
+
+        Returns
+        -------
+        DisplayString
+            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+
+        See Also
+        --------
+        Struct.dtranspose : Called by this method.
+        Struct._V : Show all rows of a `.Dataset` or `Struct`.
+        Struct._H : Show all columns and long strings of a `.Dataset` or `Struct`.
+        Struct._A : Show all columns, rows, and long strings of a `.Dataset` or `Struct`.
+        Struct._G : Show all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
+
+        Examples
+        --------
+        >>> ds = rt.Dataset({'a': [1, 2, 3], 'b' : ['longstring_longstring_longstring_longstring',
+        ...                  'fish', 'david']})
+        >>> ds
+        #   a   b
+        -   -   ---------------
+        0   1   longstring_long
+        1   2   fish
+        2   3   david
+        >>> ds._T
+        Fields:                                0     1      2
+              a                                1     2      3
+              b  longstring_longstring_lonstring  fish  david
         """
         oldmaxwidth = TypeRegister.DisplayOptions.MAX_STRING_WIDTH
         if oldmaxwidth < 32:
@@ -3894,7 +3984,98 @@ class Struct:
     @property
     def _V(self):
         """
-        Display all rows (up to 10,000), instead of using ellipses.
+        Display all rows (up to 10,000) of a `.Dataset` or `Struct`.
+
+        Without this property, rows are elided when there are more than 30 to display.
+
+        Returns
+        -------
+        DisplayString
+            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+
+        See Also
+        --------
+        Struct._H : Display all columns and long strings of a `.Dataset` or `Struct`.
+        Struct._A : Display all columns, rows, and long strings of a `.Dataset` or `Struct`.
+        Struct._G : Display all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
+        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+
+        Examples
+        --------
+        By default, rows are elided when there are more than 30 to display.
+
+        >>> ds = rt.Dataset({'a' : rt.arange(31)})
+        >>> ds
+          #     a
+        ---   ---
+          0     0
+          1     1
+          2     2
+          3     3
+          4     4
+          5     5
+          6     6
+          7     7
+          8     8
+          9     9
+         10    10
+         11    11
+         12    12
+         13    13
+         14    14
+        ...   ...
+         16    16
+         17    17
+         18    18
+         19    19
+         20    20
+         21    21
+         22    22
+         23    23
+         24    24
+         25    25
+         26    26
+         27    27
+         28    28
+         29    29
+         30    30
+
+        Display all rows:
+
+        >>> ds._V
+          #     a
+        ---   ---
+          0     0
+          1     1
+          2     2
+          3     3
+          4     4
+          5     5
+          6     6
+          7     7
+          8     8
+          9     9
+         10    10
+         11    11
+         12    12
+         13    13
+         14    14
+         15    15
+         16    16
+         17    17
+         18    18
+         19    19
+         20    20
+         21    21
+         22    22
+         23    23
+         24    24
+         25    25
+         26    26
+         27    27
+         28    28
+         29    29
+         30    30
         """
         maxrows = 10_000
         numrows = self._nrows if hasattr(self, "_nrows") else len(self)
@@ -3909,7 +4090,46 @@ class Struct:
     @property
     def _H(self):
         """
-        Display all columns, allow long strings to be displayed.
+        Display all columns and long strings of a `.Dataset` or `Struct`.
+
+        Without this property, columns are elided when the maximum display
+        width is reached, and strings are truncated after 15 characters.
+
+        Returns
+        -------
+        DisplayString
+            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+
+        See Also
+        --------
+        Struct._V : Display all rows of a `.Dataset` or `Struct`.
+        Struct._A : Display all columns, rows, and long strings of a `.Dataset` or `Struct`.
+        Struct._G : Display all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
+        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+
+        Examples
+        --------
+        By default, columns are elided when the maximum display width is reached, and strings are truncated after 15 characters.
+
+        >>> ds = rt.Dataset({key : rt.FA([i, 2*i, 3*i, 4*i])%3 == 0 for i, key in enumerate('abcdefghijklm')})
+        >>> ds[0] = rt.FA('long_string_long_string')
+        >>> ds
+        #   a                     b       c      d       e       f   ...       h       i      j       k       l      m
+        -   ---------------   -----   -----   ----   -----   -----   ---   -----   -----   ----   -----   -----   ----
+        0   long_string_lon   False   False   True   False   False   ...   False   False   True   False   False   True
+        1   long_string_lon   False   False   True   False   False   ...   False   False   True   False   False   True
+        2   long_string_lon    True    True   True    True    True   ...    True    True   True    True    True   True
+        3   long_string_lon   False   False   True   False   False   ...   False   False   True   False   False   True
+
+        Display all columns and long strings:
+
+        >>> ds._H
+        #   a                             b       c      d       e       f      g       h       i      j       k       l      m
+        -   -----------------------   -----   -----   ----   -----   -----   ----   -----   -----   ----   -----   -----   ----
+        0   long_string_long_string   False   False   True   False   False   True   False   False   True   False   False   True
+        1   long_string_long_string   False   False   True   False   False   True   False   False   True   False   False   True
+        2   long_string_long_string    True    True   True    True    True   True    True    True   True    True    True   True
+        3   long_string_long_string   False   False   True   False   False   True   False   False   True   False   False   True
         """
         return self._temp_display(["COL_ALL", "MAX_STRING_WIDTH"], [True, 1000])
 
@@ -3917,7 +4137,54 @@ class Struct:
     @property
     def _G(self):
         """
-        Display all columns, allow long strings to be displayed.
+        Display all columns of a `.Dataset` or `Struct`, wrapping the table
+        after the maximum display width is reached.
+
+        Note: The table is displayed as text, not HTML.
+
+        Returns
+        -------
+        None
+
+        See Also
+        --------
+        Struct._V : Display all rows of a `.Dataset` or `Struct`.
+        Struct._H : Display all columns and long strings of a `.Dataset` or `Struct`.
+        Struct._A : Display all columns, rows, and long strings of a `.Dataset` or `Struct`.
+        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+
+        Examples
+        --------
+        >>> ds = rt.Dataset(
+        ...     {key: rt.FA([i, 2 * i, 3 * i, 4 * i]) % 3 == 0 for i, key in enumerate('abcdefghijklmno')}
+        ... )
+
+        Default behavior:
+
+        >>> ds
+        #      a       b       c      d       e       f      g   ...      j       k       l      m       n       o
+        -   ----   -----   -----   ----   -----   -----   ----   ---   ----   -----   -----   ----   -----   -----
+        0   True   False   False   True   False   False   True   ...   True   False   False   True   False   False
+        1   True   False   False   True   False   False   True   ...   True   False   False   True   False   False
+        2   True    True    True   True    True    True   True   ...   True    True    True   True    True    True
+        3   True   False   False   True   False   False   True   ...   True   False   False   True   False   False
+
+        Show all rows, wrapping the table as needed:
+
+        >>> ds._G
+        #      a       b       c      d       e       f      g       h       i      j       k       l      m
+        -   ----   -----   -----   ----   -----   -----   ----   -----   -----   ----   -----   -----   ----
+        0   True   False   False   True   False   False   True   False   False   True   False   False   True
+        1   True   False   False   True   False   False   True   False   False   True   False   False   True
+        2   True    True    True   True    True    True   True    True    True   True    True    True   True
+        3   True   False   False   True   False   False   True   False   False   True   False   False   True
+        <BLANKLINE>
+        #       n       o
+        -   -----   -----
+        0   False   False
+        1   False   False
+        2    True    True
+        3   False   False
         """
         savemode = (DisplayTable.options.COL_ALL, DisplayTable.options.CONSOLE_X_HTML)
         DisplayTable.options.COL_ALL = True
@@ -3931,7 +4198,105 @@ class Struct:
     @property
     def _A(self):
         """
-        Display all columns and all rows, allow long strings to be displayed.
+        Display all columns, all rows (up to 10,000), and long strings of a
+        `.Dataset` or `Struct`.
+
+        Without this property, columns are elided when the maximum display width
+        is reached, rows are elided when there are more then 30 to display,
+        and strings are truncated after 15 characters.
+
+        Returns
+        -------
+        DisplayString
+            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+
+        See Also
+        --------
+        Struct._V : Display all rows of a `.Dataset` or `Struct`.
+        Struct._H : Display all columns and long strings of a `.Dataset` or `Struct`.
+        Struct._G : Display all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
+        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+
+        Examples
+        --------
+        >>> ds = rt.Dataset({'col_'+str(i):rt.arange(31) for i in range(12)})
+        >>> ds[0] = 'long_string_long_string'
+
+        By default, columns are elided when the maximum display width is
+        reached, rows are elided when there are more then 30 to display, and
+        strings are truncated after 15 characters:
+
+        >>> ds
+          #   col_0             col_1   col_2   col_3   col_4   col_5   ...   col_7   col_8   col_9   col_10   col_11
+        ---   ---------------   -----   -----   -----   -----   -----   ---   -----   -----   -----   ------   ------
+          0   long_string_lon       0       0       0       0       0   ...       0       0       0        0        0
+          1   long_string_lon       1       1       1       1       1   ...       1       1       1        1        1
+          2   long_string_lon       2       2       2       2       2   ...       2       2       2        2        2
+          3   long_string_lon       3       3       3       3       3   ...       3       3       3        3        3
+          4   long_string_lon       4       4       4       4       4   ...       4       4       4        4        4
+          5   long_string_lon       5       5       5       5       5   ...       5       5       5        5        5
+          6   long_string_lon       6       6       6       6       6   ...       6       6       6        6        6
+          7   long_string_lon       7       7       7       7       7   ...       7       7       7        7        7
+          8   long_string_lon       8       8       8       8       8   ...       8       8       8        8        8
+          9   long_string_lon       9       9       9       9       9   ...       9       9       9        9        9
+         10   long_string_lon      10      10      10      10      10   ...      10      10      10       10       10
+         11   long_string_lon      11      11      11      11      11   ...      11      11      11       11       11
+         12   long_string_lon      12      12      12      12      12   ...      12      12      12       12       12
+         13   long_string_lon      13      13      13      13      13   ...      13      13      13       13       13
+         14   long_string_lon      14      14      14      14      14   ...      14      14      14       14       14
+        ...   ...                 ...     ...     ...     ...     ...   ...     ...     ...     ...      ...      ...
+         16   long_string_lon      16      16      16      16      16   ...      16      16      16       16       16
+         17   long_string_lon      17      17      17      17      17   ...      17      17      17       17       17
+         18   long_string_lon      18      18      18      18      18   ...      18      18      18       18       18
+         19   long_string_lon      19      19      19      19      19   ...      19      19      19       19       19
+         20   long_string_lon      20      20      20      20      20   ...      20      20      20       20       20
+         21   long_string_lon      21      21      21      21      21   ...      21      21      21       21       21
+         22   long_string_lon      22      22      22      22      22   ...      22      22      22       22       22
+         23   long_string_lon      23      23      23      23      23   ...      23      23      23       23       23
+         24   long_string_lon      24      24      24      24      24   ...      24      24      24       24       24
+         25   long_string_lon      25      25      25      25      25   ...      25      25      25       25       25
+         26   long_string_lon      26      26      26      26      26   ...      26      26      26       26       26
+         27   long_string_lon      27      27      27      27      27   ...      27      27      27       27       27
+         28   long_string_lon      28      28      28      28      28   ...      28      28      28       28       28
+         29   long_string_lon      29      29      29      29      29   ...      29      29      29       29       29
+         30   long_string_lon      30      30      30      30      30   ...      30      30      30       30       30
+
+        Display all columns, rows, and long strings:
+
+        >>> ds._A
+          #   col_0                     col_1   col_2   col_3   col_4   col_5   col_6   col_7   col_8   col_9   col_10   col_11
+        ---   -----------------------   -----   -----   -----   -----   -----   -----   -----   -----   -----   ------   ------
+          0   long_string_long_string       0       0       0       0       0       0       0       0       0        0        0
+          1   long_string_long_string       1       1       1       1       1       1       1       1       1        1        1
+          2   long_string_long_string       2       2       2       2       2       2       2       2       2        2        2
+          3   long_string_long_string       3       3       3       3       3       3       3       3       3        3        3
+          4   long_string_long_string       4       4       4       4       4       4       4       4       4        4        4
+          5   long_string_long_string       5       5       5       5       5       5       5       5       5        5        5
+          6   long_string_long_string       6       6       6       6       6       6       6       6       6        6        6
+          7   long_string_long_string       7       7       7       7       7       7       7       7       7        7        7
+          8   long_string_long_string       8       8       8       8       8       8       8       8       8        8        8
+          9   long_string_long_string       9       9       9       9       9       9       9       9       9        9        9
+         10   long_string_long_string      10      10      10      10      10      10      10      10      10       10       10
+         11   long_string_long_string      11      11      11      11      11      11      11      11      11       11       11
+         12   long_string_long_string      12      12      12      12      12      12      12      12      12       12       12
+         13   long_string_long_string      13      13      13      13      13      13      13      13      13       13       13
+         14   long_string_long_string      14      14      14      14      14      14      14      14      14       14       14
+         15   long_string_long_string      15      15      15      15      15      15      15      15      15       15       15
+         16   long_string_long_string      16      16      16      16      16      16      16      16      16       16       16
+         17   long_string_long_string      17      17      17      17      17      17      17      17      17       17       17
+         18   long_string_long_string      18      18      18      18      18      18      18      18      18       18       18
+         19   long_string_long_string      19      19      19      19      19      19      19      19      19       19       19
+         20   long_string_long_string      20      20      20      20      20      20      20      20      20       20       20
+         21   long_string_long_string      21      21      21      21      21      21      21      21      21       21       21
+         22   long_string_long_string      22      22      22      22      22      22      22      22      22       22       22
+         23   long_string_long_string      23      23      23      23      23      23      23      23      23       23       23
+         24   long_string_long_string      24      24      24      24      24      24      24      24      24       24       24
+         25   long_string_long_string      25      25      25      25      25      25      25      25      25       25       25
+         26   long_string_long_string      26      26      26      26      26      26      26      26      26       26       26
+         27   long_string_long_string      27      27      27      27      27      27      27      27      27       27       27
+         28   long_string_long_string      28      28      28      28      28      28      28      28      28       28       28
+         29   long_string_long_string      29      29      29      29      29      29      29      29      29       29       29
+         30   long_string_long_string      30      30      30      30      30      30      30      30      30       30       30
         """
         maxrows = 10_000
         numrows = self._nrows

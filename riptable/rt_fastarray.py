@@ -1784,7 +1784,7 @@ class FastArray(np.ndarray):
         """
         Arg2: npFunc pass in None if no numpy equivalent function
         """
-        if npFunc is not None and self._kwarg_check(*args, **kwargs):
+        if npFunc is not None and (self._kwarg_check(*args, **kwargs) or len(self.shape) != 1):
             # TODO: add to math ledger
             # set ddof=1 if NOT set which is FastArray default to match matlab/pandas
             if "ddof" not in kwargs and reduceFunc in [
@@ -2127,8 +2127,58 @@ class FastArray(np.ndarray):
     def trunc(self, **kwargs) -> FastArray:
         return np.trunc(self, **kwargs)
 
-    def where(self, condition, y=np.nan, **kwargs) -> FastArray:
-        return where(condition, self, y, **kwargs)
+    def where(self, condition, y=np.nan) -> FastArray:
+        """
+        Return a new `FastArray` in which values are replaced where a given
+        condition is False.
+
+        To also provide a value for where the condition is True, use
+        :meth:`riptable.where`.
+
+        Parameters
+        ----------
+        condition : bool or array of bool
+            Where the condition is True, keep the original value. Where False,
+            replace with `y` (if `y` is a scalar) or the corresponding value
+            from `y` (if `y` is an array). If `condition` is an array or a
+            a comparison that returns an array, the array must be the same
+            length as the calling `FastArray`.
+        y : scalar, array, or callable, default np.nan
+            The value to use where `condition` is False. If `y` is an
+            array or a callable that returns an array, it must be the same
+            length as the calling `FastArray`. The value of `y` that corresponds
+            to the False value is used.
+
+        Returns
+        -------
+        FastArray
+            A new `FastArray` with values replaced where `condition` is False.
+
+        See Also
+        --------
+        .riptable.where :
+            Replace values depending on whether a given condition is True or
+            False.
+
+        Examples
+        --------
+        `condition` is a comparison that creates an array of booleans, and
+        `y` is a scalar:
+
+        >>> a = rt.FastArray(rt.arange(5))
+        >>> a
+        FastArray([0, 1, 2, 3, 4])
+        >>> a.where(a > 2, 100)
+        FastArray([100, 100, 100,   3,   4])
+
+        `condition` and `y` are same-length arrays:
+
+        >>> condition = rt.FastArray([True, True, False, False, False])
+        >>> y = rt.FastArray([100, 200, 300, 400, 500])
+        >>> a.where(condition, y)
+        FastArray([  0,   1, 300, 400, 500])
+        """
+        return where(condition, self, y)
 
     def count(self, sorted=True, filter=None) -> Dataset:
         """

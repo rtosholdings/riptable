@@ -239,7 +239,7 @@ To add it with rows and columns transposed::
     >>> ds3 = rt.Dataset()
     >>> ds3.add_matrix(np_2d_arr.T)
     >>> ds3
-    C:\Miniconda\envs\johnsonc_py39\lib\site-packages\riptable\rt_fastarray.py:561: UserWarning: FastArray initialized with strides.
+    C:\\riptable\\rt_fastarray.py:561: UserWarning: FastArray initialized with strides.
       warnings.warn(warning_string)
     #   col_0   col_1   col_2
     -   -----   -----   -----
