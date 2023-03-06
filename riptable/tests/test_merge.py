@@ -6896,5 +6896,47 @@ def test_merge_asof_unsorted_fails(
         )
 
 
+@pytest.mark.parametrize(
+    "left,right,expected",
+    [
+        pytest.param(
+            rt.Dataset({"a": [11.0]}),
+            rt.Dataset({"a": [10.0], "b": [33.0]}),
+            rt.Dataset({"a": [11.0], "b": [33.0]}),
+            id="default",
+        ),
+        pytest.param(
+            rt.Dataset({"a": []}),
+            rt.Dataset({"a": [10.0], "b": [33.0]}),
+            rt.Dataset({"a": [], "b": []}),
+            id="left_empty",
+        ),
+        pytest.param(
+            rt.Dataset({"a": [11.0]}),
+            rt.Dataset({"a": [], "b": []}),
+            rt.Dataset({"a": [11.0], "b": [rt.nan]}),
+            id="right_empty",
+        ),
+        pytest.param(
+            rt.Dataset({"a": []}),
+            rt.Dataset({"a": [], "b": []}),
+            rt.Dataset({"a": [], "b": []}),
+            id="both_empty",
+        ),
+    ],
+)
+def test_merge_asof_empty(
+    left: rt.Dataset,
+    right: rt.Dataset,
+    expected: rt.Dataset,
+):
+    """
+    Verifying 'merge_asof' with empty columns.
+    """
+    actual = rt.merge_asof(left, right, on="a")
+    for col in expected.keys():
+        assert_array_equal(actual[col], expected[col])
+
+
 if __name__ == "__main__":
     tester = unittest.main()

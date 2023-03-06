@@ -270,7 +270,7 @@ def accum_ratio(
     return_table=False,
     include_numer=False,
     include_denom=True,
-    remove_blanks=True,
+    remove_blanks=False,
 ):
     """
     Compute a bucketed ratio of two accums, using AccumTable.
@@ -358,7 +358,7 @@ def accum_ratiop(
     func="nansum",
     norm_by="T",
     include_total=True,
-    remove_blanks=True,
+    remove_blanks=False,
     filt=None,
 ):
     """
@@ -449,7 +449,7 @@ def accum_ratiop(
     return accumr
 
 
-def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum", remove_blanks=True):
+def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum", remove_blanks=False):
     """
     Compute multiple accum calculations on the same categorical label, output as a single dataset.
 

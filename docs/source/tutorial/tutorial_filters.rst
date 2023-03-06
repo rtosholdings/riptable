@@ -1,11 +1,85 @@
 Get and Operate on Subsets of Data Using Filters
 ================================================
 
-Earlier, we briefly explored operations for selecting data using
-indexing and slicing.
+Earlier, we used indexing and slicing to select data. You can also use
+filters to get data that meets a certain condition.
 
-It’s more typical to use filters to get data that meets a certain
-condition or set of conditions.
+Datasets and FastArrays have a ``filter()`` method that returns the subset
+of data that meets a given condition. But to operate on that data, it's often
+better to pass a ``filter`` keyword argument to the method you're using.
+
+This section covers:
+
+- How to create conditions for filtering -- specifically, how comparison 
+  operators create mask arrays that can be used to filter
+- What to expect when you filter a FastArray or a Dataset
+- How string operations can be used to create filters
+- How to create more complex filters using logic operators
+- How to replace values using filters and ``rt.where``
+- How to operate on filtered Datasets in a memory-efficient way
+
+
+Comparison Operators and Mask Arrays
+------------------------------------
+
+When used to compare scalar values, comparison operators 
+(``>``, ``<``, ``>=``, ``<=``, ``==``, ``!=``) return True or False.
+
+    >>> x = 10
+    >>> x == 10  # equal
+    True
+    >>> x != 12  # not equal
+    True
+    >>> x > 12  # greater than
+    False
+
+In NumPy and Riptable, comparison operators are ufuncs, which means they can be
+used to compare arrays.
+
+When an array is compared element-wise with a scalar value or a same-length array,
+the result is an array of Booleans.
+
+    >>> a = rt.FastArray([1, 2, 3, 4, 5])
+    >>> b = rt.FastArray([0, 5, 2, 4, 8])
+    >>> a < 3 
+    FastArray([False, False, False,  True,  True])
+    >>> a <= b
+    FastArray([False,  True, False,  True,  True])
+
+These Boolean arrays can be used to filter data. In this 
+context, they're often called Boolean mask arrays.
+
+For the FastArray and Dataset ``filter()`` methods, you can pass a Boolean mask 
+array directly or pass a comparison (or other operation) that results in a mask 
+array. Here, we'll focus on the various ways to generate mask arrays based on 
+comparisons and other conditions.
+
+
+Filter a FastArray with a Comparison
+------------------------------------
+
+Above, we compared two FastArrays, ``a`` and ``b``, using the condition 
+``a <= b`` to create a Boolean mask array. 
+
+To filter ``a`` based on that 
+condition (that is, to show only the values of ``a`` for which ``a <= b`` is 
+True), use the FastArray ``filter()`` method with the condition.
+
+    >>> f = a <= b
+    >>> a.filter(f)
+    FastArray([2, 4, 5])
+
+Note that the returned FastArray is a copy; the original is unchanged::
+
+    >>> a
+    FastArray([1, 2, 3, 4, 5])
+
+
+Filter a Dataset with a Comparison
+----------------------------------
+
+Datasets also have a ``filter()`` method. It returns a copy of the Dataset with
+only the rows that meet the desired condition.
 
 We’ll work with this Dataset::
 
@@ -38,14 +112,12 @@ We’ll work with this Dataset::
     8   UBER:200515:33:   UBER               2020-05-13        3.00         0.77   C              True
     9   TLT:200529:165:   TLT                2020-05-26        1.00         1.78   P             False
 
-Filter a Dataset 
------------------
+Say we want to see only the rows with options that are puts. 
 
-Suppose you want to see only the rows with options that are puts. You
-can filter the Dataset by passing a predicate (a condition you want to
-be met) to ``ds.filter()``::
+The syntax is the same as for FastArrays::
 
-    >>> ds.filter(ds.OptionType == 'P')
+    >>> f = ds.OptionType == 'P'
+    >>> ds.filter(f)
     #   OSISymbol         UnderlyingSymbol    TradeDate   TradeSize   TradePrice   OptionType   Traded
     -   ---------------   ----------------   ----------   ---------   ----------   ----------   ------
     0   VIX:200520:35:0   VIX                2020-03-03        3.00        13.40   P             False
@@ -53,36 +125,23 @@ be met) to ``ds.filter()``::
     2   LITE:200619:82:   LITE               2020-03-24        5.00        14.80   P              True
     3   TLT:200529:165:   TLT                2020-05-26        1.00         1.78   P             False
 
-``ds.filter()`` returns a copy of the Dataset with the desired rows (and
-all columns).
+By default all columns are returned. If you want to return only certain columns, 
+you can combine the mask array with column selection::
 
-Note: Keep in mind that every time you use ``ds.filter()``, it makes a
-copy of the Dataset that takes up memory. We cover a couple of
-strategies for minimizing memory use below, when we talk about
-operations on filtered data.
+   >>> ds.filter(f).col_filter(['OSISymbol', 'TradeSize'])
 
-Filtering with Mask Arrays
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Alternatively, you can use the syntax we used to select Dataset rows to select 
+rows based on the filter, along with the columns you want::
 
-Let’s take a closer look at the predicate we used::
+    >>> ds[f, [0, 3]]
+    #   OSISymbol         TradeSize
+    -   ---------------   ---------
+    0   VIX:200520:35:0        3.00
+    1   AAPL:200417:255        1.00
+    2   LITE:200619:82:        5.00
+    3   TLT:200529:165:        1.00
 
-    >>> ds.OptionType == 'P'
-    FastArray([ True,  True,  True, False, False, False, False, False, False, True])
-
-Notice that it returns a FastArray of Boolean values. In our
-``ds.filter()`` example above, we were passing the filter function that
-array. An array of Booleans used to filter another array (or in this
-case, a Dataset) is often called a Boolean mask array. (Getting subsets
-of data using Boolean mask arrays is also sometimes called Boolean
-indexing.)
-
-Where the mask array value is False, the corresponding row is omitted
-from the returned Dataset. Note that the mask array you pass to
-``ds.filter()`` needs to be the same length as the Dataset.
-
-The ‘Traded’ Column in our Dataset is also an array of Booleans (and
-it’s clearly the same length as the Dataset), so we can pass it to
-``ds.filter()`` to see only the options that were traded::
+Here it could also make sense to pass the Traded column directly as a mask array::
 
     >>> ds.filter(ds.Traded)
     #   OSISymbol         UnderlyingSymbol    TradeDate   TradeSize   TradePrice   OptionType   Traded
@@ -93,103 +152,38 @@ it’s clearly the same length as the Dataset), so we can pass it to
     3   AXSM:200515:85:   AXSM               2020-05-01        6.00         7.79   C              True
     4   UBER:200515:33:   UBER               2020-05-13        3.00         0.77   C              True
 
-Assigning variable names to your filters makes them easier to use and
-reuse, especially as your filter criteria get more complex.
+Note: Keep in mind that every time you use ``filter()``, it makes a copy of 
+the Dataset that takes up memory. We cover a couple of strategies for minimizing 
+memory use below, when we talk about operations on filtered data.
 
-If you want to return only certain columns, you can combine the saved
-mask array with slicing::
 
-    >>> f = ds.OptionType == 'P'
-    >>> ds[f, ['OSISymbol', 'TradeSize']]
-    #   OSISymbol         TradeSize
-    -   ---------------   ---------
-    0   VIX:200520:35:0        3.00
-    1   AAPL:200417:255        1.00
-    2   LITE:200619:82:        5.00
-    3   TLT:200529:165:        1.00
+Use FastArray String Methods to Create Filters
+----------------------------------------------
 
-You can also use the filter on one column/FastArray::
+FastArray string methods are useful for creating conditions you can use to
+filter.
 
-    >>> ds.OSISymbol[f]
-    FastArray([b'VIX:200520:35:0:P', b'AAPL:200417:255:0:P', b'LITE:200619:82:5:P', b'TLT:200529:165:0:P'], dtype='|S19')
+Create a filter for OSISymbol strings that start with ‘A’::
 
-The ``==`` is a comparison operator, one of several you can use on
-column data to create mask arrays that are aligned with the Dataset::
-
-    >>> filt1 = (ds.TradeSize >= 5.00)
-    >>> filt1
-    FastArray([False, False,  True,  True,  True,  True, False,  True, False, False])
-
-Riptable also has binary comparison methods that are analogous to the
-symbol versions::
-
-    >>> filt2 = ds.TradePrice.__lt__(1.00)
-    >>> filt2
-    FastArray([False, False, False,  True,  True, False, False, False,  True, False])
-
-======================== ========== ==========
-**Comparison**           **Symbol** **Method**
-======================== ========== ==========
-Equals                   =          \__eq_\_
-Does not equal           !=         \__ne_\_
-Greater than or equal to >=         \__ge_\_
-Less than or equal to    <=         \__le_\_
-Greater than             >          \__gt_\_
-Less than                <          \__lt_\_
-======================== ========== ==========
-
-FastArray string methods are useful here, too.
-
-OSISymbol strings that start with ‘A’::
-
-    >>> ds.OSISymbol.str.startswith('A')
+    >>> f = ds.OSISymbol.str.startswith('A')
+    >>> f
     FastArray([False,  True, False, False, False, False, False,  True, False, False])
 
-That contain the substring ‘2005’::
+For OSISymbol strings that contain the substring ‘2005’::
 
-    >>> ds.OSISymbol.str.contains('2005')
+    >>> f = ds.OSISymbol.str.contains('2005')
+    >>> f
     FastArray([ True, False, False, False,  True, False, False,  True,  True, True])
 
-Strings in the UnderlyingSymbol column that end with ‘L’::
+For UnderlyingSymbol strings that end with ‘L’::
 
-    >>> ds.UnderlyingSymbol.str.regex_match('L$')
+    >>> f = ds.UnderlyingSymbol.str.regex_match('L$')
+    >>> f
     FastArray([False,  True, False, False, False, False,  True, False, False, False])
 
-Set Values in Columns with Filters and ``where()``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You can use mask arrays to update values that meet the filter condition
-(that is, where the mask array is ``True``)::
-
-    >>> ds.TradeSize[filt1] = 75.0
-    >>> ds
-    #   OSISymbol         UnderlyingSymbol    TradeDate   TradeSize   TradePrice   OptionType   Traded
-    -   ---------------   ----------------   ----------   ---------   ----------   ----------   ------
-    0   VIX:200520:35:0   VIX                2020-03-03        3.00        13.40   P             False
-    1   AAPL:200417:255   AAPL               2020-03-19        1.00        27.50   P             False
-    2   LITE:200619:82:   LITE               2020-03-24       75.00        14.80   P              True
-    3   SPY:200406:265:   SPY                2020-04-06       75.00         0.14   C             False
-    4   MFA:200515:2:0:   MFA                2020-04-20       75.00         0.29   C              True
-    5   XOM:220121:60:0   XOM                2020-04-23       75.00         3.75   C              True
-    6   CCL:200717:12:5   CCL                2020-04-27        1.00         2.55   C             False
-    7   AXSM:200515:85:   AXSM               2020-05-01       75.00         7.79   C              True
-    8   UBER:200515:33:   UBER               2020-05-13        3.00         0.77   C              True
-    9   TLT:200529:165:   TLT                2020-05-26        1.00         1.78   P             False
-
-With ``where()``, you can set values in a FastArray based on whether or
-not they meet a certain condition. It takes three arguments:
-``condition``, ``x``, and ``y``. Where the condition is met, it returns
-``x``; otherwise, it returns ``y``.
-
-Here, for instance, ``where()`` returns ``a`` where ``a < 5``; otherwise
-it returns ``10 * a``::
-
-    >>> a = rt.FA([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    >>> rt.where(a < 5, a, 10 * a)
-    FastArray([ 0,  1,  2,  3,  4, 50, 60, 70, 80, 90])
 
 Create More Complex Boolean Mask Filters with Bitwise Logic Operators (``&``, ``|``, ``~``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------------------------------------------------------------------------
 
 You can build more complex filters using Python’s bitwise logic
 operators, ``&`` (bitwise and), ``|`` (bitwise or), and ``~`` (bitwise
@@ -233,8 +227,9 @@ The negation of the ``f1`` filter::
     >>> ~f1
     FastArray([False, False,  True,  True,  True,  True, False,  True, False, False])
 
-As you create more complex filters, keep in mind another good use of a
-Riptable Struct: storing your filters to save and reload them later::
+If you have complex filter criteria you want to reuse, assigning variable names 
+to your filters can make things easier. You can also store your filters in a 
+Riptable Struct::
 
     >>> s = rt.Struct()
     >>> s.ds = ds
@@ -245,20 +240,91 @@ Riptable Struct: storing your filters to save and reload them later::
     0   ds           Dataset   10 rows x 7 cols                        
     1   callsover2   bool      10                 False   False   False
 
-Operate on Filtered Data 
--------------------------
+
+Set Values in Columns with Masks and ``rt.where()``
+---------------------------------------------------
+
+You can also use mask arrays to update values that meet the filter condition.
+
+Note, though, that the values are updated in place, not copied!
+
+Suppose you want to update all the puts to be marked as traded. The FastArray
+``filter()`` method doesn't let you set new values, but you can use the following
+syntax::
+
+    >>> f = ds.OptionType == 'P'
+    >>> ds.Traded[f] = True
+    >>> ds
+    #   OSISymbol         UnderlyingSymbol    TradeDate   TradeSize   TradePrice   OptionType   Traded
+    -   ---------------   ----------------   ----------   ---------   ----------   ----------   ------
+    0   VIX:200520:35:0   VIX                2020-03-03        3.00        13.40   P              True
+    1   AAPL:200417:255   AAPL               2020-03-19        1.00        27.50   P              True
+    2   LITE:200619:82:   LITE               2020-03-24        5.00        14.80   P              True
+    3   SPY:200406:265:   SPY                2020-04-06       50.00         0.14   C             False
+    4   MFA:200515:2:0:   MFA                2020-04-20       10.00         0.29   C              True
+    5   XOM:220121:60:0   XOM                2020-04-23        5.00         3.75   C              True
+    6   CCL:200717:12:5   CCL                2020-04-27        1.00         2.55   C             False
+    7   AXSM:200515:85:   AXSM               2020-05-01        6.00         7.79   C              True
+    8   UBER:200515:33:   UBER               2020-05-13        3.00         0.77   C              True
+    9   TLT:200529:165:   TLT                2020-05-26        1.00         1.78   P              True
+
+
+What if you want to provide one value where the mask is True and a different value
+where the mask is False?
+
+``rt.where()`` is a function that works as an if-then-else procedure. 
+
+It takes three arguments:
+
+- ``condition``
+- ``x``
+- ``y``
+
+Where the condition is met, it returns ``x``; otherwise, it returns ``y``. (If 
+``x`` or ``y`` is an array, the value that corresponds to the True or False is
+used.)
+
+Here, for instance, ``rt.where`` returns ``a`` where ``a < 5``; otherwise
+it returns ``10 * a``::
+
+    >>> a = rt.FA([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    >>> rt.where(a < 5, a, 10 * a)
+    FastArray([ 0,  1,  2,  3,  4, 50, 60, 70, 80, 90])
+
+In the Dataset above, we can have ``rt.where()`` mark puts as traded and calls as
+not traded. Note that ``rt.where()`` returns a FastArray, so the result needs to 
+be assigned as a Dataset column.
+
+    >>> ds.Traded = rt.where(ds.OptionType == 'P', True, False)
+    >>> ds[['OptionType', 'Traded']]
+    #   OptionType   Traded
+    -   ----------   ------
+    0   P              True
+    1   P              True
+    2   P              True
+    3   C             False
+    4   C             False
+    5   C             False
+    6   C             False
+    7   C             False
+    8   C             False
+    9   P              True
+
+
+Operate on Filtered Data in a Dataset
+-------------------------------------
 
 Looking at filtered data can provide some useful insights. But often,
-filtering data is just a prelude to operating on it.
+you want to operate on it.
 
 Say you want to compute the total size of options that were traded.
-Given that we just covered ``ds.filter()``, you might be tempted to do
+Given that we just covered ``filter()``, you might be tempted to do
 this::
 
     >>> ds.filter(ds.Traded).TradeSize.nansum()
     303.0
 
-However, remember that ``ds.filter()`` returns a copy of the Dataset,
+However, remember that ``filter()`` returns a copy of the Dataset,
 filtered by the mask array. This is unnecessary here – we’re only
 interested in the subset of one column of data. Fortunately, there are a
 couple of ways to work only on the data we need.
@@ -278,20 +344,14 @@ array by itself, the array will be silently ignored::
     >>> ds.TradeSize.nansum(ds.Traded)
     384.0
 
-Alternatively, we can pass our Boolean filter to the TradeSize column to
-get only the sizes for the options that were traded. Then we get the
-sum::
+Alternatively, we can use the FastArray `filter()` method to get only the 
+sizes for the options that were traded. Then we get the sum::
 
-    >>> ds.TradeSize[ds.Traded].nansum()
+    >>> ds.TradeSize.filter(ds.Traded).nansum()
     303.0
-
-This filters the TradeSize column, then gets the sum.
 
 Both of these methods are much more memory-friendly and computationally
 efficient than filtering (and making a copy of) the entire Dataset.
-
-Getting familiar with method chaining in Python can help you understand
-the order in which chained operations are applied.
 
 Next, we’ll check out Riptable’s datetime objects: `Work with Dates and
 Times <tutorial_datetimes.rst>`__.

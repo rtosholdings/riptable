@@ -16,7 +16,7 @@ requirements:
     - setuptools_scm
   run:
     - python
-    - riptide_cpp >=1.11.2,<2 # run with any (compatible) version in this range
+    - riptide_cpp >=1.11.4,<2 # run with any (compatible) version in this range
     - pandas >=0.24,<2.0
     - ansi2html >=1.5.2
     - ipykernel
