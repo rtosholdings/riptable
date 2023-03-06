@@ -938,7 +938,7 @@ class TestCategorical(unittest.TestCase):
         c1 = Categorical(["a", "a", "c", "b", "b"])
         c2 = Categorical(["b", "b", "d", "d", "c"])
         cm = Categorical.hstack([c1, c2])
-        assert (cm.as_string_array == FastArray(["a", "a", "c", "b", "b", "b", "b", "d", "d", "c"]).astype(str)).all()
+        assert (cm.as_string_array == ["a", "a", "c", "b", "b", "b", "b", "d", "d", "c"]).all()
         c1 = Categorical([1, 1, 3, 2, 2], [1, 2, 3, 4, 5], from_matlab=True)
         c2 = Categorical([2, 2, 4, 4, 3], [1, 2, 3, 4, 5], from_matlab=True)
         cm = Categorical.hstack([c1, c2])
@@ -985,9 +985,9 @@ class TestCategorical(unittest.TestCase):
         c2 = Categorical(["d", "e", "f"])
         c3 = Categorical(["c", "f", "z"])
         cm = Categorical.align([c1, c2, c3])
-        assert (cm[0].as_string_array == FastArray(["a", "b", "c"]).astype(str)).all()
-        assert (cm[1].as_string_array == FastArray(["d", "e", "f"]).astype(str)).all()
-        assert (cm[2].as_string_array == FastArray(["c", "f", "z"]).astype(str)).all()
+        assert (cm[0].as_string_array == ["a", "b", "c"]).all()
+        assert (cm[1].as_string_array == ["d", "e", "f"]).all()
+        assert (cm[2].as_string_array == ["c", "f", "z"]).all()
         assert (cm[0].categories() == FastArray([b"Filtered", b"a", b"b", b"c", b"d", b"e", b"f", b"z"])).all()
         assert (cm[0].categories() == cm[1].categories()).all()
         assert (cm[0].categories() == cm[2].categories()).all()
@@ -2174,20 +2174,20 @@ class TestCategorical(unittest.TestCase):
 
     def test_as_string_array(self):
         # SJK 10/4/2018 - as string array now returns bytes OR unicode (whatever type the string based categorical is holding)
-        f_str = FastArray(["b", "b", "b", "a", "b", "b"]).astype(str)
-        c1 = Categorical(f_str)
-        is_equal = bool(np.all(c1.as_string_array == f_str))
-        assert isinstance(c1.as_string_array, FastArray), f"Categorical did not return a fastarray in as_string_array"
-        assert (
-            is_equal
-        ), f"Categorical returned an incorrect string array {c1.as_string_array} view of itself. Expected {f_str}"
-        f_int = FastArray([1, 2, 3, 4, 5, 6]).astype(str)
-        c2 = Categorical(f_int)
-        is_equal = bool(np.all(c2.as_string_array == f_int))
-        assert isinstance(c2.as_string_array, FastArray), f"Categorical did not return a fastarray in as_string_array"
-        assert (
-            is_equal
-        ), f"Categorical returned an incorrect string array {c2.as_string_array} view of itself. Expected {f_int}"
+        for input, expected in [
+            (np.array([b"b", b"b", b"b", b"a", b"b", b"b"]), rt.FA([b"b", b"b", b"b", b"a", b"b", b"b"])),
+            (rt.FA(["X", "Y", "Z"], dtype="U"), rt.FA(["X", "Y", "Z"], dtype="U")),
+            ([1, 2, 3, 4, 5, 6], FastArray([1, 2, 3, 4, 5, 6], dtype="S")),
+            (rt.FA([1, 2, 3, 4, 5, 6], dtype="U"), FastArray([1, 2, 3, 4, 5, 6], dtype="U")),
+        ]:
+            c = Categorical(input)
+            actual = c.as_string_array
+            is_equal = bool(np.all(actual == expected))
+            assert isinstance(actual, FastArray), f"Categorical did not return a fastarray in as_string_array"
+            assert actual.dtype.char == expected.dtype.char
+            assert (
+                is_equal
+            ), f"Categorical returned an incorrect string array {c.as_string_array} view of itself. Expected {expected}"
 
     def test_indexing_numeric(self):
         c = Cat([1.1, 2.2, 3.3])
