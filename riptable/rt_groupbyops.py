@@ -986,17 +986,18 @@ class GroupByOps(ABC):
         label_keys = self.gb_keychain
         g = self.grouping
 
-        # get way to make groups contiguous
-        igroup = g.igroup
-        cutoffs = g.ncountgroup.cumsum(dtype=np.int64)[1:]
+        filter = kwargs["filter"] if "filter" in kwargs else None
+        transform = kwargs["transform"] if "transform" in kwargs else None
+
         newdict = {}
         for colname, arr in origdict.items():
             gbk = label_keys.gbkeys
             if colname not in gbk:
-                ifirstkey = groupbyhash(arr[igroup], cutoffs=cutoffs)["iFirstKey"][1]
-                # the cutoffs will generate iFirstKey cutoffs that help us determine the unique counts
-                result = ifirstkey.diff()
-                result[0] = ifirstkey[0]
+                mcat = TypeRegister.Categorical([self, arr], filter=filter)
+                if transform:
+                    result = self.nansum(mcat.first_bool, transform=transform)[0]
+                else:
+                    result = mcat.null()[0].count().Count
                 newdict[colname] = result
         return g._finalize_dataset(newdict, label_keys, None, addkeys=True, **kwargs)
 

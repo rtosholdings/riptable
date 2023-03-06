@@ -935,6 +935,7 @@ class FastArray(np.ndarray):
         - Calling ``fa.set_name`` or ``ds.col.set_name``, or changing the displayed
           column name via ``ds.col_rename``, changes the name assigned to the
           `FastArray`.
+
             - Note that calling ``fa.set_name`` or ``ds.col.set_name`` doesn't change the
               displayed column name.
 

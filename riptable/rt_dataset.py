@@ -26,6 +26,14 @@ import numpy as np
 import numpy.typing as npt
 
 from . import rt_merge
+from .rt_datetime import (
+    Date,
+    DateSpan,
+    DateSpanScalar,
+    DateTimeNano,
+    TimeSpan,
+    TimeSpanScalar,
+)
 from .rt_display import DisplayDetect, DisplayString, DisplayTable
 from .rt_enum import (
     DS_DISPLAY_TYPES,
@@ -6349,12 +6357,23 @@ class Dataset(Struct):
             return out_array
 
     # -------------------------------------------------------------------
-    def as_recordarray(self):
+    def as_recordarray(self, allow_conversions=False):
         """
         Convert Dataset to one array (record array).
 
-        Wrapped class arrays such as Categorical and DateTime will lose their type
-        TODO: Expand categoricals
+        DateTimeNano will be returned as datetime64[ns].
+
+        If allow_conversions = True, additional conversions will be performed:
+        Date will be converted to datetime64[D]
+        DateSpan will be converted to timedelta64[D]
+        TimeSpan will be converted (truncated) to timedelta64[ns]
+
+        Other wrapped class arrays such as Categorical will lose their type.
+
+        Parameters
+        ----------
+        allow_conversions : bool, default False
+            allow column type conversions to appropriate dtypes
 
         Examples
         --------
@@ -6366,14 +6385,35 @@ class Dataset(Struct):
         >>> ds.as_recordarray().c
         array([b'Jim', b'Jason', b'John'], dtype='|S5')
 
+        >>> ds = rt.Dataset({'a': rt.DateTimeNano("20230301 14:05", from_tz='NYC'), 'b': rt.Date("20210908"), 'c': rt.TimeSpan(-1.23)})
+        >>> ds.as_recordarray(allow_conversions=True)
+        rec.array([('2023-03-01T19:05:00.000000000', '2021-09-08', -1)],
+                dtype=[('a', '<M8[ns]'), ('b', '<M8[D]'), ('c', '<m8[ns]')])
+
         See Also
         --------
         numpy.core.records.array
         """
         # TODO: optionally? expand categoricals
+
+        def to_dtype(obj):
+            dfl_dtype = obj.dtype
+            if isinstance(obj, DateTimeNano):
+                return np.dtype("datetime64[ns]")
+            elif allow_conversions and isinstance(obj, Date):
+                return np.dtype("datetime64[D]")
+            elif allow_conversions and isinstance(obj, DateSpan):
+                return np.dtype("timedelta64[D]")
+            elif allow_conversions and isinstance(obj, TimeSpan):
+                return np.dtype("timedelta64[ns]")
+            elif type(obj) is not FastArray and issubclass(type(obj), FastArray):
+                warnings.warn(f"Wrapper type {type(obj)} will be represented as FastArray of {dfl_dtype}")
+            return dfl_dtype
+
         vals = self.values()
+        formats = [to_dtype(obj) for obj in vals]
         names = self.keys()
-        ra = np.core.records.fromarrays(list(vals), names=names)
+        ra = np.core.records.fromarrays(list(vals), formats=formats, names=names)
         return ra
 
     # -------------------------------------------------------------------

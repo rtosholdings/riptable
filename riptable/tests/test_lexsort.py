@@ -92,6 +92,8 @@ class Lexsort_Test(unittest.TestCase):
                     "uint32": np.random.randint(0, 1000, arr_len, dtype=np.uint32),
                     "uint16": np.random.randint(0, 1000, arr_len, dtype=np.uint16),
                     "uint8": np.random.randint(0, 200, arr_len, dtype=np.uint8),
+                    "dtn-utc": DateTimeNano.random(arr_len, from_tz="UTC"),
+                    "dtn-nyc": DateTimeNano.random(arr_len, from_tz="NYC"),
                 }
             )
             # if the arrays are in this order (large itemsize -> small, record array results will compare correctly)

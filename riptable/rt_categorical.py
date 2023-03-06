@@ -4368,49 +4368,78 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     def count(self, filter: Optional[np.ndarray] = None, transform: bool = False) -> "Dataset":
         """
-        Returns the counts for each unique category. Unlike other groupby operations, does not take a parameter for data.
+        Return the unique values of a `Categorical` and their counts.
 
-        By default, invalid categories will be hidden from the result. The showfilter keyword can be set to display them.
+        Unlike other `Categorical` operations, this does not take a parameter
+        for data.
 
         Parameters
         ----------
-        filter : np.ndarray of bool, optional
-        transform : bool, defaults to False
+        filter : array of bool, optional
+            `Categorical` values that correspond to False filter values are
+            excluded from the count. The array must be the same length as the
+            `Categorical`.
+        transform : bool, default False
+            Set to True to return a `Dataset` that's the length of the
+            `Categorical`, with counts aligned to the ungrouped `Categorical`
+            values. Only the counts are included.
 
         Returns
         -------
-        Dataset
+        `Dataset`
+            A `Dataset` containing each unique category and its count. If
+            `transform` is True, the `Dataset` is the same length as the
+            original `Categorical` and contains only the counts.
+
+        See Also
+        --------
+        .Grouping.count : Called by this method.
+        Categorical.unique_count : Return the number of unique values in a `Categorical`.
+        .FastArray.count : Return the unique values of a `FastArray` and their counts.
 
         Examples
         --------
         >>> c = rt.Categorical(['a','a','b','c','a','c'])
-        >>> c.count()
-        *gb_key_0   Count
-        ---------   -----
-        a               3
-        b               1
-        c               2
-
-        >>> c = rt.Categorical(['a','a','b','c','d','d'], invalid='d')
-        >>> c
-        Categorical([a, a, b, c, d, d]) Length: 6
-          FastArray([1, 1, 2, 3, 0, 0], dtype=int8) Base Index: 1
+        Categorical([a, a, b, c, a, c]) Length: 6
+          FastArray([1, 1, 2, 3, 1, 3], dtype=int8) Base Index: 1
           FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
-
         >>> c.count()
-        *gb_key_0   Count
-        ---------   -----
-        a               2
-        b               1
-        c               1
+        *key_0   Count
+        ------   -----
+        a            3
+        b            1
+        c            2
 
-        >>> c.count(showfilter=True)
-        *gb_key_0   Count
-        ---------   -----
-        Filtered        2
-        a               2
-        b               1
-        c               1
+        With a filter:
+
+        >>> f = c.count(c == 'a')  # Filter based on Categorical values
+        >>> c.count(filter=f)
+        *key_0   Count
+        ------   -----
+        a            3
+        b            0
+        c            0
+        >>> vals = rt.arange(6)  # Filter based on a same-length array of values
+        >>> f = vals > 2
+        >>> c.count(filter=f)
+        *key_0   Count
+        ------   -----
+        a            1
+        b            0
+        c            2
+
+        With ``transform=True``, a `Dataset` is returned with counts aligned to
+        the ungrouped `Categorical` values:
+
+        >>> c.count(transform=True)
+        #   Count
+        -   -----
+        0       3
+        1       3
+        2       1
+        3       2
+        4       3
+        5       2
         """
         # grouping and groupbykeys objects will always be built for count
         # TJD bug here
@@ -4509,16 +4538,66 @@ class Categorical(GroupByOps, FastArray):
     @property
     def as_string_array(self) -> FastArray:
         """
+        Return the full list of values of a `Categorical` as a string array.
+
+        For multi-key `Categorical` objects, the corresponding keys are
+        concatenated with a '_' separator.
+
+        Filtered values become the string 'Filtered'. Values from invalid
+        categories are treated the same way as values from valid categories.
+
+        NOTE: This routine is costly because it re-expands the full list of
+        values as strings.
+
         Returns
         -------
-        Array of string value of each index (applies index mask to categories)
-        NOTE: this routine is costly as it re-expands the strings
+        FastArray
+            A `FastArray` of the string values of the `Categorical`.
+
+        See Also
+        --------
+        Categorical.expand_array : Return the full list of `Categorical` values.
+
+        Notes
+        -----
+        This method works by applying an index mask to the unique categories.
+
+        Examples
+        --------
+        Single-key string `Categorical`:
+
+        >>> c = rt.Categorical(['AAPL','MSFT','AAPL','TSLA','MSFT','TSLA','AAPL'])
+        >>> c
+        Categorical([AAPL, MSFT, AAPL, TSLA, MSFT, TSLA, AAPL]) Length: 7
+          FastArray([1, 2, 1, 3, 2, 3, 1], dtype=int8) Base Index: 1
+          FastArray([b'AAPL', b'MSFT', b'TSLA'], dtype='|S4') Unique count: 3
+        >>> c.as_string_array
+        FastArray([b'AAPL', b'MSFT', b'AAPL', b'TSLA', b'MSFT', b'TSLA', b'AAPL'], dtype='|S8')
+
+        Single-key integer `Categorical`:
+
+        >>> c = rt.Categorical([1, 2, 1, 1, 3, 2, 3])
+        >>> c.as_string_array
+        FastArray(['1', '2', '1', '1', '3', '2', '3'], dtype='<U11')
+
+        Multi-key `Categorical`:
+
+        >>> key1 = rt.FastArray(['AAPL','MSFT','AAPL','TSLA','MSFT','TSLA','AAPL'])
+        >>> key2 = rt.FastArray([1, 1, 2, 2, 3, 3, 4])
+        >>> mk_cat = rt.Categorical([key1, key2])
+        >>> mk_cat
+        Categorical([(AAPL, 1), (MSFT, 1), (AAPL, 2), (TSLA, 2), (MSFT, 3), (TSLA, 3), (AAPL, 4)]) Length: 7
+          FastArray([1, 2, 3, 4, 5, 6, 7], dtype=int8) Base Index: 1
+          {'key_0': FastArray([b'AAPL', b'MSFT', b'AAPL', b'TSLA', b'MSFT', b'TSLA', b'AAPL'], dtype='|S4'), 'key_1': FastArray([1, 1, 2, 2,
+        3, 3, 4])} Unique count: 7
+        >>> mk_cat.as_string_array
+        FastArray([b'AAPL_1', b'MSFT_1', b'AAPL_2', b'TSLA_2', b'MSFT_3', b'TSLA_3', b'AAPL_4'], dtype='|S16')
         """
         if self.isenum:
             return self.as_singlekey().expand_array
 
         elif self.issinglekey:
-            string_list = self.category_array
+            string_list = self.category_array.astype(str)
             return self._expand_array(string_list)
 
         elif self.ismultikey:
@@ -5124,37 +5203,84 @@ class Categorical(GroupByOps, FastArray):
     @property
     def expand_array(self) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
         """
+        Return the full list of values of a `Categorical`.
+
+        If the `Categorical` is constructed with an :py:class:`~enum.IntEnum` or a mapping
+        dictionary, the integer mapping codes are returned.
+
+        Filtered `Categorical` values are returned as 'Filtered' for string
+        arrays or numeric sentinel values for numeric arrays.
+
         Returns
         -------
         FastArray or tuple of FastArray
-            A re-expanded array or return instance array of mapping codes.
-            Filtered items will use the filtered string for stringlike columns, or numeric sentinel value for numeric columns.
+            For single-key `Categorical` objects, a `FastArray` is returned. For
+            multi-key `Categorical` objects, a tuple of `FastArray` objects is
+            returned.
 
-        Notes
+        Warns
         -----
-        Will warn the user if a large categorical ( > 100,000 items ) is being re-expanded.
+        Performance warning
+            Will warn the user if a large `Categorical` (more than 100,000 items)
+            is being re-expanded.
 
-        If strings are held, the result column's itemsize will be large of the categories or the invalid category.
+        See Also
+        --------
+        Categorical.as_string_array :
+            Return the full list of values of a `Categorical` as a string array.
 
         Examples
         --------
-        Singlekey categorical:
+        Single-key `Categorical`:
 
         >>> c = rt.Categorical(['a','a','b','c','a'])
         >>> c.expand_array
         FastArray([b'a', b'a', b'b', b'c', b'a'], dtype='|S3')
 
-        Multikey:
+        Multi-key `Categorical`:
 
-        >>> c = rt.Categorical([rt.FastArray(['a','b','c','a']), rt.FastArray([1,2,3,1])])
+        >>> c = rt.Categorical([rt.FastArray(['a', 'b', 'c', 'a']), rt.FastArray([1, 2, 3, 1])])
         >>> c.expand_array
         (FastArray([b'a', b'b', b'c', b'a'], dtype='|S8'), FastArray([1, 2, 3, 1]))
 
-        Enum:
+        For a `Categorical` constructed with an :py:class:`~enum.IntEnum` or a mapping dictionary,
+        the array of integer mapping codes (``c._fa``) is returned:
 
         >>> c = rt.Categorical([2, 2, 2, 1, 3], {'a':1,'b':2,'c':3})
+        >>> c
+        Categorical([b, b, b, a, c]) Length: 5
+          FastArray([2, 2, 2, 1, 3]) Base Index: None
+          {1:'a', 2:'b', 3:'c'} Unique count: 3
         >>> c.expand_array
         FastArray([2, 2, 2, 1, 3])
+        >>> c._fa
+        FastArray([2, 2, 2, 1, 3])
+
+        Filtered string `Categorical` values are returned as the string 'Filtered':
+
+        >>> a = rt.FastArray(['a', 'c', 'b', 'b', 'c', 'a'])
+        >>> f = rt.FastArray([False, False, True, True, True, True])
+        >>> c = rt.Categorical(a, filter=f)
+        >>> c
+        Categorical([Filtered, Filtered, b, b, c, a]) Length: 6
+          FastArray([0, 0, 2, 2, 3, 1], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c.expand_array
+        FastArray([b'Filtered', b'Filtered', b'b', b'b', b'c', b'a'], dtype='|S8')
+
+        Filtered integer `Categorical` values are returned as the integer
+        sentinel value:
+
+        >>> a = rt.FastArray([1, 3, 2, 2, 3, 1])
+        >>> f = rt.FastArray([False, False, True, True, True, True])
+        >>> c = rt.Categorical(a, filter=f)
+        >>> c
+        Categorical([Filtered, Filtered, 2, 2, 3, 1]) Length: 6
+          FastArray([0, 0, 2, 2, 3, 1], dtype=int8) Base Index: 1
+          FastArray([1, 2, 3]) Unique count: 3
+        >>> c.expand_array
+        FastArray([-2147483648, -2147483648,           2,           2,
+                     3,           1])
         """
         if len(self) > 100_000:
             warnings.warn(f"Performance warning: re-expanding categorical of {len(self)} items.")
@@ -5558,12 +5684,11 @@ class Categorical(GroupByOps, FastArray):
             grp.nCountGroup,
         )
 
-        idx_0 = iGroup[iFirstGroup[0] : iFirstGroup[0] + nCountGroup[0]]
-        example_res = userfunc(args[0][idx_0])
+        example_res = userfunc(args[0][:1])
 
         def column_name(arg):
             try:
-                value = args[0].get_name() if args[0].get_name() is not None else "col_0"
+                value = arg.get_name() if arg.get_name() is not None else "col_0"
             except AttributeError:  # np.arrays dont have a name
                 value = "col_0"
 
@@ -5576,6 +5701,7 @@ class Categorical(GroupByOps, FastArray):
             res_ds.label_set_names(res_ds.keys())
             value = column_name(args[0])
             res_ds[value] = res
+            res_ds.col_move_to_front(value)
             return res_ds
 
         elif np.isscalar(example_res) & transform:

@@ -783,7 +783,11 @@ class TestDataset(unittest.TestCase):
         ds1.Ticker = Categorical(ds1.Ticker)
         ds2.Ticker = Categorical(ds2.Ticker)
         ds = Dataset.concat_rows([ds1, ds2])
-        self.assertTrue((ds.Ticker.as_string_array == ["a", "a", "c", "b", "b", "b", "b", "d", "d", "c"]).all())
+        self.assertTrue(
+            (
+                ds.Ticker.as_string_array == FastArray(["a", "a", "c", "b", "b", "b", "b", "d", "d", "c"]).astype(str)
+            ).all()
+        )
         self.assertTrue((ds.Price == 100 + np.arange(10)).all())
         # Numeric labels
         ds1 = Dataset({"Ticker": [1, 1, 3, 2, 2], "Price": 100 + np.arange(5)})
@@ -2136,6 +2140,33 @@ class TestDataset(unittest.TestCase):
             )
             assert col.dtype == expected_dtype
             assert_array_equal(col, scalar_value)
+
+    def test_as_recordarray_datetime(self):
+        test_cases = {
+            "fa-i8": (rt.FA([42], dtype="i8"), None),
+            "d": (rt.Date(["2018-02-01"]), None, np.dtype("datetime64[D]")),
+            "ds": (rt.DateSpan([123]), None, np.dtype("timedelta64[D]")),
+            "dss": (rt.DateSpanScalar(123), None),
+            "dtn-gmt": (rt.DateTimeNano(["19810406 01:23:45"], from_tz="GMT"), np.dtype("datetime64[ns]")),
+            "dtn-utc": (rt.DateTimeNano(["19810406 01:23:45"], from_tz="UTC"), np.dtype("datetime64[ns]")),
+            "dtn-nyc": (rt.DateTimeNano(["20230207 09:30:00"], from_tz="NYC"), np.dtype("datetime64[ns]")),
+            "ts": (rt.TimeSpan([-123]), None, np.dtype("timedelta64[ns]")),
+            "tss": (rt.TimeSpanScalar(-123), None),
+        }
+
+        ds = rt.Dataset({k: p[0] for (k, p) in test_cases.items()})
+        ra_non_converted = ds.as_recordarray()
+        ra_converted = ds.as_recordarray(allow_conversions=True)
+        for k, p in test_cases.items():
+            obj, dt_non_converted, dt_converted = p if len(p) == 3 else (p[0], p[1], p[1])
+
+            dt_expected = dt_non_converted if dt_non_converted is not None else obj.dtype
+            dt_actual = ra_non_converted.dtype[k]
+            assert dt_actual == dt_expected, f"incorrect non-conversion for {k}:{obj}; {dt_expected=}, {dt_actual=}"
+
+            dt_expected = dt_converted if dt_converted is not None else obj.dtype
+            dt_actual = ra_converted.dtype[k]
+            assert dt_actual == dt_expected, f"incorrect conversion for {k}:{repr(obj)}; {dt_expected=}, {dt_actual=}"
 
 
 @pytest.mark.parametrize("categorical", get_all_categorical_data())
