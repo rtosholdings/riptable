@@ -4597,7 +4597,9 @@ class Categorical(GroupByOps, FastArray):
             return self.as_singlekey().expand_array
 
         elif self.issinglekey:
-            string_list = self.category_array.astype(str)
+            string_list = self.category_array
+            if string_list.dtype.char not in "SU":
+                string_list = string_list.astype(dtype="S")
             return self._expand_array(string_list)
 
         elif self.ismultikey:

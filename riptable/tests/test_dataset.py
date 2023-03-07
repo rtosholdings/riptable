@@ -783,11 +783,7 @@ class TestDataset(unittest.TestCase):
         ds1.Ticker = Categorical(ds1.Ticker)
         ds2.Ticker = Categorical(ds2.Ticker)
         ds = Dataset.concat_rows([ds1, ds2])
-        self.assertTrue(
-            (
-                ds.Ticker.as_string_array == FastArray(["a", "a", "c", "b", "b", "b", "b", "d", "d", "c"]).astype(str)
-            ).all()
-        )
+        self.assertTrue((ds.Ticker.as_string_array == ["a", "a", "c", "b", "b", "b", "b", "d", "d", "c"]).all())
         self.assertTrue((ds.Price == 100 + np.arange(10)).all())
         # Numeric labels
         ds1 = Dataset({"Ticker": [1, 1, 3, 2, 2], "Price": 100 + np.arange(5)})
