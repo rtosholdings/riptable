@@ -63,3 +63,60 @@ exclude_lines = [
     "\\.\\.\\.",
     "pass",
 ]
+
+# ruff is a Python linter implemented in Rust: https://github.com/charliermarsh/ruff
+[tool.ruff]
+line-length = 120
+
+# Rule categories (or individual rules) to enable.
+# https://beta.ruff.rs/docs/rules
+select = [
+  "B",      # flake8-bugbear
+  "C4",     # flake8-comprehensions
+  "E",      # pycodestyle (Errors)
+  "D",      # pydocstyle
+  "ERA",    # eradicate
+  "F",      # pyflakes
+  "FBT",    # flake8-boolean-trap
+  "INP",    # flake8-no-pep420
+  "ISC",    # flake8-implicit-str-concat
+  "NPY",    # NumPy-specific rules
+  "PD",     # pandas-vet
+  "PT",     # flake8-pytest-style
+  "Q",      # flake8-quotes
+  "UP",     # pyupgrade
+  "W",      # pycodestyle (Warnings)
+]
+
+# Rules NOT to enforce. Either we don't care about them,
+# or we do care but we need to fix them before we can enable
+# the rule again.
+ignore = [
+  #####
+  # Temporarily-disabled rules.
+  # Fix these issues and un-ignore these rules as soon as feasible.
+  #####
+  "D101",   # missing docstring in public class
+  "D102",   # missing docstring in public method
+  # (add others here if/as needed)
+
+  #####
+  # Rules we really want to disable (now and maybe forever).
+  #####
+  # This rule doesn't play well with numpy/riptable. In particular,
+  # if someone tries to invert a logical/boolean array by e.g. (my_arr == False)
+  # instead of `np.logical_not()`, the pattern is detected by this rule
+  # and converted to an "is"-based check that won't work with numpy/riptable arrays.
+  "E712",   # Comparison to `False` should be `cond is False`
+]
+
+# Group output by file. This format is typically most useful for development;
+# override the format via the command-line when running `ruff` from within a CI job.
+format = "grouped"
+
+[tool.ruff.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.pydocstyle]
+# Use numpy-style docstrings.
+convention = "numpy"

@@ -4,6 +4,7 @@ import os
 import sys
 from contextlib import contextmanager
 from enum import IntEnum
+from packaging import version
 
 __all__ = [
     "LikertDecision",
@@ -126,3 +127,13 @@ def new_array_function(kls: type):
         yield
     finally:
         kls.NEW_ARRAY_FUNCTION_ENABLED = False
+
+
+def parse_version(version_str):
+    return version.parse(version_str)
+
+
+def get_rc_version():
+    import riptide_cpp
+
+    return parse_version(riptide_cpp.__version__)
