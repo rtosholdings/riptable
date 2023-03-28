@@ -39,6 +39,7 @@ from .rt_enum import (
     gUnaryUFuncs,
 )
 from .rt_grouping import Grouping
+from .rt_misc import _use_autocomplete_placeholder
 from .rt_mlutils import normalize_minmax, normalize_zscore
 from .rt_numpy import (
     _searchsorted,
@@ -1766,12 +1767,12 @@ class FastArray(np.ndarray):
 
     # --------------------------------------------------------------------------
     def repeat(self, repeats, axis=None) -> FastArray:
-        """see rt.repeat"""
+        """See `riptable.repeat`."""
         return repeat(self, repeats, axis=axis)
 
     # --------------------------------------------------------------------------
     def tile(self, reps) -> FastArray:
-        """see rt.tile"""
+        """See `riptable.tile`."""
         return tile(self, reps)
 
     # --------------------------------------------------------------------------
@@ -3467,6 +3468,7 @@ class FastArray(np.ndarray):
     # def __add__(self, value):   return rc.BasicMathTwoInputs((self, value), 1, 0)
 
     @property
+    @_use_autocomplete_placeholder(0)
     def crc(self) -> int:
         """
         Calculate the 32-bit CRC of the data in this array using the Castagnoli polynomial (CRC32C).
@@ -4086,10 +4088,7 @@ class FastArray(np.ndarray):
         as a ufunc then it will not be called unless it is registered with the array function helper since array function
         protocol takes priority over the universal function protocol.
 
-        See Also
-        --------
-        For information around the Numpy array function protocol see NEP 18:
-        https://numpy.org/neps/nep-0018-array-function-protocol.html
+        Reference: `NEP 18 Array Function Protocol <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
         """
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(

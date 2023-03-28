@@ -54,7 +54,6 @@ from .rt_grouping import combine2groups
 from .rt_hstack import hstack_any
 from .rt_imatrix import IMatrix
 from .rt_itemcontainer import ItemContainer
-from .rt_misc import build_header_tuples
 from .rt_mlutils import normalize_minmax, normalize_zscore
 from .rt_numpy import (
     arange,

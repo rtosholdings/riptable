@@ -11,6 +11,7 @@ __all__ = [
 ]
 
 import warnings
+from functools import wraps
 
 import numpy as np
 
@@ -361,6 +362,7 @@ class Hooker:
     _orig_deduplicate = None
     _putils = None
     babydict = {c: None for c in list("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.")}
+    _autocomplete_placeholders_engaged = False
 
 
 # The Completion class is copied
@@ -582,6 +584,7 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
         return acobj, startpos, mainpart, endpos, startwith
 
     # ---------------------------------------------
+    @_engage_autocomplete_placeholders
     def _riptable_deduplicate_completions(text, completions):
         # This is the hook for use_jedi=True and console.
         # [<Completion start=3 end=3 text='as_struct' type='function', signature='(self)',>,  ..]
@@ -590,6 +593,18 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
 
         # turn the enumerator into a list
         completions = list(completions)
+
+        # This alternative to the above is helpful in identifying hotspots during auto-completion.
+        # import cProfile
+        # import pstats
+        # with cProfile.Profile(builtins=False) as pr:
+        #     pr.enable()
+        #     completions = list(completions)
+        #     pr.disable()
+        #     with open("C:/temp/stats.txt", "w") as stream:
+        #         pst = pstats.Stats(pr, stream=stream)
+        #         pst.sort_stats("cumtime")
+        #         pst.print_stats(r"\briptable\b")
 
         # look for apply_schema as only riptable will have this marker up front
         for comp in completions:
@@ -668,6 +683,7 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
 
         return Hooker._orig_deduplicate(text, completions)
 
+    @_engage_autocomplete_placeholders
     def _riptable_do_complete(self, code, cursor_pos):
         """
         Hooked from ipythonkernel.do_complete.  Hit in jupyter lab.
@@ -679,6 +695,18 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
         # code is what text the user typed
         # call original first (usually kicks in jedi)
         result = Hooker._orig_do_complete(self, code, cursor_pos)
+
+        # This alternative to the above is helpful in identifying hotspots during auto-completion.
+        # import cProfile
+        # import pstats
+        # with cProfile.Profile(builtins=False) as pr:
+        #     pr.enable()
+        #     result = Hooker._orig_do_complete(self, code, cursor_pos)
+        #     pr.disable()
+        #     with open("C:/temp/stats.txt", "w") as stream:
+        #         pst = pstats.Stats(pr, stream=stream)
+        #         pst.sort_stats("cumtime")
+        #         pst.print_stats(r"\briptable\b")
 
         # we only autocomplete on dots
         dotpos = code.rfind(".")
@@ -828,3 +856,29 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
         if Hooker._orig_deduplicate is not None:
             setattr(Hooker._putils, "_deduplicate_completions", Hooker._orig_deduplicate)
             Hooker._orig_deduplicate = None
+
+
+def _engage_autocomplete_placeholders(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        orig = Hooker._autocomplete_placeholders_engaged
+        try:
+            Hooker._autocomplete_placeholders_engaged = True
+            return fn(*args, **kwargs)
+        finally:
+            Hooker._autocomplete_placeholders_engaged = orig
+
+    return wrapper
+
+
+def _use_autocomplete_placeholder(placeholder):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            if Hooker._autocomplete_placeholders_engaged:
+                return placeholder(*args, **kwargs) if callable(placeholder) else placeholder
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

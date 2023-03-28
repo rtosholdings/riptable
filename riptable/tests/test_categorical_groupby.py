@@ -19,9 +19,10 @@ from riptable import (
     mask_or,
 )
 from riptable.rt_enum import GROUPBY_KEY_PREFIX
+from riptable.tests.utils import get_rc_version, parse_version
 
-#%load_ext autoreload
-#%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 # from riptable import *
 # from enum import IntEnum
 str_fa = FastArray(
@@ -900,13 +901,46 @@ class TestCategoricalGroupby:
         """
         Test that Categorical.shift shifts the values in an array or Dataset *per group*.
         """
+        result = rt.Cat([1, 1, 1, 2]).shift(arange(100, 104))[0]
+        assert result[1] == 100
+        assert result[2] == 101
+
         result = rt.Cat([1, 1, 1, 2]).shift(arange(4), window=1)[0]
         assert result[1] == 0
         assert result[2] == 1
 
-        result = rt.Cat([1, 1, 1, 2]).shift([5, 6, 7, 8], window=1)[0]
+        result = rt.Cat([1, 1, 1, 2]).shift([5, 6, 7, 8], 1)[0]
         assert result[1] == 5
         assert result[2] == 6
+
+        result = rt.Cat([1, 1, 1, 2]).shift([-5, -6, -7, -8], periods=1)[0]
+        assert result[1] == -5
+        assert result[2] == -6
+
+        with pytest.raises(TypeError):
+            rt.Cat([1, 1, 1, 2]).shift(arange(4), 1, 1)
+
+        with pytest.raises(ValueError):
+            rt.Cat([1, 1, 1, 2]).shift(arange(4), window=4, periods=1)
+
+        with pytest.raises(ValueError):
+            rt.Cat([1, 1, 1, 2]).shift(arange(4), 4, periods=1)
+
+    @pytest.mark.xfail(
+        get_rc_version() < parse_version("1.11.5a"), reason="cat.shift of flexible not supported", strict=False
+    )
+    def test_shift_flexible(self):
+        """
+        Test that Categorical.shift shifts the flexible values in an array or Dataset *per group*.
+        """
+        cat = rt.Cat([1, 1, 1])
+        result = cat.shift([1, 2, 3])[0]
+        assert result[1] == 1
+        assert result[2] == 2
+
+        result = cat.shift(["x", "y", "z"])[0]
+        assert result[1] == "x"
+        assert result[2] == "y"
 
     def test_fill_backward(self):
         """

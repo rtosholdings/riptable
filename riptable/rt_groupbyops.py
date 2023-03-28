@@ -20,11 +20,13 @@ from .rt_enum import (
 )
 from .rt_groupbykeys import GroupByKeys
 from .rt_grouping import Grouping
+from .rt_misc import _use_autocomplete_placeholder
 from .rt_numpy import bool_to_fancy, empty_like, gb_np_quantile, groupbyhash, zeros_like
 from .rt_utils import rolling_quantile_funcParam
 
 if TYPE_CHECKING:
     from .rt_dataset import Dataset
+    from .rt_fastarray import FastArray
 
 
 # =====================================================================================================
@@ -100,6 +102,7 @@ class GroupByOps(ABC):
 
     # ---------------------------------------------------------------
     @property
+    @_use_autocomplete_placeholder({})
     def groups(self):
         """
         Returns a dictionary of unique key values -> their fancy indices of occurrence in the original data.
@@ -230,6 +233,7 @@ class GroupByOps(ABC):
 
     # ---------------------------------------------------------------
     @property
+    @_use_autocomplete_placeholder(placeholder=lambda _: FastArray[0])
     def first_fancy(self):
         """
         Return a fancy index mask of the first occurrence
@@ -523,7 +527,6 @@ class GroupByOps(ABC):
     # ------------------------------------------------------------
     @classmethod
     def get_header_names(cls, columns, default="col_"):
-
         # ---------------------------------------------------------------
         def get_array_name(arr, default, i):
             name = None
@@ -1014,7 +1017,6 @@ class GroupByOps(ABC):
         func_param=0,
         **kwargs,
     ):
-
         if any(kwargs):
             logging.warning(
                 "Unexpected GroupBy operation keyword(s): " + ", ".join([key for key, value in kwargs.items()])
@@ -1484,7 +1486,6 @@ class GroupByOps(ABC):
         function_names = []
 
         for quantile in quantiles:
-
             function_names.append(GroupByOps._gb_quantile_name(quantile, is_nan_function))
 
             # if quantile == 1:
@@ -3373,26 +3374,18 @@ class GroupByOps(ABC):
         # return get_resampler_for_grouping(self, rule, *args, **kwargs)
 
     # -------------------------------------------------------
-    def nth(self, *args, n=1, **kwargs):
+    def nth(self, n=1):
         """
-        Take the nth row from each group if `n` is an int, or a subset of rows if `n` is a list of ints.
-
-        If dropna, will take the nth non-null row, dropna is either
-        Truthy (if a Series) or 'all', 'any' (if a DataFrame);
-        this is equivalent to calling dropna(how=dropna) before the
-        groupby.
+        Take the nth row from each group if `n` is an int.
 
         Parameters
         ----------
-        n : int or list of ints
-            a single nth value for the row or a list of nth values
-        dropna : None or str, optional
-            apply the specified dropna operation before counting which row is
-            the nth row. Needs to be None, 'any' or 'all'
+        n : int
+            a single nth value for the row
 
         Examples
         --------
-        >>> df = pd.DataFrame({'A': [1, 1, 2, 1, 2],
+        >>> df = rt.Dataset({'A': [1, 1, 2, 1, 2],
         ...                    'B': [np.nan, 2, 3, 4, 5]}, columns=['A', 'B'])
         >>> g = df.groupby('A')
         >>> g.nth(0)
@@ -3420,32 +3413,8 @@ class GroupByOps(ABC):
         1  2.0
         2  3.0
         2  5.0
-
-        Specifying ``dropna`` allows count ignoring NaN
-
-        >>> g.nth(0, dropna='any')
-             B
-        A
-        1  2.0
-        2  3.0
-
-        NaNs denote group exhausted when using dropna
-
-        >>> g.nth(3, dropna='any')
-            B
-        A
-        1 NaN
-        2 NaN
-
-        Specifying ``as_index=False`` in ``groupby`` keeps the original index.
-
-        >>> df.groupby('A', as_index=False).nth(1)
-           A    B
-        1  1  2.0
-        4  2  5.0
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_NTH, *args, func_param=(n), **kwargs)
-        # raise NotImplementedError
+        return self._calculate_all(GB_FUNCTIONS.GB_NTH, func_param=(n))
 
     ##-------------------------------------------------------
     def diff(self, period=1, **kwargs):

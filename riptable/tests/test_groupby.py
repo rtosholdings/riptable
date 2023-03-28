@@ -1,11 +1,12 @@
 import os
 import unittest
 from math import isclose
+import pytest
 
 from riptable import *
 from riptable import Categorical, Dataset, FastArray, GroupBy, arange, isnan, isnotnan
 from riptable.rt_enum import INVALID_DICT
-from riptable.tests.utils import LikertDecision
+from riptable.tests.utils import LikertDecision, get_rc_version, parse_version
 from riptable.Utils.pandas_utils import dataset_as_pandas_df
 
 num_list = [3, 4, 5, 1, 2]
@@ -617,24 +618,44 @@ class Groupby_Test(unittest.TestCase):
             self.assertEqual(tup[0], correct_keys[i])
             self.assertTrue(bool(np.all(tup[1].idxcol == correct_idx[i])))
 
-    def test_shift(self):
+    def do_test_shift(self, use_flexible: bool):
         import pandas as pd
 
-        ds = Dataset({"col_" + str(i): np.random.rand(30) for i in range(5)})
+        d = {"col_" + str(i): np.random.rand(30) for i in range(5)}
+        if use_flexible:
+            d.update(
+                {
+                    "str1": np.random.choice(list("abcde"), 30),
+                    "str": np.random.choice([b"welcome", b"to", b"the", b"machine", b"."], 30),
+                    "uni": FastArray(np.random.choice(["The", "Plain", "Rain", "In", "Spain"], 30), unicode=True),
+                    "dtn": DateTimeNano.random(30),
+                }
+            )
+
+        ds = Dataset(d)
         ds.keycol = np.random.choice(["a", "b", "c"], 30)
         df = pd.DataFrame(ds.asdict())
 
         rt_result = ds.gb("keycol").shift(periods=-2).trim()
         pd_result = df.groupby("keycol").shift(periods=-2).dropna(axis="rows")
 
-        for k, v in rt_result.items():
-            self.assertTrue(bool(np.all(v == pd_result[k])))
+        for k, v in pd_result.items():
+            self.assertTrue(bool(np.all(v == rt_result[k])))
 
         rt_result = ds.gb("keycol").shift(periods=3).trim()
         pd_result = df.groupby("keycol").shift(periods=3).dropna(axis="rows")
 
-        for k, v in rt_result.items():
-            self.assertTrue(bool(np.all(v == pd_result[k])))
+        for k, v in pd_result.items():
+            self.assertTrue(bool(np.all(v == rt_result[k])))
+
+    def test_shift(self):
+        self.do_test_shift(False)
+
+    @pytest.mark.xfail(
+        get_rc_version() < parse_version("1.11.5a"), reason="groupby.shift of flexible not supported", strict=False
+    )
+    def test_shift_flexible(self):
+        self.do_test_shift(True)
 
     def test_diff(self):
         import pandas as pd
@@ -646,8 +667,8 @@ class Groupby_Test(unittest.TestCase):
         rt_result = ds.gb("keycol").rolling_diff()
         pd_result = df.groupby("keycol").diff()
 
-        for k, v in rt_result.items():
-            pdc = pd_result[k]
+        for k, pdc in rt_result.items():
+            v = rt_result[k]
             pdcnan = isnan(pdc)
             self.assertTrue(bool(np.all(isnan(v) == pdcnan)), msg=f"{v} {pdc}")
 
@@ -677,7 +698,6 @@ class Groupby_Test(unittest.TestCase):
         self.assertTrue(np.all(newds.symbol == "YHOO"))
 
     def test_transform(self):
-
         arrsize = 200
         numrows = 7
 
@@ -700,6 +720,23 @@ class Groupby_Test(unittest.TestCase):
         result1 = ds.gb("symbol").apply_nonreduce(TypeRegister.FastArray.diff)
         result2 = ds.gb("symbol").diff()
         self.assertTrue(result1.equals(result2))
+
+    @pytest.mark.skipif(get_rc_version() < parse_version("1.11.5a2"), reason="groupby.nth(n<0) is broken", strict=False)
+    def test_nth(self):
+        ds = Dataset({"a": [0, 1, 1], "num": [123.0, 456.0, 789.0], "str": ["Aa", "Bb", "Cc"]})
+        grp_offsets = [0, 1]
+        gb = ds.groupby("a")
+        for n in range(-3, 3):
+            result = gb.nth(n=n)
+            for grp in range(2):
+                grp_count = grp + 1
+                grp_index = n if n >= 0 else grp_count + n
+                if grp_index >= 0 and grp_index < grp_count:
+                    assert result["num"][grp] == ds["num"][grp_offsets[grp] + grp_index]
+                    assert result["str"][grp] == ds["str"][grp_offsets[grp] + grp_index]
+                else:
+                    assert np.isnan(result["num"][grp])
+                    assert len(result["str"][grp]) == 0
 
 
 if __name__ == "__main__":

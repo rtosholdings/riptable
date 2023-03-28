@@ -54,6 +54,7 @@ from .rt_groupbykeys import GroupByKeys
 from .rt_groupbyops import GroupByOps
 from .rt_grouping import Grouping, GroupingEnum, merge_cats
 from .rt_hstack import hstack_any
+from .rt_misc import _use_autocomplete_placeholder
 from .rt_numpy import (
     arange,
     argsort,
@@ -308,7 +309,6 @@ class Categories:
         _from_categorical=False,
         **kwargs,
     ):
-
         self._list = []
         self._column_dict = {}
 
@@ -1518,7 +1518,6 @@ class Categorical(GroupByOps, FastArray):
         from_matlab: bool = False,
         _from_categorical=None,
     ) -> Categorical:
-
         invalid_category = invalid
         # possibly set categories with defaults
         # raise certain impossible combination errors immediately
@@ -2335,7 +2334,7 @@ class Categorical(GroupByOps, FastArray):
     @property
     def category_array(self) -> FastArray:
         """
-        When possible, returns the array of stored unique categories, otherwise raises an error.
+        Return the array of stored unique categories.
 
         Unlike the default for categories(), this will not prepend the invalid category.
         """
@@ -2656,7 +2655,6 @@ class Categorical(GroupByOps, FastArray):
         deep=True,
         order="K",
     ):  # origin, possible fast track
-
         # raise error on keywords supplied that don't make sense
         error_kwargs = {"categories": categories, "_from_categorical": _from_categorical}
         for k, v in error_kwargs.items():
@@ -2808,17 +2806,136 @@ class Categorical(GroupByOps, FastArray):
         return self.newclassfrominstance(temp, self)
 
     # -------------------------------------------------------
-    def shift(self, *args, window: int = 1, **kwargs):
+    def shift(self, arr, window: Optional[int] = None, *, periods: Optional[int] = None):
         """
-        Shift each group by periods observations
+        Shift values in each group by the specified number of periods.
+
+        Where the shift introduces a missing value, the missing value is filled
+        with the invalid value for the array's data type (for example, NaN for
+        floating-point arrays or the sentinel value for integer arrays).
+
+
         Parameters
         ----------
-        window : integer, default 1 number of periods to shift
-        periods: optional support, same as window
+        arr : array or list of array
+            The array of values to shift.
+        window : int, default 1
+            The number of periods to shift. Can be a negative number to shift
+            values backward.
+        periods: int, optional, default 1
+            Can use ``periods`` instead of ``window`` for Pandas parameter
+            support.
+
+        Returns
+        -------
+        Dataset
+            A `.Dataset` containing a column of shifted values.
+
+        See Also
+        --------
+        Categorical.shift_cat : Shift the values of a `Categorical`.
+        .FastArray.shift : Shift the values of a `.FastArray`.
+        .DateTimeNano.shift : Shift the values of a `.DateTimeNano` array.
+
+        Examples
+        --------
+        With the default ``window=1``:
+
+        >>> c = rt.Cat(['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c', 'c'])
+        >>> fa = rt.arange(9)
+        >>> shift_val = c.shift(fa)
+        >>> shift_val
+        #   col_0
+        -   -----
+        0     Inv
+        1       0
+        2       1
+        3     Inv
+        4       3
+        5       4
+        6     Inv
+        7       6
+        8       7
+
+        With ``window=2``:
+
+        >>> shift_val_2 = c.shift(fa, window=2)
+        >>> shift_val_2
+        #   col_0
+        -   -----
+        0     Inv
+        1     Inv
+        2       0
+        3     Inv
+        4     Inv
+        5       3
+        6     Inv
+        7     Inv
+        8       6
+
+        With ``window=-1``:
+
+        >>> shift_neg = c.shift(fa, window=-1)
+        >>> shift_neg
+        #   col_0
+        -   -----
+        0       1
+        1       2
+        2     Inv
+        3       4
+        4       5
+        5     Inv
+        6       7
+        7       8
+        8     Inv
+
+        Results put in a `.Dataset` to show the shifts in relation to the
+        categories:
+
+        >>> ds = rt.Dataset()
+        >>> ds.c = c
+        >>> ds.shift_val = shift_val
+        >>> ds.shift_val_2 = shift_val_2
+        >>> ds.shift_neg = shift_neg
+        >>> ds
+        #   c   shift_val   shift_val_2   shift_neg
+        -   -   ---------   -----------   ---------
+        0   a         Inv           Inv           1
+        1   a           0           Inv           2
+        2   a           1             0         Inv
+        3   b         Inv           Inv           4
+        4   b           3           Inv           5
+        5   b           4             3         Inv
+        6   c         Inv           Inv           7
+        7   c           6           Inv           8
+        8   c           7             6         Inv
+
+        Shift two arrays:
+
+        >>> fa2 = rt.arange(10, 19)
+        >>> shift_val_3 = c.shift([fa, fa2])
+        >>> shift_val_3
+        #   col_0   col_1
+        -   -----   -----
+        0     Inv     Inv
+        1       0      10
+        2       1      11
+        3     Inv     Inv
+        4       3      13
+        5       4      14
+        6     Inv     Inv
+        7       6      16
+        8       7      17
         """
         # support for pandas periods keyword
-        window = kwargs.get("periods", window)
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_SHIFT, *args, func_param=(window), **kwargs)
+        # only one of window and period may be specified
+        if periods is not None:
+            if window is not None:
+                raise ValueError("Only one of window or periods may be specified")
+            window = periods
+        elif window is None:
+            window = 1
+        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_SHIFT, arr, func_param=(window))
 
     @classmethod
     def _from_meta_data(cls, arrdict, arrflags, meta):
@@ -3327,6 +3444,7 @@ class Categorical(GroupByOps, FastArray):
         >>> c.map(mapping)
         FastArray([b'w', b'w', b'x', b'y', b'z'], dtype='|S3')
         """
+
         # --------------------
         def invalid_value(invalid, newcats):
             # return an invalid string or sentinel value
@@ -3563,7 +3681,6 @@ class Categorical(GroupByOps, FastArray):
                 uniquelist = self.grouping.uniquelist[0]
 
                 if self.category_mode == CategoryMode.StringArray:
-
                     # TODO: push the string matching up to categorical
                     value = self._categories_wrap.match_str_to_category(value)
 
@@ -3574,7 +3691,6 @@ class Categorical(GroupByOps, FastArray):
                     if str_idx < self.unique_count:
                         # insertion point, not exact match
                         if value != uniquelist[str_idx]:
-
                             # adjust for le, ge comparisons
                             # str_idx -= 0.5
                             str_idx -= 0.5
@@ -4536,6 +4652,7 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @property
+    @_use_autocomplete_placeholder(placeholder=lambda _: FastArray([""]))
     def as_string_array(self) -> FastArray:
         """
         Return the full list of values of a `Categorical` as a string array.
@@ -5203,6 +5320,7 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @property
+    @_use_autocomplete_placeholder(placeholder=lambda self: self._fa)
     def expand_array(self) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
         """
         Return the full list of values of a `Categorical`.
@@ -5309,6 +5427,7 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     @property
+    @_use_autocomplete_placeholder({})
     def expand_dict(self) -> Dict["str", FastArray]:
         """
         Returns
@@ -5360,6 +5479,7 @@ class Categorical(GroupByOps, FastArray):
             where the first (0th) element of the array is the invalid value for
             that array type.
         """
+
         # ------------------------------------------------------------
         def _match_invalid(arr):
             """
@@ -5720,7 +5840,6 @@ class Categorical(GroupByOps, FastArray):
     @staticmethod
     @nb.njit(parallel=True)
     def _scalar_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
-
         ngrp = iFirstGroup.shape[0] - 1  # exclude the filtered group
         res = np.full(ngrp, np.nan)
 
@@ -5733,7 +5852,6 @@ class Categorical(GroupByOps, FastArray):
     @staticmethod
     @nb.njit(parallel=True)
     def _transformed_scalar_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
-
         ngrp = iFirstGroup.shape[0] - 1
         res = np.full((iGroup.shape[0],), np.nan)
 
@@ -5750,7 +5868,6 @@ class Categorical(GroupByOps, FastArray):
     @staticmethod
     @nb.njit(parallel=True)
     def _array_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
-
         ngrp = iFirstGroup.shape[0] - 1
         res = np.full((iGroup.shape[0],), np.nan)
 

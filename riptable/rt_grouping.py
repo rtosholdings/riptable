@@ -36,6 +36,7 @@ from .rt_enum import (
     NumpyCharTypes,
     int_dtype_from_len,
 )
+from .rt_misc import _use_autocomplete_placeholder
 from .rt_numpy import (
     _groupbycalculateall,
     _groupbycalculateallpack,
@@ -1551,6 +1552,7 @@ class Grouping:
 
     # ---------------------------------------------------------------
     @property
+    @_use_autocomplete_placeholder(lambda _: np.array([], dtype=int))
     def ifirstkey(self):
         """
         returns the row locations of the first member of the group
@@ -1573,6 +1575,7 @@ class Grouping:
 
     # ---------------------------------------------------------------
     @property
+    @_use_autocomplete_placeholder(lambda _: np.array([], dtype=int))
     def ilastkey(self):
         """
         returns the row locations of the last member of the group
@@ -3456,7 +3459,7 @@ class Grouping:
                 raise TypeError(f"Nothing was calculated for Accum2 operation.")
             elif Grouping.DebugMode:
                 print("Warning: nothing calculated.")
-            logging.warning(f"Nothing was calculated for GroupBy operation.")
+            logging.warning(f"Nothing was calculated for GroupBy operation {funcNum}.")
 
         # create a new dataset from the groupby results
         if Grouping.DebugMode:

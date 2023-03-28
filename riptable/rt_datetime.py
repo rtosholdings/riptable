@@ -1440,7 +1440,7 @@ class Date(DateBase, TimeStampBase):
             timestr = timestr.astimezone(localzone)
             timestr = timestr.strftime(format_str)
         except:
-            raise ValueError(f"Date number {date_num} is not a valid value for Date() object.")
+            return f"<InvalidDate({date_num!r})>"
         return timestr
 
     # ------------------------------------------------------------
@@ -4639,7 +4639,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             timestr = timestr.astimezone(localzone)
             timestr = timestr.strftime(format_str)
         except:
-            raise ValueError(f"DateTime: the utc nano value {utcnano!r} for {timezone.utc!r} is not valid.")
+            return f"<InvalidDateTimeNano({utcnano!r}, tz='UTC')>"
 
         # possible add ms,us,ns precision to seconds
         # each instance should attempt to set its own precision based on how it was constructed
@@ -6922,7 +6922,7 @@ class DateScalar(np.int32):
 
     def __repr__(self):
         itemformat = self.get_item_format()
-        return Date.format_date_num(self._np, itemformat)
+        return f"{self.get_classname()}('{Date.format_date_num(self._np, itemformat)}')"
 
     def __str__(self):
         itemformat = self.get_item_format()
@@ -7012,7 +7012,7 @@ class DateSpanScalar(np.int32):
 
     def __repr__(self):
         itemformat = self.get_item_format()
-        return DateSpan.format_date_span(self._np, itemformat)
+        return f"{self.get_classname()}('{DateSpan.format_date_span(self._np, itemformat)}')"
 
     def __str__(self):
         itemformat = self.get_item_format()
