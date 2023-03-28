@@ -61,7 +61,7 @@ jobs:
       - name: Install other dependencies
         run: |
           python dev_tools/gen_requirements.py --out runtime_reqs.txt runtime
-          python dev_tools/gen_requirements.py --out tests_reqs.txt tests
+          python dev_tools/gen_requirements.py --out tests_reqs.txt tests flake8
           pip install -r runtime_reqs.txt -r tests_reqs.txt
       - name: Lint with flake8
         run: |
