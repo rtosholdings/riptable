@@ -6594,6 +6594,26 @@ def test_merge_lookup_inplace_multi():
     assert_array_equal(foo.strcol, rt.FA([b"", b"Lombard", b"", b"", b"", b""]))
 
 
+def test_merge2_keep_equals_first():
+    # Testing for correct behavior on merge2 (and thus merge_lookup) with a keep = 'first' kwarg.
+    # As in RIPTABLE-88 this gave incorrect behavior in some cases, ultimately related to a bug with
+    # the ifirstkey in the grouping.
+    leftds = rt.Dataset()
+    leftds.samplecat = rt.Cat([2, 1, 3], ["a", "b", "c"])
+    leftds.samplecat_copy = leftds.samplecat.copy()
+    rightds = rt.Dataset()
+    rightds.samplecat = rt.Cat([2, 1], ["a", "b", "c"])
+    rightds.samplecat_copy = rightds.samplecat.copy()
+    merged_ds = rt.merge2(
+        leftds, rightds, on="samplecat", suffixes=["_left", "_right"], how="left", keep=(None, "first")
+    )
+    # Correct behavior at this point here would be:
+    #    merged_ds.samplecat_copy_left = [b, a, c]
+    #    merged_ds.samplecat_copy_right = [b, a, Filtered]
+    # Incorrect previous behavior was that samplecat_copy_right gave [a, b, Filtered]
+    assert (merged_ds.samplecat_copy_right == rt.Cat([2, 1, 0], ["a", "b", "c"])).all()
+
+
 class MergeAsofTest(unittest.TestCase):
     def test_merge_asof(self):
         def check_merge_asof(ds, ds1, ds2):

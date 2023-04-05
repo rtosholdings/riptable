@@ -41,6 +41,7 @@ from .rt_numpy import (
     _groupbycalculateall,
     _groupbycalculateallpack,
     arange,
+    argsort,
     combine2keys,
     combine_accum1_filter,
     combine_accum2_filter,
@@ -2149,11 +2150,22 @@ class Grouping:
             if self._unique_count == unique_count_new:
                 # fast path if not filtering and not already filtered
                 if filter is None and ikey_new.min() > 0:
-                    ikey_fix = self.ikey[ifirstkey][ikey_new - 1]
+                    ikey_ifirstkey = self.ikey[ifirstkey]
+                    ikey_fix = ikey_ifirstkey[ikey_new - 1]
+                    if not issorted(ikey_ifirstkey):
+                        ifkremap_argsort = argsort(ikey_ifirstkey)
+                        ifirstkey_fix = ifirstkey[ifkremap_argsort]
+                    else:
+                        ifirstkey_fix = ifirstkey
                 else:
                     # TJD this path needs to be tested
                     ifkremap, sortkey = ifirstkey_regroup(self.ikey, ifirstkey)
                     ikey_fix = ifkremap[ikey_new]
+                    if not issorted(ifkremap[1:]):
+                        ifkremap_argsort = argsort(ifkremap[1:])
+                        ifirstkey_fix = ifirstkey[ifkremap_argsort]
+                    else:
+                        ifirstkey_fix = ifirstkey
 
                 copy_gdict(self, newgrouping)
 
@@ -2162,6 +2174,11 @@ class Grouping:
                 ifkremap, sortkey = ifirstkey_regroup(self.ikey, ifirstkey, lex=True)
                 # TJD ideally want an inplace remapping for speeed
                 ikey_fix = ifkremap[ikey_new]
+                if not issorted(ifkremap[1:]):
+                    ifkremap_argsort = argsort(ifkremap[1:] - 1)
+                    ifirstkey_fix = ifirstkey[ifkremap_argsort]
+                else:
+                    ifirstkey_fix = ifirstkey
 
                 # remove base 1 indexing
                 sortkey -= 1
@@ -2174,7 +2191,7 @@ class Grouping:
 
             # init defaults most attributes to none, set the bare minimum
             newgrouping._iKey = ikey_fix
-            newgrouping.iFirstKey = ifirstkey
+            newgrouping.iFirstKey = ifirstkey_fix
             newgrouping._unique_count = unique_count_new
             newgrouping._sort_display = self._sort_display
             newgrouping._categorical = self._categorical
