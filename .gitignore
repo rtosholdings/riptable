@@ -138,6 +138,7 @@ dmypy.json
 .idea
 .vs
 .vscode/
+*.code-workspace
 
 # OS-specific metadata files
 .DS_Store

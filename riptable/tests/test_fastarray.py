@@ -29,7 +29,7 @@ from riptable.rt_numpy import (
     nanmin,
 )
 from riptable.rt_utils import mbget
-from riptable.tests.utils import new_array_function
+from riptable.tests.utils import new_array_function, get_rc_version, parse_version
 from riptable.testing.array_assert import assert_array_or_cat_equal
 
 NP_ARRAY_FUNCTION_PARAMS: List[Callable] = [
@@ -1112,6 +1112,54 @@ class FastArray_Test(unittest.TestCase):
                 bool(np.all(result == correct)),
                 msg=f"isnan failed for dtype {np.dtype(dt)}",
             )
+
+    @pytest.mark.xfail(
+        get_rc_version() < parse_version("1.12.1a"), reason="nan sentinels fails for some supported types"
+    )
+    def test_nan_sentinels(self):
+        all_dtypes = [np.dtype(c) for c in rt.rt_enum.NumpyCharTypes.All]
+        nan_dtypes = [
+            dt
+            for dt in all_dtypes
+            if (
+                dt.num in rt.rt_enum.INVALID_DICT
+                and dt.char not in rt.rt_enum.NumpyCharTypes.Unsupported
+                and dt.char != "?"  # bool nan is broken (neither supported nor unsupported)
+            )
+        ]
+        ops = {
+            True: ["isnan", "isnanorzero", "isnotfinite"],
+            False: ["isnotnan", "isfinite"],
+        }
+
+        for dt in nan_dtypes:
+            arr = rt.FA([rt.rt_enum.INVALID_DICT[dt.num], 1], dtype=dt)
+            try:
+                is_nan = isnan(INVALID_DICT[arr.dtype.num])
+            except:
+                is_nan = False
+            if not is_nan:
+                self.assertEqual(INVALID_DICT[arr.dtype.num], arr[0], msg=f"failed for {dt!r}")
+
+            for expected, names in ops.items():
+                correct = [expected, not expected]
+
+                for name in names:
+                    # test the fa.xxx() variant
+                    fn = getattr(arr, name)
+                    result = fn()
+                    self.assertTrue(
+                        bool(np.all(result == correct)),
+                        msg=f"fa.{name} failed for dtype {dt!r}",
+                    )
+
+                    # test the rt.xxx(fa) variant
+                    fn = getattr(rt, name)
+                    result = fn(arr)
+                    self.assertTrue(
+                        bool(np.all(result == correct)),
+                        msg=f"rt.{name} failed for dtype {dt!r}",
+                    )
 
     def test_safe_conversions_uint(self):
         uint_types = [np.uint8, np.uint16, np.uint32, np.uint64]

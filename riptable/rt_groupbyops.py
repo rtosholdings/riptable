@@ -3374,7 +3374,7 @@ class GroupByOps(ABC):
         # return get_resampler_for_grouping(self, rule, *args, **kwargs)
 
     # -------------------------------------------------------
-    def nth(self, n=1):
+    def nth(self, *args, n=1, **kwargs):
         """
         Take the nth row from each group if `n` is an int.
 
@@ -3414,7 +3414,7 @@ class GroupByOps(ABC):
         2  3.0
         2  5.0
         """
-        return self._calculate_all(GB_FUNCTIONS.GB_NTH, func_param=(n))
+        return self._calculate_all(GB_FUNCTIONS.GB_NTH, *args, func_param=(n), **kwargs)
 
     ##-------------------------------------------------------
     def diff(self, period=1, **kwargs):

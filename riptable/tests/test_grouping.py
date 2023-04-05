@@ -614,6 +614,22 @@ class Grouping_Test(unittest.TestCase):
 
         assert_array_equal(rt.FA([]), result1)
 
+    def test_regrouping_ifirstkey_correct(self):
+        # Added after fixing a bug where .ifirstkey of a regrouped grouping with unused categories wasn't properly ordered.
+        test_cat = Categorical([2, 1], ["a", "b", "c"])
+        # In this example, if we regroup it drops category 'c' and ifirstkey should be [1, 0],
+        # meaning the first occurance of 'a' is in position 1, the first occurance of 'b' is in position 0.
+        regrouped_ifirstkey = test_cat.grouping.regroup().ifirstkey
+        assert_array_equal(regrouped_ifirstkey, rt.FA([1, 0]))
+
+    def test_regrouping_ilastkey_correct(self):
+        # Parallel version of above check for ilastkey (which had not previously been affected by the same bug).
+        test_cat = Categorical([2, 1], ["a", "b", "c"])
+        # In this example, if we regroup it drops category 'c' and ilastkey should be [1, 0],
+        # meaning the last occurance of 'a' is in position 1, the last occurance of 'b' is in position 0.
+        regrouped_ilastkey = test_cat.grouping.regroup().ilastkey
+        assert_array_equal(regrouped_ilastkey, rt.FA([1, 0]))
+
 
 def test_merge_cats_stringcat_with_empty():
     cat_lens = [
