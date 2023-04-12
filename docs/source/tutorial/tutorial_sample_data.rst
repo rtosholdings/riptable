@@ -36,7 +36,7 @@ The following methods generate repeated 0s and 1s.
     >>> rt.ones(10, int)
     FastArray([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
-The following methods generate repated specified values.
+The following methods generate repeated specified values.
 
 10 fives::
 
@@ -91,7 +91,7 @@ For randomly generated values, you have several options.
 For integers and floating-point values, NumPy has you covered. Call
 ``default_rng`` to get a new instance of a NumPy Generator, then call
 its methods. To generate values that can be replicated, initialize with
-a seed::
+a seed value of your choice to initialize the BitGenerator::
 
     >>> rng = np.random.default_rng(seed=42)
 
@@ -122,7 +122,8 @@ a seed::
     >>> rng.choice([True, False], 10)
     array([False, False,  True, False,  True,  True, False,  True,  True, True])
 
-See NumPy’s documentation for more details and other methods.
+See `NumPy’s
+documentation <https://numpy.org/doc/stable/user/index.html>`__ for more details and other methods.
 
 Riptable has methods for generating random Date and DateTimeNano arrays.
 
@@ -149,8 +150,7 @@ use ``rng.choice`` to pick dates from a range::
     >>> rt.Date(rng.choice(rt.Date.range('20220201', '20220430'), 5))
     Date(['2022-04-12', '2022-02-17', '2022-03-14', '2022-02-12', '2022-04-03'])
 
-Next we cover ways to get data in and out of Riptable: `IO Tools and
-Working with Other File Types <tutorial_io.rst>`__.
+Next we cover ways to get data in and out of Riptable: `Work with Riptable Files and Other File Formats <tutorial_io.rst>`__.
 
 --------------
 

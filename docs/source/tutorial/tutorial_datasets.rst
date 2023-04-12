@@ -1,4 +1,4 @@
-Intro to Riptable Datasets, FastArrays, and Structs
+Riptable Datasets, FastArrays, and Structs
 ===================================================
 
 What Is a Dataset?
@@ -57,6 +57,9 @@ Dataset::
 Another way to think of a Dataset is as a dictionary of same-length
 FastArrays, where each key is a column name that’s mapped to a FastArray
 of values that all have the same dtype.
+
+For Python dictionary details, see `Python’s
+documentation <https://docs.python.org/3/tutorial/datastructures.html#dictionaries>`__.
 
 Use the Dataset Constructor with Dictionary-Style Input
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -371,7 +374,7 @@ statistics:
 =============== ==============================
 Count           Total number of items
 Valid           Total number of valid values
-Nans            Total number of NaN values
+Nans            Total number of NaN values*
 Mean            Mean
 Std             Standard deviation
 Min             Minimum value
@@ -383,6 +386,9 @@ P90             90th percentile
 Max             Maximum value
 MeanM           Mean without top or bottom 10%
 =============== ==============================
+
+\*NaN stands for Not a Number, and is commonly used to represent missing data. 
+For details, see `Working with Missing Data <tutorial_missing_data.rst>`__.
 
 You can also use ``describe()`` on a single column::
 
@@ -404,7 +410,8 @@ You can also use ``describe()`` on a single column::
     MeanM     0.54
 
 If your Dataset is very large, you can get column statistics with
-``statx()``, which you can import from ``riptable.rt_stats``. It gives
+``statx()``, which you can import from ``riptable.rt_stats``. 
+``statx()`` provides rapid sampling and gives
 you a few more percentiles than ``describe()`` does, but it works only
 on one column at a time::
 
@@ -435,6 +442,10 @@ See a column’s unique values::
 
     >>> ds2.Symbol.unique()
     FastArray([b'AAPL', b'AMZN', b'GME', b'SPY', b'TSLA'], dtype='|S4')
+
+A note about strings in FastArrays: When you view a FastArray of
+strings, you’ll see a ‘b’ next to each string. These b's indicate that the strings are encoded to byte strings,
+which saves memory compared to saving strings as ASCII.
 
 Count the number of unique values in a column::
 
@@ -598,65 +609,6 @@ More often, you’ll probably use filters to get subsets of your data. That's
 covered in more detail in `Get and Operate on Subsets of Data Using
 Filters <tutorial_filters.rst>`__.
 
-Delete a Column from a Dataset
-------------------------------
-
-To delete a column from a Dataset, use ``del ds.ColumnName``.
-
-Hold Two or More Datasets in a Struct
--------------------------------------
-
-When you’re working with multiple Datasets, it can be helpful to keep
-them together in a Riptable Struct. Structs were created as a base class
-for Datasets. They also replicate Matlab structs.
-
-You can think of a Struct as a Python dictionary, but with attribute
-access allowed for keys.
-
-Data structures stored together in a Struct don’t need to be aligned::
-
-    >>> s = rt.Struct()
-    >>> s.ds = ds
-    >>> s.ds2 = ds2
-
-You can access each data structure using attribute-style access. For
-example:
-
-    >>> s.ds2
-      #   Symbol   Size   Value
-    ---   ------   ----   -----
-      0   AAPL      300    0.77
-      1   AMZN      100    0.44
-      2   AAPL      300    0.86
-      3   GME       500    0.70
-      4   SPY       100    0.09
-      5   AMZN      300    0.98
-      6   TSLA      200    0.76
-      7   SPY       300    0.79
-      8   TSLA      300    0.13
-      9   TSLA      300    0.45
-     10   AAPL      400    0.37
-     11   AAPL      400    0.93
-     12   AAPL      400    0.64
-     13   GME       100    0.82
-     14   AMZN      100    0.44
-    ...   ...       ...     ...
-     35   GME       200    0.19
-     36   TSLA      400    0.13
-     37   SPY       200    0.48
-     38   AMZN      500    0.23
-     39   GME       400    0.67
-     40   AAPL      300    0.44
-     41   SPY       100    0.83
-     42   TSLA      500    0.70
-     43   AAPL      500    0.31
-     44   AAPL      100    0.83
-     45   AAPL      200    0.80
-     46   AMZN      400    0.39
-     47   AMZN      500    0.29
-     48   AMZN      300    0.68
-     49   AMZN      400    0.14
-
 Perform Operations on Dataset Columns
 -------------------------------------
 
@@ -736,6 +688,11 @@ right length for the Dataset you want to add it to::
     0   0   5   5   5.10   -1.00   20
     1   1   5   6   6.10   -2.25   22
     2   2   5   7   7.10   -4.00   24
+
+Delete a Column from a Dataset
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To delete a column from a Dataset, use ``del ds.ColumnName``.
 
 Reducing Operations vs. Non-Reducing Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -992,14 +949,59 @@ separate columns, so we’ll add a fix::
     3   AAPL:191018:260    0.45   -0.14   AAPL     191018       C         260.00
     4   AAPL:191018:265   -0.81    0.68   AAPL     191018       P         265.00
 
-A note about strings in FastArrays: When you view a FastArray of
-strings, you’ll see a ‘b’ next to each string::
+Hold Two or More Datasets in a Struct
+-------------------------------------
 
-    >>> ds5.Symbol
-    FastArray([b'SPY', b'SPY', b'TLT', b'AAPL', b'AAPL'], dtype='|S4')
+When you’re working with multiple Datasets, it can be helpful to keep
+them together in a Riptable Struct. Structs were created as a base class
+for Datasets. They also replicate Matlab structs.
 
-These b's indicate that the strings are encoded to byte strings,
-which saves memory compared to saving strings as ASCII.
+You can think of a Struct as a Python dictionary, but with attribute
+access allowed for keys.
+
+Data structures stored together in a Struct don’t need to be aligned::
+
+    >>> s = rt.Struct()
+    >>> s.ds = ds
+    >>> s.ds2 = ds2
+
+You can access each data structure using attribute-style access. For
+example:
+
+    >>> s.ds2
+      #   Symbol   Size   Value
+    ---   ------   ----   -----
+      0   AAPL      300    0.77
+      1   AMZN      100    0.44
+      2   AAPL      300    0.86
+      3   GME       500    0.70
+      4   SPY       100    0.09
+      5   AMZN      300    0.98
+      6   TSLA      200    0.76
+      7   SPY       300    0.79
+      8   TSLA      300    0.13
+      9   TSLA      300    0.45
+     10   AAPL      400    0.37
+     11   AAPL      400    0.93
+     12   AAPL      400    0.64
+     13   GME       100    0.82
+     14   AMZN      100    0.44
+    ...   ...       ...     ...
+     35   GME       200    0.19
+     36   TSLA      400    0.13
+     37   SPY       200    0.48
+     38   AMZN      500    0.23
+     39   GME       400    0.67
+     40   AAPL      300    0.44
+     41   SPY       100    0.83
+     42   TSLA      500    0.70
+     43   AAPL      500    0.31
+     44   AAPL      100    0.83
+     45   AAPL      200    0.80
+     46   AMZN      400    0.39
+     47   AMZN      500    0.29
+     48   AMZN      300    0.68
+     49   AMZN      400    0.14
 
 Riptable has a few other methods for operating on strings. We'll use them as
 the basis for filtering data in the next section, `Get and Operate on Subsets 

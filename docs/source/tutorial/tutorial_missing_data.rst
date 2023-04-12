@@ -64,7 +64,7 @@ operation involving a ``NaN`` is another ``NaN``::
     1      2     1.50         3.00
     2      3     2.70         5.40
 
-To help, many arithmatic functions have NaN versions that ignore ``NaN``
+To help, many arithmetic functions have NaN versions that ignore ``NaN``
 values::
 
     >>> ds.Ints.nansum()
@@ -202,6 +202,8 @@ values within categories::
 
 Propagate forward the last encountered non-``NaN`` value for the
 category::
+
+Note that until a reported bug is fixed, explicit column name declarations might not be displayed for grouping operations.
 
     >>> ds.Cat.fill_forward(ds.x)
     *gb_key_0       x

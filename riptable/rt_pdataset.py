@@ -117,7 +117,7 @@ class PDataset(Dataset):
             self._pcutoffs = list(cutoffs.values())[0]
         else:
             # assume one row, init from dataset
-            self._pcutoffs = FastArray([self._nrows])
+            self._pcutoffs = FastArray([self._nrows if self._nrows is not None else 1])
 
         # number of rows in each partition
         self._prows = self._pcutoffs.copy()

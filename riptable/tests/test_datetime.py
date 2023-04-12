@@ -2195,8 +2195,20 @@ class DateTime_Test(unittest.TestCase):
             from_tz="UTC",
             to_tz="UTC",
         )
-        correct_hour = DateTimeNano(
-            [
+        expected_rule_conversions = {
+            "H": "h",
+            "T": "m",
+            "min": "m",
+            "S": "s",
+            "L": "ms",
+            "ms": "ms",
+            "U": "us",
+            "US": "us",
+            "N": "ns",
+            "NS": "ns",
+        }
+        expected_results = {
+            "h": [
                 "2015-04-15 14:00:00",
                 "2015-04-20 07:00:00",
                 "2015-04-23 13:00:00",
@@ -2204,14 +2216,7 @@ class DateTime_Test(unittest.TestCase):
                 "2015-04-24 07:00:00",
                 "2015-04-10 23:00:00",
             ],
-            from_tz="UTC",
-            to_tz="UTC",
-        )
-        h_result = dtn.resample("H", dropna=True)
-        self.assertTrue(arr_eq(correct_hour, h_result))
-
-        correct_minute = DateTimeNano(
-            [
+            "m": [
                 "2015-04-15 14:26:00",
                 "2015-04-20 07:30:00",
                 "2015-04-23 13:15:00",
@@ -2219,14 +2224,7 @@ class DateTime_Test(unittest.TestCase):
                 "2015-04-24 07:47:00",
                 "2015-04-10 23:59:00",
             ],
-            from_tz="UTC",
-            to_tz="UTC",
-        )
-        m_result = dtn.resample("T", dropna=True)
-        self.assertTrue(arr_eq(correct_minute, m_result))
-
-        correct_second = DateTimeNano(
-            [
+            "s": [
                 "2015-04-15 14:26:54",
                 "2015-04-20 07:30:00",
                 "2015-04-23 13:15:24",
@@ -2234,14 +2232,7 @@ class DateTime_Test(unittest.TestCase):
                 "2015-04-24 07:47:54",
                 "2015-04-10 23:59:59",
             ],
-            from_tz="UTC",
-            to_tz="UTC",
-        )
-        s_result = dtn.resample("S", dropna=True)
-        self.assertTrue(arr_eq(correct_second, s_result))
-
-        correct_ms = DateTimeNano(
-            [
+            "ms": [
                 "2015-04-15 14:26:54.735",
                 "2015-04-20 07:30:00.858",
                 "2015-04-23 13:15:24.526",
@@ -2249,14 +2240,7 @@ class DateTime_Test(unittest.TestCase):
                 "2015-04-24 07:47:54.737",
                 "2015-04-10 23:59:59.376",
             ],
-            from_tz="UTC",
-            to_tz="UTC",
-        )
-        ms_result = dtn.resample("L", dropna=True)
-        self.assertTrue(arr_eq(correct_ms, ms_result))
-
-        correct_us = DateTimeNano(
-            [
+            "us": [
                 "2015-04-15 14:26:54.735321",
                 "2015-04-20 07:30:00.858219",
                 "2015-04-23 13:15:24.526871",
@@ -2264,17 +2248,21 @@ class DateTime_Test(unittest.TestCase):
                 "2015-04-24 07:47:54.737776",
                 "2015-04-10 23:59:59.376589",
             ],
-            from_tz="UTC",
-            to_tz="UTC",
-        )
-        us_result = dtn.resample("U", dropna=True)
-        self.assertTrue(arr_eq(correct_us, us_result))
-
-    # def test_resample_float(self):
-    #    pass
-
-    # def test_resample_units(self):
-    #    pass
+            "ns": [
+                "2015-04-15 14:26:54.735321368",
+                "2015-04-20 07:30:00.858219615",
+                "2015-04-23 13:15:24.526871083",
+                "2015-04-21 02:25:11.768548100",
+                "2015-04-24 07:47:54.737776979",
+                "2015-04-10 23:59:59.376589955",
+            ],
+        }
+        for rule in expected_rule_conversions:
+            with self.subTest(rule=rule):
+                res = dtn.resample(rule=rule, dropna=True)
+                converted_rule = expected_rule_conversions[rule]
+                expected_dtn = DateTimeNano(expected_results[converted_rule], from_tz="UTC", to_tz="UTC")
+                self.assertTrue(arr_eq(expected_dtn, res))
 
     def test_resample_errors(self):
         dtn = DateTimeNano.random(5)

@@ -41,7 +41,7 @@ the result is an array of Booleans.
 
     >>> a = rt.FastArray([1, 2, 3, 4, 5])
     >>> b = rt.FastArray([0, 5, 2, 4, 8])
-    >>> a < 3 
+    >>> a > 3 
     FastArray([False, False, False,  True,  True])
     >>> a <= b
     FastArray([False,  True, False,  True,  True])
