@@ -56,7 +56,10 @@ to sum for each group::
     TSLA         50
 
 A Dataset is returned containing the groups from the Categorical and the result
-of the operation we called on each group.
+of the operation we called on each group. 
+
+Note the prepended '*' in the Symbol column. This indicates that the column 
+was used as the grouping variable in an operation.
 
 Categoricals as Split, Apply, Combine Operations
 ------------------------------------------------
@@ -117,17 +120,17 @@ of the original data::
 The alignment of the result to the original data is easier to see if you add 
 the results to the Dataset::
 
-    >>> ds.CumValue = ds.Symbol.cumsum(ds.Value)
-    >>> # Sort to make the cumulative sum more clear, then display only the relevant columns.
-    >>> ds.sort_copy('Symbol')
-    #   Symbol   Value2   CumSum
-    -   ------   ------   ------
-    0   AAPL          2        2
-    1   AAPL          5        7
-    2   MSFT         10       10
-    3   MSFT          8       18
-    4   TSLA         25       25
-    5   TSLA         20       45
+    >>> ds.CumValue2 = ds.Symbol.cumsum(ds.Value2)
+    >>> # Sort to make the cumulative sum per group more clear, then display only the relevant columns.
+    >>> ds.sort_copy('Symbol').col_filter(['Symbol', 'Value2', 'CumValue2'])
+    #   Symbol   Value2   CumValue2
+    -   ------   ------   ---------
+    0   AAPL          2           2
+    1   AAPL          5           7
+    2   MSFT         10          10
+    3   MSFT          8          18
+    4   TSLA         25          25
+    5   TSLA         20          45
 
 A commonly used non-reducing function is ``shift()``. You can use it to
 compare values with shifted versions of themselves – for example,
@@ -438,6 +441,9 @@ omitted from calculations on the Categorical::
     b            3
     c            0
 
+Note that the first column in the output is labeled 'key_0'. This was code-generated because there was no explicit column name declaration. 
+You can use the :meth:`.FastArray.set_name` method to assign a column name to the Categorical before doing any grouping operations.
+The Count column was created by the ``count()`` method.
 
 Filter Values or Categories from Certain Categorical Operations
 ---------------------------------------------------------------
@@ -468,7 +474,7 @@ for only that operation.
 
 To filter out an entire category::
 
-    >>> ds.Symbol.mean(ds.value, filter=ds.Symbol != 'MSFT')
+    >>> ds.Symbol.mean(ds.Value, filter=ds.Symbol != 'MSFT')
     *Symbol   Value
     -------   -----
     AAPL      10.00
@@ -746,8 +752,8 @@ Notice that the buckets form the groups of a Categorical::
       FastArray([b'-3.011->221.182', b'221.182->445.376', b'445.376->669.569', b'669.569->893.763', b'893.763->1117.956'], dtype='|S17') Unique count: 5
 
 To choose your own intervals, provide the endpoints. Here, we define
-bins that cover two intervals: one bin for prices from 0 to 500 (0
-excluded), and one for prices from 500 to 1,000 (500 excluded)::
+bins that cover two intervals: one bin for prices from 0 to 600 (0
+excluded), and one for prices from 600 to 1,200 (600 excluded)::
 
     >>> buckets = [0, 600, 1200]
     >>> ds2.PriceBucket2 = rt.cut(ds2.Price, buckets)
@@ -1167,6 +1173,8 @@ Our second function performs two non-reducing operations::
 
 Because the operations in this function are non-reducing operations, the
 resulting Dataset is expanded.
+
+Note that until a reported bug is fixed, column names might not persist through grouping operations.
 
 In the next section, `Accums <tutorial_accums.rst>`__, we look at
 another way to do multi-key groupings with fancier output.

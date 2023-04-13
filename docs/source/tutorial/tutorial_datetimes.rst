@@ -19,9 +19,9 @@ information for display.
 
 A Date object stores an array of dates with no time data attached. You
 can create Date arrays from strings, integer date values, or Matlab
-ordinal dates. Creating Date arrays from strings is fairly common.
+ordinal dates. For Matlab details, see `Matlab Dates and Times <https://www.mathworks.com/help/matlab/date-and-time-operations.html>`__. 
 
-If your string dates are in YYYYMMDD format, you can simply pass the
+Creating Date arrays from strings is fairly common. If your string dates are in YYYYMMDD format, you can simply pass the
 list of strings to ``rt.Date()``::
 
     >>> rt.Date(['20210101', '20210519', '20220308'])
@@ -33,8 +33,8 @@ what to expect using Python ``strptime`` format code::
     >>> rt.Date(['12/31/19', '6/30/19', '02/21/19'], format='%m/%d/%y')
     Date(['2019-12-31', '2019-06-30', '2019-02-21'])
 
-For a list of format codes, see `Python’s
-documentation <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__.
+For a list of format codes and ``strptime`` implementation details, see `Python’s
+'strftime' cheatsheet <https://strftime.org/>`__. The formatting codes are the same for ``strftime`` and ``strptime``. 
 
 Note: Under the hood, dates are stored as integers – specifically, as
 the number of days since the Unix epoch, 01-01-1970::

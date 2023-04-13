@@ -23,22 +23,12 @@ Riptable (and back again if need be). It’s also possible to convert data
 from CSV or SQL files. Similarly, h5 files can be converted to
 Riptable’s format. Matlab users, who will generally find similar syntax
 and functionality in Riptable, can use special keyword arguments to
-convert Matlab data to Riptable’s format. See `IO Tools and Working with
-Other File Types <tutorial_io.rst>`__ for details.
+convert Matlab data to Riptable’s format. See `Work with Riptable Files and Other File Formats <tutorial_io.rst>`__ for details.
 
 For data visualization, any of the standard plotting tools (for example,
 matplotlib.pyplot) will work out of the box. To see a few basic
 examples, check out the `Visualize Data <tutorial_visualize.rst>`__
 section.
-
-A Note to Pandas Users
-----------------------
-
-If you’ve used Pandas, you’ll notice many similarities in Riptable –
-though be aware that Riptable has some not-always-immediately-obvious
-differences. This tutorial doesn’t call out those differences
-specifically; see the API Reference for details of differences in specific 
-methods, functions, attributes, etc.
 
 Who This Tutorial Is For
 ------------------------
@@ -49,6 +39,15 @@ help get you familiar with Riptable’s basic functionality and syntax.
 Some experience with Python will be helpful, especially familiarity with
 dictionary syntax, sequences (lists, tuples, etc.), and basic functions
 and arguments.
+
+A Note to Pandas Users
+----------------------
+
+If you’ve used Pandas, you’ll notice many similarities in Riptable –
+though be aware that Riptable has some not-always-immediately-obvious
+differences. This tutorial doesn’t call out those differences
+specifically; see the API Reference for details of differences in specific 
+methods, functions, attributes, etc.
 
 Install and Import Riptable
 ---------------------------
@@ -324,7 +323,7 @@ per-display basis:
 -  Transpose columns and rows: ``ds._T``
 
 Now that we’re all set up, we’re ready to look at Riptable’s
-foundational data structures: `Intro to Riptable Datasets, FastArrays,
+foundational data structures: `Riptable Datasets, FastArrays,
 and Structs <tutorial_datasets.rst>`__.
 
 --------------

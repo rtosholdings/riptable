@@ -1,4 +1,4 @@
-__all__ = [
+﻿__all__ = [
     "DateTimeBase",
     "DateTimeNano",
     "TimeSpan",
@@ -4145,7 +4145,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     FrequencyStrings = {
         "H": "h",
         "T": "m",
-        "MIN": "s",
+        "MIN": "m",
         "S": "s",
         "L": "ms",
         "MS": "ms",

@@ -1,5 +1,5 @@
-IO Tools and Working with Other File Types
-==========================================
+Work with Riptable Files and Other File Formats
+===============================================
 
 SDS is Riptable’s native file format, and it’s the only data format
 fully supported directly within Riptable. That said, there are ways to

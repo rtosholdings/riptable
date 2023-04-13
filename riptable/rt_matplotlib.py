@@ -144,7 +144,7 @@ class MicrosecondTicker(LinTicker):
     def make_formats(self):
         if len(self.second_aligned_ticks) == 0:
             first_tick = self.ticks_local[0]
-            self.offset_local = first_tick.replace(second=0, microsecond=0)
+            self.offset_local = first_tick.replace(microsecond=0)
             self.tick_format = "%fus"
             self.offset_format = "%Y-%m-%d %H:%M:%S"
 

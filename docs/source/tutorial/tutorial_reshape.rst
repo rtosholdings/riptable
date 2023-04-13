@@ -23,7 +23,7 @@ represent this is to have three columns – for date, symbol, and volume::
     4   20191112   AAPL         10
     5   20191112   TSLA         30
 
-While format this is ideal for Riptable’s work, the repeated date and
+While this format is ideal for Riptable’s work, the repeated date and
 symbol values make it a bit unintuitive for humans to read and make
 sense of.
 
