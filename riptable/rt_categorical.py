@@ -1531,6 +1531,7 @@ class Categorical(GroupByOps, FastArray):
         grouping = None
 
         # prepare to eliminate sort_gb
+        arg_sort_gb = sort_gb
         if sort_display is not None:
             sort_gb = sort_display
 
@@ -1547,10 +1548,12 @@ class Categorical(GroupByOps, FastArray):
             _lex = lex
 
         # default to bytestrings - more performant, less memory
+        arg_unicode = unicode
         if unicode is None:
             unicode = False
 
         # default to 1-based indexing (filtering, etc. fully supported in this mode)
+        arg_base_index = base_index
         if base_index is None:
             base_index = 1
 
@@ -1574,16 +1577,17 @@ class Categorical(GroupByOps, FastArray):
                     # ordered = True
 
         # from categorical, deep copy - send to regular categorical.copy() to correctly preserve attributes
+        # use original arguments rather than defaulted ones to avoid warnings in copy().
         if isinstance(values, Categorical):
             return values.copy(
                 categories=categories,  # main data
                 ordered=ordered,
-                sort_gb=sort_gb,
+                sort_gb=arg_sort_gb,
                 lex=lex,  # sorting/hashing
-                base_index=base_index,
+                base_index=arg_base_index,
                 filter=filter,  # priority options
                 dtype=dtype,
-                unicode=unicode,
+                unicode=arg_unicode,
                 invalid=invalid,
                 auto_add=auto_add,  # misc options
                 from_matlab=from_matlab,

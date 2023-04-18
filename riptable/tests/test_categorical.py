@@ -2603,8 +2603,18 @@ class TestCategorical(unittest.TestCase):
         x = rt.FA([1, 2, 1, 2, 1, 2])
 
         assert (cat.count_uniques(x)[0] == rt.FA([2, 2])).all(), "Failed check 1"
-        assert (cat.count_uniques(x, filter=filter)[0] == rt.FA([1, 1])).all(), "Failed check 2"
-        assert (cat.count_uniques(x, transform=True)[0] == rt.FA([2] * 6)).all(), "Failed check 3"
+
+        if GroupByOps._USE_FAST_COUNT_UNIQUES:
+            assert (cat.count_uniques(x, filter=filter)[0] == rt.FA([1, 1])).all(), "Failed check 2"
+            assert (cat.count_uniques(x, transform=True)[0] == rt.FA([2] * 6)).all(), "Failed check 3"
+
+        cat = rt.Cat(["a", "a", "b", "c"])
+        x = rt.FA(["1", "1", "2", "3"])
+        assert (cat.count_uniques(x)[0] == rt.FA([1, 1, 1])).all()
+
+        ds = rt.Dataset({"a": ["a", "a", "b", "c"]})
+        gb = ds.groupby("a")
+        assert (gb.count_uniques(x)[0] == rt.FA([1, 1, 1])).all()
 
 
 # Cannot use the pytest.mark.parameterize decorator within classes that inherit from unittest.TestCase.

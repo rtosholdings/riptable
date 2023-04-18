@@ -1930,6 +1930,234 @@ class DateTime_Test(unittest.TestCase):
             f"Did not match at time: \n{dtn[mask!=result.isnan()]}",
         )
 
+    def test_isnan(self):
+        d = DateTimeNano([0, np.nan, 1])
+        result = d.isnan()
+        expected = [True, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNano: \n{d[expected != result]}",
+        )
+
+        d = [DateTimeNanoScalar(x) for x in [0, -1, 1]]
+        result = [x.isnan() for x in d]
+        expected = [True, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNanoScalar: \n{d[expected != result]}",
+        )
+
+        d = Date([0, np.nan, 1])
+        result = d.isnan()
+        expected = [True, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at Date: \n{d[expected != result]}",
+        )
+
+        d = DateSpan([-1, 0, INVALID_DICT[np.dtype(int32).num], 1])
+        result = d.isnan()
+        expected = [False, False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpan: \n{d[expected != result]}",
+        )
+
+        d = [DateSpanScalar(x) for x in [-1, 0, INVALID_DICT[np.dtype(int32).num], 1]]
+        result = [x.isnan() for x in d]
+        expected = [False, False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpanScalar: \n{d[expected != result]}",
+        )
+
+        d = TimeSpan([0, np.nan, 1])
+        result = d.isnan()
+        expected = [False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpan: \n{d[expected != result]}",
+        )
+
+        d = [TimeSpanScalar(x) for x in [0, np.nan, 1]]
+        result = [x.isnan() for x in d]
+        expected = [False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpanScalar: \n{d[expected != result]}",
+        )
+
+    def test_isnotnan(self):
+        d = DateTimeNano([0, np.nan, 1])
+        result = d.isnotnan()
+        expected = [False, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNano: \n{d[expected != result]}",
+        )
+
+        d = [DateTimeNanoScalar(x) for x in [0, -1, 1]]
+        result = [x.isnotnan() for x in d]
+        expected = [False, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNanoScalar: \n{d[expected != result]}",
+        )
+
+        d = Date([0, np.nan, 1])
+        result = d.isnotnan()
+        expected = [False, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at Date: \n{d[expected != result]}",
+        )
+
+        d = DateSpan([-1, 0, INVALID_DICT[np.dtype(int32).num], 1])
+        result = d.isnotnan()
+        expected = [True, True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpan: \n{d[expected != result]}",
+        )
+
+        d = [DateSpanScalar(x) for x in [-1, 0, INVALID_DICT[np.dtype(int32).num], 1]]
+        result = [x.isnotnan() for x in d]
+        expected = [True, True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpanScalar: \n{d[expected != result]}",
+        )
+
+        d = TimeSpan([0, np.nan, 1])
+        result = d.isnotnan()
+        expected = [True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpan: \n{d[expected != result]}",
+        )
+
+        d = [TimeSpanScalar(x) for x in [0, np.nan, 1]]
+        result = [x.isnotnan() for x in d]
+        expected = [True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpanScalar: \n{d[expected != result]}",
+        )
+
+    def test_isfinite(self):
+        d = DateTimeNano([0, np.nan, 1])
+        result = d.isfinite()
+        expected = [False, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNano: \n{d[expected != result]}",
+        )
+
+        d = [DateTimeNanoScalar(x) for x in [0, -1, 1]]
+        result = [x.isfinite() for x in d]
+        expected = [False, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNanoScalar: \n{d[expected != result]}",
+        )
+
+        d = Date([0, np.nan, 1])
+        result = d.isfinite()
+        expected = [False, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at Date: \n{d[expected != result]}",
+        )
+
+        d = DateSpan([-1, 0, INVALID_DICT[np.dtype(int32).num], 1])
+        result = d.isnotnan()
+        expected = [True, True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpan: \n{d[expected != result]}",
+        )
+
+        d = [DateSpanScalar(x) for x in [-1, 0, INVALID_DICT[np.dtype(int32).num], 1]]
+        result = [x.isfinite() for x in d]
+        expected = [True, True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpanScalar: \n{d[expected != result]}",
+        )
+
+        d = TimeSpan([0, np.nan, 1])
+        result = d.isfinite()
+        expected = [True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpan: \n{d[expected != result]}",
+        )
+
+        d = [TimeSpanScalar(x) for x in [0, np.nan, 1]]
+        result = [x.isfinite() for x in d]
+        expected = [True, False, True]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpanScalar: \n{d[expected != result]}",
+        )
+
+    def test_isnotfinite(self):
+        d = DateTimeNano([0, np.nan, 1])
+        result = d.isnotfinite()
+        expected = [True, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNano: \n{d[expected != result]}",
+        )
+
+        d = [DateTimeNanoScalar(x) for x in [0, -1, 1]]
+        result = [x.isnotfinite() for x in d]
+        expected = [True, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateTimeNanoScalar: \n{d[expected != result]}",
+        )
+
+        d = Date([0, np.nan, 1])
+        result = d.isnotfinite()
+        expected = [True, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at Date: \n{d[expected != result]}",
+        )
+
+        d = DateSpan([-1, 0, INVALID_DICT[np.dtype(int32).num], 1])
+        result = d.isnotfinite()
+        expected = [False, False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpan: \n{d[expected != result]}",
+        )
+
+        d = [DateSpanScalar(x) for x in [-1, 0, INVALID_DICT[np.dtype(int32).num], 1]]
+        result = [x.isnotfinite() for x in d]
+        expected = [False, False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at DateSpanScalar: \n{d[expected != result]}",
+        )
+
+        d = TimeSpan([0, np.nan, 1])
+        result = d.isnotfinite()
+        expected = [False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpan: \n{d[expected != result]}",
+        )
+
+        d = [TimeSpanScalar(x) for x in [0, np.nan, 1]]
+        result = [x.isnotfinite() for x in d]
+        expected = [False, True, False]
+        self.assertTrue(
+            bool(np.all(expected == result)),
+            f"Did not match at TimeSpanScalar: \n{d[expected != result]}",
+        )
+
     def test_groupby_restore(self):
         dtn = DateTimeNano(
             [
@@ -2731,6 +2959,34 @@ def test_view_casting(cls, arr):
     viewMembers = dir(objView)
     missing = [m for m in members if m not in viewMembers]
     assert len(missing) == 0, f"Not found: {missing}"
+
+
+_INV_I32 = INVALID_DICT[np.dtype(np.int32).num]
+_INV_I64 = INVALID_DICT[np.dtype(np.int64).num]
+_INV_F = np.nan
+
+
+@pytest.mark.parametrize(
+    "obj,expected",
+    [
+        pytest.param(Date([_INV_I32]), "'Inv'", id="Date(inv)"),
+        pytest.param(Date([0]), "'Inv'", id="Date(0)"),
+        pytest.param(DateScalar(_INV_I32), "Inv", id="DateScalar(inv)"),
+        pytest.param(DateScalar(0), "Inv", id="DateScalar(0)"),
+        pytest.param(DateSpan([_INV_I32]), "'Inv'", id="DateSpan(inv)"),
+        pytest.param(DateSpanScalar(_INV_I32), "Inv", id="DateSpanScalar(inv)"),
+        pytest.param(DateTimeNano([_INV_I64]), "'Inv'", id="DateTimeNano(inv)"),
+        pytest.param(DateTimeNanoScalar(_INV_I64), "Inv", id="DateTimeNanoScalar(inv)"),
+        pytest.param(TimeSpan([_INV_F]), "'Inv'", id="TimeSpan(inv)"),
+        pytest.param(TimeSpanScalar(_INV_F), "Inv", id="TimeSpanScalar(inv)"),
+    ],
+)
+def test_invalid_str(obj, expected):
+    actual = str(obj)
+    if isinstance(expected, list):
+        actual = actual[0]
+        expected = expected[0]
+    assert actual == expected, f"Failed for {obj!r}: expected {expected!r}, got {actual!r}"
 
 
 if __name__ == "__main__":
