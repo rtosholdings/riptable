@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import pytest
 
@@ -66,6 +67,11 @@ class TestCategoricalFilterInvalid:
 
         with pytest.warns(UserWarning):
             d = Categorical(c, invalid="inv")
+
+        # ensure no warnings are otherwise raised by default
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            d = Categorical(c)
 
     def test_filtered_set_name(self):
         c = Categorical([0, 1, 1, 2, 3], ["a", "b", "c"])

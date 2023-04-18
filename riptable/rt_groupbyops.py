@@ -957,6 +957,7 @@ class GroupByOps(ABC):
             TypeRegister.Dataset({}), self.gb_keychain, None, addkeys=True, showfilter=showfilter
         )
 
+    _USE_FAST_COUNT_UNIQUES = False  # re-enable/delete slow once riptable#209 is fixed.
     # ---------------------------------------------------------------
     def count_uniques(self, *args, **kwargs):
         """
@@ -989,19 +990,35 @@ class GroupByOps(ABC):
         label_keys = self.gb_keychain
         g = self.grouping
 
-        filter = kwargs["filter"] if "filter" in kwargs else None
-        transform = kwargs["transform"] if "transform" in kwargs else None
+        if GroupByOps._USE_FAST_COUNT_UNIQUES:
+            filter = kwargs["filter"] if "filter" in kwargs else None
+            transform = kwargs["transform"] if "transform" in kwargs else None
 
-        newdict = {}
-        for colname, arr in origdict.items():
-            gbk = label_keys.gbkeys
-            if colname not in gbk:
-                mcat = TypeRegister.Categorical([self, arr], filter=filter)
-                if transform:
-                    result = self.nansum(mcat.first_bool, transform=transform)[0]
-                else:
-                    result = mcat.null()[0].count().Count
-                newdict[colname] = result
+            newdict = {}
+            for colname, arr in origdict.items():
+                gbk = label_keys.gbkeys
+                if colname not in gbk:
+                    mcat = TypeRegister.Categorical([self, arr], filter=filter)
+                    if transform:
+                        result = self.nansum(mcat.first_bool, transform=transform)[0]
+                    else:
+                        result = mcat.null()[0].count().Count
+                    newdict[colname] = result
+
+        else:  # slow code
+            # get way to make groups contiguous
+            igroup = g.igroup
+            cutoffs = g.ncountgroup.cumsum(dtype=np.int64)[1:]
+            newdict = {}
+            for colname, arr in origdict.items():
+                gbk = label_keys.gbkeys
+                if colname not in gbk:
+                    ifirstkey = groupbyhash(arr[igroup], cutoffs=cutoffs)["iFirstKey"][1]
+                    # the cutoffs will generate iFirstKey cutoffs that help us determine the unique counts
+                    result = ifirstkey.diff()
+                    result[0] = ifirstkey[0]
+                    newdict[colname] = result
+
         return g._finalize_dataset(newdict, label_keys, None, addkeys=True, **kwargs)
 
     def _gb_keyword_wrapper(

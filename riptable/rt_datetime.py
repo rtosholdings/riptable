@@ -16,12 +16,13 @@
     "strptime_to_nano",
 ]
 
-import time
-import warnings
 from datetime import date
 from datetime import datetime as dt
 from datetime import timezone
+import math
+import time
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+import warnings
 
 import numpy as np
 import riptide_cpp as rc
@@ -1544,6 +1545,94 @@ class Date(DateBase, TimeStampBase):
         return ~self.isnan()
 
     # ------------------------------------------------------------
+    def isfinite(self):
+        """
+        Return a boolean array that's True for each `Date` element that's
+        not a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
+        considered to be NaN.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each non-NaN element,
+            False otherwise.
+
+        See Also
+        --------
+        Date.isnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that
+            contains at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+
+        Notes
+        -----
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> d = rt.Date.range('20190201', days = 3, step = 2)
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d
+        Date(['Inv', 'Inv', '2019-02-05'])
+        >>> d.isfinite()
+        FastArray([False, False,  True])
+        """
+        return ~self.isnan()
+
+    # ------------------------------------------------------------
+    def isnotfinite(self):
+        """
+        Return a boolean array that's True for each `Date` element that's
+        a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
+        considered to be NaN.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each NaN element, False
+            otherwise.
+
+        See Also
+        --------
+        Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that
+            contains at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+
+        Notes
+        -----
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> d = rt.Date.range('20190201', days = 3, step = 2)
+        >>> d[0] = 0
+        >>> d[1] = d.inv
+        >>> d
+        Date(['Inv', 'Inv', '2019-02-05'])
+        >>> d.isnotfinite()
+        FastArray([ True,  True, False])
+        """
+        return self._fa.isnanorzero()
+
+    # ------------------------------------------------------------
     @property
     def yyyymmdd(self):
         return DateTimeNano(self._fa * NANOS_PER_DAY, from_tz="GMT", to_tz="GMT").yyyymmdd
@@ -2569,7 +2658,7 @@ class DateSpan(DateBase):
         "version": 0,  # if no version, assume before versions implemented
         "instance_vars": {"_display_length": DisplayLength.Long},
     }
-    NAN_DATE = INVALID_DICT[7]  # int32 sentinel
+    NAN_DATE = INVALID_DICT[np.dtype(np.int32).num]  # int32 sentinel
     forbidden_mathops = ()
 
     def __new__(cls, arr, unit=None):
@@ -5085,6 +5174,96 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         return ~self.isnan()
 
     # -------------------------------------------------------------
+    def isfinite(self):
+        """
+        Return a boolean array that's True for each `DateTimeNano` element
+        that's not a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
+        considered to be NaN.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each non-NaN element,
+            False otherwise.
+
+        See Also
+        --------
+        DateTimeNano.isnan, Date.isnan, Date.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that
+            contains at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+
+        Notes
+        -----
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
+        ...                        '20210713 02:44:19'], from_tz = 'NYC')
+        >>> dtn[0] = 0
+        >>> dtn[1] = dtn.inv
+        >>> dtn
+        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        >>> dtn.isfinite()
+        FastArray([False, False,  True])
+        """
+        return ~self.isnan()
+
+    # -------------------------------------------------------------
+    def isnotfinite(self):
+        """
+        Return a boolean array that's True for each `DateTimeNano` element
+        that's a NaN (Not a Number), False otherwise.
+
+        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
+        considered to be NaN.
+
+        Returns
+        -------
+        `FastArray`
+            A `FastArray` of booleans that's True for each NaN element, False
+            otherwise.
+
+        See Also
+        --------
+        DateTimeNano.isnotnan, Date.isnan, Date.isnotnan, riptable.isnan,
+        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
+        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
+        Categorical.isnan, Categorical.isnotnan, Categorical.notna
+        Dataset.mask_or_isnan :
+            Return a boolean array that's True for each `Dataset` row that contains
+            at least one NaN.
+        Dataset.mask_and_isnan :
+            Return a boolean array that's True for each all-NaN `Dataset` row.
+
+        Notes
+        -----
+        Riptable currently uses 0 for the DateTime NaN value. This constant is
+        held in the `DateTimeBase` class.
+
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
+        ...                        '20210713 02:44:19'], from_tz = 'NYC')
+        >>> dtn[0] = 0
+        >>> dtn[1] = dtn.inv
+        >>> dtn
+        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        >>> dtn.isnotfinite()
+        FastArray([ True,  True, False])
+        """
+        return self._fa.isnanorzero()
+
+    # -------------------------------------------------------------
     def _datetimenano_compare_check(self, funcname, other):
         caller = self._fa
 
@@ -6986,6 +7165,8 @@ class DateSpanScalar(np.int32):
 
     __slots__ = "_display_length"
 
+    NAN_DATESPANSCALAR = INVALID_DICT[np.dtype(np.int32).num]  # int32 sentinel
+
     # ------------------------------------------------------------
     def __new__(cls, arr, **kwargs):
         return super().__new__(cls, arr)
@@ -7022,6 +7203,22 @@ class DateSpanScalar(np.int32):
     @property
     def _np(self):
         return self.view(np.int32)
+
+    # ------------------------------------------------------------
+    def isnan(self):
+        return self == DateSpanScalar.NAN_DATESPANSCALAR
+
+    # ------------------------------------------------------------
+    def isnotnan(self):
+        return self != DateSpanScalar.NAN_DATESPANSCALAR
+
+    # ------------------------------------------------------------
+    def isfinite(self):
+        return self != DateSpanScalar.NAN_DATESPANSCALAR
+
+    # ------------------------------------------------------------
+    def isnotfinite(self):
+        return self == DateSpanScalar.NAN_DATESPANSCALAR
 
     # ------------------------------------------------------------
     @property
@@ -7131,6 +7328,18 @@ class DateTimeNanoScalar(np.int64, DateTimeCommon, TimeStampBase):
 
     # ------------------------------------------------------------
     def isnan(self):
+        return self <= 0
+
+    # ------------------------------------------------------------
+    def isnotnan(self):
+        return self > 0
+
+    # ------------------------------------------------------------
+    def isfinite(self):
+        return self > 0
+
+    # ------------------------------------------------------------
+    def isnotfinite(self):
         return self <= 0
 
     # ------------------------------------------------------------
@@ -7261,6 +7470,22 @@ class TimeSpanScalar(np.float64, TimeSpanBase):
         '09:00:00'
         """
         return self._strftime(format)
+
+    # ------------------------------------------------------------
+    def isnan(self):
+        return math.isnan(self)
+
+    # ------------------------------------------------------------
+    def isnotnan(self):
+        return not math.isnan(self)
+
+    # ------------------------------------------------------------
+    def isfinite(self):
+        return math.isfinite(self)
+
+    # ------------------------------------------------------------
+    def isnotfinite(self):
+        return not math.isfinite(self)
 
     # ------------------------------------------------------------
     def get_classname(self):
