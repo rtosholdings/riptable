@@ -163,7 +163,6 @@ def _fnanmean(x, filter):
 
 @nb.njit(parallel=True)
 def _fnanvar(x, filter):
-
     abc = 0.0
     length = 0
 
@@ -213,7 +212,6 @@ def _fmean(x, filter):
 
 @nb.njit(parallel=True)
 def _fvar(x, filter):
-
     abc = 0.0
     length = 0
 
@@ -681,6 +679,7 @@ class FastArray(np.ndarray):
             callable
                 The decorator that registers `np_function` with the decorated function.
             """
+
             # @wraps(np_function)
             def decorator(func):
                 cls.HANDLED_FUNCTIONS[np_function] = func
@@ -707,6 +706,7 @@ class FastArray(np.ndarray):
             callable
                 The decorator that registers the type compatibility check for the `np_function` with the decorated function.
             """
+
             # @wraps(np_function)
             def decorator(check_type_compatibility):
                 cls.HANDLED_TYPE_COMPATIBILITY_CHECK[np_function] = check_type_compatibility
@@ -767,7 +767,6 @@ class FastArray(np.ndarray):
 
     # --------------------------------------------------------------------------
     def __new__(cls, arr, **kwargs) -> FastArray:
-
         allow_unicode = kwargs.get("unicode", False)
         try:
             del kwargs["unicode"]
@@ -1234,7 +1233,6 @@ class FastArray(np.ndarray):
             newvalue = value
 
         if newvalue is not None:
-
             # now we have a numpy array.. convert the dtype to match us
             # this should take care of invalids
             # convert first 14 common types (bool, ints, floats)
@@ -1463,6 +1461,8 @@ class FastArray(np.ndarray):
     def _fill_invalid_internal(self, shape=None, dtype=None, inplace=True, fill_val=None):
         if dtype is None:
             dtype = self.dtype
+        if isinstance(dtype, str):
+            dtype = np.dtype(dtype)
         if shape is None:
             shape = self.shape
         elif not isinstance(shape, tuple):
@@ -1480,7 +1480,7 @@ class FastArray(np.ndarray):
                 )
             if dtype != self.dtype:
                 raise ValueError(
-                    f"Inplace fill invalid cannot be different dtype than existing categorical. Got {dtype} vs. {len(self.dtype)}"
+                    f"Inplace fill invalid cannot be different dtype than existing array. Got {dtype} vs. {len(self.dtype)}"
                 )
 
             self.fill(inv)
@@ -2730,7 +2730,6 @@ class FastArray(np.ndarray):
     #############################################
 
     def _fa_filter_wrapper(self, myFunc, filter=None, dtype=None):
-
         if filter is True:
             filter = ones(len(self), dtype=bool)
         if filter is False:
@@ -2747,7 +2746,6 @@ class FastArray(np.ndarray):
         return myFunc(self, filter)
 
     def _fa_keyword_wrapper(self, filter=None, dtype=None, axis=None, keepdims=None, ddof=None, **kwargs):
-
         if self.dtype.char in "OSU":
             raise TypeError("FastArray operation applied to string or object array.")
 
@@ -4278,7 +4276,6 @@ class FastArray(np.ndarray):
         # note: when method is 'at' this is an inplace unbuffered operation
         # this can speed up routines that use heavy masked operations
         if method == "reduce" and FastArray.FasterUFunc and not toplevel_abort:
-
             # a.any() and a.all() are logical reduce operations
             # Examples
             # Look for axis:None -- otherwise ABORT
@@ -4317,10 +4314,8 @@ class FastArray(np.ndarray):
 
         # check if we can proceed to calculate a faster way
         if method == "__call__" and FastArray.FasterUFunc and not toplevel_abort:
-
             # check for binary ufunc
             if len(args) == 2 and ufunc.nout == 1:
-
                 ###########################################################################
                 ## BINARY
                 ###########################################################################

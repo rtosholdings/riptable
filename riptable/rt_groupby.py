@@ -352,6 +352,47 @@ class GroupBy(GroupByOps):
         """Compute count of group"""
         return self.grouping.count(keychain=self.gb_keychain, **kwargs)
 
+    # ---------------------------------------------------------------
+    def nth(self, n: int = 1):
+        """
+        Select the nth row from each group.
+
+        Parameters
+        ----------
+        n : int
+            A single nth value for the row
+
+        Examples
+        --------
+        >>> ds = rt.Dataset({'A': [1, 1, 2, 1, 2],
+        ...                  'B': [np.nan, 2, 3, 4, 5]})
+        >>> g = ds.groupby('A')
+        >>> g.nth(0)
+        *A      B
+        --   ----
+        1    nan
+        2   3.00
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 32.0 B
+
+        >>> g.nth(1)
+        *A      B
+        --   ----
+        1  2.00
+        2  5.00
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 32.0 B
+
+        >>> g.nth(-1)
+        *A      B
+        --   ----
+        1  4.00
+        2  5.00
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 32.0 B
+        """
+        return super()._nth(n=n)
+
     ## ------------------------------------------------------------
     def __getattr__(self, name):
         """

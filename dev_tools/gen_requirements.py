@@ -13,6 +13,11 @@ def is_windows() -> bool:
     return platform.system() == "Windows"
 
 
+def is_python(major: int, minor: int) -> bool:
+    ver = sys.version_info
+    return ver.major == major and ver.minor == minor
+
+
 _ABSEIL_REQ = "abseil-cpp==20220623.*"
 _BENCHMARK_REQ = "benchmark>=1.7,<1.8"
 _NUMPY_REQ = "numpy>=1.22"
@@ -53,10 +58,9 @@ pypi_reqs = [
 runtime_reqs = [
     # No riptide_cpp as that must be handled separately
     "ansi2html>=1.5.2",
-    "ipykernel",
     "numba>=0.56.2",
     _NUMPY_REQ,
-    "pandas>=0.24,<2.0",
+    "pandas>=1.0,<3.0",
     "python-dateutil",
     _TBB_REQ,
 ]
@@ -72,7 +76,8 @@ tests_reqs = [
     "bokeh",
     "bottleneck",
     "hypothesis",
-    "ipython",
+    "ipykernel",
+    "ipython<8.13" if is_python(3, 8) else "ipython",
     "matplotlib",
     "nose",
     "pyarrow",

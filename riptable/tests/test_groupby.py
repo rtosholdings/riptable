@@ -3,6 +3,7 @@ import unittest
 from math import isclose
 import pytest
 
+import riptable as rt
 from riptable import *
 from riptable import Categorical, Dataset, FastArray, GroupBy, arange, isnan, isnotnan
 from riptable.rt_enum import INVALID_DICT
@@ -727,7 +728,7 @@ class Groupby_Test(unittest.TestCase):
         grp_offsets = [0, 1]
         gb = ds.groupby("a")
         for n in range(-3, 3):
-            result = gb.nth(n=n)
+            result = gb.nth(n)
             for grp in range(2):
                 grp_count = grp + 1
                 grp_index = n if n >= 0 else grp_count + n
@@ -737,6 +738,67 @@ class Groupby_Test(unittest.TestCase):
                 else:
                     assert np.isnan(result["num"][grp])
                     assert len(result["str"][grp]) == 0
+
+    # -------------------------- TEST COUNT_UNIQUES --------------------------------------------
+
+    def test_count_uniques(self):
+        k = rt.FA([1, 1, 1, 2, 2, 2])
+        x = rt.FA([1, 2, 1, 2, 1, 2])
+
+        gb = rt.Dataset({"k": k, "x": x}).groupby("k")
+        assert (gb.count_uniques()[0] == rt.FA([2, 2])).all(), "Failed check 1"
+
+        if GroupByOps._USE_FAST_COUNT_UNIQUES:
+            filter = rt.FA([0, 1, 0, 1, 0, 1], dtype=bool)
+            assert (gb.count_uniques(filter=filter)[0] == rt.FA([1, 1])).all(), "Failed check 2"
+
+            assert (gb.count_uniques(transform=True)[0] == rt.FA([2] * 6)).all(), "Failed check 3"
+
+            k = rt.FA([1] * 4 + [2] * 4)
+            x = rt.FA([1, 2] * 4)
+            gb = rt.Dataset({"k": k, "x": x}).groupby("k", filter=np.arange(8) < 4)
+            filter = rt.arange(8) % 2 == 0
+            assert (gb.count_uniques(filter=filter, transform=True)[0] == rt.ones(8)).all(), "Failed check 4"
+
+        k = rt.FA(["a", "a", "b", "c"])
+        x = rt.FA(["1", "1", "2", "3"])
+        gb = rt.Dataset({"k": k, "x": x}).groupby("k")
+        assert (gb.count_uniques()["x"] == rt.FA([1, 1, 1])).all(), "Failed check 5"
+
+    @pytest.mark.skipif(not GroupByOps._USE_FAST_COUNT_UNIQUES, reason="Needs new implementation")
+    def test_count_uniques_filter_entire_group(self):
+        strs = rt.FA(["a", "b", "c"] * 2)
+        nums = rt.FA([5, 6, 7] * 2)
+        ds = rt.Dataset({"strs": strs, "nums": nums})
+        gb = ds.groupby("strs")
+        result = gb.count_uniques(filter=nums > 5)["nums"]
+        expected = rt.FA([0, 1, 1])
+        assert (result == expected).all()
+
+
+@pytest.mark.skipif(not GroupByOps._USE_FAST_COUNT_UNIQUES, reason="Needs new implementation")
+@pytest.mark.parametrize("use_filter", [True, False])
+@pytest.mark.parametrize("showfilter", [True, False])
+def test_count_uniques_with_nans(showfilter, use_filter):
+    k1 = rt.FA([0, 1, 0, 1, 2])
+    k2 = rt.FA(["a", "b", "a", "b", "c"])
+    ds = rt.Dataset({"k1": k1, "k2": k2, "v": rt.arange(5)})
+    gb = ds.groupby(["k1", "k2"])
+
+    kwargs = dict(showfilter=showfilter, filter=k2 != "a" if use_filter else None)
+    result = gb.count_uniques(**kwargs)
+    expected = rt.Dataset(
+        dict(
+            k1=[INVALID_DICT[k1.dtype.num], 0, 1, 2],
+            k2=["Filtered", "a", "b", "c"],
+            v=[0, 0, 2, 1] if use_filter else [0, 2, 2, 1],
+        )
+    )
+    if not showfilter:
+        expected = expected[1:, :]
+    assert len(result) == len(expected)
+    for k in expected.keys():
+        assert (result[k] == expected[k]).all()
 
 
 if __name__ == "__main__":

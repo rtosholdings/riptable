@@ -2,6 +2,7 @@ import keyword
 import re
 import unittest
 from collections import namedtuple
+import itertools
 
 import numpy as np
 import pandas as pd
@@ -1497,6 +1498,127 @@ class TestDataset(unittest.TestCase):
         self.assertIsNot(new_ds, empty_ds)
         self_ds = empty_ds.drop_duplicates("a", inplace=True)
         self.assertIs(self_ds, empty_ds)
+
+    def test_trim(self):
+        def create_ds(N):
+            return Dataset(
+                {
+                    "stridxcol": [str(i) for i in range(N)],
+                    "strcol": np.random.choice(["a", "b", "c", "d"], N),
+                    "catintcol": Categorical(np.random.choice([1, 2, 3], N)),
+                    "catstrcol": Categorical(np.random.choice(["X", "Y", "Z"], N)),
+                    "intcol": np.random.randint(1, 10, N),
+                    "intcol_zeros": np.random.randint(0, 3, N),
+                    "intcol_nans": np.random.randint(0, 3, N),
+                    "intcol_zeros_nans": np.random.randint(0, 3, N),
+                    "floatcol": np.abs(np.random.rand(N)) + 1,
+                    "floatcol_zeros": np.random.rand(N),
+                    "floatcol_nans": np.random.rand(N),
+                    "floatcol_zeros_nans": np.random.rand(N),
+                }
+            )
+
+        def add_filtered_vals(
+            ds, zero_cols, zero_rows, nan_cols, nan_rows, mixed_cols, mixed_rows, computable_cols, rows_first=True
+        ):
+            def fill_rows():
+                for column in computable_cols:
+                    for row in zero_rows:
+                        ds[column][row] = 0
+
+                    for row in nan_rows:
+                        ds[column][row] = np.nan
+
+                for row in mixed_rows:
+                    perm = np.random.permutation(computable_cols)
+                    for col in perm[: len(computable_cols) // 2]:
+                        ds[col][row] = 0
+                    for col in perm[len(computable_cols) // 2 :]:
+                        ds[col][row] = np.nan
+
+            def fill_cols():
+                for col in zero_cols:
+                    ds[col][:] = 0
+
+                for col in nan_cols:
+                    ds[col][:] = np.nan
+
+                for col in mixed_cols:
+                    ds[col][:] = np.nan
+                    perm_idxs = np.random.choice(range(len(ds[col])), len(ds[col]) // 2, replace=False)
+                    ds[col][perm_idxs] = 0
+
+            if rows_first:
+                fill_rows()
+                fill_cols()
+            else:
+                fill_cols()
+                fill_rows()
+
+        zero_cols = ["intcol_zeros", "floatcol_zeros"]
+        nan_cols = ["intcol_nans", "floatcol_nans"]
+        mixed_cols = ["intcol_zeros_nans", "floatcol_zeros_nans"]
+
+        def create_and_add_filtered(N, rows_first):
+            ds = create_ds(N)
+            all_cols = ds.keys()
+            computable_cols = all_cols[4:]
+
+            zero_rows, nan_rows, mixed_rows = np.random.choice(range(N), N // 3, replace=False).reshape(3, -1)
+            zero_rows = list(zero_rows)
+            nan_rows = list(nan_rows)
+            mixed_rows = list(mixed_rows)
+
+            add_filtered_vals(
+                ds, zero_cols, zero_rows, nan_cols, nan_rows, mixed_cols, mixed_rows, computable_cols, rows_first
+            )
+
+            return ds, zero_rows, nan_rows, mixed_rows
+
+        N = 200
+
+        for rows_first in [True, False]:
+
+            ds, zero_rows, nan_rows, mixed_rows = create_and_add_filtered(N, rows_first)
+            all_cols = ds.keys()
+
+            for zeros, nans, columns, rows in itertools.product((False, True), repeat=4):
+                if not zeros and not nans:
+                    with self.assertRaises(ValueError):
+                        ds.trim(zeros=zeros, nans=nans, columns=columns, rows=rows)
+                    continue
+
+                trim_ds = ds.trim(zeros=zeros, nans=nans, columns=columns, rows=rows)
+                filtered_cols = []
+                if columns:
+                    if zeros and nans:
+                        filtered_cols = nan_cols + zero_cols + mixed_cols
+                    elif zeros and rows_first:
+                        filtered_cols = zero_cols
+                    elif nans and rows_first:
+                        filtered_cols = nan_cols
+
+                filtered_rows = []
+                if rows:
+                    if zeros and nans:
+                        filtered_rows = zero_rows + nan_rows + mixed_rows
+                    elif zeros and not rows_first:
+                        filtered_rows = zero_rows
+                    elif nans and not rows_first:
+                        filtered_rows = nan_rows
+
+                self.assertEqual(
+                    trim_ds.shape,
+                    (
+                        N - len(filtered_rows),
+                        len(all_cols) - len(filtered_cols),
+                    ),
+                )
+
+                self.assertListEqual(trim_ds.keys(), [c for c in all_cols if c not in filtered_cols])
+                self.assertListEqual(
+                    [int(idx) for idx in trim_ds["stridxcol"]], [idx for idx in range(N) if idx not in filtered_rows]
+                )
 
     def test_describe(self):
         ds = self.get_basic_dataset()

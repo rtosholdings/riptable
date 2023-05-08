@@ -1,8 +1,34 @@
 import unittest
+import pytest
 
 import numpy as np
 
-from riptable import FA, Categorical, FastArray, arange, cut, qcut
+from riptable import FA, Categorical, FastArray, arange, cut, qcut, unique
+
+from riptable.testing.array_assert import assert_categorical_equal
+
+
+@pytest.mark.parametrize(
+    "kwargs, msg",
+    [
+        ({"duplicates": "drop"}, None),
+        ({}, "Bin edges must be unique"),
+        ({"duplicates": "raise"}, "Bin edges must be unique"),
+        ({"duplicates": "foo"}, "invalid value for 'duplicates' parameter"),
+    ],
+)
+def test_cut_duplicates_bin(kwargs, msg):
+    bins = FA([0, 2, 4, 6, 10, 10])
+    values = FA([1, 3, 5, 7, 9])
+    assert bins.duplicated().any(), "For this test, bins should have duplicates."
+
+    if msg is not None:
+        with pytest.raises(ValueError, match=msg):
+            cut(values, bins, **kwargs)
+    else:
+        result = cut(values, bins, **kwargs)
+        expected = cut(values, unique(bins))
+        assert_categorical_equal(result, expected)
 
 
 class Cut_Test(unittest.TestCase):

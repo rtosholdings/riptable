@@ -2234,6 +2234,73 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     @property
     def _fa(self) -> FastArray:
+        """
+        Return the array of integer category mapping codes that corresponds to the array of `Categorical` values.
+
+        Returns
+        -------
+        FastArray
+            A `.FastArray` of the integer category mapping codes of the `Categorical`.
+
+        See Also
+        --------
+        Categorical.category_array : Return the array of unique categories of a `Categorical`.
+        Categorical.categories :
+            Return the unique categories of a single-key or multi-key `Categorical`, prepended with the 'Filtered' category.
+        Categorical.category_dict : Return a dictionary of the unique categories.
+        Categorical.category_mapping :
+            Return a dictionary of the integer category mapping codes for a `Categorical` created with an :py:class:`~enum.IntEnum` or a mapping dictionary.
+
+        Examples
+        --------
+        Single-key string `Categorical`:
+
+        >>> c = rt.Categorical(['a','a','b','c','a'])
+        >>> c
+        Categorical([a, a, b, c, a]) Length: 5
+          FastArray([1, 1, 2, 3, 1], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c._fa
+        FastArray([1, 1, 2, 3, 1], dtype=int8)
+
+        Multi-key `Categorical`:
+
+        >>> c2 = rt.Categorical([rt.FA([1, 2, 3, 3, 3, 1]), rt.FA(['a','b','c','c','c','a'])])
+        >>> c2
+        Categorical([(1, a), (2, b), (3, c), (3, c), (3, c), (1, a)]) Length: 6
+          FastArray([1, 2, 3, 3, 3, 1], dtype=int8) Base Index: 1
+          {'key_0': FastArray([1, 2, 3]), 'key_1': FastArray([b'a', b'b', b'c'], dtype='|S1')} Unique count: 3
+        >>> c2._fa
+        FastArray([1, 2, 3, 3, 3, 1], dtype=int8)
+
+        A `Categorical` constructed with an :py:class:`~enum.IntEnum` or a mapping dictionary returns the provided integer category mapping codes:
+
+        >>> log_levels = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}
+        >>> c3 = rt.Categorical([10, 10, 40, 0, 50, 10, 30], log_levels)
+        >>> c3
+        Categorical([DEBUG, DEBUG, ERROR, !<0>, CRITICAL, DEBUG, WARNING]) Length: 7
+          FastArray([10, 10, 40,  0, 50, 10, 30]) Base Index: None
+          {10:'DEBUG', 20:'INFO', 30:'WARNING', 40:'ERROR', 50:'CRITICAL'} Unique count: 5
+        >>> c3._fa
+        FastArray([10, 10, 40,  0, 50, 10, 30])
+
+        A 'Filtered' category is mapped to 0 in the integer array:
+
+        >>> c4 = rt.Categorical(['b','b','c','d','e','b','c'])
+        >>> c4
+        Categorical([b, b, c, d, e, b, c]) Length: 7
+          FastArray([1, 1, 2, 3, 4, 1, 2], dtype=int8) Base Index: 1
+          FastArray([b'b', b'c', b'd', b'e'], dtype='|S1') Unique count: 4
+        >>> c4._fa
+        FastArray([1, 1, 2, 3, 4, 1, 2], dtype=int8)
+        >>> c4.category_remove('c')  # A removed category becomes 'Filtered'.
+        >>> c4
+        Categorical([b, b, Filtered, d, e, b, Filtered]) Length: 7
+          FastArray([1, 1, 0, 2, 3, 1, 0], dtype=int8) Base Index: 1
+          FastArray([b'b', b'c', b'd', b'e'], dtype='|S1') Unique count: 4
+        >>> c4._fa
+        FastArray([1, 1, 0, 2, 3, 1, 0], dtype=int8)
+        """
         result = self.view(FastArray)
         _copy_name(self, result)
         return result
@@ -2338,9 +2405,80 @@ class Categorical(GroupByOps, FastArray):
     @property
     def category_array(self) -> FastArray:
         """
-        Return the array of stored unique categories.
+        Return the array of unique categories of a `Categorical`.
 
-        Unlike the default for categories(), this will not prepend the invalid category.
+        Unlike `Categorical.categories`, this method does not prepend the 'Filtered' category to the returned array.
+
+        Raises an error for multi-key `Categorical` objects. To get the categories of a multi-key `Categorical`, use `Categorical.categories`.
+
+        Returns
+        -------
+        FastArray
+            A `.FastArray` of the unique categories of the `Categorical`.
+
+        See Also
+        --------
+        Categorical._fa :
+            Return the array of integer category mapping codes that corresponds to the array of `Categorical` values.
+        Categorical.categories :
+            Return the unique categories of a single-key or multi-key `Categorical`, prepended with the 'Filtered' category.
+        Categorical.category_dict : Return a dictionary of the unique categories.
+        Categorical.category_mapping :
+            Return a dictionary of the integer category mapping codes for a `Categorical` created with an :py:class:`~enum.IntEnum` or a mapping dictionary.
+
+        Examples
+        --------
+        Single-key string `Categorical`:
+
+        >>> c = rt.Categorical(['a','a','b','c','a'])
+        >>> c
+        Categorical([a, a, b, c, a]) Length: 5
+          FastArray([1, 1, 2, 3, 1], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c.category_array
+        FastArray([b'a', b'b', b'c'], dtype='|S1')
+
+        Single-key integer `Categorical`:
+
+        >>> c2 = rt.Categorical([4, 5, 4, 4, 6, 5, 6])
+        >>> c2
+        Categorical([4, 5, 4, 4, 6, 5, 6]) Length: 7
+          FastArray([1, 2, 1, 1, 3, 2, 3], dtype=int8) Base Index: 1
+          FastArray([4, 5, 6]) Unique count: 3
+        >>> c2.category_array
+        FastArray([4, 5, 6])
+
+        Single-key integer `Categorical` with categories provided:
+
+        >>> c3 = rt.Categorical([2, 3, 4, 2, 3, 4], categories=['a', 'b', 'c', 'd', 'e'])
+        >>> c3
+        Categorical([b, c, d, b, c, d]) Length: 6
+          FastArray([2, 3, 4, 2, 3, 4]) Base Index: 1
+          FastArray([b'a', b'b', b'c', b'd', b'e'], dtype='|S1') Unique count: 5
+        >>> c3.category_array
+        FastArray([b'a', b'b', b'c', b'd', b'e'], dtype='|S1')
+
+        The 'Filtered' category isn't included:
+
+        >>> c4 = rt.Categorical([0, 1, 1, 0, 2, 1, 1, 1, 2, 0], categories=['a', 'b', 'c'])
+        >>> c4
+        Categorical([Filtered, a, a, Filtered, b, a, a, a, b, Filtered]) Length: 10
+          FastArray([0, 1, 1, 0, 2, 1, 1, 1, 2, 0]) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c4.category_array
+        FastArray([b'a', b'b', b'c'], dtype='|S1')
+
+        A `Categorical` constructed with an :py:class:`~enum.IntEnum` or a mapping dictionary returns the provided string categories:
+
+        >>> log_levels = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}
+        >>> c5 = rt.Categorical([10, 10, 40, 0, 50, 10, 30], log_levels)
+        >>> c5
+        Categorical([DEBUG, DEBUG, ERROR, !<0>, CRITICAL, DEBUG, WARNING]) Length: 7
+          FastArray([10, 10, 40,  0, 50, 10, 30]) Base Index: None
+          {10:'DEBUG', 20:'INFO', 30:'WARNING', 40:'ERROR', 50:'CRITICAL'} Unique count: 5
+        >>> c5.category_array
+        FastArray([b'DEBUG', b'INFO', b'WARNING', b'ERROR', b'CRITICAL'],
+                dtype='|S8')
         """
         return self._categories_wrap._get_array()
 
@@ -2810,7 +2948,14 @@ class Categorical(GroupByOps, FastArray):
         return self.newclassfrominstance(temp, self)
 
     # -------------------------------------------------------
-    def shift(self, arr, window: Optional[int] = None, *, periods: Optional[int] = None):
+    def shift(
+        self,
+        arr,
+        window: Optional[int] = None,
+        *,
+        periods: Optional[int] = None,
+        filter: Optional[FastArray[bool]] = None,
+    ):
         """
         Shift values in each group by the specified number of periods.
 
@@ -2826,9 +2971,11 @@ class Categorical(GroupByOps, FastArray):
         window : int, default 1
             The number of periods to shift. Can be a negative number to shift
             values backward.
-        periods: int, optional, default 1
-            Can use ``periods`` instead of ``window`` for Pandas parameter
+        periods : int, optional, default 1
+            Can use `periods` instead of `window` for Pandas parameter
             support.
+        filter : FastArray of bool, optional
+            Set of rows to include. Filtered out rows are skipped by the shift and become NaN in the output.
 
         Returns
         -------
@@ -2843,7 +2990,7 @@ class Categorical(GroupByOps, FastArray):
 
         Examples
         --------
-        With the default ``window=1``:
+        With the default `window=1`:
 
         >>> c = rt.Cat(['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c', 'c'])
         >>> fa = rt.arange(9)
@@ -2893,6 +3040,23 @@ class Categorical(GroupByOps, FastArray):
         7       8
         8     Inv
 
+        With `filter`:
+
+        >>> filt = rt.FA([True, True, True, True, False, True, False, True, True])
+        >>> shift_filt = c.shift(fa, filter=filt)
+        >>> shift_filt
+        #   col_0
+        -   -----
+        0     Inv
+        1       0
+        2       1
+        3     Inv
+        4     Inv
+        5       3
+        6     Inv
+        7     Inv
+        8       7
+
         Results put in a `.Dataset` to show the shifts in relation to the
         categories:
 
@@ -2939,7 +3103,7 @@ class Categorical(GroupByOps, FastArray):
             window = periods
         elif window is None:
             window = 1
-        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_SHIFT, arr, func_param=(window))
+        return self._calculate_all(GB_FUNCTIONS.GB_ROLLING_SHIFT, arr, func_param=(window), filter=filter)
 
     @classmethod
     def _from_meta_data(cls, arrdict, arrflags, meta):
@@ -4368,6 +4532,95 @@ class Categorical(GroupByOps, FastArray):
         See Also: Grouping
         """
         return self._grouping
+
+    # ---------------------------------------------------------------
+    def nth(
+        self,
+        arr: Union[list, tuple, np.ndarray],
+        n: int = 1,
+        transform: Optional[bool] = None,
+        filter: Optional[np.ndarray] = None,
+        showfilter: Optional[bool] = None,
+    ):
+        """
+        Select the nth row from each group.
+
+        Parameters
+        ----------
+        arr : array or list of array
+            The array of values to select from.
+        n : int
+            A single nth value for the row.
+        transform : bool
+            If `True`, the output will have the same shape as `arr`. If
+            `False`, the output will typically have the same shape as
+            the `Categorical`.
+        filter : array of bool, optional
+            Elements to include in the operation.
+        showfilter : bool
+            If `True`, the output contains an extra row representing the
+            operation applied to a stack of all the elements that were
+            filtered out (both at `Categorical` creation and in this operation,
+            using a filter.)
+
+        Examples
+        --------
+        >>> ds = rt.Dataset({'A': rt.Categorical(['a', 'a', 'b', 'a', 'b']),
+        ...                  'B': [rt.nan, 2, 3, 4, 5]})
+        >>> c = ds.A
+        >>> c.nth([ds.A, ds.B], 0)
+        *A      B
+        --   ----
+        a     nan
+        b    3.00
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 18.0 B
+
+        >>> c.nth([ds.A, ds.B], 1)
+        *A     B
+        --  ----
+        a   2.00
+        b   5.00
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 18.0 B
+
+        >>> c.nth([ds.A, ds.B], -1)
+        *A      B
+        --   ----
+        a    4.00
+        b    5.00
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 18.0 B
+
+        >>> c.nth(ds.B, -2, transform=True)
+        #      B
+        -   ----
+        0   2.00
+        1   2.00
+        2   3.00
+        3   2.00
+        4   3.00
+        <BLANKLINE>
+        [5 rows x 1 columns] total bytes: 40.0 B
+
+        >>> c.nth(ds.B, 1, filter=ds.B.isnotnan())
+        *A      B
+        --   ----
+        a    4.00
+        b    5.00
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 18.0 B
+
+        >>> c.nth(ds.B, -2, filter=ds.A!='b', showfilter=True)
+        *A            B
+        --------   ----
+        Filtered   3.00
+        a          2.00
+        b           nan
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
+        """
+        return super()._nth(arr, n=n, transform=transform, filter=filter, showfilter=showfilter)
 
     # -------------------------------------------------------
     @property

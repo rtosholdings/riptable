@@ -355,7 +355,6 @@ class TestCategorical(unittest.TestCase):
         assert rt.all(x.eq("c") == rt.FA([False, False, True]))
 
     def test_map(self):
-
         c = Categorical(["b", "b", "c", "a", "d"], ordered=False)
         mapping = {"a": "AA", "b": "BB", "c": "CC", "d": "DD"}
         result = c.map(mapping)
@@ -1560,7 +1559,6 @@ class TestCategorical(unittest.TestCase):
 
     # ------------------------------------------------------
     def test_keywords_not_allowed(self):
-
         # filter + base index 0
         f = np.array([True, False, True])
         with pytest.raises(ValueError):
@@ -1588,7 +1586,6 @@ class TestCategorical(unittest.TestCase):
     # ------------------------------------------------------
     # -----MISC. COVER TESTS--------------------------------
     def test_non_array_dict_categories_ctor(self):
-
         with pytest.raises(TypeError):
             c = Categories(["garbage", "list"])
 
@@ -2597,7 +2594,6 @@ class TestCategorical(unittest.TestCase):
     # -------------------------- TEST COUNT_UNIQUES --------------------------------------------
 
     def test_count_uniques(self):
-
         cat = rt.Cat([1, 1, 1, 2, 2, 2])
         filter = rt.FA([0, 1, 0, 1, 0, 1], dtype=bool)
         x = rt.FA([1, 2, 1, 2, 1, 2])
@@ -2608,13 +2604,43 @@ class TestCategorical(unittest.TestCase):
             assert (cat.count_uniques(x, filter=filter)[0] == rt.FA([1, 1])).all(), "Failed check 2"
             assert (cat.count_uniques(x, transform=True)[0] == rt.FA([2] * 6)).all(), "Failed check 3"
 
+            cat = rt.Cat([1] * 4 + [2] * 4, filter=np.arange(8) < 4)
+            x = rt.FA([1, 2] * 4)
+            filter = rt.arange(8) % 2 == 0
+            assert (cat.count_uniques(x, filter=filter, transform=True)[0] == rt.ones(8)).all(), "Failed check 4"
+
         cat = rt.Cat(["a", "a", "b", "c"])
         x = rt.FA(["1", "1", "2", "3"])
-        assert (cat.count_uniques(x)[0] == rt.FA([1, 1, 1])).all()
+        assert (cat.count_uniques(x)[0] == rt.FA([1, 1, 1])).all(), "Failed check 5"
 
-        ds = rt.Dataset({"a": ["a", "a", "b", "c"]})
-        gb = ds.groupby("a")
-        assert (gb.count_uniques(x)[0] == rt.FA([1, 1, 1])).all()
+        ds = rt.Dataset({"c": rt.Cat(["a", "a", "b", "c"]), "v": rt.FA(["1", "1", "2", "3"])})
+        assert (ds.c.count_uniques(ds.v)["v"] == rt.FA([1, 1, 1])).all(), "Failed check 6"
+
+    @pytest.mark.skipif(not GroupByOps._USE_FAST_COUNT_UNIQUES, reason="Needs new implementation")
+    def test_count_uniques_filter_entire_group(self):
+        arr = rt.FA([1, 2, 3] * 2)
+        result = rt.Cat(arr).count_uniques(arr, filter=arr > 1)
+        expected = rt.FA([0, 1, 1])
+        assert (result[0] == expected).all()
+
+
+@pytest.mark.skipif(not GroupByOps._USE_FAST_COUNT_UNIQUES, reason="Needs new implementation")
+@pytest.mark.parametrize("use_filter", [True, False])
+@pytest.mark.parametrize("showfilter", [True, False])
+def test_count_uniques_with_nans(showfilter, use_filter):
+    cat = rt.Cat([0, 1, 0, 1, 2], ["a", "b"])
+
+    kwargs = dict(showfilter=showfilter, filter=cat != "a" if use_filter else None)
+    result = cat.count_uniques(rt.arange(5), **kwargs)
+    expected = rt.Dataset(
+        dict(
+            key_0=["Filtered", "a", "b"],
+            col_0=[2, 0, 1] if use_filter else [2, 2, 1],
+        )
+    )
+    if not showfilter:
+        expected = expected[1:, :]
+    assert result.equals(expected)
 
 
 # Cannot use the pytest.mark.parameterize decorator within classes that inherit from unittest.TestCase.

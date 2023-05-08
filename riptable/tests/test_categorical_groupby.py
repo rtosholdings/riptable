@@ -18,7 +18,7 @@ from riptable import (
     logical,
     mask_or,
 )
-from riptable.rt_enum import GROUPBY_KEY_PREFIX
+from riptable.rt_enum import GROUPBY_KEY_PREFIX, INVALID_DICT
 from riptable.tests.utils import get_rc_version, parse_version
 
 # %load_ext autoreload
@@ -926,6 +926,26 @@ class TestCategoricalGroupby:
         with pytest.raises(ValueError):
             rt.Cat([1, 1, 1, 2]).shift(arange(4), 4, periods=1)
 
+    def test_shift_filtered(self):
+        """
+        Test that Categorical.shift properly works with filter kwarg.
+        """
+
+        ds = rt.Dataset(
+            {
+                "c": rt.Cat(["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"]),
+                "v": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                "f": [False, True, True, True, False, True, False, True, False, True],
+            }
+        )
+
+        result = ds.c.shift(ds.v, filter=ds.f)
+
+        inv = rt.INVALID_DICT[result.v.dtype.num]
+        expected = rt.Dataset({"v": rt.FA([inv, inv, 1, 2, inv, inv, inv, 5, inv, 7], dtype="int")})
+
+        assert expected.equals(result)
+
     @pytest.mark.xfail(
         get_rc_version() < parse_version("1.11.5a"), reason="cat.shift of flexible not supported", strict=False
     )
@@ -1035,3 +1055,60 @@ class TestCategoricalGroupby:
             match="Tried to perform a groupby operation where the length of the input was not equal to the length of the categorical.",
         ):
             _ = x.median(y)
+
+    @pytest.mark.skipif(get_rc_version() < parse_version("1.11.5a2"), reason="groupby.nth(n<0) is broken", strict=False)
+    def test_nth_offsets(self):
+        ds = Dataset({"a": rt.Cat([0, 1, 1]), "num": [123.0, 456.0, 789.0], "str": ["Aa", "Bb", "Cc"]})
+        grp_offsets = [0, 1]
+        gb: rt.Cat = ds.a
+        for n in range(-3, 3):
+            result = gb.nth((ds.num, ds.str), n=n)
+            for grp in range(2):
+                grp_count = grp + 1
+                grp_index = n if n >= 0 else grp_count + n
+                if grp_index >= 0 and grp_index < grp_count:
+                    assert result["num"][grp] == ds["num"][grp_offsets[grp] + grp_index]
+                    assert result["str"][grp] == ds["str"][grp_offsets[grp] + grp_index]
+                else:
+                    assert np.isnan(result["num"][grp])
+                    assert len(result["str"][grp]) == 0
+
+    @pytest.mark.parametrize("showfilter", [None, True, False])
+    @pytest.mark.parametrize("filter", [None, True])
+    @pytest.mark.parametrize("transform", [None, True, False])
+    def test_nth(self, transform, filter, showfilter):
+        ds = Dataset(
+            {
+                "a": rt.Cat([10, 11, 11]),
+                "num": [123.0, 456.0, 789.0],
+                "str": ["Aa", "Bb", "Cc"],
+            }
+        )
+        gb: rt.Cat = ds.a
+        filter_arr = rt.FA([True, False, True]) if filter else None
+
+        expected = {
+            "num": [123.0, 789.0] if filter else [123.0, 456.0],
+            "str": ["Aa", "Cc"] if filter else ["Aa", "Bb"],
+        }
+        if transform:
+            expected["num"].append(expected["num"][-1])
+            expected["str"].append(expected["str"][-1])
+        else:
+            expected["a"] = [10, 11]
+        if showfilter and not transform:
+            expected["num"].insert(0, 456.0 if filter else np.nan)
+            expected["str"].insert(0, "Bb" if filter else INVALID_DICT[np.dtype(str).num])
+            expected["a"].insert(0, INVALID_DICT[np.dtype(int).num])
+
+        actual = gb.nth(
+            [ds.num, ds.str],
+            0,
+            transform=transform,
+            filter=filter_arr,
+            showfilter=showfilter,
+        )
+
+        assert len(actual.keys()) == len(expected.keys())
+        for k in expected.keys():
+            assert_array_equal(actual[k], rt.FA(expected[k]))

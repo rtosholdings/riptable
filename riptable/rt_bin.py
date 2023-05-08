@@ -1,6 +1,7 @@
 __all__ = ["cut", "qcut", "quantile"]
 
 from typing import (
+    Literal,
     Optional,
 )
 
@@ -417,6 +418,7 @@ def cut(
     precision=3,
     include_lowest=False,
     filter: Optional[np.ndarray] = None,
+    duplicates: Literal["raise", "drop"] = "raise",
 ):
     """
     Bin values into discrete intervals.
@@ -560,7 +562,14 @@ def cut(
     labels = None if labels is True else labels
 
     fac, bins, ret_labels = _bins_to_cuts_new(
-        x, bins, right=right, labels=labels, precision=precision, include_lowest=include_lowest, dtype=dtype
+        x,
+        bins,
+        right=right,
+        labels=labels,
+        precision=precision,
+        include_lowest=include_lowest,
+        dtype=dtype,
+        duplicates=duplicates,
     )
 
     labels = ret_labels if labels is not False else labels

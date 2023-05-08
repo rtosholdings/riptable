@@ -17,6 +17,7 @@ from functools import wraps
 
 import numba as nb
 import numpy as np
+import numpy.typing as npt
 from numba.core.dispatcher import Dispatcher
 
 from .config import get_global_settings
@@ -24,6 +25,7 @@ from .rt_enum import TypeRegister
 from .rt_fastarray import FastArray
 from .rt_numpy import empty, ones, unique, where, zeros
 from .Utils.common import cached_property
+from .numba.indexing import scalar_or_lookup
 
 # Partially-specialize the numba.njit decorator to simplify its use in the FAString class below.
 _njit_serial = partial(nb.njit, parallel=False, cache=get_global_settings().enable_numba_cache, nogil=True)
@@ -76,6 +78,8 @@ def _warn_deprecated_naming(old_func, new_func):
 # Also note: On Windows as of Aug 2019, prange is much slower without tbb installed
 #
 # subclass from FastArray
+
+SliceBoundType = Union[int, npt.NDArray[np.integer]]
 
 
 @nb.njit
@@ -1157,8 +1161,9 @@ class FAString(FastArray):
         n_elements = len(out)
         max_chars = 0
         for elem in nb.prange(n_elements):
+            i = scalar_or_lookup(start, elem)
+            j = scalar_or_lookup(stop, elem)
             elem_len = strlen[elem]
-            i, j = start[elem], stop[elem]
             if i < 0:
                 i += elem_len
             if j < 0:
@@ -1171,29 +1176,39 @@ class FAString(FastArray):
                 max_chars = max(max_chars, out_pos + 1)
         return out[:, :max_chars]
 
-    def _substr(self, start: Union[int, np.ndarray], stop: Optional[Union[int, np.ndarray]] = None) -> FastArray:
+    def _substr(self, start: SliceBoundType, stop: Optional[SliceBoundType] = None) -> FastArray:
         """
         Take a substring of each element using slice args.
+        Behaves like slice, such that a single argument is treated as the stop.
+        start, stop may be integers or arrays of integers aligned with self.
+
+        Examples
+        --------
+        >>> a = rt.FA(['abc', 'xyzQ'])
+        >>> a.str.substr(2)
+        FastArray([b'ab', b'xy'], dtype='|S2')
+        >>> a.str.substr(0, 2)
+        FastArray([b'ab', b'xy'], dtype='|S2')
+        >>> a.str.substr(1, 2)
+        FastArray([b'b', b'y'], dtype='|S2')
+        >>> a.str.substr([1, 2])    # element-wise bounds
+        FastArray([b'a', b'xy'], dtype='|S2')
         """
         if stop is None:
-            # emulate behaviour of slice
             start, stop = 0, start
 
-        def _bound_to_array(value, name):
-            value = TypeRegister.FastArray(value)
-            if len(value) == 1:
-                value = np.full(self.n_elements, value[0])
-            if value.shape != (self.n_elements,):
-                raise ValueError(
-                    f"{name} must be an integer or an array of length equal to the number of elements"
-                    f" in self. Expected {(self.n_elements,)}, got {value.shape}"
-                )
-            return value
-
-        start = _bound_to_array(start, "start")
-        stop = _bound_to_array(stop, "stop")
-
         strlen = self.strlen
+
+        if start is None:
+            start = 0
+        if stop is None:
+            stop = strlen
+
+        def _asarray_or_int(x):
+            return int(x) if np.ndim(x) == 0 else np.asarray(x)
+
+        start = _asarray_or_int(start)
+        stop = _asarray_or_int(stop)
 
         out = zeros((self.n_elements, self._itemsize), self.dtype)
 
@@ -1287,7 +1302,7 @@ class FAString(FastArray):
             raise ValueError("position must be a scalar or a vector of the same length as self")
 
         out = zeros(self.n_elements, self.dtype)
-        broken_at = self._nb_char(position, self._itemsize, self.strlen, out)
+        broken_at = self.nb_char(position, self._itemsize, self.strlen, out)
         if broken_at >= 0:
             raise ValueError(f"Position {position[broken_at]} out of bounds " f"for string of length {self._itemsize}")
         out = out.view(f"{self._intype}1")
@@ -1385,7 +1400,28 @@ def _populate_wrappers(cls):
 
 class _SubStrAccessor:
     """
-    Class for providing slicing on string arrays via FAString.substr
+    Facilitiates FAString.substr[<slice>] usage pattern.
+
+    FAString.substr return an instance of this object which can either be
+    sliced or called.
+
+    Examples
+    --------
+    >>> a = rt.FA(['abc', 'xyzQ'])
+    >>> a.str.substr(2)
+    FastArray([b'ab', b'xy'], dtype='|S2')
+    >>> a.str.substr(0, 2)
+    FastArray([b'ab', b'xy'], dtype='|S2')
+    >>> a.str.substr(1, 2)
+    FastArray([b'b', b'y'], dtype='|S1')
+    >>> a.str.substr[:2]
+    FastArray([b'ab', b'xy'], dtype='|S2')
+    >>> a.str.substr[1:2]
+    FastArray([b'b', b'y'], dtype='|S1')
+    >>> a.str.substr[-2:]
+    FastArray([b'bc', b'zQ'], dtype='|S2')
+    >>> a.str.substr[-2:-1]
+    FastArray([b'b', b'z'], dtype='|S1')
     """
 
     def __init__(self, fastring):
@@ -1393,12 +1429,18 @@ class _SubStrAccessor:
 
     def __getitem__(self, y):
         if isinstance(y, slice):
-            start = 0 if y.start is None else y.start
-            return self.fastring._substr(start, y.stop)
+            if y.step is not None:
+                raise NotImplementedError("slicing with step in substr is not supported")
+            if y.stop is None:
+                stop = self.fastring.strlen
+            else:
+                stop = y.stop
+            return self.fastring._substr(y.start, stop)
         else:
             return self.fastring.char(y)
 
-    def __call__(self, start, stop=None):
+    @wraps(FAString._substr)
+    def __call__(self, start: SliceBoundType, stop: Optional[SliceBoundType] = None):
         return self.fastring._substr(start, stop)
 
 

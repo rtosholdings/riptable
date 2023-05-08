@@ -2375,7 +2375,8 @@ class DateTime_Test(unittest.TestCase):
         pdt = pd.DatetimeIndex(dtn._fa)
         self.assertTrue(bool(np.all(dtn._fa == pdt.values.view(np.int64))))
 
-        df = pd.DataFrame({"pdt": pdt})
+        # Add dummy to avoid empty DataFrame errors in pandas-2.0
+        df = pd.DataFrame({"pdt": pdt, "dummy": 1})
         df = df.set_index("pdt")
 
         rule = "1H"

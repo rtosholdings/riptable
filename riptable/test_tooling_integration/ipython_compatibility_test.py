@@ -8,6 +8,8 @@ import textwrap
 import unittest
 
 import pytest
+
+pytest.importorskip("IPython")
 from IPython import get_ipython
 from IPython.core import completer
 from IPython.core.completer import (
