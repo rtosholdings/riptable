@@ -62,6 +62,7 @@ ERROR_MSGS = {
     "EX98": "flake8 error {error_code}: {error_message}{times_happening}",
     "EX97": "Do not import {imported_library}, as it is imported automatically for the examples",
     "EX96": "flake8 warning {error_code}: {error_message}{times_happening}",
+    "EX95": "black format error:\n{error_message}",
 }
 
 OUT_FORMAT_OPTS = "default", "json", "actions"
@@ -236,6 +237,9 @@ class RiptableDocstring(Validator):
             file.close()
             cmd = ["python", "-m", "flake8", "--quiet", "--statistics", fname]
             response = subprocess.run(cmd, capture_output=True, text=True)
+            if response.stderr:
+                stderr = response.stderr.strip("\n")
+                error_messages.append(f"1 ERROR {stderr}")
             stdout = response.stdout
             stdout = stdout.replace(fname, "")
             messages = stdout.strip("\n")
@@ -247,6 +251,34 @@ class RiptableDocstring(Validator):
         for error_message in error_messages:
             error_count, error_code, message = error_message.split(maxsplit=2)
             yield error_code, message, int(error_count)
+
+    def validate_format(self):
+        if not self.examples:
+            return
+
+        content = "".join((*self.examples_source_code,))
+
+        error_messages = []
+        try:
+            fd, fname = tempfile.mkstemp(prefix="val-", suffix=".py")
+            file = os.fdopen(fd, mode="w", encoding="utf-8")
+            file.write(content)
+            file.close()
+            cmd = ["python", "-m", "black", "--quiet", "--diff", fname]
+            response = subprocess.run(cmd, capture_output=True, text=True)
+            if response.stderr:
+                stderr = response.stderr.strip("\n")
+                error_messages.append(stderr)
+            stdout = response.stdout
+            stdout = stdout.replace(fname, "<example>")
+            messages = stdout.strip("\n")
+            if messages:
+                error_messages.append(messages)
+        finally:
+            os.remove(fname)
+
+        for error_message in error_messages:
+            yield error_message
 
     def non_hyphenated_array_like(self):
         return "array_like" in self.raw_doc
@@ -314,7 +346,9 @@ def riptable_validate(
             times_happening = f" ({error_count} times)" if error_count > 1 else ""
             result["errors"].append(
                 riptable_error(
-                    "EX98" if flake8_errors and matches(error_code, flake8_errors) else "EX96",
+                    "EX98"
+                    if error_code == "ERROR" or (flake8_errors and matches(error_code, flake8_errors))
+                    else "EX96",
                     error_code=error_code,
                     error_message=error_message,
                     times_happening=times_happening,
@@ -324,6 +358,14 @@ def riptable_validate(
         for wrong_import in [v.__name__ for v in IMPORT_CONTEXT.values()]:
             if re.search(f"import {wrong_import}\W+", examples_source_code):
                 result["errors"].append(riptable_error("EX97", imported_library=wrong_import))
+
+        for error_message in doc.validate_format():
+            result["errors"].append(
+                riptable_error(
+                    "EX95",
+                    error_message=error_message,
+                )
+            )
 
     if doc.non_hyphenated_array_like():
         result["errors"].append(riptable_error("GL97"))
@@ -636,7 +678,7 @@ def main():
     argparser.add_argument(
         "--flake8-errors",
         default=None,
-        help="Comma separated list of flake8 error codes to treat as EX98 errors. Others are treated as warnings.",
+        help="Comma separated list of flake8 error codes to treat as errors. Others are treated as warnings.",
     )
     argparser.add_argument(
         "--out",

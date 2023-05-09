@@ -97,6 +97,11 @@ sphinx_reqs = (
     + tests_reqs
 )
 
+# Black formatting requirements.
+black_reqs = [
+    "black==22.*",
+]
+
 # Docstrings validation requirements.
 # Validation requires complete riptable for iteration and evaluating examples.
 docstrings_reqs = (
@@ -105,14 +110,10 @@ docstrings_reqs = (
         "tomli",
     ]
     + flake8_reqs
+    + black_reqs
     + runtime_reqs
     + tests_reqs
 )
-
-# Black formatting requirements.
-black_reqs = [
-    "black==22.*",
-]
 
 # Pydocstyle doc style requirements.
 pydocstyle_reqs = [
