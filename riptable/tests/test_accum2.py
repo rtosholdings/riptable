@@ -644,6 +644,11 @@ class AccumTable_Test(unittest.TestCase):
             decimal=2,
         )
 
+    def test_count_uniques(self):
+        accum = rt.Accum2([1, 1, 2, 2], ["A", "B", "C", "A"])
+        with pytest.raises(NotImplementedError):
+            accum.count_uniques(rt.arange(4))
+
 
 if __name__ == "__main__":
     tester = unittest.main()

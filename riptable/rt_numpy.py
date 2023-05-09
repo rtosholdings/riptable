@@ -5241,25 +5241,36 @@ def _mask_op(bool_list, funcNum, inplace=False):
     if lenbool == 1:
         return bool_list[0]
 
-    # check all boolean arrays are same size - cpp code seems to fail
-    size = len(bool_list[0])
-    for i in range(lenbool):
-        if len(bool_list[i]) != size:
-            raise ValueError(f"Boolean arrays must be the same length")
-
     # we could support all int types here as well
     dtype = 0
     for v in bool_list:
-        dtype += v.dtype.num
+        # allow for scalar bool, as well as bool arrays.
+        dtype += 0 if isinstance(v, bool) else v.dtype.num
     if dtype != 0:
         raise TypeError(f"Must all be boolean types")
 
     # we have at least two items
     # grabbing the func pointer speeds things up in testing
-    func = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
+    ledgerFunc = TypeRegister.MathLedger._BASICMATH_TWO_INPUTS
+
+    # Wrapper to detect not-supported result from rc and raise an error.
+    def func(*args):
+        result = ledgerFunc(*args)
+        if result is None:
+            # Operation not supported, so raise appropriate error.
+            # Check all boolean arrays are same size
+            size = len(bool_list[0])
+            for i in range(lenbool):
+                if len(bool_list[i]) != size:
+                    raise ValueError("Boolean arrays must be the same length")
+            raise ValueError(f"Cannot perform mask_op {funcNum}")
+        return result
+
     if inplace:
         # assume first value can be reused
         result = bool_list[0]
+        if not isinstance(result, np.ndarray):
+            raise TypeError("First argument must be an array")
         func((result, bool_list[1], result), funcNum, 0)
         i = 2
 

@@ -1,12 +1,13 @@
 import unittest
 from io import StringIO
+import pytest
 
 import numpy as np
 from numpy import nan
 from numpy.testing import assert_array_equal, assert_equal
 
 from riptable import FastArray as FA
-from riptable import mask_and, mask_andnot, mask_or, mask_xor
+from riptable import mask_and, mask_andnot, mask_or, mask_xor, mask_xori
 
 from .utils import redirectStdoutCtx
 
@@ -54,6 +55,63 @@ try:
                 result = result * ~np_bools[i]
             result2 = mask_andnot(np_bools)
             assert_array_equal(result, result2)
+
+        def test_masking_scalar(self):
+            for reverse in [False, True]:
+                a1 = True
+                a2 = np.array([True, False, True])
+                if reverse:
+                    a1, a2 = a2, a1
+
+                result1 = a1 ^ a2
+                result2 = mask_xor(a1, a2)
+                assert_array_equal(result1, result2)
+
+        def test_masking_scalar_arr(self):
+            for reverse in [False, True]:
+                a1 = np.array([True])
+                a2 = np.array([True, False, True])
+                if reverse:
+                    a1, a2 = a2, a1
+
+                result1 = a1 ^ a2
+                result2 = mask_xor(a1, a2)
+                assert_array_equal(result1, result2)
+
+        def test_masking_scalar_arr_inplace(self):
+            a1 = np.array([True, False, True])
+            a2 = np.array([True])
+            s2 = True
+
+            expected = a1 ^ a2
+            actual = mask_xori(a1, a2)
+            assert_array_equal(expected, actual)
+
+            expected = a1 ^ s2
+            actual = mask_xori(a1, s2)
+            assert_array_equal(expected, actual)
+
+        def test_masking_scalar_arr_inplace_fails(self):
+            a1 = np.array([True])
+            s1 = True
+            a2 = np.array([True, False, True])
+
+            with pytest.raises(ValueError):
+                mask_xori(a1, a2)
+            with pytest.raises(TypeError):
+                mask_xori(s1, a2)
+
+        def test_masking_mismatched_fails(self):
+            for reverse in [False, True]:
+                a1 = np.array([True, False])
+                a2 = np.array([True, False, True])
+                if reverse:
+                    a1, a2 = a2, a1
+
+                with pytest.raises(ValueError):
+                    a1 | a2
+                with pytest.raises(ValueError):
+                    mask_or(a1, a2)
 
         def test_noncontig(self):
             # no longer a warning

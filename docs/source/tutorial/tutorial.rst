@@ -33,5 +33,6 @@ Appendix
    
    tutorial_numpy_rt
    tutorial_cat_reduce
+   tutorial_cat_adv_instantiation
    
    

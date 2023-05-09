@@ -4,6 +4,8 @@ from enum import IntEnum
 from typing import List, Union
 
 import pytest
+
+pytest.importorskip("IPython")
 from IPython import get_ipython
 from IPython.core.completer import provisionalcompleter
 from IPython.terminal import ptutils

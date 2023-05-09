@@ -1590,6 +1590,44 @@ class FastArray_Test(unittest.TestCase):
         filtered_cat = cat.filter([True, True, False, False, True, False])
         assert_array_or_cat_equal(cat.categories(), filtered_cat.categories())
 
+    def test_fill_internal(self):
+        int_fa = rt.FA([1, 2, 3])
+        float_fa = rt.FA([1.0, 2, 3])
+
+        int_inv = INVALID_DICT[int_fa.dtype.num]
+        float_inv = INVALID_DICT[float_fa.dtype.num]
+
+        # Basic test
+        int_result = int_fa.fill_invalid(inplace=False)
+        int_expected = rt.FA([int_inv, int_inv, int_inv])
+        assert_array_equal(int_expected, int_result)
+        assert int_expected.dtype == int_result.dtype
+
+        # Inplace=True
+        inplace_fa = rt.FA([1, 2, 3])
+        inplace_fa.fill_invalid()
+        inplace_expected = rt.FA([int_inv, int_inv, int_inv])
+        assert_array_equal(inplace_expected, inplace_fa)
+        assert inplace_expected.dtype == inplace_fa.dtype
+
+        # Specific dtype
+        float_result = int_fa.fill_invalid(inplace=False, dtype=np.dtype("float"))
+        float_expected = rt.FA([float_inv, float_inv, float_inv])
+        assert_array_equal(float_expected, float_result)
+        assert float_expected.dtype == float_result.dtype
+
+        # Specific dtype as string
+        float_result = int_fa.fill_invalid(inplace=False, dtype="float")
+        float_expected = rt.FA([float_inv, float_inv, float_inv])
+        assert_array_equal(float_expected, float_result)
+        assert float_expected.dtype == float_result.dtype
+
+        # Different shape
+        int_result = int_fa.fill_invalid(inplace=False, shape=2)
+        int_expected = rt.FA([int_inv, int_inv])
+        assert_array_equal(int_expected, int_result)
+        assert int_expected.dtype == int_result.dtype
+
 
 # TODO: Extend the tests in the TestFastArrayNanmax / TestFastArrayNanmin classes below to cover the following cases:
 #   * non-array inputs (e.g. a list or set or scalar)

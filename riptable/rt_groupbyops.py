@@ -21,7 +21,7 @@ from .rt_enum import (
 from .rt_groupbykeys import GroupByKeys
 from .rt_grouping import Grouping
 from .rt_misc import _use_autocomplete_placeholder
-from .rt_numpy import bool_to_fancy, empty_like, gb_np_quantile, groupbyhash, zeros_like
+from .rt_numpy import bool_to_fancy, empty_like, gb_np_quantile, groupbyhash, zeros_like, zeros
 from .rt_utils import rolling_quantile_funcParam
 
 if TYPE_CHECKING:
@@ -957,7 +957,8 @@ class GroupByOps(ABC):
             TypeRegister.Dataset({}), self.gb_keychain, None, addkeys=True, showfilter=showfilter
         )
 
-    _USE_FAST_COUNT_UNIQUES = False  # re-enable/delete slow once riptable#209 is fixed.
+    _USE_FAST_COUNT_UNIQUES = True  # set to False to restore original implementation.
+
     # ---------------------------------------------------------------
     def count_uniques(self, *args, **kwargs):
         """
@@ -985,24 +986,33 @@ class GroupByOps(ABC):
         SPY       AMEX                3            2
         .         NYSE                1            2
         """
+
+        if isinstance(self, TypeRegister.Accum2):
+            raise NotImplementedError("May I recommend using a multicat and then pivoting?")
+
         origdict, user_args, tups = self._prepare_gb_data("count_uniques", None, *args, **kwargs)
 
         label_keys = self.gb_keychain
         g = self.grouping
 
         if GroupByOps._USE_FAST_COUNT_UNIQUES:
-            filter = kwargs["filter"] if "filter" in kwargs else None
-            transform = kwargs["transform"] if "transform" in kwargs else None
+            filter = kwargs.get("filter")
+            transform = kwargs.get("transform")
+            showfilter = kwargs.get("showfilter")
 
+            gbk = TypeRegister.Dataset(label_keys.gbkeys)
             newdict = {}
             for colname, arr in origdict.items():
-                gbk = label_keys.gbkeys
                 if colname not in gbk:
-                    mcat = TypeRegister.Categorical([self, arr], filter=filter)
+                    mcat = TypeRegister.Categorical([g.catinstance, arr], filter=filter)
                     if transform:
-                        result = self.nansum(mcat.first_bool, transform=transform)[0]
+                        result = self.nansum(mcat.first_bool, transform=transform)[-1]
                     else:
-                        result = mcat.null()[0].count().Count
+                        count = mcat.null()[0].count()
+                        result = zeros(len(gbk) + 1, dtype=int)
+                        result[count[0]] = count.Count
+                        if not showfilter:
+                            result = result[1:]
                     newdict[colname] = result
 
         else:  # slow code
@@ -1097,7 +1107,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1166,7 +1176,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1234,7 +1244,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1302,7 +1312,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1370,7 +1380,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1442,7 +1452,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1733,7 +1743,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1804,7 +1814,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1877,7 +1887,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -1945,7 +1955,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2013,7 +2023,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2081,7 +2091,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2149,7 +2159,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2217,7 +2227,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2285,7 +2295,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2385,7 +2395,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2456,7 +2466,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2527,7 +2537,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2599,7 +2609,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2667,7 +2677,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2739,7 +2749,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -2809,7 +2819,7 @@ class GroupByOps(ABC):
         showfilter : bool
             If showfilter is True, there will be an extra row in the output
             representing the GroupBy Operation applied to all those elements that
-            were filered out.
+            were filtered out.
         col_idx : str, list of str, optional
             If the input is a Dataset, col_idx specifies which columns to keep.
         dataset : Dataset, optional
@@ -3390,48 +3400,13 @@ class GroupByOps(ABC):
         # from pandas.core.resample import get_resampler_for_grouping
         # return get_resampler_for_grouping(self, rule, *args, **kwargs)
 
+    @abstractmethod
+    def nth(self, *args, **kwargs):
+        pass
+
     # -------------------------------------------------------
-    def nth(self, *args, n=1, **kwargs):
-        """
-        Take the nth row from each group if `n` is an int.
-
-        Parameters
-        ----------
-        n : int
-            a single nth value for the row
-
-        Examples
-        --------
-        >>> df = rt.Dataset({'A': [1, 1, 2, 1, 2],
-        ...                    'B': [np.nan, 2, 3, 4, 5]}, columns=['A', 'B'])
-        >>> g = df.groupby('A')
-        >>> g.nth(0)
-             B
-        A
-        1  NaN
-        2  3.0
-
-        >>> g.nth(1)
-             B
-        A
-        1  2.0
-        2  5.0
-
-        >>> g.nth(-1)
-             B
-        A
-        1  4.0
-        2  5.0
-
-        >>> g.nth([0, 1])
-             B
-        A
-        1  NaN
-        1  2.0
-        2  3.0
-        2  5.0
-        """
-        return self._calculate_all(GB_FUNCTIONS.GB_NTH, *args, func_param=(n), **kwargs)
+    def _nth(self, *args, n: int = 1, **kwargs):
+        return self._calculate_all(GB_FUNCTIONS.GB_NTH, *args, func_param=n, **kwargs)
 
     ##-------------------------------------------------------
     def diff(self, period=1, **kwargs):

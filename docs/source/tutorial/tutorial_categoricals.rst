@@ -649,17 +649,16 @@ Later on we’ll cover another Riptable function, ``Accum2()``, that
 aggregates two groups similarly but provides summary data and a styled 
 output.
 
-Bucket Numeric Data for Analysis
---------------------------------
+Partition Numeric Data into Bins for Analysis
+---------------------------------------------
 
-When you have a large amount of numeric data, ``cut()`` and ``qcut()``
-can help you split the values into Categorical bins (a.k.a. “buckets”)
-for analysis.
+When you have a large array of numeric data, ``rt.cut()`` and ``rt.qcut()``
+can help you partition the values into Categorical bins for analysis.
 
-Use ``cut()`` for buckets based on values of your choosing. Use
-``qcut()`` for buckets based on sample quantiles.
+Use ``cut()`` to create equal-width bins or bins defined by specified endpoints. 
+Use ``qcut()`` to create bins based on sample quantiles.
 
-Let’s create a moderately large Dataset::
+Let’s use a moderately large Dataset::
 
     >>> N = 1_000
     >>> ds2 = rt.Dataset()
@@ -702,15 +701,15 @@ Let’s create a moderately large Dataset::
     998   MSFT       984.06
     999   MSFT       907.39
 
-With ``cut()``, you can create equal-width buckets or choose your own
-intervals.
+Create equal-width bins with ``rt.cut()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To split values into equal-width buckets, just specify an integer number
-of buckets (in this case 5)::
+To partition values into equal-width bins, use ``cut()`` and specify the number 
+of bins::
 
-    >>> ds2.PriceBucket = rt.cut(ds2.Price, 5)
+    >>> ds2.PriceBin = rt.cut(ds2.Price, bins=5)
     >>> ds2
-      #   Symbol      Price   PriceBucket      
+      #   Symbol      Price   PriceBin      
     ---   ------   --------   -----------------
       0   AMZN        93.87   -3.011->221.182  
       1   AMZN       150.69   -3.011->221.182  
@@ -744,21 +743,21 @@ of buckets (in this case 5)::
      998  MSFT       984.06   893.763->1117.956
      999  MSFT       907.39   893.763->1117.956
 
-Notice that the buckets form the groups of a Categorical::
+Notice that the bins form the categories of a Categorical::
 
-    >>> ds2.PriceBucket
+    >>> ds2.PriceBin
     Categorical([-3.011->221.182, -3.011->221.182, -3.011->221.182, -3.011->221.182, -3.011->221.182, ..., 893.763->1117.956, 893.763->1117.956, 893.763->1117.956, 893.763->1117.956, 893.763->1117.956]) Length: 1000
       FastArray([1, 1, 1, 1, 1, ..., 5, 5, 5, 5, 5], dtype=int8) Base Index: 1
       FastArray([b'-3.011->221.182', b'221.182->445.376', b'445.376->669.569', b'669.569->893.763', b'893.763->1117.956'], dtype='|S17') Unique count: 5
 
-To choose your own intervals, provide the endpoints. Here, we define
-bins that cover two intervals: one bin for prices from 0 to 600 (0
-excluded), and one for prices from 600 to 1,200 (600 excluded)::
+To specify your own bin endpoints, provide an array. Here, we define two
+bins: one for prices from 0 to 600 (with both endpoints, 0 and 600, included), 
+and one for prices from 600 to 1,200 (600 excluded, 1,200 included)::
 
-    >>> buckets = [0, 600, 1200]
-    >>> ds2.PriceBucket2 = rt.cut(ds2.Price, buckets)
+    >>> bins = [0, 600, 1200]
+    >>> ds2.PriceBin2 = rt.cut(ds2.Price, bins)
     >>> ds2
-      #   Symbol      Price   PriceBucket         PriceBucket2 
+      #   Symbol      Price   PriceBin            PriceBin2 
     ---   ------   --------   -----------------   -------------
       0   AMZN        93.87   -3.011->221.182     0.0->600.0   
       1   AMZN       150.69   -3.011->221.182     0.0->600.0   
@@ -792,18 +791,13 @@ excluded), and one for prices from 600 to 1,200 (600 excluded)::
     998   MSFT       984.06   893.763->1117.956   600.0->1200.0
     999   MSFT       907.39   893.763->1117.956   600.0->1200.0
 
-In interval notation, the intervals look like this: (0, 600] (600, 1200]
 
-The left side of each interval is open (meaning the left value is
-excluded), and the right side is closed. To switch which side is closed,
-pass ``right=False``.
+Create bins based on sample quantiles with ``rt.qcut()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Use ``qcut()`` to get buckets based on sample quantiles. Unlike
-``cut()``, ``qcut()`` will usually result in buckets that are of roughly
-equal size – that is, each bucket will contain around the same number of
-data points.
+To partition values into bins based on sample quantiles, use ``qcut()``.
 
-We’ll create a Dataset with symbol groups and contracts per day::
+We’ll create another Dataset with symbol groups and contracts per day::
 
     >>> N = 1_000
     >>> ds3 = rt.Dataset()
@@ -833,10 +827,10 @@ We’ll create a Dataset with symbol groups and contracts per day::
     18   eqt_comp                1,504
     19   eqtrest                   118
 
-Create three labeled buckets for the volume::
+Create three labeled, quantile-based bins for the volume::
 
     >>> label_names = ['Low', 'Medium', 'High']
-    >>> ds3.Volume = rt.qcut(ds3.ContractsPerDay, 3, labels=label_names)
+    >>> ds3.Volume = rt.qcut(ds3.ContractsPerDay, q=3, labels=label_names)
     >>> ds3.head()
      #   SymbolGroup   ContractsPerDay   Volume
     --   -----------   ---------------   ------
@@ -861,21 +855,21 @@ Create three labeled buckets for the volume::
     18   eqt_comp                1,504   Low   
     19   eqtrest                   118   Low  
 
-See the total number of contracts per day for each bucket::
+As with ``cut()``, the bins form the categories of a Categorical::
 
-    >>> ds3.Volume.nansum(ds3.ContractsPerDay)
-    *Volume   ContractsPerDay
-    -------   ---------------
-    Clipped                 0
-    Low               287,043
-    Medium            850,758
-    High            1,392,177
+    >>> ds3.Volume
+    Categorical([High, High, Medium, High, Low, ..., Low, Medium, High, Low, Low]) Length: 1000
+      FastArray([4, 4, 3, 4, 2, ..., 2, 3, 4, 2, 2], dtype=int8) Base Index: 1
+      FastArray([b'Clipped', b'Low', b'Medium', b'High'], dtype='|S7') Unique count: 4
 
-Similarly to ``cut()``, ``qcut()`` can take a list of quantiles (numbers
+The 'Clipped' bin is created to hold any out-of-bounds values (though there are
+none in this case).
+
+Alternatively, you can give ``qcut()`` a list of quantiles (numbers
 between 0 and 1, inclusive). Here, we create quartiles::
 
     >>> quartiles = [0, .25, .5, .75, 1.]
-    >>> ds3.VolQuartiles = rt.qcut(ds3.ContractsPerDay, quartiles)
+    >>> ds3.VolQuartiles = rt.qcut(ds3.ContractsPerDay, q=quartiles)
     >>> ds3.head()
      #   SymbolGroup   ContractsPerDay   Volume   VolQuartiles   
     --   -----------   ---------------   ------   ---------------
@@ -909,7 +903,7 @@ supported (for example, a function you’ve written), you can use
 ``apply_nonreduce()`` to apply a non-reducing function.
 
 ``apply_reduce()``
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 The function you use with ``apply_reduce()`` can take in one or multiple
 columns/FastArrays as input, but it must return a single value per group.
@@ -1012,7 +1006,7 @@ assign them to a column::
 As expected, every instance of a category gets the same value.
 
 ``apply_nonreduce()``
-~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^
 
 For ``apply_nonreduce()``, our lambda function computes a new value for
 every element of the original input::
@@ -1093,7 +1087,7 @@ columns as input::
      49   TSLA     45.62    91.25      2.10   74,124.69    772.06    861.31
 
 ``apply()``
-~~~~~~~~~~~
+^^^^^^^^^^^
 
 If you want your custom function to return multiple aggregations – for
 example, you want to return both the mean value of one column and the

@@ -163,7 +163,6 @@ def _fnanmean(x, filter):
 
 @nb.njit(parallel=True)
 def _fnanvar(x, filter):
-
     abc = 0.0
     length = 0
 
@@ -213,7 +212,6 @@ def _fmean(x, filter):
 
 @nb.njit(parallel=True)
 def _fvar(x, filter):
-
     abc = 0.0
     length = 0
 
@@ -681,6 +679,7 @@ class FastArray(np.ndarray):
             callable
                 The decorator that registers `np_function` with the decorated function.
             """
+
             # @wraps(np_function)
             def decorator(func):
                 cls.HANDLED_FUNCTIONS[np_function] = func
@@ -707,6 +706,7 @@ class FastArray(np.ndarray):
             callable
                 The decorator that registers the type compatibility check for the `np_function` with the decorated function.
             """
+
             # @wraps(np_function)
             def decorator(check_type_compatibility):
                 cls.HANDLED_TYPE_COMPATIBILITY_CHECK[np_function] = check_type_compatibility
@@ -767,7 +767,6 @@ class FastArray(np.ndarray):
 
     # --------------------------------------------------------------------------
     def __new__(cls, arr, **kwargs) -> FastArray:
-
         allow_unicode = kwargs.get("unicode", False)
         try:
             del kwargs["unicode"]
@@ -1047,7 +1046,33 @@ class FastArray(np.ndarray):
     @property
     def _np(self) -> np.ndarray:
         """
-        quick way to return a numpy array instead of fast array
+        Return a NumPy array view of the input `FastArray`.
+
+        Returns
+        -------
+        numpy.ndarray
+            A NumPy array view of the input `FastArray`.
+
+        See Also
+        --------
+        Fastarray.view : View a NumPy array as a `FastArray`.
+
+        Examples
+        --------
+        Return a NumPy array view for an integer `FastArray`:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5])
+        >>> a
+        FastArray([1, 2, 3, 4, 5])
+        >>> a._np
+        array([1, 2, 3, 4, 5])
+
+        Update the `FastArray` using the NumPy array view:
+
+        >>> npview = a._np
+        >>> npview[2] = 10
+        >>> a
+        FastArray([ 1,  2, 10,  4,  5])
         """
         return self.view(np.ndarray)
 
@@ -1234,7 +1259,6 @@ class FastArray(np.ndarray):
             newvalue = value
 
         if newvalue is not None:
-
             # now we have a numpy array.. convert the dtype to match us
             # this should take care of invalids
             # convert first 14 common types (bool, ints, floats)
@@ -1389,6 +1413,40 @@ class FastArray(np.ndarray):
 
     # --------------------------------------------------------------------------
     def copy(self, order="K") -> FastArray:
+        """
+        Return a copy of the input `FastArray`.
+
+        Parameters
+        ----------
+        order : {'K', 'C', 'F', 'A'}, default 'K'
+            Controls the memory layout of the copy: 'K' means match the layout of the input array as closely as possible;
+            'C' means row-based (C-style) order; 'F' means column-based (Fortran-style) order;
+            'A' means 'F' if the input array is formatted as 'F', 'C' if not.
+
+        Returns
+        -------
+        FastArray
+            A copy of the input `FastArray`.
+
+        See Also
+        --------
+        .Categorical.copy : Returns a copy of the input `.Categorical`.
+        .Dataset.copy : Returns a copy of the input `.Dataset`.
+        .Struct.copy : Returns a copy of the input `.Struct`.
+
+        Examples
+        --------
+        Copy a `FastArray`:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5])
+        >>> a
+        FastArray([1, 2, 3, 4, 5])
+        >>> a2 = a.copy()
+        >>> a2
+        FastArray([1, 2, 3, 4, 5])
+        >>> a2 is a
+        False  # The copy is a separate object.
+        """
         # result= super(FastArray, self).copy(order)
         if self.flags.f_contiguous or self.flags.c_contiguous:
             if order == "K" and self.dtype.num <= 13:
@@ -1463,6 +1521,8 @@ class FastArray(np.ndarray):
     def _fill_invalid_internal(self, shape=None, dtype=None, inplace=True, fill_val=None):
         if dtype is None:
             dtype = self.dtype
+        if isinstance(dtype, str):
+            dtype = np.dtype(dtype)
         if shape is None:
             shape = self.shape
         elif not isinstance(shape, tuple):
@@ -1480,7 +1540,7 @@ class FastArray(np.ndarray):
                 )
             if dtype != self.dtype:
                 raise ValueError(
-                    f"Inplace fill invalid cannot be different dtype than existing categorical. Got {dtype} vs. {len(self.dtype)}"
+                    f"Inplace fill invalid cannot be different dtype than existing array. Got {dtype} vs. {len(self.dtype)}"
                 )
 
             self.fill(inv)
@@ -1569,28 +1629,43 @@ class FastArray(np.ndarray):
     # -------------------------------------------------------------------------
     def between(self, low, high, include_low: bool = True, include_high: bool = False) -> FastArray:
         """
-        Determine which elements of the array are in a a given interval.
-
-        Return a boolean mask indicating which elements are between `low` and `high` (including/excluding endpoints
-        can be controlled by the `include_low` and `include_high` arguments).
-
-        Default behaviour is equivalent to (self >= low) & (self < high).
+        Return a boolean `FastArray` indicating which input values are in a specified interval.
 
         Parameters
         ----------
-        low: scalar, array_like
-            Lower bound for test interval.  If array, should have the same size as `self` and comparisons are done elementwise.
-        high: scalar, array_like
-            Upper bound for test interval.  If array, should have the same size as `self` and comparisons are done elementwise.
-        include_low: bool
-            Should the left endpoint included in the test interval
-        include_high: bool
-            Should the right endpoint included in the test interval
+        low: scalar, array
+            Lower bound for the interval. If an array, must be the same size as `self`, and comparisons are done elementwise.
+        high: scalar, array
+            Upper bound for the interval. If an array, must be the same size as `self`, and comparisons are done elementwise.
+        include_low: bool, default True
+            Specifies whether `low` is included when performing comparisons.
+        include_high: bool, default False
+            Specifies whether `high` is included when performing comparisons.
 
         Returns
         -------
-        array_like[bool]
-            An boolean mask indicating if the associated elements are in the test interval
+        FastArray
+            A boolean `FastArray` indicating which input values are in a specified interval.
+
+        Examples
+        --------
+        Specify an interval using scalars:
+
+        >>> a = rt.FA([9, 2, 3, 5, 8, 9, 1, 4, 6])
+        >>> a.between(5, 9, include_low=False)  # Exclude `5` (left endpoint)
+        FastArray([False, False, False, False,  True, False, False, False,  True])
+
+        Specify an interval using arrays:
+
+        >>> a2 = rt.FA([1, 2, 3, 4, 5])
+        >>> a2.between([1, 3, 5, 5, 5], [2, 4, 6, 6, 6])
+        FastArray([ True, False, False, False,  True])
+
+        Specify an interval mixing scalar and array bounds:
+
+        >>> a3 = rt.FA([1, 2, 3, 4, 5])
+        >>> a3.between(2, [2, 4, 6, 6, 6])
+        FastArray([False,  True,  True,  True,  True])
         """
         low = asanyarray(low)
         high = asanyarray(high)
@@ -1613,30 +1688,100 @@ class FastArray(np.ndarray):
         seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None,
     ) -> FastArray:
         """
+        Return a given number of randomly selected values from a `FastArray`.
+
+        Parameters
+        ----------
+        N : int, default 10
+            Number of values to select. The entire array is returned if `N` is greater than the size of the array.
+        filter : array (bool or int), optional
+            A boolean mask or index array to filter values before selection. Note that until a reported bug is fixed, no error is raised and unexpected results may occur when a boolean mask array with a length different from that of the array it's masking is passed as a filter.
+        seed : int or other types, optional
+            A seed to initialize the random number generator. If one is not provided, the generator is initialized using random data from the OS. For details and other accepted types, see the `seed` parameter for `numpy.random.default_rng`.
+
+        Returns
+        -------
+        FastArray
+            A new `FastArray` containing the randomly selected values.
+
+        See Also
+        --------
+        .Dataset.sample : Return a specified number of randomly selected rows from a `.Dataset`.
+
         Examples
         --------
-        >>> a=rt.arange(10)
+        No sample size specified:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+        >>> a.sample()  # 10 randomly selected values returned.
+        FastArray([ 1,  2,  3,  4,  5,  6,  7,  9, 10, 11])  # Random
+
+        Sample 3 values:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
         >>> a.sample(3)
-        FastArray([0, 4, 9])
+        FastArray([1, 4, 9])  # Random
+
+        Specify a sample size larger than the array:
+
+        >>> a2 = rt.FA([1, 2, 3, 4, 5])
+        >>> a2.sample(100)  # The entire array is returned.
+        FastArray([1, 2, 3, 4, 5])
+
+        Specify an index array for filtering:
+
+        >>> a3 = rt.FA(['TSLA','AMZN','IBM', 'SPY', 'GME', 'AAPL', 'FB', 'GOOG', 'MSFT', 'UBER'])  # Create sample data.
+        >>> filter = rt.FA([0, 1, 3, 7])  # Specify indices of a3 to take the sample from.
+        >>> a3.sample(2, filter)
+        FastArray([b'TSLA', b'GOOG'], dtype='|S4')  # Random
+
+        Specify a boolean mask array for filtering:
+
+        >>> a3.sample(8, filter=rt.FA(a3 != 'SPY'))
+        FastArray([b'TSLA', b'IBM', b'GME', b'AAPL', b'FB', b'GOOG', b'MSFT',
+                   b'UBER'], dtype='|S4')  # Random
         """
         return sample(self, N=N, filter=filter, seed=seed)
 
     # --------------------------------------------------------------------------
     def duplicated(self, keep="first", high_unique=False) -> FastArray:
         """
-        See pandas.Series.duplicated
-
-        Duplicated values are indicated as True values in the resulting
-        FastArray. Either all duplicates, all except the first or all except the
-        last occurrence of duplicates can be indicated.
+        Return a boolean `FastArray` indicating `True` for duplicate items in the input array.
 
         Parameters
         ----------
-        keep : {'first', 'last', False}, default 'first'
-            - 'first' : Mark duplicates as True except for the first occurrence.
-            - 'last' : Mark duplicates as True except for the last occurrence.
-            - False : Mark values with just one occurrence as False.
+        keep : {'first', 'last', 'False'}, default 'first'
+            - 'first' : Mark each duplicate as `True` except for the first occurrence.
+            - 'last' : Mark each duplicate as `True` except for the last occurrence.
+            - 'False' : Mark all duplicates as `True`.
+        high_unique : bool, default `False` (hashing)
+            Controls whether the function uses hashing- or sorting-based logic to find unique values in the input array.
+            If your data has a high proportion of unique values, set to `True` for faster performance.
 
+        Returns
+        -------
+        FastArray
+            A boolean `FastArray` indicating `True` for duplicate items in the input array.
+
+        See Also
+        --------
+        FastArray.nunique : Returns the number of unique values in an array.
+        .Dataset.duplicated : Returns a boolean `FastArray` indicating `True` for duplicate rows.
+
+        Examples
+        --------
+        Exclude the first occurrence of each duplicate (use the default `keep` value):
+
+        >>> a = rt.FA([1, 2, 3, 4, 2, 7, 8, 8, 3])
+        >>> a
+        FastArray([1, 2, 3, 4, 2, 7, 8, 8, 3])
+        >>> a.duplicated()
+        FastArray([False, False, False, False,  True, False, False,  True,  True])
+
+        Mark all duplicates:
+
+        >>> a.duplicated(keep=False)
+        FastArray([False,  True,  True, False,  True, False,  True,  True,  True])
         """
         arr = self
 
@@ -2730,7 +2875,6 @@ class FastArray(np.ndarray):
     #############################################
 
     def _fa_filter_wrapper(self, myFunc, filter=None, dtype=None):
-
         if filter is True:
             filter = ones(len(self), dtype=bool)
         if filter is False:
@@ -2747,7 +2891,6 @@ class FastArray(np.ndarray):
         return myFunc(self, filter)
 
     def _fa_keyword_wrapper(self, filter=None, dtype=None, axis=None, keepdims=None, ddof=None, **kwargs):
-
         if self.dtype.char in "OSU":
             raise TypeError("FastArray operation applied to string or object array.")
 
@@ -3522,28 +3665,43 @@ class FastArray(np.ndarray):
     # -------------------------------------------------------
     def nunique(self) -> int:
         """
-        Returns number of unique values in array. Does not include nan or sentinel values in the count.
+        Return the number of unique values in the input `FastArray`. Does not include NaN or sentinel values.
+
+        Returns
+        -------
+        int
+            Number of unique values in the input `FastArray`. Does not include NaN or sentinel values.
+
+        See Also
+        --------
+        FastArray.duplicated : Returns a boolean `FastArray` indicating duplicate values.
+        .Categorical.nunique : Returns the number of unique values that occur in the `.Categorical`.
 
         Examples
         --------
-        Float with nan:
+        Retrieve the number of unique values in a floating point `FastArray`:
 
-        >>> a = FastArray([1.,2.,3.,np.nan])
+        >>> a = rt.FastArray([1., 2., 3., 1., 2., 3.])
+        >>> a
+        FastArray([1., 2., 3., 1., 2., 3.])
         >>> a.nunique()
         3
 
-        Signed integer with sentinel:
+        Retrieve the number of unique values in a floating point `FastArray` with a NaN value:
 
-        >>> a = FastArray([-128, 2, 3], dtype=np.int8)
-        >>> a.nunique()
+        >>> a2 = rt.FastArray([1., 2., 3., 1., 2., 3., rt.nan])
+        >>> a2
+        FastArray([ 1.,  2.,  3.,  1.,  2.,  3., nan])
+        >>> a2.nunique()  # The NaN value is not included.
+        3
+
+        Retrieve the number of unique values in an unsigned integer `FastArray` with a sentinel value:
+
+        >>> a3 = rt.FastArray([255, 2, 3, 2, 3], dtype="uint8")
+        >>> a3
+        FastArray([255,   2,   3,   2,   3], dtype=uint8)
+        >>> a3.nunique()  # The sentinel value is not included.
         2
-
-        Unsigned integer with sentinel:
-
-        >>> a = FastArray([255, 2, 3], dtype=np.uint8)
-        >>> a.nunique()
-        2
-
         """
         un = unique(self)
         count = len(un)
@@ -3614,27 +3772,44 @@ class FastArray(np.ndarray):
     # ---------------------------------------------------------------------------
     def shift(self, periods=1, invalid=None) -> FastArray:
         """
-        Modeled on pandas.shift.
-        Values in the array will be shifted to the right for positive, to the left for negative.
-        Spaces at either end will be filled with an invalid based on the datatype.
-        If abs(periods) >= the length of the FastArray, it will return a FastArray full of invalid
-        will be returned.
+        Return a shifted `FastArray`. Spaces at either end (from shifting) are filled with invalid values based on the input array's data type.
 
         Parameters
         ----------
-        periods: int, 1
-             number of elements to shift right (if positive) or left (if negative), defaults to 1
-        invalid: None, default
-             optional invalid value to fill
+        periods: int, default 1
+            Number of element positions to shift right (if positive) or left (if negative).
 
         Returns
         -------
-        FastArray shifted right or left by number of periods
+        A shifted `FastArray`. Spaces at either end (from shifting) are filled with invalid values based on the input array's data type.
+
+        See Also
+        --------
+        FastArray.diff : Returns a `FastArray` containing the differences between adjacent input array values.
+        .Categorical.shift : Shifts values in the `.Categorical` by a specified number of periods.
 
         Examples
         --------
-        >>> arange(5).shift(2)
-        FastArray([-2147483648, -2147483648,           0,           1,            2])
+        Shift array elements one position to the right:
+
+        >>> a=rt.FA([0, 2, 4, 8, 16, 32])
+        >>> a
+        FastArray([ 0,  2,  4,  8, 16, 32])
+        >>> a.shift()
+        FastArray([-2147483648,           0,           2,           4,
+                             8,          16])
+
+        Shift array elements two positions to the left:
+
+        >>> a.shift(-2)
+        >>> FastArray([          4,           8,          16,          32,
+                   -2147483648, -2147483648])
+
+        Specify a shift value greater than the array length:
+
+        >>> a.shift(10)
+        FastArray([-2147483648, -2147483648, -2147483648, -2147483648,
+                   -2147483648, -2147483648])
         """
 
         if periods == 0:
@@ -4278,7 +4453,6 @@ class FastArray(np.ndarray):
         # note: when method is 'at' this is an inplace unbuffered operation
         # this can speed up routines that use heavy masked operations
         if method == "reduce" and FastArray.FasterUFunc and not toplevel_abort:
-
             # a.any() and a.all() are logical reduce operations
             # Examples
             # Look for axis:None -- otherwise ABORT
@@ -4317,10 +4491,8 @@ class FastArray(np.ndarray):
 
         # check if we can proceed to calculate a faster way
         if method == "__call__" and FastArray.FasterUFunc and not toplevel_abort:
-
             # check for binary ufunc
             if len(args) == 2 and ufunc.nout == 1:
-
                 ###########################################################################
                 ## BINARY
                 ###########################################################################

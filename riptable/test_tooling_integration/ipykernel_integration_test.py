@@ -3,6 +3,8 @@ from textwrap import dedent
 from typing import List, Set, Tuple
 
 import pytest
+
+pytest.importorskip("ipykernel")
 from ipykernel.tests.utils import TIMEOUT, execute, kernel, wait_for_idle
 
 from riptable import (  # not unused; needed for evaluated code below

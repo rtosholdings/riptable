@@ -6938,14 +6938,18 @@ class Dataset(Struct):
         func: Optional[Callable[[np.ndarray], np.ndarray]] = None,
         zeros: bool = True,
         nans: bool = True,
+        columns: bool = True,
         rows: bool = True,
         keep: bool = False,
         ret_filters: bool = False,
     ) -> Union["Dataset", Tuple["Dataset", np.ndarray, np.ndarray]]:
         """
-        Returns a Dataset with columns removed that contain all zeros or all nans (or either).
+        Returns a Dataset with columns and/or rows removed that contain all zeros and/or nans.
+        Whether to remove only zeros, only nans, or both zeros and nans is controlled by kwargs `zeros` and `nans`.
 
-        If `rows` is True (the default), any rows which are all zeros or all nans will also be removed.
+        If `columns` is True (the default), any columns which are all zeros and/or nans will be removed.
+
+        If `rows` is True (the default), any rows which are all zeros and/or nans will be removed.
 
         If `func` is set, it will bypass the zeros and nan check and instead call `func`.
 
@@ -6962,8 +6966,10 @@ class Dataset(Struct):
             Defaults to True. Values must be non-zero.
         nans : bool
             Defaults to True. Values cannot be nan.
+        columns : bool
+            Defaults to True. Reduce columns if entire column filtered.
         rows : bool
-            Defaults to True. Reduce rows also if entire row filtered.
+            Defaults to True. Reduce rows if entire row filtered.
         keep : bool
             Defaults to False.  When set to True, does the opposite.
         ret_filters : bool
@@ -7026,7 +7032,8 @@ class Dataset(Struct):
                         # print('**col ', col, sum(result), len(arr))
                         addcol = sum(result) != len(arr)
 
-                    if addcol:
+                    # add if not all TRUE/FALSE or if columns == False (to add all columms)
+                    if addcol or not columns:
                         col_filter_mask.append(result)
                         col_filter.append(col)
                         colboolmask[i] = True

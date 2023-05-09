@@ -489,6 +489,8 @@ class TestFAString:
             (-1,),
             (-3, -1),
             (-1, 1),
+            (None, 3),
+            (None, None),
         ],
     )
 
@@ -513,18 +515,23 @@ class TestFAString:
         # check categories are unique
         assert len(set(result.category_array)) == len(result.category_array)
 
+    def test_substr_stop_is_None(self):
+        result = FAString(SYMBOLS).str.substr(3, None)
+        expected = rt.FastArray([s[:3] for s in SYMBOLS])
+        assert_array_equal(result, expected)
+
     @parametrize(
-        "start, stop, expected",
+        "start_stop, expected",
         [
-            (0, [1, 2, 3, 2, 3], ["A", "AM", "FB", "GO", "IBM"]),
-            ([1, 1, 1, 1, 1], [1, 2, 3, 2, 3], ["", "M", "B", "O", "BM"]),
-            ([1, 2, 3, 2, 3], None, ["A", "AM", "FB", "GO", "IBM"]),
-            ([0, 1, 1, 0, 1], [3, 10, 2, -1, -2], ["AAP", "MZN", "B", "GOO", ""]),
-            ([1, 1, 1, 1, 1], [1, 1, 1, 1, 1], ["", "", "", "", ""]),
+            ((0, [1, 2, 3, 2, 3]), ["A", "AM", "FB", "GO", "IBM"]),
+            (([1, 1, 1, 1, 1], [1, 2, 3, 2, 3]), ["", "M", "B", "O", "BM"]),
+            (([1, 2, 3, 2, 3],), ["A", "AM", "FB", "GO", "IBM"]),
+            (([0, 1, 1, 0, 1], [3, 10, 2, -1, -2]), ["AAP", "MZN", "B", "GOO", ""]),
+            (([1, 1, 1, 1, 1], [1, 1, 1, 1, 1]), ["", "", "", "", ""]),
         ],
     )
-    def test_substr_array_bounds(self, start, stop, expected):
-        result = FAString(SYMBOLS).substr(start, stop)
+    def test_substr_array_bounds(self, start_stop, expected):
+        result = FAString(SYMBOLS).substr(*start_stop)
         assert_array_equal(rt.FastArray(expected), result)
 
     @substr_test_cases
@@ -542,6 +549,11 @@ class TestFAString:
         indexer = [0, 1, 0, 1, 0]
         expected = rt.FastArray([s[i] for s, i in zip(SYMBOLS, indexer)])
         result = FAString(SYMBOLS).substr[indexer]
+        assert_array_equal(expected, result)
+
+    def test_substr_getitem_None_stop(self):
+        expected = rt.FastArray([s[-2:] for s in SYMBOLS])
+        result = FAString(SYMBOLS).substr[-2:]
         assert_array_equal(expected, result)
 
     def test_substr_char_stop(self):
