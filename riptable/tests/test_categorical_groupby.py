@@ -1056,6 +1056,38 @@ class TestCategoricalGroupby:
         ):
             _ = x.median(y)
 
+    def test_groupby_ops_first_fancy(self):
+        x = rt.Cat(["b", "b", "a", "a", "b"])
+        y1 = x.first_fancy
+        soln1 = rt.FA([2, 0])
+        assert_array_equal(y1, soln1)
+        x = rt.Cat(["b", "b", "a", "a", "b"], ordered=False)
+        y2 = x.first_fancy
+        soln2 = rt.FA([0, 2])
+        assert_array_equal(y2, soln2)
+
+    def test_groupby_ops_first_bool(self):
+        x = rt.Cat(["b", "b", "a", "a", "b"])
+        y = x.first_bool
+        soln = rt.FA([True, False, True, False, False])
+        assert_array_equal(y, soln)
+
+    def test_groupby_ops_last_fancy(self):
+        x = rt.Cat(["b", "b", "a", "a", "b"])
+        y1 = x.last_fancy
+        soln1 = rt.FA([3, 4])
+        assert_array_equal(y1, soln1)
+        x = rt.Cat(["b", "b", "a", "a", "b"], ordered=False)
+        y2 = x.last_fancy
+        soln2 = rt.FA([4, 3])
+        assert_array_equal(y2, soln2)
+
+    def test_groupby_ops_last_bool(self):
+        x = rt.Cat(["b", "b", "a", "a", "b"])
+        y = x.last_bool
+        soln = rt.FA([False, False, False, True, True])
+        assert_array_equal(y, soln)
+
     @pytest.mark.skipif(get_rc_version() < parse_version("1.11.5a2"), reason="groupby.nth(n<0) is broken", strict=False)
     def test_nth_offsets(self):
         ds = Dataset({"a": rt.Cat([0, 1, 1]), "num": [123.0, 456.0, 789.0], "str": ["Aa", "Bb", "Cc"]})

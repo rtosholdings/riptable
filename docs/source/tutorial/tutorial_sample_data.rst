@@ -43,12 +43,12 @@ The following methods generate repeated specified values.
     >>> rt.repeat(5, 10)
     FastArray([5, 5, 5, 5, 5, 5, 5, 5, 5, 5])
 
-10 repeats of the array::
+10 repeats of each array element::
 
     >>> rt.repeat([1, 2], 10)
     FastArray([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2])
 
-10 repeats of each array value in turn::
+10 "tiles" of the entire array::
 
     >>> rt.tile([1, 2], 10)
     FastArray([1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2])

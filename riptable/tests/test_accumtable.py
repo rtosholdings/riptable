@@ -20,6 +20,22 @@ class AccumTable_Test(unittest.TestCase):
         accum_expected.footer_set_values("Total", {"Symb": "Total", "Count": 10.0, "PlusMinus": 0.0})
         self.assertTrue((accum == accum_expected).all(axis=None))
 
+    def test_accum_cols_ratio(self):
+
+        num_rows = 4
+        data = rt.Dataset(
+            {
+                "Symb": rt.Cat(["A", "B"] * int(num_rows / 2)),
+                "Count": rt.full(num_rows, num_rows * num_rows),
+                "PlusMinus": [2, -4] * int(num_rows / 2),  # Added to handle edge case of zero footer
+            }
+        )
+
+        accum = rt.accum_cols(data.Symb, [[data.Count, data.PlusMinus]], ["Rezult"])
+        accum_expected = rt.Dataset({"Symb": ["A", "B"], "Rezult": [8.0, -4.0]})
+        accum_expected.footer_set_values("Total", {"Symb": "Total", "Rezult": -16.0})
+        self.assertTrue((accum == accum_expected).all(axis=None))
+
     def test_accum_cols_multikey(self):
         num_rows = 12
         data = rt.Dataset(

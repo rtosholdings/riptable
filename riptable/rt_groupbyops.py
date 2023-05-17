@@ -245,18 +245,45 @@ class GroupByOps(ABC):
 
         Examples
         --------
-        >>> c = rt.Cat(['this','this','that','that','this'])
-        >>> c.first
+        >>> c = rt.Cat(['b','b','a','a','b'])
+        >>> c.first_fancy
         FastArray([0, 2])
 
-        >>> c=Cat(['this','this','that','that','this'], ordered=False)
-        >>> c.first
+        >>> c=Cat(['b','b','a','a','b'], ordered=False)
+        >>> c.first_fancy
         FastArray([2, 0])
         """
         # note, cache this value?
         # fancy index
         self.grouping.pack_by_group()
         return self.grouping.iGroup[self.grouping.iFirstGroup[1:]]
+
+    # ---------------------------------------------------------------
+    @property
+    @_use_autocomplete_placeholder(placeholder=lambda _: FastArray[0])
+    def last_fancy(self):
+        """
+        Return a fancy index mask of the last occurrence
+
+        Notes
+        -----
+        NOTE: not optimized for groupby which has grouping.ikey always set
+        NOTE: categorical needs to lazy evaluate ikey
+
+        Examples
+        --------
+        >>> c = rt.Cat(['b','b','a','a','b'])
+        >>> c.last_fancy
+        FastArray([3, 4])
+
+        >>> c=Cat(['b','b','a','a','b'], ordered=False)
+        >>> c.last_fancy
+        FastArray([4, 3])
+        """
+        # note, cache this value?
+        # fancy index
+        self.grouping.pack_by_group()
+        return self.grouping.iGroup[self.grouping.iFirstGroup[1:] + self.grouping.nCountGroup[1:] - 1]
 
     # ---------------------------------------------------------------
     @property
@@ -275,6 +302,26 @@ class GroupByOps(ABC):
         result = zeros_like(self.grouping.iGroup, dtype="?")
 
         # set boolean mask to True for only the first occurrence
+        result[fancy] = True
+        return result
+
+    # ---------------------------------------------------------------
+    @property
+    def last_bool(self):
+        """
+        Return a boolean mask of the last occurrence.
+
+        Examples
+        --------
+        >>> c = rt.Cat(['this','this','that','that','this'])
+        >>> c.last_bool
+        FastArray([ False, False,  False, True, True])
+        """
+        # boolean mask set to False
+        fancy = self.last_fancy
+        result = zeros_like(self.grouping.iGroup, dtype="?")
+
+        # set boolean mask to True for only the last occurrence
         result[fancy] = True
         return result
 

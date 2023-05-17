@@ -144,7 +144,7 @@ The following Datasets each have a ``NaN`` in their key column::
 
 Now we do a ``merge_lookup()`` on the Key columns::
 
-    >>> ds1.merge_lookup(ds2, on='Key', columns_right=['Value2'])
+    >>> ds1.merge_lookup(ds2, on='Key', columns_right='Value2')
     #    Key   Value1   Value2
     -   ----   ------   ------
     0   1.00     1.00     1.00

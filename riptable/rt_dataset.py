@@ -2035,7 +2035,6 @@ class Dataset(Struct):
         totalsX, totalsY, name = self.imatrix_xy(np.sum, name=name)
 
         if totalsY is not None:
-
             # tell display that this dataset has a footer
             footerdict = dict(zip(self.imatrix_ds, totalsX))
             footerdict[name] = totalsX[-1]
@@ -4539,10 +4538,19 @@ class Dataset(Struct):
         inplace: bool = False,
         high_card: Optional[Union[bool, Tuple[Optional[bool], Optional[bool]]]] = None,
         hint_size: Optional[Union[int, Tuple[Optional[int], Optional[int]]]] = None,
+        suffixes: Optional[Tuple[str, str]] = None,
     ) -> "Dataset":
+        # Make sure the suffix/suffixes/inplace aren't incorrectly combined.
+        if suffixes is not None:
+            if suffix is not None:
+                raise ValueError("Only one of 'suffixes' and 'suffix' can be specified.")
+            if inplace:
+                raise ValueError("Cannot specify 'suffixes' with 'inplace=True'. Use 'suffix' instead.")
+        else:
+            suffixes = ("", suffix)
+
         # This method supports an in-place mode; unless the user specifies that one,
         # call the normal module-based implementation.
-        suffixes = ("", suffix)
         if not inplace:
             return rt_merge.merge_lookup(
                 self,
@@ -5198,33 +5206,73 @@ class Dataset(Struct):
         seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None,
     ) -> "Dataset":
         """
-        Return `N` randomly selected rows.
+        Return a given number of randomly selected `Dataset` rows.
 
-        This function is useful for spot-checking your data, especially if the first or
-        last rows aren't representative.
+        This function is useful for spot-checking your data, especially if the
+        first or last rows aren't representative.
 
         Parameters
         ----------
         N : int, default 10
-            Number of rows to select.
-        filter : array-like (bool or rownums), default None
-            Filter for rows to select sample from.
-        seed : {None, int, array_like[ints], SeedSequence, Generator}, default None
-            A seed to initialize the `Generator`. If None, the `Generator` is
-            initialized using fresh, random entropy data gathered from the OS.
+            Number of rows to select. The entire `Dataset` is returned if `N`
+            is greater than the number of `Dataset` rows.
+        filter : array (bool or int), optional
+            A boolean mask or index array to filter values before selection.
+            Note that until a reported bug is fixed, no error is raised and
+            unexpected results may occur when a boolean mask array with a length
+            different from that of the array it's masking is passed as a filter.
+        seed : int or other types, optional
+            A seed to initialize the random number generator. If one is not
+            provided, the generator is initialized using random data from the OS.
+            For details and other accepted types, see the `seed` parameter for
+            `numpy.random.default_rng`.
 
         Returns
         -------
         Dataset
-            A view of `N` randomly selected rows of the Dataset.
+            A new `Dataset` containing the randomly selected rows.
 
         See Also
         --------
-        Dataset.head : Returns the first `n` rows of the Dataset.
-        Dataset.tail : Returns the last `n` rows of the Dataset.
-        numpy.random.default_rng : Constructs a new `Generator`.
-        """
+        Dataset.head : Return the first rows of a `Dataset`.
+        Dataset.tail : Return the last rows of a `Dataset`.
+        .FastArray.sample :
+            Return a given number of randomly selected values from a `.FastArray`.
 
+        Examples
+        --------
+        >>> ds = rt.Dataset({"A": rt.FA([0, 1, 2, 3, 4]),
+        ...                  "B": rt.FA(["a", "b", "c", "d", "e"])})
+        >>> ds.sample(2)
+        #   A   B  # random
+        -   -   -
+        0   0   a
+        1   1   b
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 10.0 B
+
+        Filter with a boolean mask array:
+
+        >>> f = ds.A > 2
+        >>> ds.sample(2, filter=f)
+        #   A   B  # random
+        -   -   -
+        0   3   d
+        1   4   e
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 10.0 B
+
+        Filter with an index array:
+
+        >>> f = rt.FA([0, 1, 2])
+        >>> ds.sample(2, filter=f)
+        #   A   B  # random
+        -   -   -
+        0   0   a
+        1   2   c
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 10.0 B
+        """
         return sample(self, N=N, filter=filter, seed=seed)
 
     # -------------------------------------------------------
@@ -5734,6 +5782,7 @@ class Dataset(Struct):
                 # return np.array([func(np.array(self[_r, :].tolist()), **kwargs) for _r in range(self.get_nrows())])
                 # 267 µs ± 2 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
                 return FastArray([func(_r, **kwargs) for _r in self.asrows(as_type="array")])
+
             # respects noncomputable cols.
             # 448 µs ± 1.7 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
             def _row(_i):

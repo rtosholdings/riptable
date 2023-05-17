@@ -375,13 +375,14 @@ column is sorted with ``issorted()``, or just sort it using
 give you an error when you try to merge.)
 
 With ``merge_asof()``, you need to specify how you want to find the
-closest match: - ``direction='forward'`` matches based on the closest
-key in the right Dataset that’s greater than the key in the left
-Dataset. - ``direction='backward'`` matches based on the closest key in
-the right Dataset that’s less than the key in the left Dataset. -
-``direction='nearest'`` matches based on the closest key in the right
-Dataset, regardless of whether it’s greater than or less than the key in
-the left Dataset.
+closest match: 
+
+- ``direction='forward'`` matches based on the closest key in the right Dataset 
+  that’s greater than the key in the left Dataset. 
+- ``direction='backward'`` matches based on the closest key in the right Dataset 
+  that’s less than the key in the left Dataset. 
+- ``direction='nearest'`` matches based on the closest key in the right Dataset, 
+  regardless of whether it’s greater than or less than the key in the left Dataset.
 
 Let’s see an example based on closest times. The left Dataset has three
 trades and their times. The right Dataset has spot prices and times that

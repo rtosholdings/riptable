@@ -2962,76 +2962,257 @@ def merge_lookup(
     hint_size: Optional[Union[int, Tuple[Optional[int], Optional[int]]]] = None,
 ) -> "Dataset":
     """
-    Merge Dataset by performing a database-style left-join operation by columns.
+    Combine two `.Dataset` objects by performing a database-style left-join
+    operation on columns.
+
+    This operation returns a new `.Dataset` object. To do an in-place merge, use
+    `.Dataset.merge_lookup` with ``inplace=True``.
 
     Parameters
     ----------
-    left : Dataset
-        Left Dataset
-    right : Dataset
-        Right Dataset
+    left : `.Dataset`
+        The first `.Dataset` to merge. If a matching value for a key in `left`
+        isn't found in `right`, the returned `.Dataset` includes a row with the
+        columns from `left`, but with NaN values in each column from `right`.
+    right : `.Dataset`
+        The second `.Dataset` to merge. If `right` has more rows than `left`,
+        the rows in `right` that don't have counterparts in `left` are discarded
+        from the result.
     on : str or (str, str) or list of str or list of (str, str), optional
-        Column names to join on. Must be found in both `left` and `right`.
+        Names of columns (keys) to join on. If `on` isn't specified, `left_on`
+        and `right_on` must be specified.
+        Options for types:
+
+        - Single string: Join on one column that has the same name in both
+          `.Dataset` objects.
+        - List: A list of strings is treated as a multi-key in which all
+          associated key column values in `left` must have matches in
+          `right`. The column names must be the same in both `.Dataset`
+          objects, unless they're in a tuple; see below.
+        - Tuple: Use a tuple to specify key columns that have different names.
+          For example, ``("col_a", "col_b")`` joins on ``col_a`` in
+          `left` and ``col_b`` in `right`. Both columns are in the
+          returned `.Dataset` unless you specify otherwise using
+          `columns_left` or `columns_right`.
     left_on : str or list of str, optional
-        Column names from left Dataset to join on. When specified, overrides whatever is specified in `on`.
+        Use instead of `on` to specify names of columns in the left `.Dataset`
+        to join on. A list of strings is treated as a multi-key in which all
+        associated key column values in `left` must have matches in `right`. If
+        both `on` and `left_on` are specified, an error is raised.
     right_on : str or list of str, optional
-        Column names from right to join on. When specified, overrides whatever is specified in `on`.
-    require_match : bool, default False
-        When True, all keys in `left` are required to have a matching key in `right`, and an exception
-        is raised when this requirement is not met.
+        Use instead of `on` to specify names of columns in the right `.Dataset`
+        to join on. A list of strings is treated as a multi-key in which all
+        associated key column values in `right` must have matches in `left`.
+        If both `on` and `right_on` are specified, an error is raised.
+    require_match : bool, default `False`
+        When `True`, all keys in `left` are required to have a matching key in
+        `right`, and an error is raised when this requirement is not met.
     suffixes: tuple of (str, str), optional
-        Suffix to apply to overlapping column names in the left and right side, respectively.
-        The default (``None``) causes an exception to be raised for any overlapping columns.
-    copy: bool, default True
-        If False, avoid copying data when possible; this can reduce memory usage
-        but users must be aware that data can be shared between `left` and/or `right`
-        and the Dataset returned by this function.
+        Suffixes to apply to returned overlapping non-key-column names in the
+        `left` and `right`, respectively. By default, an error is raised
+        for any overlapping non-key columns that will be in the returned
+        `.Dataset`.
+    copy: bool, default `True`
+        Set to `False` to avoid copying data when possible. This can reduce
+        memory usage, but be aware that data can be shared among `left`,
+        `right`, and the `.Dataset` returned by this function.
     columns_left : str or list of str, optional
-        Column names to include in the merge from `left`, defaults to None which causes all columns to be included.
+        Names of columns from `left` to include in the merged `Dataset`.
+        By default, all columns are included.
     columns_right : str or list of str, optional
-        Column names to include in the merge from `right`, defaults to None which causes all columns to be included.
-    keep : {'first', 'last'}, optional
-        When `right` contains multiple rows with a given unique key from `left`, this function
-        keeps only one such row and this parameter indicates whether it should be the first or
-        last row with the given key; when the parameter is None (the default), an exception will
-        be raised if there are any non-unique keys in `right`.
+        Names of columns from `right` to include in the merged `.Dataset`.
+        By default, all columns are included.
+    keep : {None, 'first', 'last'}, optional
+        When `right` contains multiple rows with a given unique key from `left`,
+        keep only one such row; this parameter indicates whether it should be
+        the first or last row with the given key. By default (``keep=None``), an
+        error is raised if there are any non-unique keys in `right`.
     high_card : bool or (bool, bool), optional
-        Hint to low-level grouping implementation that the key(s) of `left` and/or `right`
-        contain a high number of unique values (cardinality); the grouping logic *may* use
-        this hint to select an algorithm that can provide better performance for such cases.
+        Hint to the low-level grouping implementation that the key(s) of `left`
+        or `right` contain a high number of unique values (cardinality);
+        the grouping logic *may* use this hint to select an algorithm that can
+        provide better performance for such cases.
     hint_size : int or (int, int), optional
-        An estimate of the number of unique keys used for the join. Used as a performance hint
-        to the low-level grouping implementation.
-        This hint is typically ignored when `high_card` is specified.
+        An estimate of the number of unique keys used for the join. Used as a
+        performance hint to the low-level grouping implementation. This hint is
+        typically ignored when `high_card` is specified.
 
     Returns
     -------
-    merged : Dataset
+    Dataset
+        A new `.Dataset` of the two merged objects.
+
+    See Also
+    --------
+    ~riptable.rt_merge.merge_asof :
+        Merge two `.Dataset` objects using the nearest key.
+    ~riptable.rt_merge.merge2 :
+        Merge two `.Dataset` objects using various database-style joins.
+    ~riptable.rt_merge.merge_indices :
+        Return the left and right indices created by the join engine.
+    .Dataset.merge_lookup : Merge two `.Dataset` objects with an in-place option.
+    .Dataset.merge2 :
+        Merge two `.Dataset` objects using various database-style joins.
+    .Dataset.merge_asof : Merge two `.Dataset` objects using the nearest key.
 
     Examples
     --------
-    >>> rt.merge_lookup(ds_simple_1, ds_simple_2, left_on = 'A', right_on = 'X', how = 'inner')
-    #   A      B   X       C
-    -   -   ----   -   -----
-    0   0   1.20   0    2.40
-    1   1   3.10   1    6.20
-    2   6   9.60   6   19.20
+    A basic merge on a single column:
+
+    >>> ds_l = rt.Dataset({"Symbol": rt.FA(["GME", "AMZN", "TSLA", "SPY", "TSLA",
+    ...                                     "AMZN", "GME", "SPY", "GME", "TSLA"])})
+    >>> ds_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "GME", "AMZN", "SPY"]),
+    ...                    "Trader": rt.FA(["Nate", "Elon", "Josh", "Dan"])})
+    >>> ds_l
+    #   Symbol
+    -   ------
+    0   GME
+    1   AMZN
+    2   TSLA
+    3   SPY
+    4   TSLA
+    5   AMZN
+    6   GME
+    7   SPY
+    8   GME
+    9   TSLA
     <BLANKLINE>
-    [3 rows x 4 columns] total bytes: 72.0 B
-
-
-    Demonstrating a 'left' merge.
-
-    >>> rt.merge_lookup(ds_complex_1, ds_complex_2, on = ['A','B'], how = 'left')
-    #   B    A       C       E
-    -   -   --   -----   -----
-    0   Q    0    2.40    1.50
-    1   R    6    6.20   11.20
-    2   S    9   19.20     nan
-    3   T   11   25.90     nan
+    [10 rows x 1 columns] total bytes: 40.0 B
+    >>> ds_r
+    #   Symbol   Trader
+    -   ------   ------
+    0   TSLA     Nate
+    1   GME      Elon
+    2   AMZN     Josh
+    3   SPY      Dan
     <BLANKLINE>
-    [4 rows x 4 columns] total bytes: 84.0 B
+    [4 rows x 2 columns] total bytes: 32.0 B
+    >>> rt.merge_lookup(ds_l, ds_r, on="Symbol")
+    #   Symbol   Trader
+    -   ------   ------
+    0   GME      Elon
+    1   AMZN     Josh
+    2   TSLA     Nate
+    3   SPY      Dan
+    4   TSLA     Nate
+    5   AMZN     Josh
+    6   GME      Elon
+    7   SPY      Dan
+    8   GME      Elon
+    9   TSLA     Nate
+    <BLANKLINE>
+    [10 rows x 2 columns] total bytes: 80.0 B
 
+    When key columns have different names, use `left_on` and `right_on`
+    to specify them:
+
+    >>> ds_r.col_rename("Symbol", "Primary_Symbol")
+    >>> rt.merge_lookup(ds_l, ds_r, left_on="Symbol", right_on="Primary_Symbol",
+    ...                 columns_right="Trader")
+    #   Symbol   Trader
+    -   ------   ------
+    0   GME      Elon
+    1   AMZN     Josh
+    2   TSLA     Nate
+    3   SPY      Dan
+    4   TSLA     Nate
+    5   AMZN     Josh
+    6   GME      Elon
+    7   SPY      Dan
+    8   GME      Elon
+    9   TSLA     Nate
+    <BLANKLINE>
+    [10 rows x 2 columns] total bytes: 80.0 B
+
+    For non-key columns with the same name that will be returned, specify
+    `suffixes`:
+
+    >>> # Add duplicate non-key columns.
+    >>> ds_l.Value = rt.FA([0.72, 0.85, 0.14, 0.55, 0.77, 0.65, 0.23, 0.15, 0.43, 0.25])
+    >>> ds_r.Value = rt.FA([0.28, 0.56, 0.89, 0.74])
+    >>> # You can also use a tuple to specify left and right key columns.
+    >>> rt.merge_lookup(ds_l, ds_r, on=("Symbol", "Primary_Symbol"),
+    ...                 suffixes=["_1", "_2"], columns_right=["Value", "Trader"])
+    #   Symbol   Value_1   Value_2   Trader
+    -   ------   -------   -------   ------
+    0   GME         0.72      0.56   Elon
+    1   AMZN        0.85      0.89   Josh
+    2   TSLA        0.14      0.28   Nate
+    3   SPY         0.55      0.74   Dan
+    4   TSLA        0.77      0.28   Nate
+    5   AMZN        0.65      0.89   Josh
+    6   GME         0.23      0.56   Elon
+    7   SPY         0.15      0.74   Dan
+    8   GME         0.43      0.56   Elon
+    9   TSLA        0.25      0.28   Nate
+    <BLANKLINE>
+    [10 rows x 4 columns] total bytes: 240.0 B
+
+    When `on` is a list, a multi-key join is performed. All keys must match
+    in the right `Dataset`.
+
+    If a matching value for a key in the left `.Dataset` isn't found in the
+    right `.Dataset`, the returned `.Dataset` includes a row with the columns
+    from `left` but with NaN values in the columns from `right`.
+
+    >>> # Add associated Size values for multi-key join. Note that one
+    >>> # symbol-size pair in the left Dataset doesn't have a match in
+    >>> # the right Dataset.
+    >>> ds_l.Size = rt.FA([500, 150, 430, 225, 430, 320, 175, 620, 135, 260])
+    >>> ds_r.Size = rt.FA([430, 500, 150, 2250])
+    >>> # Pass a list of key columns that contains a tuple.
+    >>> rt.merge_lookup(ds_l, ds_r, on=[("Symbol", "Primary_Symbol"), "Size"],
+    ...                 suffixes=["_1", "_2"])
+    #   Size   Symbol   Value_1   Trader   Value_2
+    -   ----   ------   -------   ------   -------
+    0    500   GME         0.72   Elon        0.56
+    1    150   AMZN        0.85   Josh        0.89
+    2    430   TSLA        0.14   Nate        0.28
+    3    225   SPY         0.55                nan
+    4    430   TSLA        0.77   Nate        0.28
+    5    320   AMZN        0.65                nan
+    6    175   GME         0.23                nan
+    7    620   SPY         0.15                nan
+    8    135   GME         0.43                nan
+    9    260   TSLA        0.25                nan
+    <BLANKLINE>
+    [10 rows x 5 columns] total bytes: 280.0 B
+
+    When the right `.Dataset` has more than one matching key, use `keep` to
+    specify which one to use:
+
+    >>> ds_l = rt.Dataset({"Symbol": rt.FA(["GME", "AMZN", "TSLA", "SPY", "TSLA",
+    ...                                     "AMZN", "GME", "SPY", "GME", "TSLA"])})
+    >>> ds_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "GME", "AMZN", "SPY", "SPY"]),
+    ...                    "Trader": rt.FA(["Nate", "Elon", "Josh", "Dan", "Amy"])})
+    >>> rt.merge_lookup(ds_l, ds_r, on="Symbol", keep="last")
+    #   Symbol   Trader
+    -   ------   ------
+    0   GME      Elon
+    1   AMZN     Josh
+    2   TSLA     Nate
+    3   SPY      Amy
+    4   TSLA     Nate
+    5   AMZN     Josh
+    6   GME      Elon
+    7   SPY      Amy
+    8   GME      Elon
+    9   TSLA     Nate
+    <BLANKLINE>
+    [10 rows x 2 columns] total bytes: 80.0 B
+
+    NaN values are not treated as equal keys:
+
+    >>> ds_l = rt.Dataset({"Key": [1.0, rt.nan, 2.0,], "Value1": [1.0, 2.0, 3.0]})
+    >>> ds_r = rt.Dataset({"Key": [1.0, 2.0, rt.nan], "Value2": [1.0, 2.0, 3.0]})
+    >>> rt.merge_lookup(ds_l, ds_r, on="Key", columns_right="Value2")
+    #    Key   Value1   Value2
+    -   ----   ------   ------
+    0   1.00     1.00     1.00
+    1    nan     2.00      nan
+    2   2.00     3.00     2.00
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 72.0 B
     """
     # If keep is None, that means we want an exception to be raised if
     # there are any keys in 'right' occurring more than once. Do that via

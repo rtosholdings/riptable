@@ -1459,20 +1459,47 @@ class FastArray(np.ndarray):
     # --------------------------------------------------------------------------
     def copy_invalid(self) -> FastArray:
         """
-        Makes a copy of the array filled with invalids.
+        Return a `FastArray` of all invalids, of the same shape and dtype as the input array.
 
-        Examples
-        --------
-        >>> rt.arange(5).copy_invalid()
-        FastArray([-2147483648, -2147483648, -2147483648, -2147483648, -2147483648])
-
-        >>> rt.arange(5).copy_invalid().astype(np.float32)
-        FastArray([nan, nan, nan, nan, nan], dtype=float32)
+        Returns
+        -------
+        FastArray
+            A `FastArray` of all invalids, of the same shape and dtype as the input array.
 
         See Also
         --------
-        FastArray.inv
-        FastArray.fill_invalid
+        FastArray.inv : Return the invalid value for the input array's dtype.
+        FastArray.fill_invalid : Replace the contents of a `FastArray` with invalids.
+
+        Examples
+        --------
+        Copy an integer array and replace with invalids:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5])
+        >>> a
+        FastArray([1, 2, 3, 4, 5])
+        >>> a2 = a.copy_invalid()
+        >>> a2
+        FastArray([-2147483648, -2147483648, -2147483648, -2147483648,
+                   -2147483648])
+        >>> a
+        FastArray([1, 2, 3, 4, 5])  # a is unchanged.
+
+        Copy a floating point array and replace with invalids:
+
+        >>> a3 = rt.FA([0., 1., 2., 3., 4.])
+        >>> a3
+        FastArray([0., 1., 2., 3., 4.])
+        >>> a3.copy_invalid()
+        FastArray([nan, nan, nan, nan, nan])
+
+        Copy a string array and replace with invalids:
+
+        >>> a4 = rt.FA(['AMZN', 'IBM', 'MSFT', 'AAPL'])
+        >>> a4
+        FastArray([b'AMZN', b'IBM', b'MSFT', b'AAPL'], dtype='|S4')
+        >>> a4.copy_invalid()
+        FastArray([b'', b'', b'', b''], dtype='|S4')  # Invalid string value is an empty string.
         """
         return self.fill_invalid(inplace=False)
 
@@ -5674,7 +5701,48 @@ class FastArray(np.ndarray):
     @property
     def doc(self):
         """
-        The Doc object for the structure
+        Return the Doc object for the input `FastArray`.
+
+        If no Doc object exists, return None.
+
+        Returns
+        -------
+        doc : `~riptable.rt_meta.Doc`
+            The Doc object for the input `FastArray`. If no Doc object exists, return None.
+
+        See Also
+        --------
+        FastArray.info : Return a description of the input array's contents.
+        ~riptable.rt_meta.apply_schema : Set Doc object values.
+
+        Examples
+        --------
+        No Doc object exists:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5])
+        >>> print(a.doc)
+        None
+
+        Apply a schema and return the Doc object:
+
+        >>> schema = {"Description": "This is an array", "Steward": "Brian", "Type": "int32"}
+        >>> a.apply_schema(schema)
+        {}
+        >>> print(a.doc)
+        Description: This is an array
+        Steward: Brian
+        Type: int32
+
+        Return specific Doc object information:
+
+        >>> print(a.doc._type)
+        int32
+        >>> print(a.doc._descrip)
+        This is an array
+        >>> print(a.doc._steward)
+        Brian
+        >>> print(a.doc._detail)
+        None
         """
         from .rt_meta import doc as _doc
 
