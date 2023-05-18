@@ -1505,43 +1505,103 @@ class FastArray(np.ndarray):
 
     # --------------------------------------------------------------------------
     @property
-    def inv(self) -> np.number:
+    def inv(self) -> Any:
         """
-        Returns the invalid value for the array.
-        np.int8: -128
-        np.uint8: 255
-        np.int16: -32768
-        ...and so on..
+        Return the invalid value for the input array's dtype.
 
-        Examples
-        --------
-        >>> rt.arange(5).inv
-        -2147483648
+        Returns
+        -------
+        Any
+            The invalid value for the input array's dtype, for example: `numpy.int8` returns -128, `numpy.uint8` returns 255, and `numpy.bool_` returns False.
 
         See Also
         --------
-        FastArray.copy_invalid
-        FastArray.fill_invalid
-        INVALID_DICT
+        FastArray.copy_invalid : Returns a `FastArray` copy filled with the invalid value for the input array's dtype.
+        FastArray.fill_invalid : Returns the input `FastArray` or a `FastArray` copy, filled with invalid values.
+        ~riptable.rt_enum.INVALID_DICT : Maps invalid values to dtypes.
+
+        Examples
+        --------
+        Return the invalid value for an integer array:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5])
+        >>> a
+        FastArray([1, 2, 3, 4, 5])
+        >>> a.inv
+        -2147483648
+
+        Return the invalid value for a floating point array:
+
+        >>> a2 = rt.FA([0., 1., 2., 3., 4.])
+        >>> a2
+        FastArray([0., 1., 2., 3., 4.])
+        >>> a2.inv
+        nan
+
+        Return the invalid value for a string array:
+
+        >>> a3 = rt.FA(["AMZN", "IBM", "MSFT", "AAPL"])
+        >>> a3
+        FastArray([b'AMZN', b'IBM', b'MSFT', b'AAPL'], dtype='|S4')
+        >>> a3.inv
+        b''
         """
         return INVALID_DICT[self.dtype.num]
 
     # --------------------------------------------------------------------------
     def fill_invalid(self, shape=None, dtype=None, inplace=True) -> FastArray:
         """
-        Fills array or returns copy of array with invalid value of array's dtype or a specified one.
-        Warning: by default this operation is inplace.
+        Replace the contents of the input `FastArray` with invalid values.
 
-        Examples
-        --------
-        >>> a=rt.arange(5).fill_invalid()
-        >>> a
-        FastArray([-2147483648, -2147483648, -2147483648, -2147483648, -2147483648])
+        The invalid value used is determined by the input array's dtype or a user-specified dtype. Warning: By default, this operation is in place.
+
+        Parameters
+        ----------
+        shape : int or sequence of int, optional
+            Shape of the new array, for example: ``(2, 3)`` or ``2``. Note that although multi-dimensional arrays are technically supported by Riptable, you may get unexpected results when working with them.
+        dtype : str, optional
+            The desired dtype for the returned array.
+        inplace : bool, default True
+            If `False`, return a copy of the array. If `True`, modify original data.
+
+        Returns
+        -------
+        FastArray, optional
+            A copy of the input `FastArray` with invalid as all of its values. Returned only if the operation is not done in place.
 
         See Also
         --------
-        FastArray.inv
-        FastArray.fill_invalid
+        FastArray.inv : Returns the invalid value for the input array's dtype.
+        FastArray.copy_invalid : Returns a `FastArray` copy with its values replaced with the invalid value for the input array's dtype.
+
+        Examples
+        --------
+        Replace an integer array's values with invalid values. By default, the returned array is the same size and dtype as the input array, and the operation is performed in place:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5])
+        >>> a
+        FastArray([1, 2, 3, 4, 5])
+        >>> a.fill_invalid()
+        >>> a
+        FastArray([-2147483648, -2147483648, -2147483648, -2147483648,
+                   -2147483648])
+
+        Replace a floating point array's values with the invalid value for the ``int32`` dtype:
+
+        >>> a2 = rt.FA([0., 1., 2., 3., 4.])
+        >>> a2
+        FastArray([0., 1., 2., 3., 4.])
+        >>> a2.fill_invalid(dtype="int32", inplace=False)
+        FastArray([-2147483648, -2147483648, -2147483648, -2147483648,
+                   -2147483648])
+
+        Specify the size and dtype of the output array:
+
+        >>> a3 = rt.FA(["AMZN", "IBM", "MSFT", "AAPL"])
+        >>> a3
+        FastArray([b'AMZN', b'IBM', b'MSFT', b'AAPL'], dtype='|S4')
+        >>> a3.fill_invalid(2, dtype="bool", inplace=False)
+        FastArray([False, False])
         """
         return self._fill_invalid_internal(shape=shape, dtype=dtype, inplace=inplace)
 
@@ -1576,7 +1636,7 @@ class FastArray(np.ndarray):
             return arr
 
     # -------------------------------------------------------------------------
-    def isin(self, test_elements, assume_unique=False, invert=False) -> FastArray:
+    def isin(self, test_elements, *, assume_unique=False, invert=False) -> FastArray:
         """
         Calculates `self in test_elements`, broadcasting over `self` only.
         Returns a boolean array of the same shape as `self` that is True
@@ -3897,16 +3957,53 @@ class FastArray(np.ndarray):
     # -------------------------------------------------------
     def differs(self, periods=1, fancy=False) -> FastArray:
         """
-        Returns a boolean array.
-        The boolean array is set to True when the previous item in the array equals the current.
-        Use -1 instead of 1 if you want True set when the next item in the array equals the previous.
-        See also: ``transitions``
+        Identify array values that are the same as adjacent values.
 
-        ::param periods: The number of elements to look ahead (or behind), defaults to 1
-        :type periods: int
-        :param fancy: Indicates whether to return a fancy_index instead of a boolean array, defaults to False.
-        :type fancy: bool
-        :return: boolean ``FastArray``, or fancyIndex (see: `fancy` kwarg)
+        Output array values are set to `True` for equivalent values. Returns a boolean `FastArray` or a fancy index.
+
+        Parameters
+        ----------
+        periods: int, default 1
+            The number of array element positions to look behind (positive number) or look ahead (negative number) for comparison.
+        fancy: bool, default False
+            `False` returns a boolean array and `True` returns a fancy index.
+
+        Returns
+        -------
+        FastArray
+            A boolean `FastArray` or a fancy index that identifies equivalent elements in the input array.
+
+        See Also
+        --------
+        FastArray.transitions : Identify nonequivalent items in the input array and return a boolean `FastArray` or a fancy index.
+
+        Examples
+        --------
+        Return a boolean array using the ``periods=1`` default value (look behind one element position for comparisons):
+
+        >>> a = rt.FA([1, 2, 2, 3, 2, 4, 5, 6, 2, 2, 5])
+        >>> a
+        FastArray([1, 2, 2, 3, 2, 4, 5, 6, 2, 2, 5])
+        >>> a.differs()
+        FastArray([False, False,  True, False, False, False, False, False, False,
+                    True, False])
+
+        Return a boolean array and look ahead three element positions for comparisons:
+
+        >>> a.differs(periods=-3)
+        FastArray([False,  True, False, False, False, False, False, False, False,
+                   False, False])
+
+        Return a fancy index using the ``periods=1`` default value (look behind one element position for comparisons):
+
+        >>> a.differs(fancy=True)
+        FastArray([2, 9])
+
+        Set `periods` to a number larger than the input array:
+
+        >>> a.differs(periods=15)
+        FastArray([False, False, False, False, False, False, False, False, False,
+                   False, False])
         """
         if self.dtype.num > 13:
             result = self != self.shift(periods)
