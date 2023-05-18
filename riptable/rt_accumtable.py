@@ -486,7 +486,9 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
     if name_list is None:
         name_list = [f"col{n}" for n in range(len(val_list))]
     if filt_list is None:
-        filt_list = full(val_list[0].shape[0], True, dtype=bool)  # This was playa.utils.truecol
+        val_fst = val_list[0]
+        shape = val_fst.shape[0] if isinstance(val_fst, np.ndarray) else val_fst[0].shape[0]
+        filt_list = full(shape, True, dtype=bool)  # This was playa.utils.truecol
     if not isinstance(func_list, list):
         func_list = [func_list for _ in val_list]
     if not isinstance(filt_list, list):

@@ -302,7 +302,6 @@ class MergeTest(unittest.TestCase):
             ds1.merge(ds2, on="A", indicator="B")
 
     def test_outer_merge_categorical(self):
-
         cats = rt.FastArray([b"none", b"added", b"removed", b"all"], dtype="|S7")
 
         c1 = rt.Categorical([4, 3], cats)
@@ -6560,6 +6559,36 @@ def test_merge_lookup_inplace_single():
     assert_array_equal(foo.id_bar, rt.FA([8, 8, 3, inv, 1, inv], dtype=np.int32))
     assert_array_equal(foo.col2_bar, rt.FA([5, 5, inv, inv, 4, inv], dtype=np.int32))
     assert_array_equal(foo.strcol, rt.FA([b"Lombard", b"Lombard", b"Walnut", b"", b"Chestnut", b""]))
+
+
+def test_merge_lookup_suffixes():
+    left = rt.Dataset({"s": ["a", "b", "c", "a", "b", "c"], "v": [1, 2, 3, 4, 5, 6]})
+    right = rt.Dataset({"s": ["b", "c", "d"], "v": [5, 6, 7]})
+    inv = right.v.inv
+
+    # Main test of suffixes
+    result = left.merge_lookup(right, on="s", suffixes=("_left", "_right"))
+    expected = rt.Dataset(
+        {"s": ["a", "b", "c", "a", "b", "c"], "v_left": [1, 2, 3, 4, 5, 6], "v_right": [inv, 5, 6, inv, 5, 6]}
+    )
+    for col in expected:
+        assert_array_equal(result[col], expected[col])
+    assert_array_equal(result.shape, expected.shape)
+
+    # Also test suffix while we're here
+    result = left.merge_lookup(right, on="s", suffix="_right")
+    expected = rt.Dataset(
+        {"s": ["a", "b", "c", "a", "b", "c"], "v": [1, 2, 3, 4, 5, 6], "v_right": [inv, 5, 6, inv, 5, 6]}
+    )
+    for col in expected:
+        assert_array_equal(result[col], expected[col])
+    assert_array_equal(result.shape, expected.shape)
+
+    # Can't specify certain kwargs with suffixes
+    with pytest.raises(ValueError):
+        result = left.merge_lookup(right, on="v", suffixes=("_left", "_right"), suffix="_right")
+    with pytest.raises(ValueError):
+        result = left.merge_lookup(right, on="v", suffixes=("_left", "_right"), inplace=True)
 
 
 def test_merge_lookup_inplace_multi():

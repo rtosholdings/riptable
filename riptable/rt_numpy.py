@@ -466,6 +466,13 @@ def _find_lossless_common_array_type(arr1: np.array, arr2: np.array) -> Union[np
     return None
 
 
+def _get_lossless_common_array_type(arr1: np.array, arr2: np.array) -> Union[np.dtype, None]:
+    common_type = _find_lossless_common_array_type(arr1, arr2)
+    if not common_type:
+        raise TypeError(f"Cannot find lossless common type of {arr1.dtype} and {arr2.dtype}")
+    return common_type
+
+
 def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = "C") -> "FastArray":
     """
     Return a new array of specified shape and type, without initializing entries.
@@ -1086,8 +1093,7 @@ def _ismember_align_multikey(a, b):
             # cast if necessary
             if a_char != b_char:
                 # warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
-                # raise TypeError('numeric arrays in ismember need to be the same dtype')
-                common_type = np.find_common_type([a_col.dtype, b_col.dtype], [])
+                common_type = _get_lossless_common_array_type(a_col, b_col)
                 a_col = a_col.astype(common_type, copy=False)
                 b_col = b_col.astype(common_type, copy=False)
 
@@ -1294,9 +1300,7 @@ def ismember(
 
             # warnings.warn(f"Performance warning: numeric arrays in ismember had different dtypes {a.dtype} {b.dtype}")
             # raise TypeError('numeric arrays in ismember need to be the same dtype')
-            common_type = _find_lossless_common_array_type(a, b)
-            if not common_type:
-                raise TypeError(f"Cannot find lossless common type of {a.dtype} and {b.dtype}")
+            common_type = _get_lossless_common_array_type(a, b)
             if a.dtype != common_type:
                 a = a.astype(common_type)
             if b.dtype != common_type:

@@ -221,6 +221,8 @@ A few things to note about ``imatrix_make()``:
    internally by Riptable as an out-of-bounds number, and it will be
    sent to NumPy as that number. See `Working with Missing
    Data <tutorial_missing_data.rst>`__ for more on dealing with NaNs.
+-  If there are Categoricals in the Dataset, you can preserve the integer
+   mapping codes by passing ``cats=True``.
 
 To convert a 2-dimensional NumPy array back to Riptable, add it to a
 Dataset using ``add_matrix()``::

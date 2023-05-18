@@ -571,6 +571,59 @@ def test_is_member_casting_uints():
     assert (res == 2).all()
 
 
+def test_is_member_casting_big_uints():
+    # RIP-254
+    n = 2**63
+    a = FastArray([n - 1], dtype="int64")
+    b = FastArray([3, n - 1], dtype="uint64")
+    res = ismember(a, b)[0]
+    #    assert_array_equal(res, [False, True])
+    assert_array_equal(res, [True])
+    res = ismember(b, a)[1]
+    assert_array_equal(res, FastArray([-128, 0], dtype="int8"))
+    res = ismember(a, b)[1]
+    assert (res == 1).all()
+
+
+def test_is_member_multikey_casting_uints():
+    # related to RIP-254:  As floats n and n+1 are the same. We check that we don't identify n and n+1 in ismember
+    n = 2**53
+    a = FastArray([n + 2, n + 1, n, n - 1], dtype="uint64")
+    b = FastArray([n])
+    res = ismember([a, a], [b, b])[0]
+    assert_array_equal(res, [False, False, True, False])
+    res = ismember(b, a)[1]
+    assert (res == 2).all()
+
+
+def test_is_member_multikey_casting_big_uints():
+    # RIP-254
+    n = 2**63
+    a = FastArray([n - 1], dtype="int64")
+    b = FastArray([3, n - 1], dtype="uint64")
+    res = ismember([a, a], [b, b])[0]
+    #    assert_array_equal(res, [False, True])
+    assert_array_equal(res, [True])
+    res = ismember([b, b], [a, a])[1]
+    assert_array_equal(res, FastArray([-128, 0], dtype="int8"))
+    res = ismember([a, a], [b, b])[1]
+    assert (res == 1).all()
+
+
+def test_is_member_casting_too_big_uints():
+    a = FastArray([-1], dtype="int64")
+    b = FastArray([2**64 - 1], dtype="uint64")
+    with pytest.raises(TypeError):
+        ismember(a, b)
+
+
+def test_is_member_multikey_casting_too_big_uints():
+    a = FastArray([-1], dtype="int64")
+    b = FastArray([2**64 - 1], dtype="uint64")
+    with pytest.raises(TypeError):
+        ismember([a, a], [b, b])
+
+
 def test_ismember_empty_key():
     a = []
     b = [1, 2, 3]
@@ -585,20 +638,6 @@ def test_ismember_empty_multi_key():
     ismem, ix = ismember(a, b)
     assert_array_equal(ismem, FA([], dtype=bool))
     assert_array_equal(ix, FA([], dtype="int32"))
-
-
-def test_is_member_casting_big_uints():
-    # RIP-254
-    n = 2**63
-    a = FastArray([n - 1], dtype="int64")
-    b = FastArray([3, n - 1], dtype="uint64")
-    res = ismember(a, b)[0]
-    #    assert_array_equal(res, [False, True])
-    assert_array_equal(res, [True])
-    res = ismember(b, a)[1]
-    assert_array_equal(res, FastArray([-128, 0], dtype="int8"))
-    res = ismember(a, b)[1]
-    assert (res == 1).all()
 
 
 @pytest.mark.parametrize(
