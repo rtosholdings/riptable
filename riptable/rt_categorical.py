@@ -3792,10 +3792,13 @@ class Categorical(GroupByOps, FastArray):
         pandas.Categorical.isin()
         """
         x = values
+        if isinstance(x, set):
+            x = list(x)
 
         if isinstance(x, Categorical):
             if x.ismultikey:
                 return ismember(self, x)[0]
+
         # handle enum + non-categorical with grouping
         elif self.isenum:
             return self.grouping.isin(x)

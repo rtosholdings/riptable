@@ -126,7 +126,6 @@ class groupby_parameters:
 
 
 class groupby_everything:
-
     val_columns = VAL_COLUMNS_MIN
     key_columns = KEY_COLUMNS_MIN
     size = SIZE_DEFAULT

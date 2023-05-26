@@ -195,7 +195,6 @@ class Date_Test(unittest.TestCase):
         self.assertTrue(isinstance(result, TimeSpan))
 
     def test_math_errors(self):
-
         d = Date(1)
         val = Date(1)
         with self.assertRaises(TypeError):

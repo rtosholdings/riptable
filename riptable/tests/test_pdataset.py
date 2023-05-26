@@ -285,7 +285,6 @@ class PDataset_Test(unittest.TestCase):
             pds.psave()
 
     def test_partition_rename(self):
-
         ds = Dataset({"col_" + str(i): arange(5) for i in range(5)})
         pds = PDataset([ds, ds, ds])
         newnames = ["part1", "part2", "part3"]

@@ -17,6 +17,7 @@ from .rt_numpy import empty, empty_like
 from .numba.invalid_values import get_invalid, is_valid
 from .rt_fastarraynumba import _check_fill_values
 
+
 # NOTE YOU MUST INSTALL tbb
 # conda install tbb
 # to confirm...
@@ -50,7 +51,6 @@ def build_core_list(cores, unique_rows, binLow, binHigh):
 
 
 class GroupbyNumba(GroupByOps):
-
     # how many cores to cap the computation at
     # NOTE: this is not how many cores the system has but a number where
     # we believe thrashing takes place.  This number could be dynamic per algo in the future.
@@ -104,7 +104,6 @@ class GroupbyNumba(GroupByOps):
         inplace,  # if to apply function inplace
         func_param,
     ):  # parameters
-
         results = []
 
         # TODO: add enumerate here
@@ -236,7 +235,7 @@ class GroupbyNumba(GroupByOps):
                 totalValues = 0.0
                 pEMA = np.nan
                 pTime = times[0]
-                for (idx, (t, v)) in enumerate(zip(times, rows)):
+                for idx, (t, v) in enumerate(zip(times, rows)):
                     if not np.isnan(v):
                         deltaT = t - pTime
                         decay = np.exp(-decayRate * deltaT)

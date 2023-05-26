@@ -1008,7 +1008,6 @@ class Struct:
 
             # top-level item
             if itemflag & SDSFlag.OriginalContainer:
-
                 # this items arrays and other info are in a dictionary
                 if itemflag & SDSFlag.Nested:
                     idict = item
@@ -1059,7 +1058,6 @@ class Struct:
 
     # ------------------------------------------------------------
     def _as_meta_data(self, name=None, nested=True):
-
         itemdict = {}
         itemflags = []
         meta = MetaData(self._meta_dict(name=name))
@@ -1335,7 +1333,6 @@ class Struct:
             itemenum = tup[1]
 
             if itemenum & SDSFlag.OriginalContainer:
-
                 # TODO: write a routine to display scalars
                 if itemenum & SDSFlag.Scalar:
                     scalars[name] = cls._scalar_summary(arrays[idx])
@@ -1447,7 +1444,6 @@ class Struct:
     # -------------------------------------------------------
     @classmethod
     def _align_array_info(cls, allinfo, maxwidths):
-
         finalinfo = []
         for arrinfo in allinfo:
             newinfo = []
@@ -2103,7 +2099,6 @@ class Struct:
         metastring = None
         # arrays / array sublclasses
         if isinstance(item, np.ndarray):
-
             # get arrays, flags, meta from array subclass
             if hasattr(item, "_build_sds_meta_data"):
                 # store the instance array
@@ -2305,7 +2300,6 @@ class Struct:
             itemname = obj_array[i][0]
             # check if we are at the end of a substruct
             if startpos != 0 and not itemname.startswith(startname):
-
                 # build the nested class we collected earlier
                 return build_class_nested(metastringdict.get("_root", None), newstruct), i
 

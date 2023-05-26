@@ -35,6 +35,7 @@ def merge_index(indices, listcats, idx_cutoffs=None, unique_cutoffs=None, from_m
     - list of fixed indices, or array of fixed contiguous indices.
     - stacked unique values
     """
+
     # ------------------------------------------------------------
     def index_fixups(oldcats, newcats):
         # funnel for ismember in merge_index

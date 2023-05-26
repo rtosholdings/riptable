@@ -598,7 +598,6 @@ def empty_like(
 
 # -------------------------------------------------------
 def _searchsorted(array, v, side="left", sorter=None):
-
     # we cannot handle a sorter
     if sorter is None:
         try:
@@ -1293,7 +1292,6 @@ def ismember(
 
         # cast if necessary
         if a_char != b_char:
-
             # import traceback
             # for line in traceback.format_stack():
             #    print(line.strip())
@@ -1815,6 +1813,7 @@ def _groupbycalculateallpack(*args):
 # def _groupbycrunch(*args):
 #    #return rc.GroupByOp32(*args)
 #    return LedgerFunction(rc.GroupByOp32,*args)
+
 
 # -------------------------------------------------------
 def groupbypack(ikey, ncountgroup, unique_count=None, cutoffs=None) -> dict:
@@ -2365,6 +2364,7 @@ def argsort(*args, **kwargs) -> FastArray:
 # This is redefined down below...
 # def ceil(*args,**kwargs): return LedgerFunction(np.ceil,*args,**kwargs)
 
+
 # -------------------------------------------------------
 def concatenate(*args, **kwargs):
     firstarg, *_ = args[0]
@@ -2429,6 +2429,7 @@ def diff(*args, **kwargs) -> FastArray:
 
 # -------------------------------------------------------
 # this is a ufunc no need to take over def floor(*args,**kwargs): return LedgerFunction(np.floor,*args,**kwargs)
+
 
 # -------------------------------------------------------
 def full(shape, fill_value, dtype=None, order="C") -> FastArray:
@@ -2990,6 +2991,7 @@ def sortinplaceindirect(*args, **kwargs):
 # -------------------------------------------------------
 # is a ufunc def trunc(*args,**kwargs): return LedgerFunction(rc.IsSorted,*args,**kwargs)
 
+
 # -------------------------------------------------------
 def _unary_func(func, *args, **kwargs):
     """
@@ -3114,7 +3116,6 @@ def round(*args, **kwargs) -> FastArray | np.number:
 
 
 def _np_keyword_wrapper(filter=None, dtype=None, **kwargs):
-
     if dtype is not None:
         kwargs["dtype"] = dtype
     if filter is not None:
@@ -4594,6 +4595,7 @@ def logical(a):
 # class bool(np.bool):
 #    pass
 
+
 # -------------------------------------------------------
 class bool_(np.bool_):
     """
@@ -5011,6 +5013,7 @@ class float64(np.float64):
 # -------------------------------------------------------
 # linux only
 # class float128(np.float128):
+
 
 # -------------------------------------------------------
 def interp(x, xp, fp):

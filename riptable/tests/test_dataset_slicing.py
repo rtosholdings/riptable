@@ -369,7 +369,6 @@ ShowSliceInfo = False
 
 
 class Dataset_Slice_Accuracy(unittest.TestCase):
-
     # ------------------GENERAL COMPARE FUNCTIONS-------------------------------
     # --------------------------------------------------------------------------
     def try_conversions(self, ds_item, dict_item):

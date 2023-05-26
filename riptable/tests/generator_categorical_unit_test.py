@@ -2,7 +2,6 @@ from .groupby_categorical_unit_test_parameters import *
 
 
 def generate(n):
-
     PARAMETERS = categorical_parameters()
     epsilon = 0.00003
 

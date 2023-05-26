@@ -24,7 +24,6 @@ def arr_equal(a, b):
 
 class TestCategoricalOrdered:
     def test_single_values(self):
-
         # -------------SINGLE STRINGS----------------------------
         c = Categorical(str_list)
         ds = c.sum(data)
@@ -191,7 +190,6 @@ class TestCategoricalOrdered:
         assert arr_equal(ds.col_0, datasum_unsorted)
 
     def test_multikey(self):
-
         c = Categorical([FA(str_list), FA(int_list)])
         ds = c.sum(data)
         assert arr_equal(ds[GROUPBY_KEY_PREFIX + "_0"], str_unsorted)
@@ -249,7 +247,6 @@ class TestCategoricalOrdered:
         assert arr_equal(ds.col_0, datasum_unsorted)
 
     def test_values_cats(self):
-
         c = Categorical(str_list, str_unsorted)
         assert arr_equal(c.category_array, str_unsorted)
         c = Categorical(str_list, str_unsorted, ordered=True)

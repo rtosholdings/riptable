@@ -234,11 +234,9 @@ class GroupByOps_Test(unittest.TestCase):
 
 
 def quantile_params_generator(dtypes, max_N, windowed, with_cats, with_nans, with_infs, seed, scrunity_level=1):
-
     rng = default_rng(seed)
 
     for dtype in dtypes:
-
         # N = 1 case
         N = 1
         N_cat = 1
@@ -1146,7 +1144,6 @@ limit = {limit}"""
         fills_params_generator(),
     )
     def test_groupbyops_fills(self, N, N_cat, nan_fraction, types, limit, fill_val):
-
         this_seed = N * N_cat * int(nan_fraction * 1000) % 10_000
         rng = default_rng(this_seed)
 

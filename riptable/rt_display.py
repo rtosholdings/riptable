@@ -269,7 +269,6 @@ class DisplayTable(object):
         styles=None,
         callback=None,
     ):
-
         """
         Step 1: save all parameters into self namespace, as build_result_table is broken down into several functions.
         Step 2: if set_view has been called, only display the specified columns. if sort_values has been called, move those columns to the front.
@@ -1324,6 +1323,7 @@ class DisplayTable(object):
         If the user requested all columns to be shown - regardless of width, the display will split them up into
         separate views with the maximum columns per line.
         """
+
         # ----------------------------------
         def build_break_column(nrows):
             # Builds a break column using the number of rows.
@@ -1866,7 +1866,6 @@ class DisplayColumn:
         itemformat=None,
         footer=None,
     ):
-
         # column data
         self._header = header
         self._data = data

@@ -487,6 +487,19 @@ class TestCategorical(unittest.TestCase):
     def test_setitem_enum(self):
         self._notimpl()
 
+    def test_isin_set(self):
+        cat_list = ["a", "a", "b", "a", "c", "c", "b", "d", "d", "a", "b", "e", "d", "c"]
+        c = Cat(cat_list)
+        single_set_results = c.isin({b"a"})
+        single_list_results = c.isin([b"a"])
+        assert (single_set_results == rt.FA([val == "a" for val in cat_list])).all(), "Failed check 1, .isin(set())"
+        assert (single_set_results == single_list_results).all(), "Failed check 2, .isin(set())"
+
+        multi_set_results = c.isin({"a", "c"})
+        multi_list_results = c.isin(["a", "c"])
+
+        assert (multi_set_results == multi_list_results).all(), "Failed check 3, .isin(set())"
+
     # -------------------------------------------- MATLAB ----------------------------------
     def test_ctor_matlab(self):
         idx_list = [1.0, 2.0, 3.0, 4.0, 5.0]

@@ -33,6 +33,8 @@ int_types = [
 string_types = [np.bytes_, np.str_]
 warning_types = [object, np.complex64, np.complex128, np.float16]
 
+_numpy_version = tuple(int(x) for x in np.version.version.split("."))
+
 # nan_funcs   = [ np.nanargmax, np.nanargmin, np.nancumprod, np.nancumsum, np.nanmax,
 #                np.nanmean, np.nanmedian, np.nanmin, np.nanpercentile, np.nanprod,
 #                np.nanstd, np.nansum, np.nanvar ]
@@ -75,7 +77,6 @@ def almost_eq(fa: FastArray, arr: np.ndarray, places=5, rtol=1e-5, atol=1e-5, eq
 
 
 class FastArray_Test(unittest.TestCase):
-
     # --------VALID CONSTRUCTORS-------------------
     """
     BUGS:
@@ -792,14 +793,23 @@ class FastArray_Test(unittest.TestCase):
         FastArray currently does not support bytestring array comparison with ufuncs - numpy also prints notimplemented
         However operators <=, <, ==, !=, >, >= will return the correct result (boolean array)
         """
+        is_numpy_1_24 = _numpy_version >= (1, 24, 0)
         f_arr = FA(["a", "b", "c"])
-        invalid_funcs = [
+        funcs = [
             np.less_equal,
             np.less,
             np.equal,
             np.not_equal,
             np.greater,
             np.greater_equal,
+        ]
+        func_results = [
+            [True, True, True],
+            [False, False, False],
+            [True, True, True],
+            [False, False, False],
+            [False, False, False],
+            [True, True, True],
         ]
         valid_func_names = ["__ne__", "__eq__", "__ge__", "__gt__", "__le__", "__lt__"]
         correct_results = [
@@ -813,9 +823,18 @@ class FastArray_Test(unittest.TestCase):
         correct_dict = dict(zip(valid_func_names, correct_results))
 
         # ufunc comparisons will not work for strings (should we implement this on our own?)
-        for func in invalid_funcs:
-            with self.assertRaises(TypeError, msg=f"String comparison did not raise TypeError for {func}"):
+        for func, correct in zip(funcs, func_results):
+            if is_numpy_1_24:
                 result = func(f_arr, f_arr)
+                for i in range(len(result)):
+                    self.assertEqual(
+                        result[i],
+                        correct[i],
+                        msg=f"String comparison failed for function {func}",
+                    )
+            else:
+                with self.assertRaises(TypeError, msg=f"String comparison did not raise TypeError for {func}"):
+                    result = func(f_arr, f_arr)
 
         # strings need to be compared this way
         for f_name in valid_func_names:

@@ -111,7 +111,6 @@ class GroupBy(GroupByOps):
         verbose=False,
         **kwargs,
     ):
-
         # upon creation create a unique id to track sorting
         self._uniqueid = GetTSC()
 

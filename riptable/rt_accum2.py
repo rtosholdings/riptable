@@ -443,7 +443,6 @@ class Accum2(GroupByOps, FastArray):
         """
 
         if callable(func):
-
             row_count, col_count = imatrix.shape
 
             # horizontal add
@@ -701,10 +700,8 @@ class Accum2(GroupByOps, FastArray):
         newfilter = None
         # first check for any row and col filters
         if badrows is not None or badcols is not None:
-
             # the common filter is already merged into the row or col filter
             if badrows is not None and badcols is not None:
-
                 # both col and row filter are in use so combine the filters
                 newfilter = newfilterX & newfilterY
             else:
@@ -1077,7 +1074,6 @@ class Accum2(GroupByOps, FastArray):
 
             ms = TypeRegister.Multiset({})
             for i, v in enumerate(accum_dict.keys()):
-
                 # Accum2 uses two categoricals for rows and cols
                 # dont bother to calculate the row or col keys
                 # the row keys are the gbkeys
@@ -1099,7 +1095,6 @@ class Accum2(GroupByOps, FastArray):
     def apply_reduce(
         self, userfunc, *args, dataset=None, label_keys=None, func_param=None, dtype=None, transform=False, **kwargs
     ):
-
         """
         Accum2:apply_reduce calls Grouping:apply_helper
 

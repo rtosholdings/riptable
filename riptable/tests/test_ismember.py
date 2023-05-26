@@ -162,7 +162,6 @@ def test_ismember_strings():
 def test_ismember_categorical():
     for b_index_c in [0, 1]:
         for b_index_d in [0, 1]:
-
             # string values, both base indices
             c = TypeRegister.Categorical(
                 np.random.choice(["a", "b", "c", "d", "e", "f"], 15),

@@ -4,7 +4,6 @@ from .rt_fastarray import FastArray
 
 
 class CompressedArray(FastArray):
-
     allowed_funcs = ["decompress", "view"]
 
     def __new__(cls, arr):

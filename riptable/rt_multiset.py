@@ -382,11 +382,9 @@ class Multiset(Struct):
         colorgroup = 0
         # pass over all datasets until all arrays have been paired up
         for outerindex in range(numTier1):
-
             # search the next dataset for ANY array
             # then try to match the next datasets with the same key
             for k, v in returnlist[outerindex].items():
-
                 # always add the first item
                 allArrays.append(v)
                 cell_span = 1
@@ -855,6 +853,8 @@ class Multiset(Struct):
 
 
 MultisetFunc = {}
+
+
 # -----------------------------------------------------------
 def _FixupDocStrings():
     """

@@ -703,6 +703,7 @@ class Grouping:
         _trusted : bool
             If True, data used to initialize will not be validated. e.g. generation from a slice. Defaults to False.
         """
+
         # -------------------------------------------------
         def data_as_dict(grouping, name_def: Optional[str] = None) -> dict:
             if not isinstance(grouping, list):
@@ -945,7 +946,6 @@ class Grouping:
 
                     # skip this if after lex
                     if self.Ordered and lex is not True:
-
                         # since the original lengths are being dropped, iFirstKey is no longer valid
                         self.iFirstKey = None
 
@@ -1306,7 +1306,6 @@ class Grouping:
                 return ismember(uniquelist, values)
 
         else:
-
             result_len = len(self.catinstance)
 
             if isinstance(values, tuple) or np.isscalar(values):
@@ -1564,7 +1563,6 @@ class Grouping:
         """
         # only categoricals do not have an iFirstKey
         if self.iFirstKey is None:
-
             # TJD TODO: if iFirstGroup exists, we can derive ifirstkey
             # skip over 0 bin
             if self.base_index == 1:
@@ -1586,7 +1584,6 @@ class Grouping:
         ilastkey : np.ndarray of int
         """
         if self.iLastKey is None:
-
             # skip over 0 bin
             if self.base_index == 1:
                 self.iLastKey = makeilast(self.ikey, self.unique_count + 1)[1:-1]
@@ -2064,7 +2061,6 @@ class Grouping:
         """
 
         def ifirstkey_regroup(ikey, ifirstkey, lex=False):
-
             """
             Returns
             -------
@@ -2692,7 +2688,6 @@ class Grouping:
 
         # for all the columns we have to process
         for colname, arr in npdict.items():
-
             # reorder the data so groups are contiguous
             # one big fancy index pull
             if tups > 0:
@@ -2804,7 +2799,6 @@ class Grouping:
                 # ----------------------------------------------
                 # check for multiple output array path
                 if outputs is not None:
-
                     if False:
                         pass
                         # TJD future speed ups will use a numba loop such as below
@@ -2887,7 +2881,6 @@ class Grouping:
                     # loop over all groups
                     # TODO: consider c++ loop? (i.e. vectorize this)
                     for first, count in zip(ifirst, ncount):
-
                         # currently we do not pass in empty arrays... should we?i put in t
                         if count > 0:
                             last = first + count
@@ -3173,7 +3166,6 @@ class Grouping:
 
         # check if the user wanted a reduce
         if result_len == totalcallbacks:
-
             inv_delta = unique_rows - totalcallbacks
             if inv_delta > 0:
                 f = self.nCountGroup[1:] > 0
@@ -3188,7 +3180,6 @@ class Grouping:
 
             result = self._finalize_dataset(result, label_keys, label_keys.gbkeys, addkeys=(inv_delta <= 0), **kwargs)
         else:
-
             if self.nCountGroup[0] > 0:
                 # this group was probably filtered out, pass the user a row full of invalids
                 # only build the emptyGroup once
@@ -3363,7 +3354,6 @@ class Grouping:
         empty_allowed = self._empty_allowed(funcNum)
 
         if len(values) != 0 or empty_allowed:
-
             if Grouping.DebugMode:
                 print("values", values)
                 if isinstance(values, Iterable) and len(values):
@@ -3429,7 +3419,6 @@ class Grouping:
 
             # basic not packed
             elif funcNum >= GB_FUNCTIONS.GB_SUM and funcNum < GB_FUNCTIONS.GB_FIRST:
-
                 accum_tuple = _groupbycalculateall(
                     values, ikey, unique_rows, funcList, binLowList, binHighList, func_param
                 )
@@ -3439,7 +3428,6 @@ class Grouping:
 
             # packed
             elif funcNum >= GB_FUNCTIONS.GB_FIRST and funcNum < GB_FUNCTIONS.GB_CUMSUM:
-
                 accum_tuple = _groupbycalculateallpack(
                     values,
                     ikey,

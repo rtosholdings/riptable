@@ -417,7 +417,6 @@ class test_numpy_functions(unittest.TestCase):
 
             for function_set in binary_functions:
                 for function in function_set:
-
                     # print('function - ', function)
                     if not np.issubdtype(a.dtype, np.integer) and function == "__truediv__":
                         np_out = getattr(a, function)(b)
@@ -427,7 +426,6 @@ class test_numpy_functions(unittest.TestCase):
 
             for function_set in unary_functions:
                 for function in function_set:
-
                     ##these require 'resets' due to division
                     a = copy.copy(A_array)
                     b = copy.copy(B_array)
@@ -478,9 +476,7 @@ class test_numpy_functions(unittest.TestCase):
 
     # TODO pytest parameterize type_list
     def test_reductions(self):
-
         for type_ in type_list:
-
             A_array = np.array(
                 np.random.randint(100, size=TEST_SIZE) + np.array(np.random.rand(TEST_SIZE)),
                 dtype=type_,
@@ -604,7 +600,6 @@ class test_numpy_functions(unittest.TestCase):
 
 def rolling_quantile_params_generator(dtypes, max_N, with_nans, with_infs):
     for dtype in dtypes:
-
         # N = 1 case
         N = 1
         window = 1

@@ -2,7 +2,6 @@ from .groupby_unit_test_parameters import *
 
 
 def generate(numb_tests):
-
     PARAMETERS = groupby_parameters()
 
     def concat_list(lst):
@@ -65,7 +64,6 @@ def generate(numb_tests):
         return "\n\t\trt.FastArray._TON()"
 
     def str_standard_test():
-
         s = "\n\tdef test_multikey_" + trait_str() + "(self):"
         s += "\n\t\taggs = " + str_agg_params()
         s += "\n\t\ttest_class = groupby_everything(" + str_params() + " )"

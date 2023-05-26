@@ -39,7 +39,6 @@ _logger = logging.getLogger(__name__)
 """Logger for this module."""
 
 
-@nb.generated_jit(nopython=True)
 def _less_than_comparison(allow_exact_matches, x, y):
     """
     Numba-based wrapper for ``__lt__`` and ``__le__`` which allows them to be
@@ -56,13 +55,17 @@ def _less_than_comparison(allow_exact_matches, x, y):
     bool
         ``x < y`` if `allow_exact_matches` is ``None``; otherwise ``x <= y``.
     """
+    raise RuntimeError("Unexpected call")
+
+
+@nb.extending.overload(_less_than_comparison, nopython=True)
+def __less_than_comparison(allow_exact_matches, x, y):
     if isinstance(allow_exact_matches, nb.types.NoneType):
         return lambda allow_exact_matches, x, y: x < y
     else:
         return lambda allow_exact_matches, x, y: x <= y
 
 
-@nb.generated_jit(nopython=True)
 def _greater_than_comparison(allow_exact_matches, x, y):
     """
     Numba-based wrapper for ``__gt__`` and ``__ge__`` which allows them to be
@@ -79,6 +82,11 @@ def _greater_than_comparison(allow_exact_matches, x, y):
     bool
         ``x > y`` if `allow_exact_matches` is ``None``; otherwise ``x >= y``.
     """
+    raise RuntimeError("Unexpected call")
+
+
+@nb.extending.overload(_greater_than_comparison, nopython=True)
+def __greater_than_comparison(allow_exact_matches, x, y):
     if isinstance(allow_exact_matches, nb.types.NoneType):
         return lambda allow_exact_matches, x, y: x > y
     else:

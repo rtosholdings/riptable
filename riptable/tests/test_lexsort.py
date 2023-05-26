@@ -19,7 +19,6 @@ class Lexsort_Test(unittest.TestCase):
 
     # TODO pytest parameterize arr_end
     def test_numeric_multikey(self):
-
         arr_len = 1_000_000
         d = {
             "int8": np.random.randint(0, 120, arr_len, dtype=np.int8),
@@ -32,7 +31,6 @@ class Lexsort_Test(unittest.TestCase):
         }
 
         for arr_end in [100, 1000, 10_000, 100_000, 1_000_000]:
-
             arr = list(a[:arr_end] for a in d.values())
             np_result = np.lexsort(arr)
             sfw_result = lexsort(arr)

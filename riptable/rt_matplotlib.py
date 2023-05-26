@@ -370,7 +370,7 @@ class DateTimeNanoLocator(ticker.Locator):
         return ticks
 
     def get_tick_interval(self, width):
-        for (scale, sizes) in self.intervals.items():
+        for scale, sizes in self.intervals.items():
             nanos = sizes_ns[scale]
             max_tick = self.max_ticks[scale]
             for size in sizes:
@@ -662,7 +662,7 @@ class TimeSpanLocator(ticker.Locator):
         return ticks
 
     def get_tick_interval(self, width):
-        for (scale, sizes) in self.intervals.items():
+        for scale, sizes in self.intervals.items():
             nanos = sizes_ns[scale]
             max_tick = self.max_ticks[scale]
             for size in sizes:

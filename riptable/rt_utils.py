@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
+
 # -----------------------------------------------------------------------------------------
 def load_h5(
     filepath: Union[str, os.PathLike],
@@ -424,7 +425,6 @@ def normalize_keys(key1, key2, verbose=False):
 
     # convert to common dtype
     for arr1, arr2 in zip(key1, key2):
-
         # if either one is Categorical or both are, make sure they are aligned
         if isinstance(arr1, TypeRegister.Categorical) or isinstance(arr2, TypeRegister.Categorical):
             arr1, arr2 = TypeRegister.Categorical.align([arr1, arr2])

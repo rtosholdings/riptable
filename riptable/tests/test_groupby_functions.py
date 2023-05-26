@@ -70,11 +70,9 @@ class GroupbyFunctions_Test(unittest.TestCase):
         return getattr(df, functions_str[fn])
 
     def test_single_col_groupby_tests(self):
-
         Values = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
         Keys = ["a", "b", "c", "a", "b", "c", "d", "e", "f"]
         for type_ in type_list:
-
             data = {"Vs": rt.FastArray(Values, dtype=type_), "Ks": Keys}
 
             pd_data = pd.DataFrame(data)
@@ -87,7 +85,6 @@ class GroupbyFunctions_Test(unittest.TestCase):
             sfw_gb = sfw_data.groupby(key)
 
             for name in functions_str:
-
                 pd_func = getattr(pd_gb, name)
                 sfw_func = getattr(sfw_gb, name)
 
@@ -124,7 +121,6 @@ class GroupbyFunctions_Test(unittest.TestCase):
         MAX_LENGTH = min(len(col_val_names), len(col_key_names))
         assert numb_keys_and_values <= MAX_LENGTH
         for type_ in type_list:
-
             vals = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
             keys = "a b c d e f g".split(" ")
 

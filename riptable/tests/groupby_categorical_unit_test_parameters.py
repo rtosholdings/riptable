@@ -37,7 +37,6 @@ def isNaN(num):
 
 
 def safe_assert(ary1, ary2):
-
     if len(ary1) != len(ary2):
         print("mismatch lengths-", len(ary1), len(ary2))
         assert len(ary1) == len(ary2)
@@ -107,7 +106,6 @@ class categorical_parameters:
 
 class categorical_base:
     def __init__(self, val_cols, symbol_ratio, aggs):
-
         self.val_cols = val_cols
         self.symbol_ratio = symbol_ratio
         self.numb_keys = int(SIZE_DEFAULT * self.symbol_ratio)

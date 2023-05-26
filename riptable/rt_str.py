@@ -482,7 +482,6 @@ class FAString(FastArray):
 
                 # check if still enough space left
                 if k >= str2len:
-
                     k2 = str2len
                     # check if only the end matches
                     while k2 > 0:

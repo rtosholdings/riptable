@@ -527,7 +527,6 @@ class AccumTable_Test(unittest.TestCase):
         reason="Test needs to be re-written to remove the np.random.seed usage -- it's not stable across numpy versions."
     )
     def test_accum_table(self):
-
         # Create the test data
 
         def unpivot(frame):

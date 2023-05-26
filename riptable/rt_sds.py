@@ -96,6 +96,7 @@ If enabled, SDS will rebuilds the root SDS file, ``_root.sds``, in the event tha
 directory that was part of a previous ``Struct`` save.
 """
 
+
 # -----------------------------------------------------------------------------------------
 def SDSMakeDirsOn() -> None:
     """Enables ``SDSMakeDirs``."""
@@ -610,15 +611,15 @@ def _sds_save_single(
     Fast track for saving a single item in an .sds file. This will be called if someone saves
     a single array or FastArray subclass with the main save_sds() wrapper
     """
-    _, name, status = _sds_path_single(path, share=share, overwrite=overwrite, name=name, append=append)
+    new_path, new_name, status = _sds_path_single(path, share=share, overwrite=overwrite, name=name, append=append)
     if status is False:
         return
     # wrap in struct, struct build meta will call item build meta if necessary
-    item = TypeRegister.Struct({name: item})
+    item = TypeRegister.Struct({new_name: item})
     fileType = SDSFileType.Array
     _write_to_sds(
         item,
-        path,
+        path=new_path,
         name=None,
         compress=compress,
         sharename=share,
@@ -911,7 +912,6 @@ def sds_info(
     sections: Optional[List[str]] = None,
     threads: Optional[int] = None,
 ):
-
     # TODO: match the Matlab output (should it look the same, or print more information from array info?)
     return _sds_raw_info(filepath, share=share, sections=sections, threads=threads)
 
@@ -1289,7 +1289,6 @@ def _multistack_items(arrays, meta_tups, cutoffs, meta):
 
     # categoricals only
     for spec_name, meta_list in spec_meta.items():
-
         underlying = data.get(spec_name, None)
         # only rebuild if the underlying was loaded (may not have been in include list)
         if underlying is not None:
@@ -1365,7 +1364,6 @@ def _stacked(filenames, result, folders):
 
 # -----------------------------------------------------------------------------------------
 def _convert_to_mask(filter):
-
     if not isinstance(filter, np.ndarray):
         filter = np.atleast_1d(filter)
 
@@ -1677,7 +1675,6 @@ def _load_sds_internal(
             origerror = sys.exc_info()[1]
 
         if origerror is not None:
-
             # try again with extension
             filepath = filepath + SDS_EXTENSION
 
@@ -1998,6 +1995,7 @@ def decompress_dataset_internal(
         If `include` is not a list of column names.
         If the result doesn't contain any data.
     """
+
     # -------------------------------------------
     def _add_sds_ext(filename):
         """If a filename does not exist or is not a file, and has no extension, add extension"""
@@ -2363,7 +2361,6 @@ def _rebuild_rootfile(path: AnyPath, sharename=None, compress=True, bandsize=Non
 
 # ------------------------------------------------------------------------------------
 def skeleton_from_meta_data(container_type, filepath, meta, arrays, meta_tups, file_header):
-
     # bug when nested struct doesn't have its own file (only has containers)
     # need to find a general way to address this for all SDS loads
     # general loader should also look for files that start with end of path
@@ -2650,7 +2647,6 @@ def _build_schema_shared(
 
                 # only structs can have nested containers
                 if fileheader["FileType"] == SDSFileType.Struct:
-
                     # chain off prefix
                     prefix = prefix + itemname + "!"
                     schema[itemname], dirlist = _build_schema_shared(meta_tups, sharename, prefix, dirlist, threads)
@@ -3296,7 +3292,6 @@ def save_struct(
 
     # only create a directory if the struct has nested containers
     if has_nested_containers and not onefile:
-
         # add this change when matlab save changes
         # to mirror the save, strip .sds if the user added the extension
         # .sds should only be on files, not directories

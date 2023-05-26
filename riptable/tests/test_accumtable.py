@@ -5,7 +5,6 @@ import riptable as rt
 
 class AccumTable_Test(unittest.TestCase):
     def test_accum_cols(self):
-
         num_rows = 10
         data = rt.Dataset(
             {
@@ -21,7 +20,6 @@ class AccumTable_Test(unittest.TestCase):
         self.assertTrue((accum == accum_expected).all(axis=None))
 
     def test_accum_cols_ratio(self):
-
         num_rows = 4
         data = rt.Dataset(
             {
@@ -75,7 +73,6 @@ class AccumTable_Test(unittest.TestCase):
 
     # Test basic accum_ratiop
     def test_accum_ratiop(self):
-
         num_rows = 12
         data = rt.Dataset(
             {

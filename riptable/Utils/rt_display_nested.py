@@ -155,7 +155,6 @@ class LeftAligned(KeyArgsConstructor):
 
 
 class DisplayNested:
-
     inline_svg = {
         "array": '<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 50 50" enable-background="new 0 0 50 50"><path d="M 7 2 L 7 3 L 7 47 L 7 48 L 8 48 L 42 48 L 43 48 L 43 47 L 43 15 L 43 14.59375 L 42.71875 14.28125 L 30.71875 2.28125 L 30.40625 2 L 30 2 L 8 2 L 7 2 z M 9 4 L 29 4 L 29 15 L 29 16 L 30 16 L 41 16 L 41 46 L 9 46 L 9 4 z M 31 5.4375 L 39.5625 14 L 31 14 L 31 5.4375 z"/></svg>',
         "object": '<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="2 2 28 28"><path d="M 16 4 C 9.3844276 4 4 9.3844276 4 16 C 4 22.615572 9.3844276 28 16 28 C 22.615572 28 28 22.615572 28 16 C 28 9.3844276 22.615572 4 16 4 z M 16 6 C 21.534692 6 26 10.465308 26 16 C 26 21.534692 21.534692 26 16 26 C 10.465308 26 6 21.534692 6 16 C 6 10.465308 10.465308 6 16 6 z M 22 16 C 22 19.325562 19.325562 22 16 22 L 16 24 C 20.406438 24 24 20.406438 24 16 L 22 16 z"/></svg>',
@@ -192,7 +191,6 @@ class DisplayNested:
         maxlen = len(max(list(data.keys()), key=len))
 
         for k, v in data.items():
-
             info_indent = " " * (maxlen - len(k) + 1)
 
             if hasattr(v, "items"):

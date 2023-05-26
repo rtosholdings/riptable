@@ -45,7 +45,6 @@ class RestoreSubclass_Test(unittest.TestCase):
         self.assertTrue(arr_eq(nptile, c2._fa))
 
     def test_repeat(self):
-
         dtn = DateTimeNano.random(5)
         dtn2 = repeat(dtn, 2)
         nprep = repeat(dtn._np, 2)
