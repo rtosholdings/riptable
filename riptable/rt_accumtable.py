@@ -498,7 +498,7 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
     temp_cat = Categorical(full(cat.shape[0], 1, dtype=np.int8), ["NotGrouped"])  # This was playa.utils.onescol
     accum = Accum2(cat, temp_cat)
 
-    for (val, name, filt, func) in zip(val_list, name_list, filt_list, func_list):
+    for val, name, filt, func in zip(val_list, name_list, filt_list, func_list):
         func_name = func
         func = getattr(accum, func_name)
         if isinstance(val, list):  # Special cases

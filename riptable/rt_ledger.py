@@ -236,7 +236,6 @@ class MathLedger(Struct):
 
     @classmethod
     def _BASICMATH_ONE_INPUT(cls, tupleargs, fastfunction, final_num):
-
         if fastfunction == MATH_OPERATION.BITWISE_NOT:
             # speed up this common operation
             if isinstance(tupleargs, tuple) and tupleargs[0].dtype == bool:

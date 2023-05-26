@@ -342,7 +342,6 @@ def snapshot_stats(pr, sort="tottime", calls=True, findfunc=None):
     # call information
     # NOTE consider cython or C since this can be huge
     for entry in entries:
-
         code = entry.code
         if isinstance(code, str):
             func = ("~", 0, code)  # built-in functions ('~' sorts at the end)

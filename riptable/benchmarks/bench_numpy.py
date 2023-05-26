@@ -173,7 +173,6 @@ def benchmark_unary(
     recycle=True,
     scalar=False,
 ):
-
     return benchmark(
         funcs=funcs,
         dtypes=dtypes,

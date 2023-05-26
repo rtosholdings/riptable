@@ -34,7 +34,6 @@ from .test_utils import get_all_categorical_data
 
 
 def almost_eq(ds, arr, places=5, rtol=1e-5, atol=1e-5, equal_nan=True):
-
     epsilon = 10 ** (-places)
     rtol = epsilon
 
@@ -391,7 +390,6 @@ class TestDataset(unittest.TestCase):
         # self.col_swap
 
     def test_add_remove_column(self):
-
         tempsave = Struct.AllowAnyName
         Struct.AllowAnyName = False
 
@@ -502,9 +500,7 @@ class TestDataset(unittest.TestCase):
         with self.assertRaises(IndexError):
             _ = ds[[]]
         with self.assertRaises(IndexError):
-            _ = ds[
-                5,
-            ]
+            _ = ds[5,]
         with self.assertRaises(TypeError):
             _ = ds[0.0, :]
         with self.assertRaises(IndexError):
@@ -516,13 +512,9 @@ class TestDataset(unittest.TestCase):
         with self.assertRaises(TypeError):
             _ = ds[complex(1), :]
         with self.assertRaises(IndexError):
-            _ = ds[
-                rows,
-            ]
+            _ = ds[rows,]
         with self.assertRaises(IndexError):
-            _ = ds[
-                sel,
-            ]
+            _ = ds[sel,]
         with self.assertRaises(IndexError):
             _ = ds[ds.get_nrows(), :]
         with self.assertRaises(TypeError):
@@ -770,7 +762,6 @@ class TestDataset(unittest.TestCase):
                 self.assertTrue((_v[nr1:] == dset2[_k]).all())
 
     def test_copy_names(self):
-
         ds = Dataset({"col_" + str(i): arange(5) for i in range(5)})
         ds2 = ds[:2, :]
         for k, v in ds.items():
@@ -1578,7 +1569,6 @@ class TestDataset(unittest.TestCase):
         N = 200
 
         for rows_first in [True, False]:
-
             ds, zero_rows, nan_rows, mixed_rows = create_and_add_filtered(N, rows_first)
             all_cols = ds.keys()
 
@@ -1821,7 +1811,7 @@ class TestDataset(unittest.TestCase):
         df["E"] = pd.Categorical.from_codes(codes, np.arange(0, 0.3, 0.1))
         df["F"] = pd.Categorical.from_codes(codes, np.arange(3, dtype="float32") ** 2)
         df["G"] = pd.Series(pd.date_range("20190101", periods=4))
-        for (key, tz) in [
+        for key, tz in [
             ("H", "UTC"),
             ("I", "GMT"),
             ("J", "US/Eastern"),
@@ -1836,7 +1826,7 @@ class TestDataset(unittest.TestCase):
         self.assertTrue((df.A == ds.A.astype(str)).all())
         for key in "BCDEF":
             self.assertTrue((df[key] == _bytes_to_string(ds[key].expand_array)).all())
-        for (key, tz) in [
+        for key, tz in [
             ("G", "UTC"),
             ("H", "UTC"),
             ("I", "GMT"),

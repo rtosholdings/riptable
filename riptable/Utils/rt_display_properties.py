@@ -40,7 +40,6 @@ class ItemFormat:
         timezone_str=None,
         maxwidth=None,
     ):
-
         self.length = length
         self.justification = justification
         self.invalid = invalid

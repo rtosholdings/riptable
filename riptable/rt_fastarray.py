@@ -119,8 +119,12 @@ import math
 import numba as nb
 
 
-@nb.generated_jit()
 def _isnan(x):
+    raise RuntimeError("Unexpected call")
+
+
+@nb.extending.overload(_isnan)
+def __isnan(x):
     if x == nb.int8:
         return lambda x: x == nb.int8(-128)
     elif x == nb.int16:
@@ -4046,21 +4050,47 @@ class FastArray(np.ndarray):
     # -------------------------------------------------------
     def diff(self, periods=1) -> FastArray:
         """
-        Only works for integers and floats.
+        Compute the differences between adjacent elements of a `FastArray`.
+
+        Spaces at either end are filled with invalid values based on the input array's dtype. If a calculated difference isn't supported by the dtype, it is displayed as a NaN or rollover value. For example, negative differences in a uint8 array are displayed as 255.
+        To resolve this, you can explicitly upcast to the next larger signed int dtype before calculating the differences.
 
         Parameters
         ----------
-        periods: int, defaults to 1.  How many elements to shift the data before subtracting.
+        periods: int, default 1
+            Number of element positions to shift right (if positive) or left (if negative) before subtracting. Raises an error if set to 0.
 
         Returns
         -------
-        FastArray same length as current array.  Invalids will fill the beginning based on the periods.
+        FastArray
+            An equivalent-length array containing the differences between input array elements that are adjacent or separated by a specified period. Spaces at either end are filled with invalids based on the input array's dtype.
+
+        See Also
+        --------
+        FastArray.shift : Returns a shifted `FastArray`.
 
         Examples
         --------
-        >>> a=rt.arange(3, dtype=rt.int32); a.diff()
-        FastArray([-2147483648,           1,           1])
+        Calculate differences using the ``periods=1`` default (array elements one position to the right):
 
+        >>> a=rt.FA([0, 2, 4, 8, 16, 32])
+        >>> a
+        FastArray([ 0,  2,  4,  8, 16, 32])
+        >>> a.diff()
+        FastArray([-2147483648,           2,           2,           4,
+                             8,          16])
+
+        Calculate differences using array elements two positions to the left:
+
+        >>> a.diff(-2)
+        FastArray([         -4,          -6,         -12,         -24,
+                   -2147483648, -2147483648])
+
+        Specify a `periods` value that is greater than the array length:
+
+        >>> a.diff(10)
+        FastArray([-2147483648, -2147483648, -2147483648, -2147483648,
+                   -2147483648, -2147483648])
         """
         try:
             invalid = INVALID_DICT[self.dtype.num]
@@ -5789,7 +5819,54 @@ class FastArray(np.ndarray):
 
     def info(self, **kwargs):
         """
-        Print a description of the FastArray's contents
+        Return a description of the input array's contents.
+
+        This information is set using `FastArray.apply_schema` and includes steward and dtype.
+
+        Parameters
+        ----------
+        **kwargs :  optional
+            Keyword arguments passed to :func:`.rt_meta.info`
+
+        Returns
+        -------
+        info : :class:`.rt_meta.Info`
+            A description of the input array's contents.
+
+        See Also
+        --------
+        FastArray.doc : Returns the Doc object for the input `FastArray`.
+        .Categorical.info : Displays a description of the input `.Categorical`.
+        .Struct.info : Returns an object containing a description of the input structure's contents.
+
+        Examples
+        --------
+        Return the description of the input array's contents:
+
+        >>> a = rt.FA([1, 2, 3, 4, 5])
+        >>> a.info()
+        Description: <no description>
+        Steward: <no steward>
+        Type: int32
+
+        Apply a schema and return the description of the input array's contents:
+
+        >>> schema = {"Description": "This is an array", "Steward": "Brian"}
+        >>> a.apply_schema(schema)
+        {}
+        >>> a.info()
+        Description: This is an array
+        Steward: Brian
+        Type: int32
+
+        Return the description of the input array's contents with a title:
+
+        >>> a.info(title="Test")
+        Test
+        ====
+        Description: This is an array
+        Steward: Brian
+        Type: int32
         """
         from .rt_meta import info as _info
 

@@ -5,7 +5,7 @@ package_name = "riptable"
 install_requires = [
     "ansi2html >=1.5.2",
     "numba >=0.56.2",
-    "numpy >=1.22",
+    "numpy >=1.23",
     "pandas >=1.0,<3.0",
     "python-dateutil",
     "riptide_cpp >=1.12.2,<2",

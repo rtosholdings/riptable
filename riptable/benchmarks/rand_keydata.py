@@ -468,7 +468,6 @@ class SCDArrayGen(Problem):
         return abs(self.d_metric(arr) - self.d)
 
     def _evaluate(self, x, out, *args, **kwargs):
-
         # objectives
         se = np.apply_along_axis(self.s_error, 1, x)
         ce = np.apply_along_axis(self.c_error, 1, x)

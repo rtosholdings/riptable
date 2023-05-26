@@ -1080,7 +1080,6 @@ def bench_compare_ops(**kwargs):
                 loop_count = warmup_iters if is_warmup else iters
 
                 for i in range(loop_count):
-
                     start_time_ns = timestamper()
 
                     # invocation of actual actual function
@@ -1183,7 +1182,6 @@ def bench_compare_ops_numpy(**kwargs):
                 loop_count = warmup_iters if is_warmup else iters
 
                 for i in range(loop_count):
-
                     start_time_ns = timestamper()
 
                     # invocation of actual actual function

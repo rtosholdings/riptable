@@ -10,7 +10,6 @@ import numpy.typing as npt
 import numba as nb
 
 
-@nb.generated_jit(nopython=True)
 def deref_idx(deref: Optional[np.ndarray], idx: np.integer):
     """
     A numba function for turning an 'indirect' index into a true index if a deference idx exists.
@@ -36,13 +35,25 @@ def deref_idx(deref: Optional[np.ndarray], idx: np.integer):
     int
         `idx` if `deref` is ``None``; otherwise ``deref[idx]``.
     """
+    raise RuntimeError("Unexpected call")
+
+
+@nb.extending.overload(deref_idx, nopython=True)
+def _deref_idx(deref: Optional[np.ndarray], idx: np.integer):
     if isinstance(deref, nb.types.NoneType):
-        return lambda deref, idx: idx
+
+        def fn(deref: Optional[np.ndarray], idx: np.integer):
+            return idx
+
+        return fn
     else:
-        return lambda deref, idx: deref[idx]
+
+        def fn(deref: Optional[np.ndarray], idx: np.integer):
+            return deref[idx]
+
+        return fn
 
 
-@nb.generated_jit(nopython=True)
 def scalar_or_lookup(val: np.ndarray, idx: np.integer):
     """
     Allows a numba-based function to accept either a scalar value or an array for some parameter.
@@ -62,7 +73,20 @@ def scalar_or_lookup(val: np.ndarray, idx: np.integer):
     -------
     retval
     """
+    raise RuntimeError("Unexpected call")
+
+
+@nb.extending.overload(scalar_or_lookup, nopython=True)
+def _scalar_or_lookup(val: np.ndarray, idx: np.integer):
     if isinstance(val, nb.types.Array):
-        return lambda val, idx: val[idx]
+
+        def fn(val: np.ndarray, idx: np.integer):
+            return val[idx]
+
+        return fn
     else:
-        return lambda val, idx: val
+
+        def fn(val: np.ndarray, idx: np.integer):
+            return val
+
+        return fn

@@ -486,7 +486,6 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(bool(np.all(correct == result)))
 
     def test_to_iso_dst_fall(self):
-
         # test a daylight savings day change
         # 3 hours were added to the underlying array, but only two hours changed because of time change
 
@@ -2252,7 +2251,6 @@ class DateTime_Test(unittest.TestCase):
     #    self.assertTrue(bool(np.all(maxtime==dtn[4])))
 
     def test_start_date(self):
-
         dtn = DateTimeNano(
             NANOS_PER_HOUR * arange(5),
             from_tz="NYC",
@@ -2299,7 +2297,6 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(np.all(today == future))
 
     def test_copy(self):
-
         dtn = DateTimeNano.random(5)
         dtn2 = dtn.copy()
         self.assertTrue(isinstance(dtn2, DateTimeNano))

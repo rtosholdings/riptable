@@ -65,6 +65,7 @@ def hstack_any(
     rt.Categorical.align
     rt.Dataset.concat_rows
     """
+
     # ------------------------------
     def hstack_containers(itemlist, fill_inv=True, destroy=False):
         # assembles all columns into lists for final hstack call
@@ -648,7 +649,6 @@ def _hstack_categorical(cats: list, verbose: bool = False, destroy: bool = False
 
     # ------------------------- start rebuild here
     if mode in (CategoryMode.Dictionary, CategoryMode.IntEnum):
-
         # -----------------------
         # use info from grouping objects to stack
         glist = [c.grouping for c in cats]
@@ -682,7 +682,6 @@ def _hstack_categorical(cats: list, verbose: bool = False, destroy: bool = False
         category_dict = {}
         # now we need stack the unique cats
         for c in cats:
-
             # it might be multikey
             for i, v in enumerate(c.category_dict.values()):
                 cv = category_dict.get(i, None)

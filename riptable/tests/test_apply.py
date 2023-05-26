@@ -52,7 +52,6 @@ class transform_apply_test(unittest.TestCase):
                     self.assertAlmostEqual(item, bcol[idx], msg=f"{item} {bcol[idx]} {f.__name__}")
 
     def test_docstring_examples(self):
-
         ds = Dataset({"A": "a a b".split(), "B": [1, 2, 3], "C": [4, 6, 5]})
         g = GroupBy(ds, "A")
 
@@ -95,7 +94,6 @@ class transform_apply_test(unittest.TestCase):
         self.assertTrue(arr_eq(result.Sub, FA([3, 4, 2])))
 
     def test_apply_catcol_filter(self):
-
         ds = Dataset({"keycol": FA(["a", "a", "b", "b", "a"]), "data": np.random.rand(5)})
         ds.keycol = Categorical(ds.keycol)
         f = FA([False, False, True, True, True])
@@ -211,7 +209,6 @@ class transform_apply_test(unittest.TestCase):
         self.assertTrue(arr_eq(agg_result.Sum.data, app_result.Sum))
 
     def test_apply_errors(self):
-
         st_arr = np.random.choice(["a", "b", "c"], 25)
         c = Categorical(st_arr)
 
@@ -239,7 +236,6 @@ class transform_apply_test(unittest.TestCase):
         self.assertTrue(arr_eq(result["val"], [10, 51]))
 
     def test_apply_ema(self):
-
         correct = FastArray(
             [
                 150.63090515,

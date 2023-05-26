@@ -493,7 +493,6 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz="NYC"):
     if date is None:
         result = TimeSpan(nano_times)
     else:
-
         if isinstance(date, (str, bytes)):
             date = TypeRegister.FastArray([date])
 
@@ -1275,10 +1274,8 @@ class Date(DateBase, TimeStampBase):
             arr = FastArray(arr)
 
         if isinstance(arr, np.ndarray):
-
             # if this the same class, do nothing
             if not isinstance(arr, Date):
-
                 # sometimes matlab dates are categoricals
                 if isinstance(arr, TypeRegister.Categorical):
                     try:
@@ -4317,7 +4314,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             instance = cls._convert_matlab_days(arr, _timezone)
         else:
             if start_date is not None:
-
                 if not isinstance(arr, np.ndarray):
                     arr = FastArray(arr)
                 # if array was strings, interpret as timespan
@@ -4344,7 +4340,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
             if isinstance(arr, list) or np.isscalar(arr):
                 arr = FastArray(arr)
             if isinstance(arr, np.ndarray):
-
                 if arr.dtype.char == "O":
                     # possibly python datetime object
                     if isinstance(arr[0], dt):
@@ -6230,7 +6225,6 @@ class TimeSpanBase:
     # ------------------------------------------------------------
     @staticmethod
     def display_item(nanosecs, itemformat=None):
-
         if itemformat is not None:
             length = itemformat.length
         else:

@@ -20,7 +20,7 @@ def is_python(major: int, minor: int) -> bool:
 
 _ABSEIL_REQ = "abseil-cpp==20220623.*"
 _BENCHMARK_REQ = "benchmark>=1.7,<1.8"
-_NUMPY_REQ = "numpy>=1.22"
+_NUMPY_REQ = "numpy>=1.23"
 _TBB_VER = "==2021.6.*"
 _TBB_REQ = "tbb" + _TBB_VER
 _TBB_DEVEL_REQ = "tbb-devel" + _TBB_VER
@@ -65,6 +65,11 @@ runtime_reqs = [
     _TBB_REQ,
 ]
 
+# Black formatting requirements.
+black_reqs = [
+    "black==23.*",
+]
+
 # Flake8 style guide requirements.
 flake8_reqs = [
     "flake8==6.*",
@@ -97,10 +102,6 @@ sphinx_reqs = (
     + tests_reqs
 )
 
-# Black formatting requirements.
-black_reqs = [
-    "black==22.*",
-]
 
 # Docstrings validation requirements.
 # Validation requires complete riptable for iteration and evaluating examples.
@@ -128,6 +129,7 @@ developer_reqs = (
     ]
     + black_reqs
     + conda_reqs
+    + flake8_reqs
     + pydocstyle_reqs
     + pypi_reqs
     + runtime_reqs

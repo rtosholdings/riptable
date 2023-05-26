@@ -61,8 +61,6 @@ def load_csv_as_dataset(
     """
     try:
         import pandas as pd
-
-        from .Utils.pandas_utils import dataset_from_pandas_df
     except ImportError:
         pd = None
     if converters is None:

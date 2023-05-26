@@ -189,7 +189,6 @@ def linear_spline(X0, Y0, knots, display=True):
 
 
 def plotPrediction(X, Yhat, Y, N, lb=None, ub=None):
-
     if lb is None:
         lowerBound = np.nanmin(X)
     else:

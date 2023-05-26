@@ -392,7 +392,6 @@ class Completion:
     __slots__ = ["start", "end", "text", "type", "signature", "_origin"]
 
     def __init__(self, start: int, end: int, text: str, *, type: str = None, _origin="", signature="") -> None:
-
         self.start = start
         self.end = end
         self.text = text
@@ -623,7 +622,6 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
             acobj, startpos, mainpart, endpos, startwith = _evaluate_text(text, dotpos, careful=not found)
 
             if acobj is not None:
-
                 # calc the subsection
                 endpos = dotpos + 1
                 while endpos < len(text):
@@ -718,7 +716,6 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
             if acobj is not None:
                 try:
                     if isinstance(acobj, TypeRegister.Struct):
-
                         oclass = acobj.__class__.__dict__
                         oinstance = acobj.__dict__
 
@@ -731,7 +728,6 @@ def autocomplete(hook: bool = True, jedi: bool = None, greedy: bool = None):
 
                         # check if there are any jedi completions
                         if len(rmatches) == 0:
-
                             # jedi failed, so we will attempt
                             matches = []
                             completions = []

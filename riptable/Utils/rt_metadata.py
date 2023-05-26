@@ -61,7 +61,6 @@ def meta_from_version(cls, vnum):
 
 
 class MetaData:
-
     default_dict = {"name": "", "typeid": TypeId.Default}
 
     def __init__(self, metadict={}):

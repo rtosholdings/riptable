@@ -445,7 +445,6 @@ class DateTimeMath_Test(unittest.TestCase):
         self.assertTrue(isnan(result._fa[0]))
 
     def test_dtn_compare_date(self):
-
         dtn = DateTimeNano(["20190227"], from_tz="NYC", to_tz="NYC").repeat(24)
         dtn = dtn + TimeSpan(arange(24), unit="h")
         self.assertTrue(bool(np.all(dtn.hour == arange(24))))

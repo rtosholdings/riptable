@@ -12,6 +12,7 @@ from riptable.rt_sds import SDSMakeDirsOn
 # change to true since we write into /tests directory
 SDSMakeDirsOn()
 
+
 # TODO: Replace these two functions with calls to assert_array_equal to get better diagnostics if the assertion fails.
 def arr_all(a):
     return bool(np.all(a))
@@ -51,7 +52,6 @@ class Grouping_Test(unittest.TestCase):
         pytest.skip("This test is not yet implemented.")
 
     def test_single_key(self):
-
         for vals in [randi, rands, randu, randf]:
             vals = vals.view(FA)
             vals.set_name(keyname)
