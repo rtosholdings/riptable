@@ -1059,7 +1059,7 @@ class FastArray(np.ndarray):
 
         See Also
         --------
-        Fastarray.view : View a NumPy array as a `FastArray`.
+        numpy.ndarray.view : Can be used to view a NumPy array as a `FastArray`.
 
         Examples
         --------
@@ -1071,12 +1071,17 @@ class FastArray(np.ndarray):
         >>> a._np
         array([1, 2, 3, 4, 5])
 
-        Update the `FastArray` using the NumPy array view:
+        Changes to the view are reflected in the original `FastArray`:
 
         >>> npview = a._np
         >>> npview[2] = 10
         >>> a
         FastArray([ 1,  2, 10,  4,  5])
+
+        To view a NumPy array as a `FastArray`, you can use `numpy.ndarray.view`:
+
+        >>> npview.view(rt.FastArray)
+        FastArray([1, 2, 10, 4, 5])
         """
         return self.view(np.ndarray)
 
@@ -1423,8 +1428,9 @@ class FastArray(np.ndarray):
         Parameters
         ----------
         order : {'K', 'C', 'F', 'A'}, default 'K'
-            Controls the memory layout of the copy: 'K' means match the layout of the input array as closely as possible;
-            'C' means row-based (C-style) order; 'F' means column-based (Fortran-style) order;
+            Controls the memory layout of the copy: 'K' means match the layout
+            of the input array as closely as possible; 'C' means row-based
+            (C-style) order; 'F' means column-based (Fortran-style) order;
             'A' means 'F' if the input array is formatted as 'F', 'C' if not.
 
         Returns
@@ -1434,9 +1440,9 @@ class FastArray(np.ndarray):
 
         See Also
         --------
-        .Categorical.copy : Returns a copy of the input `.Categorical`.
-        .Dataset.copy : Returns a copy of the input `.Dataset`.
-        .Struct.copy : Returns a copy of the input `.Struct`.
+        .Categorical.copy : Return a copy of the input `.Categorical`.
+        .Dataset.copy : Return a copy of the input `.Dataset`.
+        .Struct.copy : Return a copy of the input `.Struct`.
 
         Examples
         --------
@@ -1463,17 +1469,21 @@ class FastArray(np.ndarray):
     # --------------------------------------------------------------------------
     def copy_invalid(self) -> FastArray:
         """
-        Return a `FastArray` of all invalids, of the same shape and dtype as the input array.
+        Return a copy of a `FastArray` filled with the invalid value
+        for the array's data type.
 
         Returns
         -------
         FastArray
-            A `FastArray` of all invalids, of the same shape and dtype as the input array.
+            A copy of the input array, filled with the invalid value for the
+            array's dtype.
 
         See Also
         --------
         FastArray.inv : Return the invalid value for the input array's dtype.
-        FastArray.fill_invalid : Replace the contents of a `FastArray` with invalids.
+        FastArray.fill_invalid :
+            Replace the values of a `FastArray` with the invalid value for the
+            array's dtype.
 
         Examples
         --------
@@ -1489,7 +1499,7 @@ class FastArray(np.ndarray):
         >>> a
         FastArray([1, 2, 3, 4, 5])  # a is unchanged.
 
-        Copy a floating point array and replace with invalids:
+        Copy a floating-point array and replace with invalids:
 
         >>> a3 = rt.FA([0., 1., 2., 3., 4.])
         >>> a3
@@ -1720,30 +1730,34 @@ class FastArray(np.ndarray):
     # -------------------------------------------------------------------------
     def between(self, low, high, include_low: bool = True, include_high: bool = False) -> FastArray:
         """
-        Return a boolean `FastArray` indicating which input values are in a specified interval.
+        Return a boolean `FastArray` indicating which input values are in a
+        specified interval.
 
         Parameters
         ----------
-        low: scalar, array
-            Lower bound for the interval. If an array, must be the same size as `self`, and comparisons are done elementwise.
-        high: scalar, array
-            Upper bound for the interval. If an array, must be the same size as `self`, and comparisons are done elementwise.
-        include_low: bool, default True
+        low : scalar or array
+            Lower bound for the interval. If an array, it must be the same size
+            as `self`, and comparisons are done elementwise.
+        high : scalar or array
+            Upper bound for the interval. If an array, it must be the same size
+            as `self`, and comparisons are done elementwise.
+        include_low : bool, default `True`
             Specifies whether `low` is included when performing comparisons.
-        include_high: bool, default False
+        include_high : bool, default `False`
             Specifies whether `high` is included when performing comparisons.
 
         Returns
         -------
         FastArray
-            A boolean `FastArray` indicating which input values are in a specified interval.
+            A boolean `FastArray` indicating which input values are in a specified
+            interval.
 
         Examples
         --------
         Specify an interval using scalars:
 
         >>> a = rt.FA([9, 2, 3, 5, 8, 9, 1, 4, 6])
-        >>> a.between(5, 9, include_low=False)  # Exclude `5` (left endpoint)
+        >>> a.between(5, 9, include_low=False)  # Exclude 5 (left endpoint).
         FastArray([False, False, False, False,  True, False, False, False,  True])
 
         Specify an interval using arrays:
@@ -1784,11 +1798,18 @@ class FastArray(np.ndarray):
         Parameters
         ----------
         N : int, default 10
-            Number of values to select. The entire array is returned if `N` is greater than the size of the array.
+            Number of values to select. The entire array is returned if `N` is
+            greater than the size of the array.
         filter : array (bool or int), optional
-            A boolean mask or index array to filter values before selection. Note that until a reported bug is fixed, no error is raised and unexpected results may occur when a boolean mask array with a length different from that of the array it's masking is passed as a filter.
+            A boolean mask or index array to filter values before selection. Note
+            that until a reported bug is fixed, no error is raised and unexpected
+            results may occur when a boolean mask array with a length different
+            from that of the array it's masking is passed as a filter.
         seed : int or other types, optional
-            A seed to initialize the random number generator. If one is not provided, the generator is initialized using random data from the OS. For details and other accepted types, see the `seed` parameter for `numpy.random.default_rng`.
+            A seed to initialize the random number generator. If one is not provided,
+            the generator is initialized using random data from the OS. For details
+            and other accepted types, see the `seed` parameter for
+            `numpy.random.default_rng`.
 
         Returns
         -------
@@ -1797,7 +1818,8 @@ class FastArray(np.ndarray):
 
         See Also
         --------
-        .Dataset.sample : Return a specified number of randomly selected rows from a `.Dataset`.
+        .Dataset.sample :
+            Return a specified number of randomly selected rows from a `.Dataset`.
 
         Examples
         --------
@@ -1821,7 +1843,8 @@ class FastArray(np.ndarray):
 
         Specify an index array for filtering:
 
-        >>> a3 = rt.FA(['TSLA','AMZN','IBM', 'SPY', 'GME', 'AAPL', 'FB', 'GOOG', 'MSFT', 'UBER'])  # Create sample data.
+        >>> a3 = rt.FA(['TSLA','AMZN','IBM', 'SPY', 'GME', 'AAPL', 'FB', 'GOOG',
+        ...             'MSFT', 'UBER'])  # Create sample data.
         >>> filter = rt.FA([0, 1, 3, 7])  # Specify indices of a3 to take the sample from.
         >>> a3.sample(2, filter)
         FastArray([b'TSLA', b'GOOG'], dtype='|S4')  # Random
@@ -1837,7 +1860,8 @@ class FastArray(np.ndarray):
     # --------------------------------------------------------------------------
     def duplicated(self, keep="first", high_unique=False) -> FastArray:
         """
-        Return a boolean `FastArray` indicating `True` for duplicate items in the input array.
+        Return a boolean `FastArray` indicating `True` for duplicate items in
+        the input array.
 
         Parameters
         ----------
@@ -1846,18 +1870,21 @@ class FastArray(np.ndarray):
             - 'last' : Mark each duplicate as `True` except for the last occurrence.
             - 'False' : Mark all duplicates as `True`.
         high_unique : bool, default `False` (hashing)
-            Controls whether the function uses hashing- or sorting-based logic to find unique values in the input array.
-            If your data has a high proportion of unique values, set to `True` for faster performance.
+            Controls whether the function uses hashing- or sorting-based logic
+            to find unique values in the input array. If your data has a high
+            proportion of unique values, set to `True` for faster performance.
 
         Returns
         -------
         FastArray
-            A boolean `FastArray` indicating `True` for duplicate items in the input array.
+            A boolean `FastArray` indicating `True` for duplicate items in the
+            input array.
 
         See Also
         --------
-        FastArray.nunique : Returns the number of unique values in an array.
-        .Dataset.duplicated : Returns a boolean `FastArray` indicating `True` for duplicate rows.
+        FastArray.nunique : Return the number of unique values in an array.
+        .Dataset.duplicated :
+            Return a boolean `FastArray` indicating `True` for duplicate rows.
 
         Examples
         --------
@@ -3756,21 +3783,24 @@ class FastArray(np.ndarray):
     # -------------------------------------------------------
     def nunique(self) -> int:
         """
-        Return the number of unique values in the input `FastArray`. Does not include NaN or sentinel values.
+        Return the number of unique values in the input `FastArray`.
+
+        Does not include NaN or sentinel values.
 
         Returns
         -------
         int
-            Number of unique values in the input `FastArray`. Does not include NaN or sentinel values.
+            Number of unique values in the input `FastArray`, excluding NaN and
+            sentinel values.
 
         See Also
         --------
-        FastArray.duplicated : Returns a boolean `FastArray` indicating duplicate values.
-        .Categorical.nunique : Returns the number of unique values that occur in the `.Categorical`.
+        FastArray.duplicated : Return a boolean `FastArray` indicating duplicate values.
+        .Categorical.nunique : Return the number of unique values in the `.Categorical`.
 
         Examples
         --------
-        Retrieve the number of unique values in a floating point `FastArray`:
+        Retrieve the number of unique values in a floating-point `FastArray`:
 
         >>> a = rt.FastArray([1., 2., 3., 1., 2., 3.])
         >>> a
@@ -3778,7 +3808,8 @@ class FastArray(np.ndarray):
         >>> a.nunique()
         3
 
-        Retrieve the number of unique values in a floating point `FastArray` with a NaN value:
+        Retrieve the number of unique values in a floating-point `FastArray`
+        with a NaN value:
 
         >>> a2 = rt.FastArray([1., 2., 3., 1., 2., 3., rt.nan])
         >>> a2
@@ -3786,7 +3817,8 @@ class FastArray(np.ndarray):
         >>> a2.nunique()  # The NaN value is not included.
         3
 
-        Retrieve the number of unique values in an unsigned integer `FastArray` with a sentinel value:
+        Retrieve the number of unique values in an unsigned integer `FastArray`
+        with a sentinel value:
 
         >>> a3 = rt.FastArray([255, 2, 3, 2, 3], dtype="uint8")
         >>> a3
@@ -3863,27 +3895,36 @@ class FastArray(np.ndarray):
     # ---------------------------------------------------------------------------
     def shift(self, periods=1, invalid=None) -> FastArray:
         """
-        Return a shifted `FastArray`. Spaces at either end (from shifting) are filled with invalid values based on the input array's data type.
+        Shift an array's elements right or left.
+
+        Newly empty elements at either end (resulting from the shift) are filled
+        with the invalid value for the input array's data type.
 
         Parameters
         ----------
-        periods: int, default 1
-            Number of element positions to shift right (if positive) or left (if negative).
+        periods : int, default 1
+            Number of element positions to shift right (if positive) or left
+            (if negative).
 
         Returns
         -------
-        A shifted `FastArray`. Spaces at either end (from shifting) are filled with invalid values based on the input array's data type.
+        FastArray
+            A shifted `FastArray`. Newly empty elements are filled with the
+            invalid values for the input array's data type.
 
         See Also
         --------
-        FastArray.diff : Returns a `FastArray` containing the differences between adjacent input array values.
-        .Categorical.shift : Shifts values in the `.Categorical` by a specified number of periods.
+        FastArray.diff :
+            Return a `FastArray` containing the differences between adjacent
+            input array values.
+        .Categorical.shift :
+            Shift values in the `.Categorical` by a specified number of periods.
 
         Examples
         --------
         Shift array elements one position to the right:
 
-        >>> a=rt.FA([0, 2, 4, 8, 16, 32])
+        >>> a = rt.FA([0, 2, 4, 8, 16, 32])
         >>> a
         FastArray([ 0,  2,  4,  8, 16, 32])
         >>> a.shift()
@@ -3963,27 +4004,35 @@ class FastArray(np.ndarray):
         """
         Identify array values that are the same as adjacent values.
 
-        Output array values are set to `True` for equivalent values. Returns a boolean `FastArray` or a fancy index.
+        Returns either a boolean `FastArray`, where `True` indicates equivalent
+        values, or a fancy index `FastArray` containing the indices of equivalent
+        values.
 
         Parameters
         ----------
         periods: int, default 1
-            The number of array element positions to look behind (positive number) or look ahead (negative number) for comparison.
+            The number of array element positions to look behind (positive number)
+            or look ahead (negative number) for comparison.
         fancy: bool, default False
-            `False` returns a boolean array and `True` returns a fancy index.
+            If `False` (the default), returns a boolean array. If `True`, returns
+            a fancy index array.
 
         Returns
         -------
         FastArray
-            A boolean `FastArray` or a fancy index that identifies equivalent elements in the input array.
+            A boolean or fancy index array that identifies equivalent
+            elements in the input array.
 
         See Also
         --------
-        FastArray.transitions : Identify nonequivalent items in the input array and return a boolean `FastArray` or a fancy index.
+        FastArray.transitions :
+            Identify nonequivalent items in the input array and return a boolean
+            or fancy index array.
 
         Examples
         --------
-        Return a boolean array using the ``periods=1`` default value (look behind one element position for comparisons):
+        Return a boolean array using the ``periods=1`` default value (look behind
+        one element position for comparisons):
 
         >>> a = rt.FA([1, 2, 2, 3, 2, 4, 5, 6, 2, 2, 5])
         >>> a
@@ -3998,12 +4047,13 @@ class FastArray(np.ndarray):
         FastArray([False,  True, False, False, False, False, False, False, False,
                    False, False])
 
-        Return a fancy index using the ``periods=1`` default value (look behind one element position for comparisons):
+        Return a fancy index array using the ``periods=1`` default value (look
+        behind one element position for comparisons):
 
         >>> a.differs(fancy=True)
         FastArray([2, 9])
 
-        Set `periods` to a number larger than the input array:
+        Set `periods` to a number larger than the length of the input array:
 
         >>> a.differs(periods=15)
         FastArray([False, False, False, False, False, False, False, False, False,
@@ -4052,26 +4102,34 @@ class FastArray(np.ndarray):
         """
         Compute the differences between adjacent elements of a `FastArray`.
 
-        Spaces at either end are filled with invalid values based on the input array's dtype. If a calculated difference isn't supported by the dtype, it is displayed as a NaN or rollover value. For example, negative differences in a uint8 array are displayed as 255.
-        To resolve this, you can explicitly upcast to the next larger signed int dtype before calculating the differences.
+        Spaces at either end are filled with invalid values based on the input array's
+        dtype. If a calculated difference isn't supported by the dtype, it is
+        displayed as a NaN or rollover value. For example, negative differences
+        in a `~riptable.uint8` array are displayed as 255. To resolve this, you can
+        explicitly upcast to the next larger signed `int` dtype before calculating the
+        differences.
 
         Parameters
         ----------
         periods: int, default 1
-            Number of element positions to shift right (if positive) or left (if negative) before subtracting. Raises an error if set to 0.
+            Number of element positions to shift right (if positive) or left (if
+            negative) before subtracting. Raises an error if set to 0.
 
         Returns
         -------
         FastArray
-            An equivalent-length array containing the differences between input array elements that are adjacent or separated by a specified period. Spaces at either end are filled with invalids based on the input array's dtype.
+            An equivalent-length array containing the differences between input array
+            elements that are adjacent or separated by a specified period. Spaces at
+            either end are filled with invalids based on the input array's dtype.
 
         See Also
         --------
-        FastArray.shift : Returns a shifted `FastArray`.
+        FastArray.shift : Shift an array's elements right or left.
 
         Examples
         --------
-        Calculate differences using the ``periods=1`` default (array elements one position to the right):
+        Calculate differences using the ``periods=1`` default (array elements one
+        position to the right):
 
         >>> a=rt.FA([0, 2, 4, 8, 16, 32])
         >>> a
