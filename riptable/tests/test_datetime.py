@@ -42,6 +42,47 @@ def arr_all(a):
     return bool(np.all(a))
 
 
+def test_dtn_from_matlab():
+    # Test that the output matches what the code should be generating.
+    arr = [737426, 738583.75]
+    from_tz = "NYC"
+    to_tz = "NYC"
+    _timezone = TimeZone(from_tz=from_tz, to_tz=to_tz)
+    obj = DateTimeNano(arr, from_matlab=True, from_tz=from_tz)
+    expected1 = DateTimeNano(obj._convert_matlab_days(FastArray(arr), _timezone))
+    assert (obj == expected1).all(), "DateTimeNano constructor didn't properly convert Matlab datenums."
+    # Test that the output matches what we know it should be.
+    expected2 = DateTimeNano(["20190101", "20220303 18:00:00"], from_tz=from_tz)
+    assert (obj == expected2).all(), "DateTimeNano constructor didn't properly convert Matlab datenums."
+    # And that no error is raised.
+    try:
+        DateTimeNano([737426], from_matlab=True, from_tz="NYC")
+    except AttributeError:
+        pytest.fail("AttributeError in DateTimeNano constructor with from_matlab=True.")
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        pytest.param("datetime64", id="generic"),
+        pytest.param("datetime64[us]", id="us"),
+        pytest.param("datetime64[ms]", id="ms"),
+        pytest.param("datetime64[s]", id="s"),
+        pytest.param("datetime64[m]", id="m"),
+        pytest.param("datetime64[h]", id="h"),
+        pytest.param("datetime64[D]", id="D"),
+        pytest.param("datetime64[W]", id="W"),
+        pytest.param("datetime64[M]", id="M"),
+        pytest.param("datetime64[Y]", id="Y"),
+    ],
+)
+def test_dtn_datetime64(dtype):
+    test = np.array(["2018-11-02 09:30:00.002201", "2020-01-02 09:30:01.004212"], dtype=dtype)
+    obj = DateTimeNano(test)
+    expected = DateTimeNano(test.astype("datetime64[ns]", copy=False).view(np.int64))
+    assert (obj == expected).all(), f"{dtype} wasn't properly converted to ns."
+
+
 class DateTime_Test(unittest.TestCase):
     def test_nano_add(self):
         a = DateTimeNano(

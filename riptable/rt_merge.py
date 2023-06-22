@@ -54,6 +54,7 @@ from .rt_numpy import (
     unique,
     unique32,
     where,
+    zeros,
 )
 from .rt_timers import GetNanoTime
 from .rt_utils import alignmk, get_default_value, mbget, merge_prebinned
@@ -505,7 +506,7 @@ def _get_keep_ifirstlastkey_with_null(grouping: "Grouping", keep: Optional[str])
         return None
     elif keep == "first":
         # Does the original data contain any null/invalid/NA entries?
-        if grouping.base_index > 0 and grouping.ncountgroup[0] > 0:
+        if grouping.base_index > 0 and len(grouping.ncountgroup) > 0 and grouping.ncountgroup[0] > 0:
             # Create a new array like ifirstkey but with an additional entry for the invalid/NA group.
             # NOTE: It's not actually correct to use the original ifirstkey's dtype for the new array here; for example
             #       we could have a case where we have an (original data) array with 100k elements, and all the normal
@@ -513,9 +514,8 @@ def _get_keep_ifirstlastkey_with_null(grouping: "Grouping", keep: Optional[str])
             #       invalid/NA which first occurs in the last element of the array -- if we want to represent that
             #       index we'd need to use a wider dtype.
             orig_ifirstkey = grouping.ifirstkey
-            invalid_key_first_idx = grouping.igroup[
-                0
-            ]  # This works because the invalid group is always first (i.e. ifirstgroup[0] == 0).
+            # This works because the invalid group is always first (i.e. ifirstgroup[0] == 0).
+            invalid_key_first_idx = grouping.igroup[0]
 
             # Determine the dtype needed to hold the result.
             ifirstkey_dtype = np.promote_types(orig_ifirstkey.dtype, int_dtype_from_len(invalid_key_first_idx))
@@ -530,16 +530,15 @@ def _get_keep_ifirstlastkey_with_null(grouping: "Grouping", keep: Optional[str])
 
     elif keep == "last":
         # Does the original data contain any null/invalid/NA entries?
-        if grouping.base_index > 0 and grouping.ncountgroup[0] > 0:
+        if grouping.base_index > 0 and len(grouping.ncountgroup) > 0 and grouping.ncountgroup[0] > 0:
             # Create a new array like ilastkey but with an additional entry for the invalid/NA group.
             # NOTE: It's not actually correct to use the original ilastkey's dtype for the new array here; for example
             #       we could have a case where we have an (original data) array with 100k elements, and all the normal
             #       keys appear in the first ~30k rows so we use an int16 for the ilastkey dtype, but there's an invalid/NA
             #       in the last element of the array -- if we want to represent that index we'd need to use a wider dtype.
             orig_ilastkey = grouping.ilastkey
-            invalid_key_last_idx = grouping.igroup[
-                grouping.ncountgroup[0] - 1
-            ]  # This works because the invalid group is group 0 (as long as base_index > 0).
+            # This works because the invalid group is group 0 (as long as base_index > 0).
+            invalid_key_last_idx = grouping.igroup[grouping.ncountgroup[0] - 1]
 
             # Determine the dtype needed to hold the result.
             ilastkey_dtype = np.promote_types(orig_ilastkey.dtype, int_dtype_from_len(invalid_key_last_idx))
@@ -776,6 +775,28 @@ def _build_right_fancyindex(
         else left_keygroup.ikey[_get_keep_ifirstlastkey_with_null(left_keygroup, keep_left)]
     )
 
+    # Handle the case of an empty 'left' Dataset here;
+    # otherwise the code further below breaks when it tries to index into an empty array.
+    if len(left_ikey) == 0:
+        # Return an empty fancy index to use for the 'right' Dataset.
+        # When used to index the columns of the 'right' Dataset, this'll ensure
+        # no rows are selected, but empty columns with the correct type and dtype
+        # are created for the output dataset (so the schema is preserved).
+        return empty(0, dtype=left_keyid_to_right_keyid_map.dtype)
+
+    # Handle the case of an empty 'right' Dataset here;
+    # otherwise the code below breaks when it tries to access the Grouping.ifirstgroup for a zero-length Grouping.
+    if len(right_keygroup.ikey) == 0:
+        # Return a fancy index with all invalids to use for the 'right' Dataset.
+        # The length needs to be correct to match the OUTPUT for the 'left' Dataset,
+        # i.e. accounting for the join type and whether the 'keep' parameter has been specified for the 'left' Dataset.
+        if is_inner_join:
+            # No keys in the 'right' Dataset so the result of the join will be empty.
+            return empty(0, dtype=left_keyid_to_right_keyid_map.dtype)
+        else:
+            output_rowcount = len(left_ikey)
+            return full(output_rowcount, right_keygroup.ikey.inv, dtype=left_keyid_to_right_keyid_map.dtype)
+
     # Create an array with the same shape as the 'left' keygroup.
     # Populate each element with the 1-based keyid of the matching key from 'right';
     # if there is no matching key in 'right', the element is populated with the invalid value.
@@ -1001,6 +1022,33 @@ def _build_left_fancyindex(
     """
     # Unpack 'keep' for later use.
     keep_left, keep_right = keep
+
+    # Handle the case of an empty 'right' Dataset here;
+    # otherwise the code further below breaks when it tries to index into an empty array.
+    if len(right_keygroup.ikey) == 0:
+        # Is this an inner join? If so, the resulting dataset should be empty.
+        if is_inner_join:
+            # Return an empty fancy index to use for the 'left' Dataset.
+            # When used to index the columns of the 'left' Dataset, this'll ensure
+            # no rows are selected, but empty columns with the correct type and dtype
+            # are created for the output dataset (so the schema is preserved).
+            return empty(0, dtype=left_keygroup.ikey.dtype)
+        else:
+            # Does the caller want to keep all rows of the 'left' Dataset? Or keep only the first/last row
+            # for each unique key?
+            if keep_left is None:
+                # Return None, since we're going to keep all rows from the 'left' Dataset.
+                return None
+            else:
+                return _get_keep_ifirstlastkey_with_null(left_keygroup, keep_left)
+
+    # Handle the case of an empty 'left' Dataset here;
+    # otherwise the code below breaks when it tries to access the Grouping.ifirstgroup for a zero-length Grouping.
+    if len(left_keygroup.ikey) == 0:
+        # We're either performing a left join or an inner join; in either case, since the 'left' Dataset
+        # is empty, the result should be empty (because there aren't any keys to join on from the left Dataset).
+        # Return an empty fancy index to select zero rows from the 'left' Dataset while preserving its schema.
+        return empty(0, dtype=left_keygroup.ikey.dtype)
 
     # Check if the right grouping has any duplicate keys. If all rows have a unique key,
     # we can take the same optimized code path below (for left joins) as if the 'keep' parameter was specified.
@@ -1301,7 +1349,17 @@ def _create_merge_fancy_indices(
         # key will be smaller-than-or-equal to the length of the original data column, and in most
         # cases will be significantly smaller (so using ismember on the gbkeys will be significantly faster).
         # TODO: Pass 'hint_size' here to speed up the 'ismember' call?
-        right_key_exists_in_left, right_keyid_to_left_keyid_map = ismember(right_grouping_gbkey, left_grouping_gbkey)
+        # WORKAROUND: Through v1.9.0 ismember() incorrectly raises an exception if one or both inputs is a multikey of
+        # empty arrays. Until that's fixed, detect that case and handle it here.
+        if len(left_keygroup.ikey) == 0 or len(right_keygroup.ikey) == 0:
+            right_key_exists_in_left = zeros(right_keygroup.ikey.shape, dtype=bool)
+            right_keyid_to_left_keyid_map = full(
+                right_keygroup.ikey.shape, right_keygroup.ikey.inv, dtype=right_keygroup.ikey.dtype
+            )
+        else:
+            right_key_exists_in_left, right_keyid_to_left_keyid_map = ismember(
+                right_grouping_gbkey, left_grouping_gbkey
+            )
 
         # Determine which keys in 'right' are also in 'left'.
         # We can compute this relatively inexpensively from the boolean mask we created earlier
@@ -1533,7 +1591,32 @@ def _create_merge_fancy_indices(
         return left_or_inner_join(left_keygroup, right_keygroup, True, keep)
 
     elif how == "outer":
-        return outer_join(left_keygroup, right_keygroup, right_groupby_keygroup, keep)
+        # When the 'left' and/or 'right' Dataset is empty, an 'outer' join decays
+        # to one of the other join types. Detect when that's the case and utilize the logic
+        # for the appropriate join type; that way the outer join logic can assume both datasets
+        # are non-empty and won't need to include special-casing for the empty dataset cases.
+        is_left_ds_empty = len(left_keygroup.ikey) == 0
+        is_right_ds_empty = len(right_keygroup.ikey) == 0
+        if is_left_ds_empty or is_right_ds_empty:
+            if is_right_ds_empty:
+                # Right table is empty, so this decays to a left join.
+                # N.B. The left table may be empty here too!
+                recursive_how = "left"
+            else:
+                # Left table is empty, so this decays to a right join.
+                recursive_how = "right"
+
+            join_indices = _create_merge_fancy_indices(
+                left_keygroup, right_keygroup, right_groupby_keygroup, recursive_how, keep
+            )
+
+            # Need to properly populate the right_only_rowcount, which is used in merge2 for outer join
+            right_index = join_indices.right_index
+            right_only_rowcount = 0 if is_right_ds_empty or right_index is None else len(right_index)
+            return JoinIndices(join_indices.left_index, join_indices.right_index, right_only_rowcount)
+
+        else:
+            return outer_join(left_keygroup, right_keygroup, right_groupby_keygroup, keep)
 
     else:
         raise ValueError(f"Unsupported value ({how}) specified for the 'how' parameter.")
@@ -2975,9 +3058,9 @@ def merge_lookup(
         isn't found in `right`, the returned `.Dataset` includes a row with the
         columns from `left`, but with NaN values in each column from `right`.
     right : `.Dataset`
-        The second `.Dataset` to merge. If `right` has more rows than `left`,
-        the rows in `right` that don't have counterparts in `left` are discarded
-        from the result.
+        The second `.Dataset` to merge. If rows in `right` don't have matches in
+        `left` they will be discarded. If they match multiple rows in `left` they will
+        be duplicated appropriately.
     on : str or (str, str) or list of str or list of (str, str), optional
         Names of columns (keys) to join on. If `on` isn't specified, `left_on`
         and `right_on` must be specified.
@@ -3007,12 +3090,12 @@ def merge_lookup(
     require_match : bool, default `False`
         When `True`, all keys in `left` are required to have a matching key in
         `right`, and an error is raised when this requirement is not met.
-    suffixes: tuple of (str, str), optional
-        Suffixes to apply to returned overlapping non-key-column names in the
+    suffixes : tuple of (str, str), optional
+        Suffixes to apply to returned overlapping non-key-column names in
         `left` and `right`, respectively. By default, an error is raised
         for any overlapping non-key columns that will be in the returned
         `.Dataset`.
-    copy: bool, default `True`
+    copy : bool, default `True`
         Set to `False` to avoid copying data when possible. This can reduce
         memory usage, but be aware that data can be shared among `left`,
         `right`, and the `.Dataset` returned by this function.
@@ -3149,7 +3232,7 @@ def merge_lookup(
     [10 rows x 4 columns] total bytes: 240.0 B
 
     When `on` is a list, a multi-key join is performed. All keys must match
-    in the right `Dataset`.
+    in the right `.Dataset`.
 
     If a matching value for a key in the left `.Dataset` isn't found in the
     right `.Dataset`, the returned `.Dataset` includes a row with the columns
@@ -3201,7 +3284,7 @@ def merge_lookup(
     <BLANKLINE>
     [10 rows x 2 columns] total bytes: 80.0 B
 
-    NaN values are not treated as equal keys:
+    Invalid values are not treated as equal keys:
 
     >>> ds_l = rt.Dataset({"Key": [1.0, rt.nan, 2.0,], "Value1": [1.0, 2.0, 3.0]})
     >>> ds_r = rt.Dataset({"Key": [1.0, 2.0, rt.nan], "Value2": [1.0, 2.0, 3.0]})

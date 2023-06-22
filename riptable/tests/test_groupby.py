@@ -224,6 +224,32 @@ class Groupby_Test(unittest.TestCase):
             msg=f"Groupby bool did not product the correct result for count. returned {result_arr}, expected {correct_count}",
         )
 
+    def test_empty_count(self):
+        """
+        Test of .count on empty categorical, should return 0 for each category.
+        """
+        empty_categorical = ds.categorical[:0]
+        result_empty_count = empty_categorical.count()
+        self.assertEqual(result_empty_count._ncols, 2, msg=f"Groupby count did not return a single column.")
+
+        correct_count = np.array([0, 0, 0, 0, 0])
+        correct_categories = ["1", "2", "3", "4", "5"]
+        result_arr = result_empty_count.Count
+        result_categories = result_empty_count.categorical
+
+        is_correct = bool(np.all(correct_count == result_arr))
+        is_correct_cat = bool(np.all(correct_categories == result_categories))
+
+        self.assertTrue(
+            is_correct,
+            msg=f"Groupby on empty categorical did not product the correct result for count. returned {result_arr}, expected {correct_count}",
+        )
+
+        self.assertTrue(
+            is_correct_cat,
+            msg=f"Groupby on empty categorical did not product the correct result for count. returned {result_categories}, expected {correct_categories}",
+        )
+
     def test_nan_funcs(self):
         GroupBy.include_keys = True
         nan_dict = {

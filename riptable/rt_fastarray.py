@@ -1521,18 +1521,24 @@ class FastArray(np.ndarray):
     @property
     def inv(self) -> Any:
         """
-        Return the invalid value for the input array's dtype.
+        Return the invalid value for the input array's data type.
 
         Returns
         -------
         Any
-            The invalid value for the input array's dtype, for example: `numpy.int8` returns -128, `numpy.uint8` returns 255, and `numpy.bool_` returns False.
+            The invalid value for the input array's dtype. For example,
+            `~riptable.int8` returns -128, `~riptable.uint8` returns 255, and
+            `~riptable.bool_` returns `False`.
 
         See Also
         --------
-        FastArray.copy_invalid : Returns a `FastArray` copy filled with the invalid value for the input array's dtype.
-        FastArray.fill_invalid : Returns the input `FastArray` or a `FastArray` copy, filled with invalid values.
-        ~riptable.rt_enum.INVALID_DICT : Maps invalid values to dtypes.
+        FastArray.copy_invalid :
+            Return a copy of a `FastArray` filled with the invalid value for the
+            array's dtype.
+        FastArray.fill_invalid :
+            Replace the values of a `FastArray` with the invalid value for the
+            array's dtype.
+        ~riptable.rt_enum.INVALID_DICT : A mapping of invalid values to dtypes.
 
         Examples
         --------
@@ -1544,7 +1550,7 @@ class FastArray(np.ndarray):
         >>> a.inv
         -2147483648
 
-        Return the invalid value for a floating point array:
+        Return the invalid value for a floating-point array:
 
         >>> a2 = rt.FA([0., 1., 2., 3., 4.])
         >>> a2
@@ -1565,32 +1571,44 @@ class FastArray(np.ndarray):
     # --------------------------------------------------------------------------
     def fill_invalid(self, shape=None, dtype=None, inplace=True) -> FastArray:
         """
-        Replace the contents of the input `FastArray` with invalid values.
+        Replace all values of the input `FastArray` with an invalid value.
 
-        The invalid value used is determined by the input array's dtype or a user-specified dtype. Warning: By default, this operation is in place.
+        The invalid value used is determined by the input array's dtype or a
+        user-specified dtype.
+
+        Warning: By default, this operation is in place.
 
         Parameters
         ----------
         shape : int or sequence of int, optional
-            Shape of the new array, for example: ``(2, 3)`` or ``2``. Note that although multi-dimensional arrays are technically supported by Riptable, you may get unexpected results when working with them.
+            Shape of the new array, for example: ``(2, 3)`` or ``2``. Note that
+            although multi-dimensional arrays are technically supported by Riptable,
+            you may get unexpected results when working with them.
         dtype : str, optional
             The desired dtype for the returned array.
         inplace : bool, default True
-            If `False`, return a copy of the array. If `True`, modify original data.
+            If `True` (the default), modify original data. If `False`, return a
+            copy of the array.
 
         Returns
         -------
         FastArray, optional
-            A copy of the input `FastArray` with invalid as all of its values. Returned only if the operation is not done in place.
+            If ``inplace=False``, a copy of the input `FastArray` is returned
+            that has all values replaced with an invalid value. Otherwise, nothing
+            is returned.
 
         See Also
         --------
-        FastArray.inv : Returns the invalid value for the input array's dtype.
-        FastArray.copy_invalid : Returns a `FastArray` copy with its values replaced with the invalid value for the input array's dtype.
+        FastArray.inv : Return the invalid value for the input array's dtype.
+        FastArray.copy_invalid :
+            Return a copy of a `FastArray` filled with the invalid value
+            for the array's dtype.
 
         Examples
         --------
-        Replace an integer array's values with invalid values. By default, the returned array is the same size and dtype as the input array, and the operation is performed in place:
+        Replace an integer array's values with the invalid value for the array's
+        dtype. By default, the returned array is the same size and dtype as the
+        input array, and the operation is performed in place:
 
         >>> a = rt.FA([1, 2, 3, 4, 5])
         >>> a
@@ -1600,7 +1618,8 @@ class FastArray(np.ndarray):
         FastArray([-2147483648, -2147483648, -2147483648, -2147483648,
                    -2147483648])
 
-        Replace a floating point array's values with the invalid value for the ``int32`` dtype:
+        Replace a floating-point array's values with the invalid value for the
+        `~riptable.int32` dtype:
 
         >>> a2 = rt.FA([0., 1., 2., 3., 4.])
         >>> a2
@@ -1934,19 +1953,65 @@ class FastArray(np.ndarray):
         name: Optional[str] = None,
     ) -> None:
         """
-        Save a single array in an .sds file.
+        Save a `FastArray` to an .sds file.
 
         Parameters
         ----------
-        filepath: str or os.PathLike
-        share : str, optional, default None
+        filepath : str or os.PathLike
+            Path for the .sds file. If there's a trailing slash, `filepath` is treated
+            as a path to a directory and you also need to specify `name`. Alternatively,
+            you can include a file name (with or without the .sds extension) at the end
+            of `filepath` (with no trailing slash), and an .sds file with that name is
+            created. Directories that don't yet exist are created.
+        share : str, optional
+            If specified, the `FastArray` is saved to shared memory (NOT to disk) and
+            path information from `filepath` is discarded. A `name` value must be
+            provided. When shared memory is used, data is not compressed. Note that
+            shared memory functions are not currently supported on Windows.
         compress : bool, default True
+            When `True` (the default), compression is used when writing to the .sds
+            file. Otherwise, no compression is used. (If shared memory is used, data is
+            always saved uncompressed.)
         overwrite : bool, default True
-        name : str, optional, default None
+            When `True` (the default), the user is not prompted to specify whether or
+            not to overwrite an existing .sds file. When set to `False`, a prompt is
+            displayed.
+        name : str, optional
+            Name for the .sds file. The .sds extension is not required. Note that if
+            `name` is provided, `filepath` is treated as a path to a directory, even if
+            `filepath` has no trailing slash.
+
+        Returns
+        -------
+        An .sds file containing the `FastArray`.
 
         See Also
         --------
-        rt_sds.save_sds
+        ~riptable.rt_sds.save_sds :
+            Save `Dataset` objects and arrays into a single .sds file.
+        ~riptable.rt_sds.load_sds : Load an .sds file.
+
+        Examples
+        --------
+        Include a file name in the path:
+
+        >>> a = rt.FA([0, 1, 2, 3, 4])
+        FastArray([0, 1, 2, 3, 4])
+        >>> a.save("C://junk//saved_file")
+        >>> os.listdir("C://junk")
+        ['saved_file.sds']
+
+        When `name` is specified, `filepath` is treated as a path to a directory:
+
+        >>> a.save("C://junk//saved_file", name="fa")
+        >>> os.listdir("C://junk//saved_file")
+        ['fa.sds']
+
+        Display a prompt before overwriting an existing file:
+
+        >>> a.save("C://junk//saved_file", overwrite=False)
+        C://junk//saved_file.sds already exists. Overwrite? (y/n) n
+        No file was saved.
         """
         save_sds(filepath, self, share=share, compress=compress, overwrite=overwrite, name=name)
 
@@ -5879,23 +5944,25 @@ class FastArray(np.ndarray):
         """
         Return a description of the input array's contents.
 
-        This information is set using `FastArray.apply_schema` and includes steward and dtype.
+        This information is set using `FastArray.apply_schema` and includes the steward
+        and dtype.
 
         Parameters
         ----------
-        **kwargs :  optional
-            Keyword arguments passed to :func:`.rt_meta.info`
+        **kwargs : optional
+            Keyword arguments passed to :func:`.rt_meta.info`.
 
         Returns
         -------
-        info : :class:`.rt_meta.Info`
+        :class:`.rt_meta.Info`
             A description of the input array's contents.
 
         See Also
         --------
-        FastArray.doc : Returns the Doc object for the input `FastArray`.
-        .Categorical.info : Displays a description of the input `.Categorical`.
-        .Struct.info : Returns an object containing a description of the input structure's contents.
+        FastArray.doc : Return the `.Doc` object for the input `FastArray`.
+        .Categorical.info : Display a description of the input `.Categorical`.
+        .Struct.info :
+            Return an object containing a description of the input structure's contents.
 
         Examples
         --------
@@ -5933,46 +6000,47 @@ class FastArray(np.ndarray):
     @property
     def doc(self):
         """
-        Return the Doc object for the input `FastArray`.
+        Return the `.Doc` object for the input `FastArray`.
 
-        If no Doc object exists, return None.
+        If no `.Doc` object exists, return `None`.
 
         Returns
         -------
-        doc : `~riptable.rt_meta.Doc`
-            The Doc object for the input `FastArray`. If no Doc object exists, return None.
+        `~riptable.rt_meta.Doc`
+            The `.Doc` object for the input `FastArray`. If no `.Doc` object
+            exists, return `None`.
 
         See Also
         --------
         FastArray.info : Return a description of the input array's contents.
-        ~riptable.rt_meta.apply_schema : Set Doc object values.
+        ~riptable.rt_meta.apply_schema : Set `.Doc` object values.
 
         Examples
         --------
-        No Doc object exists:
+        No `.Doc` object exists:
 
         >>> a = rt.FA([1, 2, 3, 4, 5])
         >>> print(a.doc)
         None
 
-        Apply a schema and return the Doc object:
+        Apply a schema and return the `.Doc` object:
 
         >>> schema = {"Description": "This is an array", "Steward": "Brian", "Type": "int32"}
         >>> a.apply_schema(schema)
         {}
-        >>> print(a.doc)
+        >>> a.doc
         Description: This is an array
         Steward: Brian
         Type: int32
 
-        Return specific Doc object information:
+        Return specific `.Doc` object information:
 
-        >>> print(a.doc._type)
-        int32
-        >>> print(a.doc._descrip)
-        This is an array
-        >>> print(a.doc._steward)
-        Brian
+        >>> a.doc._type
+        'int32'
+        >>> a.doc._descrip
+        'This is an array'
+        >>> a.doc._steward
+        'Brian'
         >>> print(a.doc._detail)
         None
         """

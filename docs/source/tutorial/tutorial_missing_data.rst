@@ -117,14 +117,14 @@ negative ``inf``), so it can be good to check for them::
     inf
 
 For Datasets, ``mask_and_isnan()`` and ``mask_or_isnan()`` each return a
-FastArray of Booleans with a value for each row: - ``mask_and_isnan()``
-returns True for each row in which every value is ``NaN``::
+FastArray of Booleans with a value for each row.
+
+``mask_and_isnan()`` returns True for each row in which every value is ``NaN``::
 
     >>> ds.mask_and_isnan()
     FastArray([ True, False, False])
 
--  ``mask_or_isnan()`` returns True for each row in which at least one
-   value is ``NaN``::
+``mask_or_isnan()`` returns True for each row in which at least one value is ``NaN``::
 
     ds.mask_or_isnan()
     FastArray([ True, False, False])
@@ -132,27 +132,34 @@ returns True for each row in which every value is ``NaN``::
 Merging with Missing Values
 ---------------------------
 
-As with Python and NumPy, ``rt.nan != rt.nan``. That means that merge
-functions do not treat ``NaN`` keys as equal values.
+Missing values are not equivalent::
 
-The following Datasets each have a ``NaN`` in their key column::
+    >>> rt.nan == rt.nan
+    False
 
-    >>> ds1 = rt.Dataset({'Key': [1.0, rt.nan, 2.0,],
-    ...                   'Value1': [1.0, 2.0, 3.0]})
+This is true for integer invalid values, string invalid values, filtered values of a
+Categorical, etc. That means that merge functions do not treat invalid keys as equal 
+values.
+
+For example, these two Datasets each have an invalid floating-point value in the Key 
+column::
+
+    >>> ds1 = rt.Dataset({'Key': [1.0, rt.nan, 2.0],
+    ...                   'Value1': ['a', 'b', 'c']})
     >>> ds2 = rt.Dataset({'Key': [1.0, 2.0, rt.nan],
-    ...                   'Value2': [1.0, 2.0, 3.0]})
+    ...                   'Value2': [1, 2, 3]})
 
 Now we do a ``merge_lookup()`` on the Key columns::
 
-    >>> ds1.merge_lookup(ds2, on='Key', columns_right='Value2')
+    >>> ds1.merge_lookup(ds2, on='Key')
     #    Key   Value1   Value2
     -   ----   ------   ------
-    0   1.00     1.00     1.00
-    1    nan     2.00      nan
-    2   2.00     3.00     2.00
+    0   1.00   a             1
+    1    nan   b           Inv
+    2   2.00   c             2
 
-The ``NaN`` key and its associated value in ``ds2`` were ignored by the
-merge function.
+The ``NaN`` key and its associated value in ``ds2`` were ignored, and the invalid 
+integer value was filled in.
 
 Replacing Missing Values
 ------------------------
@@ -203,8 +210,6 @@ values within categories::
 Propagate forward the last encountered non-``NaN`` value for the
 category::
 
-Note that until a reported bug is fixed, explicit column name declarations might not be displayed for grouping operations.
-
     >>> ds.Cat.fill_forward(ds.x)
     *gb_key_0       x
     ---------   -----
@@ -214,6 +219,10 @@ Note that until a reported bug is fixed, explicit column name declarations might
     B            4.00
     A            9.00
     B           16.00
+
+
+Note that until a reported bug is fixed, explicit column name declarations might not be 
+displayed for grouping operations.
 
 Propagate backward the next encountered non-NaN value for the category::
 
