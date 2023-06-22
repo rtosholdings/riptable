@@ -1675,7 +1675,11 @@ class Grouping:
         igroupreverse
         """
         if self.nCountGroup is None:
-            self.nCountGroup = rc.BinCount(self.ikey, self.unique_count + 1)
+            if len(self.ikey):
+                self.nCountGroup = rc.BinCount(self.ikey, self.unique_count + 1)
+            else:
+                self.nCountGroup = zeros((self.unique_count + 1), dtype=np.int32)
+
         return self.nCountGroup
 
     # ---------------------------------------------------------------

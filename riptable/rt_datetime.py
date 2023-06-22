@@ -4368,7 +4368,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
                 # flip numpy datetime64 array
                 elif arr.dtype.char == "M":
-                    instance = arr.astype("datetime64[ns]", copy=False).view(np.int64)
+                    arr = arr.astype("datetime64[ns]", copy=False).view(np.int64)
 
                 # don't allow timespan arrays without start date
                 elif isinstance(arr, TimeSpan) and start_date is None:
@@ -4480,6 +4480,9 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         Converts matlab datenums to an array of int64 containing utc nanoseconds.
         """
+        if not isinstance(arr, np.ndarray):
+            arr = FastArray(arr)
+
         inv_mask = isnan(arr)
 
         # matlab dates come in as float

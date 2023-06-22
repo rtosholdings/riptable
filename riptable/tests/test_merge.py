@@ -6462,6 +6462,220 @@ def test_merge2_int_overflow_bug():
     assert_array_equal(mergedds_rightonly["idx_L"].inv, mergedds_rightonly["idx_L"]._np)
 
 
+@pytest.mark.parametrize(
+    ["left_empty", "right_empty"],
+    [
+        pytest.param(True, False, id="left (only) empty"),
+        pytest.param(False, True, id="right (only) empty"),
+        pytest.param(True, True, id="left and right empty"),
+    ],
+)
+@pytest.mark.parametrize(
+    ["on"],
+    [
+        pytest.param("f", id="string key"),
+        pytest.param("g", id="int key"),
+        pytest.param(["f", "g"], id="(string, int) key"),
+        pytest.param(["g", "f"], id="(int, string) key"),
+    ],
+)
+@pytest.mark.parametrize(
+    ["how"],
+    [
+        pytest.param("left"),
+        pytest.param("right"),
+        pytest.param("inner"),
+        pytest.param("outer"),
+    ],
+)
+@pytest.mark.parametrize(
+    ["keep_left"],
+    [
+        pytest.param(None, id="keep_left_None"),
+        pytest.param("first", id="keep_left_first"),
+        pytest.param("last", id="keep_left_last"),
+    ],
+)
+@pytest.mark.parametrize(
+    ["keep_right"],
+    [
+        pytest.param(None, id="keep_right_None"),
+        pytest.param("first", id="keep_right_first"),
+        pytest.param("last", id="keep_right_last"),
+    ],
+)
+def test_merge2_with_zero_rows(
+    request: pytest.FixtureRequest,
+    left_empty: bool,
+    right_empty: bool,
+    on,
+    how: str,
+    keep_left: Optional[str],
+    keep_right: Optional[str],
+) -> None:
+    """
+    Test how merge2() behaves when the left and/or right Dataset has zero rows
+    (but does have the columns specified in the 'on' parameter).
+    This can occur when e.g. one of the input datasets has been created by filtering
+    another Dataset.
+    """
+    # Certain combinations of 'keep' with how='outer' aren't supported. Mark those as xfail for now.
+    if how == "outer" and keep_left is not None:
+        request.applymarker(xfail_rip260_outermerge_left_keep)
+
+    ds1 = rt.Dataset(
+        {"f": ["1", "2", "3", "4", "4"], "g": rt.FastArray([1, 2, 3, 4, 4], dtype="i2"), "h1": [1, 1, 1, 1, 2]}
+    )
+    ds2 = rt.Dataset(
+        {
+            "f": ["2", "3", "4", "5", "6", "4"],
+            "g": rt.FastArray([2, 3, 4, 5, 6, 4], dtype="i4"),
+            "h2": rt.Categorical(["a", "ab", "ab", "a", "abc", "abc"]),
+        }
+    )
+
+    if left_empty:
+        ds1 = ds1[:0, :]
+        assert ds1.get_nrows() == 0
+
+    if right_empty:
+        ds2 = ds2[:0, :]
+        assert ds2.get_nrows() == 0
+
+    keep = (keep_left, keep_right)
+    result = rt.merge2(ds1, ds2, on=on, how=how, suffixes=("_left", "_right"), keep=keep)
+    assert isinstance(result, rt.Dataset)
+
+    def get_empty_ds() -> rt.Dataset:
+        # Note: For inner and outer when the output is empty dataset, the dtype of common merge-on columns is from left.
+        if how in {"left", "inner", "outer"}:
+            on_ds = ds1
+        elif how == "right":
+            on_ds = ds2
+        else:
+            raise NotImplementedError("Unsupported `how` value")
+        if on == "f":
+            return rt.Dataset(
+                {
+                    "f": on_ds["f"][:0],
+                    "g_left": ds1["g"][:0],
+                    "h1": ds1["h1"][:0],
+                    "g_right": ds2["g"][:0],
+                    "h2": ds2["h2"][:0],
+                }
+            )
+        elif on == "g":
+            return rt.Dataset(
+                {
+                    "f_left": ds1["f"][:0],
+                    "g": on_ds["g"][:0],
+                    "h1": ds1["h1"][:0],
+                    "f_right": ds2["f"][:0],
+                    "h2": ds2["h2"][:0],
+                }
+            )
+        elif set(on) == {"f", "g"}:
+            return rt.Dataset({"f": on_ds["f"][:0], "g": on_ds["g"][:0], "h1": ds1["h1"][:0], "h2": ds2["h2"][:0]})
+        else:
+            raise NotImplementedError("Unsupported `on` value")
+
+    def get_left_ds() -> rt.Dataset:
+        if keep_left is None:
+            selection = slice(None)
+        elif keep_left == "first":
+            selection = rt.FastArray([0, 1, 2, 3])
+        elif keep_left == "last":
+            selection = rt.FastArray([0, 1, 2, 4])
+        else:
+            raise NotImplementedError("Unsupported `keep_left` value")
+        ds = ds1[selection, :]
+        ds_size = len(ds)
+        if on == "f":
+            ds.col_rename("g", "g_left")
+            ds["g_right"] = np.full(ds_size, ds2["g"].inv, ds2["g"].dtype)
+        elif on == "g":
+            ds.col_rename("f", "f_left")
+            ds["f_right"] = np.full(ds_size, ds2["f"].inv, ds2["f"].dtype)
+        elif set(on) != {"f", "g"}:
+            raise NotImplementedError("Unsupported `on` value")
+        ds["h2"] = rt.Categorical(rt.full(ds_size, 0, ds2["h2"].dtype), categories=ds2["h2"].category_array)
+        return ds
+
+    def get_right_ds() -> rt.Dataset:
+        if keep_right is None:
+            selection = slice(None)
+        elif keep_right == "first":
+            selection = rt.FastArray([0, 1, 2, 3, 4])
+        elif keep_right == "last":
+            selection = rt.FastArray([0, 1, 5, 3, 4])
+        else:
+            raise NotImplementedError("Unsupported `keep_right` value")
+        ds = ds2[selection, :]
+        ds_size = len(ds)
+        if on == "f":
+            ds.col_rename("g", "g_right")
+            ds["g_left"] = np.full(ds_size, ds1["g"].inv, ds1["g"].dtype)
+        elif on == "g":
+            ds.col_rename("f", "f_right")
+            ds["f_left"] = np.full(ds_size, ds1["f"].inv, ds1["f"].dtype)
+        elif set(on) != {"f", "g"}:
+            raise NotImplementedError("Unsupported `on` value")
+        ds["h1"] = np.full(ds_size, ds1["h1"].inv, ds1["h1"].dtype)
+        return ds
+
+    # Determine how many rows the output Dataset is *expected* to have, given the input Datasets
+    # and the 'keep' parameter.
+    if how == "inner":
+        expected = get_empty_ds()
+
+    elif how == "left":
+        # The result of a left join is empty if the left table is empty.
+        if left_empty:
+            expected = get_empty_ds()
+        elif right_empty:
+            expected = get_left_ds()
+        else:
+            raise NotImplementedError(
+                "Shouldn't hit this, because either left_empty and/or right_empty should be true for this test."
+            )
+
+    elif how == "right":
+        # The result of a right join is empty if the right table is empty.
+        if right_empty:
+            expected = get_empty_ds()
+        elif left_empty:
+            expected = get_right_ds()
+        else:
+            raise NotImplementedError(
+                "Shouldn't hit this, because either left_empty and/or right_empty should be true for this test."
+            )
+
+    elif how == "outer":
+        # In an outer join, if the left table is empty but the right isn't,
+        # the rowcount is that of the right dataset.
+        if left_empty and right_empty:
+            expected = get_empty_ds()
+        elif left_empty:
+            expected = get_right_ds()
+        elif right_empty:
+            expected = get_left_ds()
+        else:
+            raise NotImplementedError(
+                "Shouldn't hit this, because either left_empty and/or right_empty should be true for this test."
+            )
+
+    else:
+        raise NotImplementedError("Unsupported value for 'how'.")
+
+    assert set(result.keys()) == set(expected.keys())
+    for name in result.keys():
+        result_arr = result[name]
+        expected_arr = expected[name]
+        # Note: numpy's assert_array_equal does not check dtype equality
+        assert result_arr.dtype == expected_arr.dtype
+        assert_array_or_cat_equal(result_arr, expected_arr)
+
+
 def test_lookup_copy_when_right_already_unique():
     """
     Test case for RIP-491.
