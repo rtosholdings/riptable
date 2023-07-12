@@ -4965,7 +4965,7 @@ class FastArray(np.ndarray):
 
                     # min/max/nanmin/nanmax -- same result
                     if dtype == np.bool_:
-                        result = np.bool(result)
+                        result = np.bool_(result)
                     else:
                         result = dtype.type(result)
 

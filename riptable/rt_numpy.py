@@ -4587,7 +4587,7 @@ def logical(a):
         return a.astype(np.bool_)
     # TODO: Check for scalar here? Then we can be maybe use np.asanyarray(..., dtype=bool).view(TypeRegister.FastArray)
     #       to replace the use of the deprecated `np.bool`.
-    return np.bool(a).view(TypeRegister.FastArray)
+    return np.bool_(a).view(TypeRegister.FastArray)
 
 
 ##-------------------------------------------------------
