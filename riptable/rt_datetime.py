@@ -4329,8 +4329,12 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                     if len(start_date) == len(arr):
                         # user has passed in multiple start dates
                         start_date = start_date._fa * NANOS_PER_DAY
-                    else:
+                    elif len(start_date) == 1:
                         start_date = start_date[0] * NANOS_PER_DAY
+                    else:
+                        raise ValueError(
+                            f"start_date Date array must be either length 1 or the same length as arr. Got arr of length {len(arr)} and start_date of length {len(start_date)}."
+                        )
                 else:
                     raise TypeError(
                         f"Start date must be string in format YYYYMMDD or Date object. Got type {type(start_date)}"

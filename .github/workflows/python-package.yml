@@ -17,7 +17,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        #working-directory: ./
     strategy:
       matrix:
         os: [ubuntu-latest, windows-2019]
@@ -37,6 +36,7 @@ jobs:
         with:
           activate-environment: "pypi_build"
           python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
           auto-update-conda: true
           channels: conda-forge
           channel-priority: flexible
@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           python dev_tools/gen_requirements.py --out pypi_reqs.txt pypi
-          conda create -q -y -n pypi_build python=${{ matrix.python-version }} --file pypi_reqs.txt
+          mamba create -q -y -n pypi_build python=${{ matrix.python-version }} --file pypi_reqs.txt
       - name: Install core dependencies
         # Needed for pip install of riptide_cpp from sdist
         run: |
@@ -91,7 +91,7 @@ jobs:
           if-no-files-found: error
 
   pypi_deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
     # since riptable is all python source code, only a source build is required from one os
     needs: [pypi_build, conda_build]
     runs-on: ubuntu-latest
@@ -119,6 +119,9 @@ jobs:
 
   conda_build:
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       matrix:
         os: ["ubuntu-latest", "windows-2019"]
@@ -138,24 +141,33 @@ jobs:
         with:
           activate-environment: "conda_build"
           python-version: ${{ env.python_version }}
+          mamba-version: "*"
           auto-update-conda: true
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
-      - name: Install dependencies
-        shell: bash -l {0}
+      - name: Install dependencies (Windows)
+        if: ${{ matrix.os == 'windows-2019' }}
         run: |
           set -ex
           python dev_tools/gen_requirements.py --out conda_reqs.txt conda
-          conda create -q -y -n conda_build python=${{ env.python-version }} --file conda_reqs.txt
-      - name: Build Package
-        shell: bash -l {0}
+          # boa-0.15 broken for Windows (see https://github.com/conda-forge/conda-forge.github.io/issues/1960)
+          mamba install -q -y --override-channels -c conda-forge -c defaults boa=0.14 --file conda_reqs.txt
+          mamba list
+      - name: Install dependencies (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          set -ex
+          python dev_tools/gen_requirements.py --out conda_reqs.txt conda
+          mamba install -q -y --override-channels -c conda-forge -c defaults --file conda_reqs.txt
+          mamba list
+      - name: Build package
         run: |
           set -ex
           export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
           mkdir conda_pkgs_output
           echo "python: " ${{ matrix.python-version }} > ./conda_variant.yaml
-          conda build conda_recipe -c ${ANACONDA_USER} --output-folder ./conda_pkgs_output --variant-config-files ./conda_variant.yaml
+          conda mambabuild conda_recipe --override-channels -c ${ANACONDA_USER} -c conda-forge -c defaults --output-folder ./conda_pkgs_output --variant-config-files ./conda_variant.yaml
       - name: Publish artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -164,7 +176,7 @@ jobs:
           if-no-files-found: "error"
 
   conda_deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
     needs: [pypi_build, conda_build]
     runs-on: ubuntu-latest
     env:
@@ -177,6 +189,7 @@ jobs:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
           activate-environment: "conda_deploy"
+          mamba-version: "*"
           auto-update-conda: true
           channels: conda-forge
           channel-priority: flexible
@@ -184,7 +197,7 @@ jobs:
       - name: Install dependencies
         shell: bash -l {0}
         run: |
-          conda install anaconda-client -q -y
+          mamba install anaconda-client -q -y
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:

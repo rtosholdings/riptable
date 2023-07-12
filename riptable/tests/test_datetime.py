@@ -42,6 +42,30 @@ def arr_all(a):
     return bool(np.all(a))
 
 
+def test_dtn_start_date_array():
+    # For the DTN constructor, this tests how a Date array for start_date
+    # is applied to arr.
+    arr = ["08:00", "13:00"]  # String arr is parsed as TimeSpan.
+
+    # If len(start_date) == 1, the Date should be broadcast to arr.
+    start_date = Date("20230601")
+    dtn = DateTimeNano(arr, from_tz="UTC", to_tz="UTC", start_date=start_date)
+    assert (Date(dtn) == start_date).all(), "start_date wasn't properly broadcast to arr."
+
+    # If len(start_date) == len(arr), the start_date values should be applied elementwise to arr.
+    days = len(arr)
+    start_date = Date.range("20230601", days=days)
+    dtn = DateTimeNano(arr, from_tz="UTC", to_tz="UTC", start_date=start_date)
+    assert (Date(dtn) == start_date).all(), "start_date wasn't properly applied elementwise to arr."
+
+    # Otherwise, if len(start_date) != len(arr), an error should be raised.
+    days = len(arr) + 1
+    start_date = Date.range("20230601", days=days)
+    msg = "start_date Date array must be either length 1 or the same length as arr."
+    with pytest.raises(ValueError, match=msg):
+        DateTimeNano(arr, from_tz="UTC", to_tz="UTC", start_date=start_date)
+
+
 def test_dtn_from_matlab():
     # Test that the output matches what the code should be generating.
     arr = [737426, 738583.75]
