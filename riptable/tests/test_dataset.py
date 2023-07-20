@@ -437,6 +437,26 @@ class TestDataset(unittest.TestCase):
         ds = Dataset({})
         ds.A = 1
         self.assertEqual(ds.shape, (1, 1))
+
+        ds[["B", "C"]] = 5
+        self.assertEqual(list(ds.keys()), ["A", "B", "C"])
+
+        ds[["E", "F"]] = Dataset({"E": [1], "F": [2]})
+        self.assertEqual(list(ds.keys()), ["A", "B", "C", "E", "F"])
+        self.assertEqual(list(ds.B), [5])
+        self.assertEqual(list(ds.F), [2])
+
+        with self.assertRaises(NotImplementedError):
+            ds[0, "G"] = 5
+        with self.assertRaises(NotImplementedError):
+            ds[5, "G"] = 5
+
+        with self.assertRaises(NotImplementedError):
+            ds[[0, 0], "G"] = 5
+
+        ds[:, ["G", "H"]] = 50
+        self.assertEqual(list(ds.keys()), ["A", "B", "C", "E", "F", "G", "H"])
+
         ds = Dataset({})
         ds.A = [1, 2, 3]
         self.assertEqual(ds.shape, (3, 1))
@@ -445,6 +465,19 @@ class TestDataset(unittest.TestCase):
         self.assertEqual(ds.shape, (3, 1))
         with self.assertRaises(ValueError):
             ds.B = np.array([1, 2, 3, 4])
+
+        ds[["B", "C", "D"]] = 10
+        self.assertEqual(ds.shape, (3, 4))
+        self.assertEqual(list(ds.keys()), ["A", "B", "C", "D"])
+        self.assertEqual(list(ds.B), [10, 10, 10])
+        with self.assertRaises(NotImplementedError):
+            ds[0, "F"] = 5
+        with self.assertRaises(NotImplementedError):
+            ds[[1, 2], "F"] = 5
+        with self.assertRaises(IndexError):
+            ds[0, ["F", "G"]] = 5
+        with self.assertRaises(KeyError):
+            ds[[1, 2], ["F", "G"]] = 5
 
         Struct.AllowAnyName = tempsave
 
@@ -2009,6 +2042,14 @@ class TestDataset(unittest.TestCase):
         ds.footer_set_values("sum", {"x1": 3})
         ds.footer_remove()
         ds.copy()
+
+    def test_empty_dataset_copy(self):
+        ds = Dataset()
+        self.assertEqual(len(ds), 0)
+        self.assertEqual(ds.col_get_len(), 0)
+        ds2 = ds.copy()
+        self.assertEqual(len(ds2), 0)
+        self.assertEqual(ds2.col_get_len(), 0)
 
     def test_equals(self):
         ds = Dataset({"a": [True, True, False, True], "b": [False, False, True, False]})

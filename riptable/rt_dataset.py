@@ -374,7 +374,8 @@ class Dataset(Struct):
         Store the itemcontainer and set _nrows.
         """
         self._all_items = columns
-        self._nrows = len(list(self._all_items.values())[0][0])
+        values = list(self._all_items.values())
+        self._nrows = len(values[0][0]) if len(values) > 0 else None
 
     # ------------------------------------------------------------
     def _pre_init(self, sort=False):
@@ -1252,7 +1253,13 @@ class Dataset(Struct):
 
             elif self.is_valid_colname(col_idx):
                 if nrows == self.get_nrows() or nrows == 0:
-                    self.__setattr__(col_idx, value)
+                    if row_idx is not None:
+                        raise NotImplementedError(
+                            f"Cannot set a new column {col_idx!r} with specified row indices {row_idx!r}. "
+                            " If want to create a new column, no row indices should be specified."
+                        )
+                    else:
+                        self.__setattr__(col_idx, value)
                 else:
                     raise NotImplementedError(f"Cannot set {col_idx!r} because rows are different lengths.")
             elif col_idx in ["True", "False", "None"]:
@@ -1263,7 +1270,7 @@ class Dataset(Struct):
                     raise NotImplementedError(f"Cannot set {col_idx!r} because rows are different lengths.")
             else:
                 raise IndexError(f"Invalid column name: {col_idx!r}")
-        elif nrows == 1:
+        elif (nrows == 1) and (self.get_nrows() != 1):
             if not all(self.col_exists(colname) for colname in col_idx):
                 raise IndexError("If creating a new column can only do one at a time.")
             if np.isscalar(value):

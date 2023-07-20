@@ -9,6 +9,7 @@ from collections import OrderedDict
 
 # from io import StringIO
 import numpy as np
+import pytest
 
 import riptable as rt
 from riptable import Categorical, Dataset, FastArray, Struct, arange
@@ -801,6 +802,22 @@ class Struct_Test(unittest.TestCase):
         self.assertEqual(
             st.key_search("a.*e"), ["Apple", "Alex", "opp.ale", "Alex.allen", "Alex.substruct.myds2.Valence"]
         )
+
+
+@pytest.mark.parametrize(
+    "propname, expected",
+    [
+        ("_A", DisplayString),
+        ("_V", DisplayString),
+        ("_H", DisplayString),
+        ("_G", type(None)),
+        ("_T", DisplayString),
+    ],
+)
+def test_display_props(propname: str, expected):
+    st = rt.Struct({"A": rt.FA([1, 2, 3])})
+    prop = getattr(st, propname)
+    assert isinstance(prop, expected)
 
 
 if __name__ == "__main__":

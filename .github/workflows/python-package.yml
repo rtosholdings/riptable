@@ -11,17 +11,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  pypi_build:
-    runs-on: ${{ matrix.os }}
+  flake8:
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-2019]
         python-version: [3.9, "3.10", "3.11"]
-        numpy-version: [1.23]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -34,7 +32,7 @@ jobs:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: "pypi_build"
+          activate-environment: "flake8_env"
           python-version: ${{ matrix.python-version }}
           mamba-version: "*"
           auto-update-conda: true
@@ -46,88 +44,22 @@ jobs:
           conda config --set unsatisfiable_hints_check_depth 0 # setting unsatisfiable_hints=False is broken
       - name: Install dependencies
         run: |
-          python dev_tools/gen_requirements.py --out pypi_reqs.txt pypi
-          mamba create -q -y -n pypi_build python=${{ matrix.python-version }} --file pypi_reqs.txt
-      - name: Install core dependencies
-        # Needed for pip install of riptide_cpp from sdist
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy==${{ matrix.numpy-version }}.*
-          # Pin build-constraints for numpy (see https://github.com/pypa/pip/issues/9542#issuecomment-1242347397)
-          echo "numpy==${{ matrix.numpy-version }}.*" > constraints.txt
-          # Pip install riptide_cpp, along with all dependencies.
-          PIP_CONSTRAINT=constraints.txt pip install -v --upgrade riptide_cpp
-          python -c "import riptide_cpp; print(riptide_cpp.__version__); print(riptide_cpp.__file__)"
-      - name: Install other dependencies
-        run: |
-          python dev_tools/gen_requirements.py --out runtime_reqs.txt runtime
-          python dev_tools/gen_requirements.py --out tests_reqs.txt tests flake8
-          pip install -r runtime_reqs.txt -r tests_reqs.txt
+          python dev_tools/gen_requirements.py --out flake8_reqs.txt flake8
+          mamba install -q -y --file flake8_reqs.txt
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: Test with pytest
-        run: |
-          python -m riptable.tests.run
-      - name: Tooling integration tests
-        run: |
-          echo "DISABLED until tooling tests can be updated"
-          #ipython -m riptable.test_tooling_integration.run
-      # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate
-      #- name: Property based hypothesis tests
-      #  run: |
-      #    pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
-      - name: Package sources
-        run: |
-          python setup.py sdist
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-artifacts
-          path: dist/
-          if-no-files-found: error
-
-  pypi_deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
-    # since riptable is all python source code, only a source build is required from one os
-    needs: [pypi_build, conda_build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install setuptools wheel twine
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: build-artifacts
-          path: dist/
-      - name: Publish artifacts to PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          set -ex
-          twine upload dist/* --verbose
 
   conda_build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
-    strategy:
-      matrix:
-        os: ["ubuntu-latest", "windows-2019"]
-        python-version: [3.9, "3.10", "3.11"]
     env:
-      python_version: 3.9
+      python_version: 3.11
       ANACONDA_USER: rtosholdings
     steps:
       - name: Checkout repo
@@ -146,16 +78,7 @@ jobs:
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
-      - name: Install dependencies (Windows)
-        if: ${{ matrix.os == 'windows-2019' }}
-        run: |
-          set -ex
-          python dev_tools/gen_requirements.py --out conda_reqs.txt conda
-          # boa-0.15 broken for Windows (see https://github.com/conda-forge/conda-forge.github.io/issues/1960)
-          mamba install -q -y --override-channels -c conda-forge -c defaults boa=0.14 --file conda_reqs.txt
-          mamba list
-      - name: Install dependencies (Linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - name: Install dependencies
         run: |
           set -ex
           python dev_tools/gen_requirements.py --out conda_reqs.txt conda
@@ -166,8 +89,7 @@ jobs:
           set -ex
           export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
           mkdir conda_pkgs_output
-          echo "python: " ${{ matrix.python-version }} > ./conda_variant.yaml
-          conda mambabuild conda_recipe --override-channels -c ${ANACONDA_USER} -c conda-forge -c defaults --output-folder ./conda_pkgs_output --variant-config-files ./conda_variant.yaml
+          conda mambabuild conda_recipe --override-channels -c ${ANACONDA_USER} -c conda-forge -c defaults --output-folder ./conda_pkgs_output --no-test
       - name: Publish artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -175,9 +97,167 @@ jobs:
           path: conda_pkgs_output/*/riptable-*.tar.bz2
           if-no-files-found: "error"
 
+  pypi_build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          # Set fetch-depth to 0 so all history is retrieved; this is needed so we get the git tags
+          # which we use for setting the package version (via setuptools-scm).
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: Package sources
+        run: |
+          python setup.py sdist
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: dist/
+          if-no-files-found: error
+
+  conda_test:
+    needs: [conda_build]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "windows-2019"]
+        python-version: [3.9, "3.10", "3.11"]
+        numpy-version: [1.23, 1.24]
+    env:
+      ANACONDA_USER: rtosholdings
+    steps:
+      - name: Checkout repo (sparse)
+        uses: actions/checkout@v3
+        with:
+          sparse-checkout: dev_tools
+          sparse-checkout-cone-mode: false
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+        with:
+          activate-environment: "conda_test"
+          python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
+          auto-update-conda: true
+          channels: conda-forge
+          channel-priority: flexible
+          show-channel-urls: true
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: conda-build-artifacts
+          path: conda_pkgs_output/
+      - name: Install dependencies
+        run: |
+          set -ex
+          ls -lF
+          mamba install -q -y --override-channels -c conda-forge -c defaults conda-build
+          mamba list
+      - name: Init testing package
+        run: |
+          set -ex
+          conda index --no-progress ./conda_pkgs_output
+          mamba create -q -y -n conda_test --override-channels -c ./conda_pkgs_output -c ${ANACONDA_USER} -c conda-forge -c defaults python=${{ matrix.python-version }} numpy=${{ matrix.numpy-version }} riptable
+          mamba list
+          python -c 'import riptable; print(riptable, riptable.__version__); print(riptable.rc, riptable.rc.__version__)'
+          python dev_tools/gen_requirements.py --out tests_reqs.txt tests
+          mamba install -q -y --override-channels -c conda-forge -c defaults --file tests_reqs.txt
+          conda list
+      - name: Test riptable
+        run: |
+          set -ex
+          python -m riptable.tests.run
+          # disable tooling integration tests until they work
+          # ipython -m pytest riptable/test_tooling_integration
+          # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate
+          # pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
+
+  pypi_test:
+    needs: [pypi_build]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-2019]
+        python-version: [3.9, "3.10", "3.11"]
+        numpy-version: [1.23, 1.24]
+    steps:
+      - name: Checkout repo (sparse)
+        uses: actions/checkout@v3
+        with:
+          sparse-checkout: dev_tools
+          sparse-checkout-cone-mode: false
+      - name: Setup Miniconda
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: "pypi_test"
+          python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
+          auto-update-conda: true
+          channels: conda-forge
+          channel-priority: flexible
+          show-channel-urls: true
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: dist/
+      - name: Install dependencies
+        run: |
+          set -ex
+          ls -lF
+          python dev_tools/gen_requirements.py --out pypi_reqs.txt pypi
+          mamba create -q -y -n pypi_test python=${{ matrix.python-version }} --file pypi_reqs.txt
+          mamba list
+      - name: Install core dependencies
+        # Needed for pip install of riptide_cpp from sdist
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy==${{ matrix.numpy-version }}.*
+          # Pin build-constraints for numpy (see https://github.com/pypa/pip/issues/9542#issuecomment-1242347397)
+          echo "numpy==${{ matrix.numpy-version }}.*" > constraints.txt
+          # Pip install riptide_cpp, along with all dependencies.
+          PIP_CONSTRAINT=constraints.txt pip install -v ./dist/riptable*.gz
+          python -c "import riptide_cpp; print(riptide_cpp, riptide_cpp.__version__)"
+      - name: Install other dependencies
+        run: |
+          python dev_tools/gen_requirements.py --out runtime_reqs.txt runtime
+          python dev_tools/gen_requirements.py --out tests_reqs.txt tests
+          pip install -r runtime_reqs.txt -r tests_reqs.txt
+          conda list
+      - name: Test with pytest
+        run: |
+          python -m riptable.tests.run
+      - name: Tooling integration tests
+        run: |
+          echo "DISABLED until tooling tests can be updated"
+          #ipython -m riptable.test_tooling_integration.run
+      # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate
+      #- name: Property based hypothesis tests
+      #  run: |
+      #    pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
+
   conda_deploy:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
-    needs: [pypi_build, conda_build]
+    needs: [conda_build, conda_test, pypi_test]
     runs-on: ubuntu-latest
     env:
       ANACONDA_USER: rtosholdings
@@ -208,3 +288,30 @@ jobs:
         run: |
           set -ex
           anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
+
+  pypi_deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
+    # since riptable is all python source code, only a source build is required from one os
+    needs: [pypi_build, pypi_test, conda_test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install setuptools wheel twine
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: dist/
+      - name: Publish artifacts to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          set -ex
+          twine upload dist/* --verbose
