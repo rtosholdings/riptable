@@ -83,11 +83,13 @@ jobs:
           set -ex
           python dev_tools/gen_requirements.py --out conda_reqs.txt conda
           mamba install -q -y --override-channels -c conda-forge -c defaults --file conda_reqs.txt
-          mamba list
+          conda list
       - name: Build package
+        id: build_package
         run: |
           set -ex
           export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
+          echo "BUILD_VERSION=${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
           mkdir conda_pkgs_output
           conda mambabuild conda_recipe --override-channels -c ${ANACONDA_USER} -c conda-forge -c defaults --output-folder ./conda_pkgs_output --no-test
       - name: Publish artifacts
@@ -96,6 +98,8 @@ jobs:
           name: conda-build-artifacts
           path: conda_pkgs_output/*/riptable-*.tar.bz2
           if-no-files-found: "error"
+    outputs:
+      build_version: ${{steps.build_package.outputs.BUILD_VERSION}}
 
   pypi_build:
     runs-on: ubuntu-latest
@@ -137,6 +141,7 @@ jobs:
         numpy-version: [1.23, 1.24]
     env:
       ANACONDA_USER: rtosholdings
+      BUILD_VERSION: ${{needs.conda_build.outputs.build_version}}
     steps:
       - name: Checkout repo (sparse)
         uses: actions/checkout@v3
@@ -170,7 +175,7 @@ jobs:
         run: |
           set -ex
           conda index --no-progress ./conda_pkgs_output
-          mamba create -q -y -n conda_test --override-channels -c ./conda_pkgs_output -c ${ANACONDA_USER} -c conda-forge -c defaults python=${{ matrix.python-version }} numpy=${{ matrix.numpy-version }} riptable
+          mamba create -q -y -n conda_test --override-channels -c ./conda_pkgs_output -c ${ANACONDA_USER} -c conda-forge -c defaults python=${{ matrix.python-version }} numpy=${{ matrix.numpy-version }} "riptable==${BUILD_VERSION}"
           mamba list
           python -c 'import riptable; print(riptable, riptable.__version__); print(riptable.rc, riptable.rc.__version__)'
           python dev_tools/gen_requirements.py --out tests_reqs.txt tests
@@ -220,24 +225,24 @@ jobs:
         with:
           name: build-artifacts
           path: dist/
-      - name: Install dependencies
+      - name: Install platform dependencies
         run: |
           set -ex
           ls -lF
           python dev_tools/gen_requirements.py --out pypi_reqs.txt pypi
           mamba create -q -y -n pypi_test python=${{ matrix.python-version }} --file pypi_reqs.txt
           mamba list
-      - name: Install core dependencies
+      - name: Install riptable and dependencies
         # Needed for pip install of riptide_cpp from sdist
         run: |
           python -m pip install --upgrade pip
           pip install numpy==${{ matrix.numpy-version }}.*
           # Pin build-constraints for numpy (see https://github.com/pypa/pip/issues/9542#issuecomment-1242347397)
           echo "numpy==${{ matrix.numpy-version }}.*" > constraints.txt
-          # Pip install riptide_cpp, along with all dependencies.
+          # Pip install riptable, along with riptide_cpp and all dependencies.
           PIP_CONSTRAINT=constraints.txt pip install -v ./dist/riptable*.gz
-          python -c "import riptide_cpp; print(riptide_cpp, riptide_cpp.__version__)"
-      - name: Install other dependencies
+          python -c 'import riptable; print(riptable, riptable.__version__); print(riptable.rc, riptable.rc.__version__)'
+      - name: Install test dependencies
         run: |
           python dev_tools/gen_requirements.py --out runtime_reqs.txt runtime
           python dev_tools/gen_requirements.py --out tests_reqs.txt tests

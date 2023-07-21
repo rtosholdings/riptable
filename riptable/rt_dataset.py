@@ -20,6 +20,7 @@ from typing import (
     Sequence,
     Tuple,
     Union,
+    Literal,
 )
 
 import numpy as np
@@ -4509,7 +4510,7 @@ class Dataset(Struct):
         tolerance: Optional[Union[int, "timedelta"]] = None,
         allow_exact_matches: bool = True,
         direction: str = "backward",
-        check_sorted: bool = True,
+        action_on_unsorted: Literal["sort", "raise"] = "sort",
         matched_on: Union[bool, str] = False,
         **kwargs,
     ) -> "Dataset":
@@ -4530,7 +4531,7 @@ class Dataset(Struct):
             tolerance=tolerance,
             allow_exact_matches=allow_exact_matches,
             direction=direction,
-            check_sorted=check_sorted,
+            action_on_unsorted=action_on_unsorted,
             matched_on=matched_on,
             **kwargs,
         )
