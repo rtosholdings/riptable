@@ -24,6 +24,7 @@ from typing import (
     Set,
     Tuple,
     Union,
+    Literal,
 )
 
 import numba as nb
@@ -37,6 +38,7 @@ from .rt_grouping import Grouping
 from .rt_numpy import (
     all,
     arange,
+    argsort,
     bool_to_fancy,
     cumsum,
     empty,
@@ -3340,7 +3342,7 @@ def merge_asof(
     allow_exact_matches: bool = True,
     direction: str = "backward",
     verbose: bool = False,
-    check_sorted: bool = True,
+    action_on_unsorted: Literal["sort", "raise"] = "sort",
     matched_on: Union[bool, str] = False,
     **kwargs,
 ) -> "Dataset":
@@ -3413,16 +3415,17 @@ def merge_asof(
         The option 'nearest' has not been implemented yet.
     verbose : bool, default False
         For the stdout debris; defaults to False.
-    check_sorted : bool, default True
-        Specifies whether a sortedness check should be performed on the
-        `on` column(s). Defaults to True for safety, but users can override
-        to False to avoid performance overhead if they're certain the data
-        is already sorted.
+    action_on_unsorted : 'sort' (default), or 'raise'
+        Specifies action when the `on` column(s) are unsorted. Sortedness is *always* checked.
+        If `sort`, sorts `on` column(s) (if unsorted), performs merging, and restores
+        the original order in the result.
+        If `raise`, raises on any unsorted `on` column.
     matched_on : bool or str, default False
         If set to True or a string, an additional column is added to the result;
         for each row, it contains the value from the `on` column in `right` that was matched.
         When True, the column will use the default name 'matched_on'; specify a string
         to explicitly name the column.
+    (check_sorted **deprecated**)
 
     Other Parameters
     ----------------
@@ -3539,9 +3542,18 @@ def merge_asof(
     # Process keyword arguments.
     left_index = bool(kwargs.pop("left_index", False))
     right_index = bool(kwargs.pop("right_index", False))
-    if kwargs:
+
+    if "check_sorted" in kwargs:
+        warnings.warn(
+            "`check_sorted` kwarg is now deprecated and ignored. Sortedness for `on` columns is *always* checked now. "
+            + "Use `action_on_unsorted` kwarg to control an action if `on` column(s) is(are) unsorted.",
+            DeprecationWarning,
+        )
+
+    remaining_kwargs = {k: v for k, v in kwargs.items() if k != "check_sorted"}
+    if remaining_kwargs:
         # There were remaining keyword args passed here which we don't understand.
-        first_kwarg = next(iter(kwargs.keys()))
+        first_kwarg = next(iter(remaining_kwargs.keys()))
         raise ValueError(f"This function does not support the kwarg '{first_kwarg}'.")
 
     if left_index or right_index:
@@ -3556,6 +3568,14 @@ def merge_asof(
     # TODO: Validate the 'direction' -- needs to be in {'forward', 'backward', 'nearest'};
     #       Create the set once and expose it as a static property (not attribute) on _AsOfMerge so it's not reparsed and re-created each time.
     #
+
+    # Validate the 'action_on_unsorted' kwarg
+    if action_on_unsorted not in ["sort", "raise"]:
+        raise ValueError(
+            f"`action_on_unsorted` kwarg should be one of ['sort', 'raise'], got {action_on_unsorted} instead"
+        )
+
+    sort_on_unsorted = action_on_unsorted == "sort"
 
     # Validate and normalize the 'on' column name for each Dataset.
     if left_on is None:
@@ -3664,7 +3684,7 @@ def merge_asof(
     #       and will raise an exception later -- better to check here and give the user a better error message.
     #
 
-    return _AsOfMerge.get_result(
+    out = _AsOfMerge.get_result(
         left,
         right,
         left_on=left_on,
@@ -3679,9 +3699,11 @@ def merge_asof(
         allow_exact_matches=allow_exact_matches,
         direction=direction,
         verbose=verbose,
-        check_sorted=check_sorted,
+        sort_on_unsorted=sort_on_unsorted,
         matched_on=matched_on,
     )
+
+    return out
 
 
 class _AsOfMerge:
@@ -3701,7 +3723,7 @@ class _AsOfMerge:
         allow_exact_matches: bool,
         direction: str,
         verbose: bool,
-        check_sorted: bool,
+        sort_on_unsorted: bool,
         matched_on: Union[bool, str],
     ) -> "Dataset":
         # TEMP: Emit a warning if `tolerance` is specified until we actually implement it.
@@ -3727,31 +3749,41 @@ class _AsOfMerge:
         right_on_col = right[right_on]
 
         # Before doing anything else, perform a sortedness check on the 'on' columns
-        # unless the user has specified otherwise.
-        if check_sorted:
-            # Check whether the left_on column is sorted.
-            start = GetNanoTime()
-            left_on_sorted = issorted(left_on_col)
+        # unless the user has specified otherwise. Raise or create argsort arrays in case
+        # of unsorted columns
 
-            if logger.isEnabledFor(logging.DEBUG):
-                delta = GetNanoTime() - start
-                logger.debug(f"merge_asof: issorted(%s).", "left_on", extra={"elapsed_nanos": delta})
+        left_argsort_indices = None
+        right_argsort_indices = None
 
-            # If the left 'on' column isn't sorted, raise an exception.
-            if not left_on_sorted:
+        # Check whether the left_on column is sorted.
+        start = GetNanoTime()
+        left_on_sorted = issorted(left_on_col)
+
+        if logger.isEnabledFor(logging.DEBUG):
+            delta = GetNanoTime() - start
+            logger.debug(f"merge_asof: issorted(%s).", "left_on", extra={"elapsed_nanos": delta})
+
+        # If the left 'on' column isn't sorted, raise an exception or argsort, depending on `sort_on_unsorted` kwarg.
+        if not left_on_sorted:
+            if not sort_on_unsorted:
                 raise ValueError(f"The column '{left_on}' from the `left` Dataset is not sorted.")
+            else:
+                left_argsort_indices = argsort(left_on_col, kind="stable")
 
-            # Check whether the right_on column is sorted.
-            start = GetNanoTime()
-            right_on_sorted = issorted(right_on_col)
+        # Check whether the right_on column is sorted.
+        start = GetNanoTime()
+        right_on_sorted = issorted(right_on_col)
 
-            if logger.isEnabledFor(logging.DEBUG):
-                delta = GetNanoTime() - start
-                logger.debug(f"merge_asof: issorted(%s).", "right_on", extra={"elapsed_nanos": delta})
+        if logger.isEnabledFor(logging.DEBUG):
+            delta = GetNanoTime() - start
+            logger.debug(f"merge_asof: issorted(%s).", "right_on", extra={"elapsed_nanos": delta})
 
-            # If the right 'on' column isn't sorted, raise an exception.
-            if not right_on_sorted:
+        # If the right 'on' column isn't sorted, raise an exception or argsort, depending on `sort_on_unsorted` kwarg.
+        if not right_on_sorted:
+            if not sort_on_unsorted:
                 raise ValueError(f"The column '{right_on}' from the `right` Dataset is not sorted.")
+            else:
+                right_argsort_indices = argsort(right_on_col, kind="stable")
 
         # Construct fancy indices for the left/right Datasets; these will be used to index into
         # columns of the respective datasets to produce new arrays/columns for the merged Dataset.
@@ -3771,6 +3803,8 @@ class _AsOfMerge:
                 allow_exact_matches=allow_exact_matches,
                 direction="backward",
                 verbose=verbose,
+                left_argsort_indices=left_argsort_indices,
+                right_argsort_indices=right_argsort_indices,
             )
 
             left_fancyindex_forward, right_fancyindex_forward = _AsOfMerge._create_merge_fancy_indices(
@@ -3784,6 +3818,8 @@ class _AsOfMerge:
                 allow_exact_matches=allow_exact_matches,
                 direction="forward",
                 verbose=verbose,
+                left_argsort_indices=left_argsort_indices,
+                right_argsort_indices=right_argsort_indices,
             )
 
             # Create a filter (bool array) indicating the rows where the 'forward' direction was closer ("nearest")
@@ -3855,6 +3891,8 @@ class _AsOfMerge:
                 allow_exact_matches=allow_exact_matches,
                 direction=direction,
                 verbose=verbose,
+                left_argsort_indices=left_argsort_indices,
+                right_argsort_indices=right_argsort_indices,
             )
 
         if logger.isEnabledFor(logging.DEBUG):
@@ -3972,6 +4010,8 @@ class _AsOfMerge:
         allow_exact_matches: bool,
         direction: str,
         verbose: bool,
+        left_argsort_indices: Optional[FastArray] = None,
+        right_argsort_indices: Optional[FastArray] = None,
     ) -> Tuple[Optional[FastArray], Optional[FastArray]]:
         # check for categoricals first
         # TODO: Finish implementing/testing this. If we re-use the code from merge2() for creating the Grouping objects,
@@ -4000,16 +4040,31 @@ class _AsOfMerge:
                     f"Different number of 'by' columns for the left and right Datasets. ({left_by_col_count} vs. {right_by_col_count})"
                 )
 
+            def _apply_optional_argsort_indices(fa: FastArray, argsort_indices: Optional[FastArray]):
+                if argsort_indices is None:
+                    return fa
+                else:
+                    return fa[argsort_indices]
+
             if left_by_col_count == 0:
                 # TODO: Can we modify alignmk so we can pass None (or an empty list) instead of allocating arrays here?
                 left_by_cols = np.ones(left.shape[0])
                 right_by_cols = np.ones(right.shape[0])
             elif left_by_col_count == 1:
-                left_by_cols = left[left_by]
-                right_by_cols = right[right_by]
+                left_by_cols = [_apply_optional_argsort_indices(left[col], left_argsort_indices) for col in left_by][0]
+                right_by_cols = [
+                    _apply_optional_argsort_indices(right[col], right_argsort_indices) for col in right_by
+                ][0]
             else:
-                left_by_cols = tuple([left[col] for col in left_by])
-                right_by_cols = tuple([right[col] for col in right_by])
+                left_by_cols = tuple(
+                    [_apply_optional_argsort_indices(left[col], left_argsort_indices) for col in left_by]
+                )
+                right_by_cols = tuple(
+                    [_apply_optional_argsort_indices(right[col], right_argsort_indices) for col in right_by]
+                )
+
+            left_on_col = _apply_optional_argsort_indices(left_on_col, left_argsort_indices)
+            right_on_col = _apply_optional_argsort_indices(right_on_col, right_argsort_indices)
 
             start = GetNanoTime()
             pright = alignmk(
@@ -4025,5 +4080,11 @@ class _AsOfMerge:
             if logger.isEnabledFor(logging.DEBUG):
                 delta = GetNanoTime() - start
                 logger.debug("aligmmk took %d ns", delta, extra={"elapsed_nanos": delta})
+
+            if left_argsort_indices is not None:
+                pright[left_argsort_indices] = pright.copy()
+
+            if right_argsort_indices is not None:
+                pright = right_argsort_indices[pright]
 
         return None, pright

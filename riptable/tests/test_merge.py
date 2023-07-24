@@ -2,10 +2,11 @@ import itertools
 import operator
 import unittest
 from collections import Counter
-from typing import List, NamedTuple, Optional, Tuple, Union
+from typing import List, NamedTuple, Optional, Tuple, Union, Literal
 
 import numpy
 import numpy as np
+from numpy.random import default_rng
 import pytest
 from numpy.testing import assert_array_compare, assert_array_equal
 
@@ -6942,6 +6943,32 @@ class MergeAsofTest(unittest.TestCase):
         assert_array_equal(ds.left_grp._np[:-1], ds.right_grp._np[:-1])
         assert_array_compare(operator.__lt__, ds.A[:-1], ds.X[:-1])
 
+        ds1 = rt.Dataset()
+        ds1.time = rt.FA([1, 4, 2, 10, 20, 15], dtype=float)
+        ds2 = rt.Dataset()
+        ds2.time = rt.arange(0.5, 18.5, 1)
+        ds2.value = ds2.time + 0.1
+
+        # left unsorted, right sorted
+        ds = rt.merge_asof(ds1, ds2, on="time", action_on_unsorted="sort")
+        assert_array_equal(ds.time, ds1.time)
+        assert_array_equal(ds.value, rt.FA([0.6, 3.6, 1.6, 9.6, 17.6, 14.6]))
+
+        # left unsorted, right unsorted
+        ds2.time = rt.arange(0.5, 18.5, 1)[::-1].copy()
+        ds2.value = ds2.time + 0.1
+
+        ds = rt.merge_asof(ds1, ds2, on="time", action_on_unsorted="sort")
+        assert_array_equal(ds.time, ds1.time)
+        assert_array_equal(ds.value, rt.FA([0.6, 3.6, 1.6, 9.6, 17.6, 14.6]))
+
+        # left sorted, right unsorted
+        ds1.time = rt.FA([1, 4, 2, 10, 15, 20], dtype=float)
+
+        ds = rt.merge_asof(ds1, ds2, on="time", action_on_unsorted="sort")
+        assert_array_equal(ds.time, ds1.time)
+        assert_array_equal(ds.value, rt.FA([0.6, 3.6, 1.6, 9.6, 14.6, 17.6]))
+
         # ds = rt.Dataset.merge_asof(ds1, ds2, left_on='A', right_on='X', left_by='left_grp',
         #                            right_by='right_grp', direction='nearest')
         # check_merge_asof(ds, ds1, ds2)
@@ -7034,7 +7061,7 @@ class MergeAsofTest(unittest.TestCase):
 
 
 @pytest.mark.parametrize(
-    "left,right,on,check_sorted,should_fail",
+    "left,right,on,action_on_unsorted,should_fail",
     [
         pytest.param(
             rt.Dataset({"A": [1, 5, 10], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
@@ -7046,9 +7073,9 @@ class MergeAsofTest(unittest.TestCase):
                 }
             ),
             ("A", "X"),
-            True,
+            "raise",
             False,
-            id="sorted,sorted,check",
+            id="sorted,sorted,raise",
         ),
         pytest.param(
             rt.Dataset({"A": [1, 5, 10], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
@@ -7060,9 +7087,9 @@ class MergeAsofTest(unittest.TestCase):
                 }
             ),
             ("A", "X"),
+            "sort",
             False,
-            False,
-            id="sorted,sorted,nocheck",
+            id="sorted,sorted,sort",
         ),
         pytest.param(
             rt.Dataset({"A": [1, 10, 5], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
@@ -7074,9 +7101,9 @@ class MergeAsofTest(unittest.TestCase):
                 }
             ),
             ("A", "X"),
+            "raise",
             True,
-            True,
-            id="unsorted,sorted,check",
+            id="unsorted,sorted,raise",
         ),
         pytest.param(
             rt.Dataset({"A": [1, 10, 5], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
@@ -7088,9 +7115,9 @@ class MergeAsofTest(unittest.TestCase):
                 }
             ),
             ("A", "X"),
+            "sort",
             False,
-            False,
-            id="unsorted,sorted,nocheck",
+            id="unsorted,sorted,sort",
         ),
         pytest.param(
             rt.Dataset({"A": [1, 5, 10], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
@@ -7102,9 +7129,9 @@ class MergeAsofTest(unittest.TestCase):
                 }
             ),
             ("A", "X"),
+            "raise",
             True,
-            True,
-            id="sorted,unsorted,check",
+            id="sorted,unsorted,raise",
         ),
         pytest.param(
             rt.Dataset({"A": [1, 5, 10], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
@@ -7116,9 +7143,37 @@ class MergeAsofTest(unittest.TestCase):
                 }
             ),
             ("A", "X"),
+            "sort",
             False,
+            id="sorted,unsorted,sort",
+        ),
+        pytest.param(
+            rt.Dataset({"A": [1, 10, 5], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
+            rt.Dataset(
+                {
+                    "X": [1, 2, 3, 6, 4],
+                    "right_val": [1, 2, 3, 6, 7],
+                    "right_grp": [1, 1, 1, 1, 1],
+                }
+            ),
+            ("A", "X"),
+            "raise",
+            True,
+            id="unsorted,unsorted,raise",
+        ),
+        pytest.param(
+            rt.Dataset({"A": [1, 10, 5], "left_val": ["a", "b", "c"], "left_grp": [1, 1, 1]}),
+            rt.Dataset(
+                {
+                    "X": [1, 2, 3, 6, 4],
+                    "right_val": [1, 2, 3, 6, 7],
+                    "right_grp": [1, 1, 1, 1, 1],
+                }
+            ),
+            ("A", "X"),
+            "sort",
             False,
-            id="sorted,unsorted,nocheck",
+            id="unsorted,unsorted,sort",
         ),
     ],
 )
@@ -7126,7 +7181,7 @@ def test_merge_asof_unsorted_fails(
     left: rt.Dataset,
     right: rt.Dataset,
     on: Union[str, Tuple[str, str]],
-    check_sorted: bool,
+    action_on_unsorted: Literal["sort", "raise"],
     should_fail: bool,
 ):
     """
@@ -7143,7 +7198,7 @@ def test_merge_asof_unsorted_fails(
                 right,
                 left_on=left_on,
                 right_on=right_on,
-                check_sorted=check_sorted,
+                action_on_unsorted=action_on_unsorted,
                 verbose=True,
             )
     else:
@@ -7154,9 +7209,128 @@ def test_merge_asof_unsorted_fails(
             right,
             left_on=left_on,
             right_on=right_on,
-            check_sorted=check_sorted,
+            action_on_unsorted=action_on_unsorted,
             verbose=True,
         )
+
+        # check that the DeprecationWarning is issued if "check_sorted" kwarg is passed
+        with pytest.warns(DeprecationWarning):
+            rt.merge_asof(
+                left,
+                right,
+                left_on=left_on,
+                right_on=right_on,
+                check_sorted=False,
+                action_on_unsorted=action_on_unsorted,
+                verbose=True,
+            )
+
+
+def test_merge_asof_sorting():
+    rng = default_rng(123)
+
+    keys = ["A", "B", "C", "D", "E", "F"]
+    start = int(rt.DateTimeNano("20230101 09:00", from_tz="NYC")[0])
+    end = int(rt.DateTimeNano("20230101 16:00", from_tz="NYC")[0])
+
+    def restore_datasets(N_left, N_right):
+        left = rt.Dataset(
+            {
+                "time": rt.DateTimeNano(rng.integers(start, end, N_left)),
+                "key1": rng.choice(keys, N_left),
+                "key2": rng.choice(keys, N_left),
+            }
+        )
+
+        right = rt.Dataset(
+            {
+                "time": rt.DateTimeNano(rng.integers(start, end, N_right)),
+                "key1": rng.choice(keys, N_right),
+                "key2": rng.choice(keys, N_right),
+                "new_data": rng.integers(0, 100, N_right),
+            }
+        )
+
+        return left, right
+
+    def restore_indices(left, right):
+        left.left_idx = rt.arange(len(left))
+        right.right_idx = rt.arange(len(right))
+
+    def check_equivalent_merge_asof(left, right):
+        for by_keys in [None, ["key1"], ["key1", "key2"]]:
+            new_merge_res = rt.merge_asof(
+                left,
+                right,
+                on="time",
+                by=by_keys,
+                action_on_unsorted="sort",
+                matched_on=True,
+                suffixes=("_left", "_right"),
+            )
+            old_merge_res = rt.merge_asof(
+                left.sort_copy("time"),
+                right.sort_copy("time"),
+                on="time",
+                by=by_keys,
+                action_on_unsorted="raise",
+                matched_on=True,
+                suffixes=("_left", "_right"),
+            ).sort_inplace("left_idx")
+            assert_array_equal(new_merge_res.right_idx, old_merge_res.right_idx)
+            assert_array_equal(new_merge_res.new_data, old_merge_res.new_data)
+            assert_array_equal(new_merge_res.matched_on, old_merge_res.matched_on)
+
+    N_left = 1000
+    N_right = 3000
+
+    left, right = restore_datasets(N_left, N_right)
+    restore_indices(left, right)
+    check_equivalent_merge_asof(left, right)
+
+    right.sort_inplace("time")
+    restore_indices(left, right)
+    check_equivalent_merge_asof(left, right)
+
+    left.sort_inplace("time")
+    restore_indices(left, right)
+    check_equivalent_merge_asof(left, right)
+
+    left, right = restore_datasets(1000, 3000)
+    restore_indices(left, right)
+    left.time[rng.random(N_left) < 0.3] = np.nan
+    check_equivalent_merge_asof(left, right)
+
+    right.time[rng.random(N_right) < 0.3] = np.nan
+    check_equivalent_merge_asof(left, right)
+
+    left.time = left.time / 1e10
+    right.time = right.time / 1e10
+
+    left.time[rng.random(N_left) < 0.2] = np.inf
+    left.time[rng.random(N_left) < 0.2] = -np.inf
+    check_equivalent_merge_asof(left, right)
+
+    right.time[rng.random(N_right) < 0.2] = np.inf
+    right.time[rng.random(N_right) < 0.2] = -np.inf
+    check_equivalent_merge_asof(left, right)
+
+    left.time[:] = np.nan
+    check_equivalent_merge_asof(left, right)
+
+    right.time[:] = np.nan
+    check_equivalent_merge_asof(left, right)
+
+    # check with a lot of duplicate values in "time" columns
+    left.time = rng.integers(0, 20, N_left)
+    right.time = rng.integers(-10, 10, N_right)
+    check_equivalent_merge_asof(left, right)
+
+    left.time[rng.random(N_left) < 0.3] = np.nan
+    check_equivalent_merge_asof(left, right)
+
+    right.time[rng.random(N_right) < 0.3] = np.nan
+    check_equivalent_merge_asof(left, right)
 
 
 @pytest.mark.parametrize(

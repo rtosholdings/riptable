@@ -4293,7 +4293,7 @@ class Struct:
          30   long_string_long_string      30      30      30      30      30      30      30      30      30       30       30
         """
         maxrows = 10_000
-        numrows = self._nrows
+        numrows = self._nrows if hasattr(self, "_nrows") else len(self)
         if numrows > maxrows:
             raise ValueError(
                 f"Dataset has more than 10,000 rows. Cannot display all rows. To override, set Display.options.ROW_ALL = True and print(ds)"
