@@ -35,7 +35,7 @@ jobs:
           activate-environment: "flake8_env"
           python-version: ${{ matrix.python-version }}
           mamba-version: "*"
-          auto-update-conda: true
+          auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
@@ -156,7 +156,7 @@ jobs:
           activate-environment: "conda_test"
           python-version: ${{ matrix.python-version }}
           mamba-version: "*"
-          auto-update-conda: true
+          auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
@@ -216,7 +216,7 @@ jobs:
           activate-environment: "pypi_test"
           python-version: ${{ matrix.python-version }}
           mamba-version: "*"
-          auto-update-conda: true
+          auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
@@ -275,7 +275,7 @@ jobs:
         with:
           activate-environment: "conda_deploy"
           mamba-version: "*"
-          auto-update-conda: true
+          auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
