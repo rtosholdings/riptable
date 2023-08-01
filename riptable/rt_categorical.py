@@ -1279,199 +1279,299 @@ class Categories:
 
 # ------------------------------------------------------------
 class Categorical(GroupByOps, FastArray):
-    '''
-    An riptable Categorical maps integer values to unique categories, which are held in an array, IntEnum/IntString Dictionary, or Multikey Dictionary.
+    """
+    A `Categorical` efficiently stores an array of repeated strings and is used for
+    groupby operations.
 
-    Certain methods of construction provide enough information for groupby operations to use bin information that the Categorical is already storing.
-    The underlying array is always integer based, in a type based on the number of unique categories or maximum value in a code mapping.
-    It will be an ``int8``, ``int16``, ``int32``, or ``int64``.
+    Riptable `Categorical` objects have two related uses:
 
-    Unless otherwise specified via ordered, categories are maintained in an unsorted order.
-    Constructing a categorical from an unsorted list of strings and forcing an ordered assumption will lead to unexpected
-    results in comparison operations.
+    - They efficiently store string (or other large dtype) arrays that have repeated
+      values. The repeated values are partitioned into groups (a.k.a. categories),
+      and each group is mapped to an integer. The mapping codes allow the data to be
+      stored and operated on more efficiently.
+
+    - They're Riptable's class for doing groupby operations. A method applied to a
+      `Categorical` is applied to each group separately.
+
+    A `Categorical` is typically created from a list of strings:
+
+    >>> c = rt.Categorical(["b", "a", "b", "a", "c", "c", "b"])
+    >>> c
+    Categorical([b, a, b, a, c, c, b]) Length: 7
+      FastArray([2, 1, 2, 1, 3, 3, 2], dtype=int8) Base Index: 1
+      FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+
+    The output shows:
+
+    - The `Categorical` values. These are grouped into unique categories (here, "a",
+      "b", and "c"), which are also stored in the `Categorical` (see below).
+    - The integer mapping codes (also called bins). Each integer is mapped to a unique
+      category (here, 1 is mapped to "a", 2 is mapped to "b", and 3 is mapped to "c").
+      Because these codes can also be used to index into the `Categorical`,
+      they're also referred to as indices. By default, the index is 1-based, with 0
+      reserved for Filtered values.
+    - The unique categories. Each category represents a group for groupby operations.
+
+    Use `Categorical` objects to perform aggregations over arbitrary arrays of the same
+    dimension as the `Categorical`:
+
+    >>> c = rt.Categorical(["b", "a", "b", "a", "c", "c", "b"])
+    >>> ints = rt.FA([3, 10, 2, 5, 4, 1, 1])
+    >>> flts = rt.FA([1.2, 3.4, 5.6, 4.0, 2.1, 0.6, 11.3])
+    >>> c.sum([ints, flts])
+    *key_0   col_0   col_1
+    ------   -----   -----
+    a           15    7.40
+    b            6   18.10
+    c            5    2.70
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 51.0 B
+
+    **Multi-Key Categoricals**
+
+    The `Categorical` above is a single-key `Categorical` -- it groups one array of
+    values into keys (the categories) for groupby operations.
+
+    Multi-key `Categorical` objects let you create and operate on groupings based on
+    multiple associated categories. The associated keys form a group:
+
+    >>> strs = rt.FastArray(["a", "b", "b", "a", "b", "a"])
+    >>> ints = rt.FastArray([2, 1, 1, 2, 1, 1])
+    >>> c = rt.Categorical([strs, ints])  # Create a with a list of arrays.
+    >>> c
+    Categorical([(a, 2), (b, 1), (b, 1), (a, 2), (b, 1), (a, 1)]) Length: 6
+      FastArray([1, 2, 2, 1, 2, 3], dtype=int8) Base Index: 1
+      {'key_0': FastArray([b'a', b'b', b'a'], dtype='|S1'), 'key_1': FastArray([2, 1, 1])} Unique count: 3
+    >>> c.count()
+    *key_0   *key_1   Count
+    ------   ------   -----
+    a             2       2
+    b             1       3
+    a             1       1
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 27.0 B
+
+    **Filtered Values and Categories**
+
+    Filter values and categories to exclude them from operations on the `Categorical`.
+
+    `Categorical` objects can be filtered when they're created or anytime afterwards.
+    Because filtered items are mapped to 0 in the integer mapping array, filters can be
+    used only in base-1 `Categorical` objects.
+
+    Filters can also be applied on a one-off basis at the time of an operation. See the
+    Filtering topic under More About Categoricals for examples.
+
+    **More About Categorials**
+
+    For more about using `Categorical` objects, see the
+    :doc:`Categoricals </tutorial/tutorial_categoricals>` section of the
+    :doc:`/tutorial/tutorial` or these more in-depth topics:
+
+    - :doc:`Constructing Categoricals </tutorial/categoricals_user_guide_construct>`
+    - :doc:`Accessing Parts of the Categorical </tutorial/categoricals_user_guide_access_data>`
+    - :doc:`Indexing </tutorial/categoricals_user_guide_indexing>`
+    - :doc:`Comparisons </tutorial/categoricals_user_guide_comparisons>`
+    - :doc:`Filtering </tutorial/categoricals_user_guide_filters>`
+    - :doc:`Base Index </tutorial/categoricals_user_guide_base_index>`
+    - :doc:`Sorting and Display Order </tutorial/categoricals_user_guide_order>`
+    - :doc:`Final dtype of Integer Mapping Array </tutorial/categoricals_user_guide_dtype>`
+    - :doc:`Invalid Categories </tutorial/categoricals_user_guide_invalid_categories>`
+    - :doc:`Get Bins from Categories and Vice-Versa</tutorial/categoricals_user_guide_bins_categories>`
 
     Parameters
     ----------
-    values
-        * list or array of string values. the list will be made unique, and an integer array will be constructed to index into it
-        * list or array of numeric values. the list will be made unique with a groupby operation and an integer array will be constructed to index into it
-        * list or array of float values. (matlab indexing) categories must be set to a unique array, and from_matlab must be set to True.
-        * list or array of integer values. (user specified indexing) categories must be set to a unique array or IntEnum/dictionary of integer->string
-        * list or array of integer values. (internally specified indexing) categories must come from another rt categorical. the _from_categorical flag must be set. a shallow copy is made.
-        * rt Categorical object - a deep copy of categories is performed
-        * pandas Categorical object - a deep copy is performed. indices will be incremented by 1 to translate pandas invalids
-        * list of numpy arrays. the keys will be made unique with a groupby operation and an integer array will be constructed to index into it
-        * dictionary of numpy arrays. the keys will be made unique with a groupby operation and an integer array will be constructed to index into it
-    categories
-        * list or array of unique categories
-        * intenum or dictionary of integer code mapping to string values. must be paired with integer array of codes
-    ordered : bool, optional, default None
-        If a categorical's ordered flag is set to True, a sort will be performed when the categorical is made,
-        otherwise the categorical's display order is dependent on `lex`==True/False. If `lex`==False, the display order is first appearance.
-        Sorted groupby operations can be requested by setting the `sort_gb` keyword to True (see below).
-    sort_display : bool, optional, default None
-        See `sort_gb`.
-    sort_gb : bool, optional, default None
-        By default, groupby operations will be unsorted. If `sort_gb` is set to True in the constructor, a sort will be performed (lazily) and
-        applied. If the categorical is naturally sorted (see above), no sort will be performed or applied.
-    lex : bool, optional, default None
-        By default hashing will be used to discover unique elements in the arrays.  If lex is set to True, a lexsort is used instead.
-        For high unique counts (more than 50% of the elements are unique), lex=True maybe faster.
-    locked : bool, default False
-        When set to True, prevents categories from being added. The locked flag is automatically set to True after a groupby operation
-        to prevent unexpected data corruption in operations to follow. If categories are added after a groupby operation, the groupby indexing
-        may no longer be accurate.
-    from_matlab : bool, default False
-        When set to True, allows floating point indexing into unique categories. The indices will be flipped to an integer type and the base
-        index will always be set to 1. 0 is always an invalid index in matlab, so the indices are already compatible with the rt base-1 default.
-    _from_categorical : (None)
-        flag for internal routines to skip checking/sorting/uniquifying values and categories. Categories will be passed through this internal keyword.
-        NOTE: this does not perform a deep copy of the categorical's categories or underlying array
-    dtype : np.dtype or str, optional
-        force the dtype of the underlying integer array. by default, the constructor will opt for the smallest type based on
-        the size of the unique categories
+    values : array of str, int, or float, list of arrays, dict, or ~riptable.rt_categorical.Categorical or pandas.Categorical
+        - Strings: Unicode strings and byte strings are supported.
+        - Integers without provided categories: The integer mapping codes start at 1.
+        - Integers with provided categories: If you have an array of integers that
+          indexes into an array of provided unique categories, the integers are used
+          for the integer mapping array. Any 0 values are mapped to the Filtered category.
+        - Floats are supported with no user-provided categories. If you have a Matlab
+          Categorical with categories, set ``from_matlab`` to `True`. `Categorical` objects
+          created from Matlab Categoricals must have a base-1 index; any 0.0 values
+          become Filtered.
+        - A list of arrays or a dictionary with multiple key-value pairs creates a
+          multi-key `Categorical`.
+        - For a `Categorical` created from a `Categorical`, a deep copy of categories
+          is performed.
+        - For a `Categorical` created from a Pandas Categorical, a deep copy is
+          performed and indices start at 1 to preserve invalid values.
+          `Categorical` objects created from Pandas Catagoricals must have a base-1 index.
+    categories : array of str, int, or float, dict of {str : int} or {int : str}, or IntEnum, optional
+        The unique categories. Can be:
+
+          - An array of strings, integers, or floats. Floats can be used only when
+            ``values`` is numeric. Warning: Non-unique categories may give unexpected results
+            in operations.
+          - A dictionary or :py:class:`~enum.IntEnum` that maps integers to strings or
+            strings to integers. Provided ``values`` must be integers.
+        Note:
+
+          - User-provided categories are always held in the order provided.
+          - Multi-key `Categorical` objects don't support user-provided categories.
+    ordered : bool, default None/True
+        Controls whether categories are sorted lexicographically before they are mapped
+        to integers:
+          - If categories are not provided, by default they are sorted. If
+            ``ordered=False``, the order is first appearance unless ``lex=True``. To
+            sort categories for groupby operations, use ``sort_gb=True`` (see below).
+          - If categories are provided, they are always held in the order they're
+            provided in; they can't be sorted with ``ordered`` or ``lex``.
+    sort_gb : bool, default None/False
+        Controls whether groupby operation results are displayed in sorted order. Note
+        that results may already appear sorted based on ``ordered`` or ``lex`` settings.
+    sort_display : bool, optional
+        See ``sort_gb``.
+    lex : bool, default None/False
+        Controls whether hashing- or sorting-based logic is used to find unique values
+        in the input array. By default hashing is used. If more than 50% of the values
+        are unique, set ``lex=True`` for a possibly faster lexicographical sort (not
+        supported if categories are provided).
+    base_index : {None, 0, 1}, default None/1
+        By default, base-1 indexing is used. Base-0 can be used if:
+
+          - A mapping dictionary isn't used. A `Categorical` created from a mapping
+            dictionary does not have a base index.
+          - A ``filter`` isn't used at creation.
+          - A Matlab or Pandas Categorical isn't being converted. These both reserve 0
+            for invalid values.
+        If base-0 indexing is used, 0 becomes a valid category.
+    filter : array of bool, optional
+        Must be the same length as ``values``. Values that are `False` become Filtered
+        and mapped to 0 in the integer mapping array, and they are ignored in groupby
+        operations. A filter can't be used with a base-0 `Categorical` or one created
+        with a mapping dictionary or :py:class:`~enum.IntEnum`.
+    dtype : riptable.dtype, numpy.dtype, or str, optional
+        Force the dtype of the underlying integer mapping array. Must be a signed integer
+        dtype. By default, the constructor uses the smallest dtype based on the number of
+        unique categories or the maximum value provided in a mapping.
+    unicode : bool, default False
+        By default, the array of unique categories is stored as byte strings. Set to `True`
+        to store as unicode strings.
     invalid : str, optional
-        specify a string to use when an invalid category is returned or displayed
+        Specify a value in ``values`` to be treated as an invalid category. Note: Invalid
+        categories are not excluded from aggregations; use `filter` instead. Warning: If the
+        invalid category isn't included in ``categories`` and a ``filter`` is used, the
+        invalid category becomes Filtered.
     auto_add : bool, default False
-        when set to True, categories that do not exist in the unique categories can be added with the setitem method. by default an error is raised.
+        Warning: Until a known issue is fixed, adding categories can have unexpected results.
+        Intended behavior: When set to `True`, categories that do not exist in the unique
+        categories can be added using `~Categorical.category_add`.
+    from_matlab : bool, default False
+        Set to `True` to convert a Matlab Categorical. The float indices are converted
+        to an integer type. To preserve invalid values, only base-1 indexing is supported.
+
+    See Also
+    --------
+    ~riptable.Accum2 : Class for multi-key aggregations with summary data displayed.
+    Categorical._fa :
+        Return the array of integer category mapping codes that corresponds to the
+        array of `Categorical` values.
+    Categorical.category_array : Return the array of unique categories of a `Categorical`.
+    Categorical.category_dict : Return a dictionary of the unique categories.
+    Categorical.category_mapping :
+        Return a dictionary of the integer category mapping codes for a `Categorical`
+        created with an :py:class:`~enum.IntEnum` or a mapping dictionary.
+    Categorical.base_index : See the base index of a `Categorical`.
+    Categorical.isnan : See which `Categorical` category is invalid.
 
     Examples
     --------
-    A single list of bytes or unicode
+    A single-key `Categorical` created from a list of strings:
 
-    >>> c = rt.Categorical(['a','a','b','a','c','c','b'])
-    >>> print(c)
-    a, a, b, a, c, c, b
+    >>> c = rt.Categorical(["b", "a", "b", "a", "c", "c", "b"])
+    Categorical([b, a, b, a, c, c, b]) Length: 7
+      FastArray([2, 1, 2, 1, 3, 3, 2], dtype=int8) Base Index: 1
+      FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
-    A view of the underlying integer array (will default to base-1 indexing)
+    A `Categorical` created from list of non-unique string values and a list of unique
+    category strings. All values must appear in the provided categories, otherwise an
+    error is raised:
 
-    >>> print(c._fa)
-    [1 1 2 1 3 3 2]
+    >>> rt.Categorical(["b", "a", "b", "c", "a", "c", "c", "c"], categories=["b", "a", "c"])
+    Categorical([b, a, b, c, a, c, c, c]) Length: 8
+      FastArray([1, 2, 1, 3, 2, 3, 3, 3], dtype=int8) Base Index: 1
+      FastArray([b'b', b'a', b'c'], dtype='|S1') Unique count: 3
 
-    The constructor attempts to convert unicode strings to bytestrings
+    A `Categorical` created from a list of integers that index into a list of unique
+    strings. The integers are used for the mapping array. Note that 0 becomes Filtered:
 
-    >>> c.categories()
-    FastArray([b'a', b'b', b'c'], dtype='|S1')
+    >>> rt.Categorical([0, 1, 1, 0, 2, 1, 2], categories=["c", "a", "b"])
+    Categorical([Filtered, c, c, Filtered, a, c, a]) Length: 7
+      FastArray([0, 1, 1, 0, 2, 1, 2]) Base Index: 1
+      FastArray([b'c', b'a', b'b'], dtype='|S1') Unique count: 3
 
-    A list of integer indices into a list of unique strings
+    If integers are provided with no categories and 0 is included, the integer mapping
+    codes are incremented by 1 so that 0 is not Filtered:
 
-    >>> c = rt.Categorical([0,1,1,0,2,1,1,1,2,0], categories=['a','b','c'])
-    >>> print(c)
-    a, b, b, a, c, b, b, b, c, a
+    >>> rt.Categorical([0, 1, 1, 0, 2, 1, 2])
+    Categorical([0, 1, 1, 0, 2, 1, 2]) Length: 7
+      FastArray([1, 2, 2, 1, 3, 2, 3], dtype=int8) Base Index: 1
+      FastArray([0, 1, 2]) Unique count: 3
 
-    A list of non-unique string values and a unique list of category strings
+    Use ``from_matlab=True`` to create a `Categorical` from Matlab data. The float
+    indices are converted to an integer type. To preserve invalid values, only base-1
+    indexing is supported:
 
-    >>> c = rt.Categorical(['a','a','b','c','a','c','c','c'], categories=['a','b','c'])
-    >>> print(c)
-    a, a, b, c, a, c, c, c
+    >>> rt.Categorical([0.0, 1.0, 2.0, 3.0, 1.0, 1.0], categories=["b", "c", "a"], from_matlab=True)
+    Categorical([Filtered, b, c, a, b, b]) Length: 6
+      FastArray([0, 1, 2, 3, 1, 1], dtype=int8) Base Index: 1
+      FastArray([b'b', b'c', b'a'], dtype='|S1') Unique count: 3
 
-    Setting an option to add an invalid category when missing values are encountered (otherwise an error is raised).
+    A `Categorical` created from a Pandas Categorical with an invalid value:
 
-    >>> c = rt.Categorical(['a','z','b','c','a','y','c','c'], categories=['a','b','c'], invalid='Inv')
-    >>> print(c)
-    a, Inv, b, c, a, Inv, c, c
+    >>> import pandas as pd
+    >>> pdc = pd.Categorical(["a", "a", "z", "b", "c"], ["c", "b", "a"])
+    >>> pdc
+    ['a', 'a', NaN, 'b', 'c']
+    Categories (3, object): ['c', 'b', 'a']
+    >>> rt.Categorical(pdc)
+    Categorical([a, a, Filtered, b, c]) Length: 5
+      FastArray([3, 3, 0, 2, 1], dtype=int8) Base Index: 1
+      FastArray([b'c', b'b', b'a'], dtype='|S1') Unique count: 3
 
-    The invalid category will not be added to the categories. instead the categorical will use base-1 indexing and
-    display the invalid indices as the specified invalid category string.
+    A `Categorical` created from a Python dictionary of strings to integers. The dictionary
+    is provided as the ``categories`` argument, with a list of the mapping codes provided
+    as the first argument:
 
-    >>> c.categories()
-    FastArray([b'a', b'b', b'c'], dtype='|S1')
-
-    A list of floating point indexes into a list of unique strings (Matlab data)
-
-    >>> c = rt.Categorical([1.0, 1.0, 2.0, 3.0, 1.0, 1.0], categories=['a','b','c'], from_matlab=True)
-    >>> print(c)
-    a, a, b, c, a, a
-
-    Matlab uses 1-based indexing, reserving the 0 bin for invalids - just like the default _riptable_ behavior.
-    All initialization from Matlab indices + matlab categories will use 1-based indexing.
-
-    >>> print(c.view(FastArray))
-    [1 1 2 3 1 1]
-
-    A pandas ``Categorical`` with invalid
-
-    >>> pdc = pd.Categorical(['a','a','z','b','c'],['a','b','c'])
-    >>> print(pdc)
-    [a, a, NaN, b, c]
-    Categories (3, object): [a, b, c]
-
-    >>> c = rt.Categorical(pdc)
-    >>> print(c)
-    a, a, Inv, b, c
-
-    An IntEnum paired with integer values
-
-    >>> from enum import IntEnum
-    >>> class LikertDecision(IntEnum):
-    ...     """A Likert scale with the typical five-level Likert item format."""
-    ...     StronglyAgree = 44
-    ...     Agree = 133
-    ...     Disagree = 75
-    ...     StronglyDisagree = 1
-    ...     NeitherAgreeNorDisagree = 144
+    >>> d = {"StronglyAgree": 44, "Agree": 133, "Disagree": 75, "StronglyDisagree": 1, "NeitherAgreeNorDisagree": 144 }
     >>> codes = [1, 44, 44, 133, 75]
-    >>> c = rt.Categorical(codes, LikertDecision)
-    >>> print(c)
-    StronglyDisagree, StronglyAgree, StronglyAgree, Agree, Disagree
+    >>> rt.Categorical(codes, categories=d)
+    Categorical([StronglyDisagree, StronglyAgree, StronglyAgree, Agree, Disagree]) Length: 5
+      FastArray([  1,  44,  44, 133,  75]) Base Index: None
+      {44:'StronglyAgree', 133:'Agree', 75:'Disagree', 1:'StronglyDisagree', 144:'NeitherAgreeNorDisagree'} Unique count: 4
 
-    A python dictionary of integers to strings
+    A `Categorical` created using the categories of another `Categorical`:
 
-    >>> d = { 44: 'StronglyAgree', 133: 'Agree', 75: 'Disagree', 1: 'StronglyDisagree', 144: 'NeitherAgreeNorDisagree' }
-    >>> codes = [1, 44, 44, 133, 75]
-    >>> c = rt.Categorical(codes, d)
-    >>> print(c)
-    StronglyDisagree, StronglyAgree, StronglyAgree, Agree, Disagree
+    >>> c = rt.Categorical(["a", "a", "b", "a", "c", "c", "b"], categories=["c", "b", "a"])
+    >>> c.category_array
+    FastArray([b'c', b'b', b'a'], dtype='|S1')
+    >>> c2 = rt.Categorical(["b", "c", "c", "b"], categories=c.category_array)
+    >>> c2
+    Categorical([b, c, c, b]) Length: 4
+      FastArray([2, 1, 1, 2], dtype=int8) Base Index: 1
+      FastArray([b'c', b'b', b'a'], dtype='|S1') Unique count: 3
 
-    A python dictionary of strings to integers
+    Multi-key Categoricals let you create and operate on groupings based on multiple
+    associated categories:
 
-    >>> d = { 'StronglyAgree': 44, 'Agree': 133, 'Disagree': 75, 'StronglyDisagree': 1, 'NeitherAgreeNorDisagree': 144 }
-    >>> codes = [1, 44, 44, 133, 75]
-    >>> c = rt.Categorical(codes, d)
-    >>> print(c)
-    StronglyDisagree, StronglyAgree, StronglyAgree, Agree, Disagree
-
-    Indexing behavior
-
-    >>> c = rt.Categorical(['a','a','b','a','c','c','b'])
-    >>> print(c)
-    a, a, b, a, c, c, b
-    >>> c['a']
-    FastArray([ True,  True, False,  True, False, False, False])
-    >>> c[['a','b']]
-    FastArray([ True,  True,  True,  True, False, False,  True])
-    >>> c[3]
-    'a'
-    >>> c[[3, 4]]
-    Categorical([a, c])
-    >>> c[:2]
-    Categorical([a, a])
-
-    Comparison behavior
-
-    >>> c = rt.Categorical(['a','a','b','a','c','c','b'])
-    >>> print(c)
-    a, a, b, a, c, c, b
-    >>> c == 'a'
-    FastArray([ True,  True, False,  True, False, False, False])
-    >>> c == b'a'
-    FastArray([ True,  True, False,  True, False, False, False])
-    >>> c == 2
-    FastArray([False, False,  True, False, False, False,  True])
-
-    Use `Categorical` to perform aggregations over arbitrary arrays (of the same dimension as the `Categorical`),
-    just like a `GroupBy` object.
-
-    >>> c = rt.Categorical(['a','a','b','a','c','c','b'])
-    >>> int_arr = np.array([3, 10, 2, 5, 4, 1, 1])
-    >>> flt_arr = np.array([1.2, 3.4, 5.6, 4.0, 2.1, 0.6, 11.3])
-    >>> c.sum(int_arr, flt_arr)
-    *gb_key   col_0   col_1
-    -------   -----   -----
-    a            18    8.60
-    b             3   16.90
-    c             5    2.70
-    '''
+    >>> strs = rt.FastArray(["a", "b", "b", "a", "b", "a"])
+    >>> ints = rt.FastArray([2, 1, 1, 2, 1, 3])
+    >>> c = rt.Categorical([strs, ints]) # Create with a list of arrays.
+    >>> c
+    Categorical([(a, 2), (b, 1), (b, 1), (a, 2), (b, 1), (a, 3)]) Length: 6
+      FastArray([1, 2, 2, 1, 2, 3], dtype=int8) Base Index: 1
+      {'key_0': FastArray([b'a', b'b', b'a'], dtype='|S1'), 'key_1': FastArray([2, 1, 3])} Unique count: 3
+    >>> c.count()
+    *key_0   *key_1   Count
+    ------   ------   -----
+    a             2       2
+    b             1       3
+    a             3       1
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 27.0 B
+    """
 
     # current metadata version and default values necessary for final reconstruction
     MetaVersion = 1
@@ -2030,18 +2130,146 @@ class Categorical(GroupByOps, FastArray):
 
     # ------------------------------------------------------------
     def isnan(self, *args, **kwargs) -> FastArray:
+        """
+        Find the invalid elements of a `Categorical`.
+
+        An invalid category is specified when the `Categorical` is created or set
+        afterward using `Categorical.invalid_set`. An invalid category is different
+        from a Filtered category or a NaN value.
+
+        Returns
+        -------
+        FastArray
+            A boolean array the length of the values array where `True` indicates
+            an invalid `Categorical` category.
+
+        See Also
+        --------
+        Categorical.isnotnan : Find the valid elements of a `Categorical.`
+        Categorical.invalid_category : The `Categorical` object's invalid category.
+        Categorical.invalid_set : Set a `Categorical` category to be invalid.
+
+        Examples
+        --------
+        >>> c = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="b")
+        >>> c
+        Categorical([b, a, c, b, c]) Length: 5
+          FastArray([2, 1, 3, 2, 3], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c.isnan()
+        FastArray([ True, False, False,  True, False])
+
+        Invalid categories are different from Filtered categories:
+
+        >>> f = rt.FA([True, False, True, True, True])
+        >>> c2 = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="b", filter=f)
+        >>> c2
+        Categorical([b, Filtered, c, b, c]) Length: 5
+          FastArray([1, 0, 2, 1, 2], dtype=int8) Base Index: 1
+          FastArray([b'b', b'c'], dtype='|S1') Unique count: 2
+        >>> c2.isnan()  # Only the invalid category returns True for Cat.isnan.
+        FastArray([ True, False, False,  True, False])
+        >>> c2.isfiltered()  # Only the Filtered value returns True for Cat.isfiltered.
+        FastArray([False,  True, False, False, False])
+
+        Invalid categories in a `Categorical` are different from regular integer NaN
+        values. An integer NaN is a valid category and is `False` for ``Cat.isnan()``:
+
+        >>> a = rt.FA([1, 2, 3, 4])
+        >>> a[3] = a.inv  # Set the last value to an integer NaN.
+        >>> a
+        FastArray([          1,           2,           3, -2147483648])
+        >>> c3 = rt.Categorical(values=a, invalid=2)  # Make 2 an invalid category.
+        >>> c3
+        Categorical([1, 2, 3, -2147483648]) Length: 4
+          FastArray([2, 3, 4, 1], dtype=int8) Base Index: 1
+          FastArray([-2147483648,           1,           2,           3]) Unique count: 4
+        >>> c3.invalid_category()
+        2
+        >>> c3.isnan()  # Only the invalid category returns True for Cat.isnan.
+        FastArray([False,  True, False, False])
+        >>> c3.expand_array.isnan()  # Only the integer NaN returns True for FA.isnan.
+        FastArray([False, False, False,  True])
+        """
         return self._nanfunc(self._fa.__eq__, False)
 
     # ------------------------------------------------------------
     def isnotnan(self, *args, **kwargs) -> FastArray:
+        """
+        Find the valid elements of a `Categorical.`
+
+        An invalid category is specified when the `Categorical` is created or set
+        afterward using `Categorical.invalid_set`. An invalid category is different
+        from a Filtered category or a NaN value.
+
+        Returns
+        -------
+        FastArray
+            A boolean array the length of the values array where `True` indicates
+            a valid `Categorical` category.
+
+        See Also
+        --------
+        Categorical.isnan : Find the invalid elements of a `Categorical.`
+        Categorical.invalid_category : The `Categorical` object's invalid category.
+        Categorical.invalid_set : Set a `Categorical` category to be invalid.
+
+        Examples
+        --------
+        >>> c = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="b")
+        >>> c
+        Categorical([b, a, c, b, c]) Length: 5
+          FastArray([2, 1, 3, 2, 3], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c.isnotnan()
+        FastArray([False,  True,  True, False,  True])
+
+        Invalid categories are different from Filtered categories:
+
+        >>> f = rt.FA([True, False, True, True, True])
+        >>> c2 = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="b", filter=f)
+        >>> c2
+        Categorical([b, Filtered, c, b, c]) Length: 5
+          FastArray([1, 0, 2, 1, 2], dtype=int8) Base Index: 1
+          FastArray([b'b', b'c'], dtype='|S1') Unique count: 2
+        >>> c2.isnotnan()  # Only the invalid category returns False for Cat.isnotnan.
+        FastArray([False,  True,  True, False,  True])
+        >>> ~c2.isfiltered()  # Only the Filtered value returns False for the negation of Cat.isfiltered.
+        FastArray([ True, False,  True,  True,  True])
+
+        Invalid categories in a `Categorical` are different from regular integer NaN
+        values. An integer NaN is a valid category and is `True` for ``Cat.isnotnan()``:
+
+        >>> a = rt.FA([1, 2, 3, 4])
+        >>> a[3] = a.inv  # Set the last value to an integer NaN.
+        >>> a
+        FastArray([          1,           2,           3, -2147483648])
+        >>> c3 = rt.Categorical(values=a, invalid=2)  # Make 2 an invalid category.
+        >>> c3
+        Categorical([1, 2, 3, -2147483648]) Length: 4
+          FastArray([2, 3, 4, 1], dtype=int8) Base Index: 1
+          FastArray([-2147483648,           1,           2,           3]) Unique count: 4
+        >>> c3.invalid_category()
+        2
+        >>> c3.isnotnan()  # Only the invalid category returns False for Cat.isnotnan.
+        FastArray([ True, False,  True,  True])
+        >>> c3.expand_array.isnotnan()  # Only the integer NaN returns False for FA.isnotnan.
+        FastArray([ True,  True,  True, False])
+        """
         return self._nanfunc(self._fa.__ne__, True)
 
     # ------------------------------------------------------------
     def isna(self, *args, **kwargs) -> FastArray:
+        """
+        See `Categorical.isnan`.
+        """
         return self.isnan()
 
     # ------------------------------------------------------------
     def notna(self, *args, **kwargs) -> FastArray:
+        """
+        See `Categorical.isnotnan`.
+        """
         return self.isnotnan()
 
     # ------------------------------------------------------------
@@ -2523,19 +2751,125 @@ class Categorical(GroupByOps, FastArray):
     # -----------------------------------------------------------------------------------
     @property
     def invalid_category(self):
-        """The value considered invalid. Not the same as filtered (which are marked with bin 0).
+        """
+        The `Categorical` object's invalid category.
 
-        Invalid category may still be part of the unique values.
+        An invalid category is specified when the `Categorical` is created or set
+        afterward using `Categorical.invalid_set`. An invalid category is different
+        from a Filtered category or a NaN value.
+
+        Returns
+        -------
+        str or int or float or None
+            The invalid category of the `Categorical`. Returns `None` if there's
+            no invalid category.
 
         See Also
         --------
-        Categorical.filtered_name
+        Categorical.filtered_name :
+            Item displayed when a 0 bin is encountered in a `Categorical`.
+        Categorical.isnan :
+            Find the invalid elements of a `Categorical`.
+        Categorical.isnotnan :
+            Find the valid elements of a `Categorical.`
+
+        Examples
+        --------
+        >>> c = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="b")
+        >>> c
+        Categorical([b, a, c, b, c]) Length: 5
+          FastArray([2, 1, 3, 2, 3], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c.invalid_category
+        'b'
+        >>> c.isnan()  # Returns True for invalid category.
+        FastArray([ True, False, False,  True, False])
+
+        Invalid categories are different from Filtered categories:
+
+        >>> f = rt.FA([False, True, True, False, True])
+        >>> c2 = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="a", filter=f)
+        >>> c2
+        Categorical([Filtered, a, c, Filtered, c]) Length: 5
+          FastArray([0, 1, 2, 0, 2], dtype=int8) Base Index: 1
+          FastArray([b'a', b'c'], dtype='|S1') Unique count: 2
+        >>> c2.invalid_category
+        'a'
+        >>> c2.isnan()  # Show which values are in the invalid category.
+        FastArray([False,  True, False, False, False])
+        >>> c2.isfiltered()  # Show which values are Filtered.
+        FastArray([ True, False, False,  True, False])
+
+        Invalid categories in a `Categorical` are different from regular integer NaN
+        values. An integer NaN is a valid category and is `False` for ``Cat.isnan()``:
+
+        >>> a = rt.FA([1, 2, 3, 4])
+        >>> a[3] = a.inv  # Set the last value to an integer NaN.
+        >>> a
+        FastArray([          1,           2,           3, -2147483648])
+        >>> c3 = rt.Categorical(values=a, invalid=2)  # Make 2 an invalid category.
+        >>> c3
+        Categorical([1, 2, 3, -2147483648]) Length: 4
+          FastArray([2, 3, 4, 1], dtype=int8) Base Index: 1
+          FastArray([-2147483648,           1,           2,           3]) Unique count: 4
+        >>> c3.invalid_category()
+        2
+        >>> c3.isnan()  # Only the invalid category returns True for Cat.isnan.
+        FastArray([False,  True, False, False])
+        >>> c3.expand_array.isnan()  # Only the integer NaN returns True for FA.isnan.
+        FastArray([False, False, False,  True])
         """
         return self._categories_wrap._invalid_category
 
     def invalid_set(self, inv: Union[bytes, str]) -> None:
         """
-        Set a new string to be displayed for invalid items.
+        Set a `Categorical` category to be invalid.
+
+        An invalid category is specified when the `Categorical` is created or set
+        afterward using `Categorical.invalid_set`. An invalid category is different
+        from a Filtered category or a NaN value.
+
+        If there's an existing invalid category in the `Categorical`, using
+        `Categorical.invalid_set` to set a different category causes the existing
+        invalid category to become valid.
+
+        Parameters
+        ----------
+        inv : str or bytes
+            The category to be made invalid.
+
+        Returns
+        -------
+        None
+
+        See Also
+        --------
+        Categorical.isnan :
+            Find the invalid elements of a `Categorical`.
+        Categorical.isnotnan :
+            Find the valid elements of a `Categorical.`
+        Categorical.invalid_category : The `Categorical` object's invalid category.
+
+        Examples
+        --------
+        >>> c = rt.Categorical(values=["b", "a", "c", "b", "c"])
+        >>> c
+        Categorical([b, a, c, b, c]) Length: 5
+          FastArray([2, 1, 3, 2, 3], dtype=int8) Base Index: 1
+          FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
+        >>> c.invalid_set("b")
+        >>> c.invalid_category
+        'b'
+        >>> c.isnan()  # Returns True for invalid category.
+        FastArray([ True, False, False,  True, False])
+
+        Set a new invalid category:
+
+        >>> c.invalid_set("a")
+        >>> c.invalid_category
+        'a'
+        >>> c.isnan()
+        FastArray([False,  True, False, False, False])
         """
         if isinstance(inv, bytes):
             inv.decode()

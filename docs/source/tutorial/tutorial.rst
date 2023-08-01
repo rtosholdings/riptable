@@ -35,4 +35,10 @@ Appendix
    tutorial_cat_reduce
    tutorial_cat_adv_instantiation
    
+More In-Depth Topics
+--------------------
+.. toctree::
+   :maxdepth: 1
+
+   categoricals_user_guide
    

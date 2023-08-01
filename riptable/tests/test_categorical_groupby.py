@@ -148,8 +148,23 @@ gb_funcs_L1 = [
     "nanvar",
     "nanstd",
 ]
-gb_funcs_L2 = ["first", "last", "median", "mode", "nanmedian"]
-gb_funcs_L3 = ["cumsum", "cumprod"]
+gb_funcs_L2 = [
+    "first",
+    "last",
+    "median",
+    "mode",
+    "nanmedian",
+]
+gb_funcs_L3 = [
+    "cumsum",
+    "cumprod",
+]
+if get_rc_version() >= parse_version("1.13.2a"):
+    gb_funcs_L3 += [
+        "cummax",
+        "cummin",
+    ]
+
 all_gb_ops = gb_funcs_L1 + gb_funcs_L2 + gb_funcs_L3
 
 all_gb_kwargs = {func: [{}] for func in all_gb_ops}

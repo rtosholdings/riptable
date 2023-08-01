@@ -1,10 +1,13 @@
 import unittest
 import pytest
 import itertools
+import numpy as np
 from numpy.random import default_rng
+
 from riptable import *
 import riptable as rt
 from riptable.rt_numpy import QUANTILE_METHOD_NP_KW, gb_np_quantile, np_rolling_nanquantile
+from riptable.tests.utils import get_rc_version, parse_version
 
 from numpy.testing import (
     assert_array_equal,
@@ -451,6 +454,88 @@ category = {category}"""
                 assert_almost_equal(data_res_max.astype(float)[0], data_res_max_np, err_msg=err_msg())
                 assert_almost_equal(data_res_nanmin.astype(float)[0], data_res_nanmin_np, err_msg=err_msg())
                 assert_almost_equal(data_res_nanmax.astype(float)[0], data_res_nanmax_np, err_msg=err_msg())
+
+    @pytest.mark.skipif(get_rc_version() < parse_version("1.13.2a"), reason="cummin/max not implemented", strict=False)
+    @pytest.mark.parametrize("N", [1, 5, 97, 2643])
+    @pytest.mark.parametrize("N_cat", [1, 10, 45])
+    @pytest.mark.parametrize("nan_fraction", [0.0, 0.5, 1.0])
+    @pytest.mark.parametrize("skipna", [True, False])
+    def test_groupbyops_cum_min_max(self, N, N_cat, nan_fraction, skipna):
+        this_seed = (N * N_cat * int(nan_fraction * 1000)) % 10_000
+        rng = default_rng(this_seed)
+
+        ds = Dataset({"categ": rng.integers(0, N_cat, size=N)})
+        ds["categ"] = Cat(ds["categ"])
+        categories = ds.categ._grouping.uniquelist[0]
+
+        float_types = [np.float32, np.float64]
+        integral_types = [
+            np.int8,
+            np.uint8,
+            np.int16,
+            np.uint16,
+            np.int32,
+            np.uint32,
+            np.int64,
+            np.uint64,
+        ]
+        bool_types = [np.bool_]
+
+        all_types = float_types + integral_types + bool_types
+
+        type_dict = {np.dtype(t).char: t for t in all_types}
+
+        for char, data_type in type_dict.items():
+            if data_type in float_types:
+                ds[f"data_{char}"] = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
+                ds[f"data_{char}"] = ds[f"data_{char}"].astype(data_type)
+
+                if nan_fraction > 0:
+                    ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = np.nan
+                    ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = np.inf
+                    ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = -np.inf
+
+            elif data_type in integral_types:
+                ds[f"data_{char}"] = rng.integers(-10_000, 10_000, size=N)
+                ds[f"data_{char}"] = ds[f"data_{char}"].astype(data_type)
+                ds[f"data_{char}"][rng.random(size=N) < nan_fraction] = np.nan
+            else:
+                ds[f"data_{char}"] = rng.choice([True, False], size=N)
+                ds[f"data_{char}"] = ds[f"data_{char}"].astype(data_type)
+
+        dscummin = ds.categ.cummin(ds, skipna=skipna)
+        dscummax = ds.categ.cummax(ds, skipna=skipna)
+
+        cols = [c for c in ds if c.startswith("data_")]  # ["data_d", "data_l"]  # np.float64 and np.int64
+
+        main_cols = ["data_d", "data_l", "data_?"]
+
+        def err_msg():
+            return f"""
+N = {N}
+N_cat = {N_cat}
+nan_fraction = {nan_fraction}
+column = {column}
+category = {category}"""
+
+        for column in cols:
+            assert dscummin[column].dtype == ds[column].dtype
+            assert dscummax[column].dtype == ds[column].dtype
+            # if column not in main_cols:
+            #     continue
+            for category in rng.choice(categories, min(len(categories), 3)):
+                data_res_cummin = dscummin[column][ds.categ == category]
+                data_res_cummax = dscummax[column][ds.categ == category]
+                curr_slice = ds.filter(ds.categ == category)[column].astype(float)._np
+                if skipna:
+                    data_res_cummin_np = np.fmin.accumulate(curr_slice)
+                    data_res_cummax_np = np.fmax.accumulate(curr_slice)
+                else:
+                    data_res_cummin_np = np.minimum.accumulate(curr_slice)
+                    data_res_cummax_np = np.maximum.accumulate(curr_slice)
+                # make answer float to transform integer invalids into np.nans for comparison
+                assert_array_almost_equal(data_res_cummin.astype(float), data_res_cummin_np, err_msg=err_msg())
+                assert_array_almost_equal(data_res_cummax.astype(float), data_res_cummax_np, err_msg=err_msg())
 
     @pytest.mark.parametrize(
         "N, N_cat, window, q, nan_fraction, inf_fraction, minus_inf_fraction, dtype",

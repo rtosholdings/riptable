@@ -4,6 +4,7 @@ import unittest
 import pandas as pd
 
 import riptable as rt
+from riptable.tests.utils import get_rc_version, parse_version
 
 functions_str = [
     "count",
@@ -17,12 +18,16 @@ functions_str = [
     "quantile",
     "cumsum",
     "cumprod",
-    # 'cummax',
-    # 'cummin'
     "first",
     "last",
     # 'mode'
 ]
+
+if get_rc_version() >= parse_version("1.13.2a"):
+    functions_str += [
+        "cummax",
+        "cummin",
+    ]
 
 # dictionary of {func_name : (rt_cat_kwargs, pd_gb_kwargs)}
 functions_kwargs = {"quantile": ({"q": 0.84}, {"q": 0.84, "interpolation": "midpoint"})}

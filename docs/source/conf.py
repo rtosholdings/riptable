@@ -59,8 +59,6 @@ napoleon_use_param = True
 napoleon_use_rtype = True
 napoleon_type_aliases = None
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -87,6 +85,21 @@ master_doc = "index"
 
 autoapi_dirs = ["../../riptable"]
 autoapi_ignore = ["*test*", "*benchmarks*"]
+
+# When using AutoAPI, use autoapi_template_dir (see below).
+# templates_path = ["_templates"]
+
+# https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#customise-templates
+autoapi_template_dir = "_autoapi_templates"
+
+# Setting autoapi_add_toctree_entry = False prevents a table of contents entry for the
+# API Reference (/riptable/riptable/autoapi/index.html) from being automatically created.
+# See https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#how-to-remove-the-index-page.
+# That API Reference page doesn't seem to allow any sidebar TOC entries.
+# Instead, manually add a link to /autoapi/riptable/index in /docs/source/index.rst as
+# suggested at the sphinx-autoapi link above. This link goes to /autoapi/riptable/index.html
+# -- a page that is generated using an AutoAPI template, which can be customized (see above).
+autoapi_add_toctree_entry = False
 
 # Remove typehints from html
 autodoc_typehints = "none"

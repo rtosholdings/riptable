@@ -45,6 +45,8 @@ class GroupByOps(ABC):
     AggNames = {
         "count",
         "cumsum",
+        "cummin",
+        "cummax",
         "first",
         "last",
         "max",
@@ -3143,6 +3145,64 @@ class GroupByOps(ABC):
             GB_FUNCTIONS.GB_CUMSUM, *args, func_param=(0.0, None, filter, reset_filter), **kwargs
         )
 
+        # ---------------------------------------------------------------
+
+    def cummin(self, *args, filter=None, reset_filter=None, skipna=True, **kwargs):
+        """Cumulative nanmin for each group
+
+        Parameters
+        ----------
+        filter: optional, boolean mask array of included
+        reset_filter: optional, boolean mask array
+        skipna: boolean, default True
+            Exclude nan/invalid values.
+
+        Returns
+        -------
+        Dataset same rows as original dataset
+        """
+        if filter is None:
+            filter = self._filter
+
+        if kwargs.get("transform", False):
+            raise (ValueError("You can't pass transform=True to cummin."))
+
+        if skipna:
+            gb_function = GB_FUNCTIONS.GB_CUMNANMIN
+        else:
+            gb_function = GB_FUNCTIONS.GB_CUMMIN
+
+        return self._calculate_all(gb_function, *args, func_param=(0.0, None, filter, reset_filter), **kwargs)
+
+        # ---------------------------------------------------------------
+
+    def cummax(self, *args, filter=None, reset_filter=None, skipna=True, **kwargs):
+        """Cumulative nanmax for each group
+
+        Parameters
+        ----------
+        filter: optional, boolean mask array of included
+        reset_filter: optional, boolean mask array
+        skipna: boolean, default True
+            Exclude nan/invalid values.
+
+        Returns
+        -------
+        Dataset same rows as original dataset
+        """
+        if filter is None:
+            filter = self._filter
+
+        if kwargs.get("transform", False):
+            raise (ValueError("You can't pass transform=True to cummax."))
+
+        if skipna:
+            gb_function = GB_FUNCTIONS.GB_CUMNANMAX
+        else:
+            gb_function = GB_FUNCTIONS.GB_CUMMAX
+
+        return self._calculate_all(gb_function, *args, func_param=(0.0, None, filter, reset_filter), **kwargs)
+
     # ---------------------------------------------------------------
     def cumprod(self, *args, filter=None, reset_filter=None, **kwargs):
         """Cumulative product for each group
@@ -3565,16 +3625,6 @@ class GroupByOps(ABC):
         raise NotImplementedError
 
     # -------------------------------------------------------
-    def cummin(self, axis=0, **kwargs):
-        """Cumulative min for each group"""
-        raise NotImplementedError
-
-    # -------------------------------------------------------
-    def cummax(self, axis=0, **kwargs):
-        """Cumulative max for each group"""
-        raise NotImplementedError
-
-    # -------------------------------------------------------
     def shift(self, window=1, **kwargs):
         """
         Shift each group by periods observations
@@ -3696,6 +3746,8 @@ CPP_GB_TABLE = [
     (GBF.GB_EMADECAY, "ema_decay", GB_PACKUNPACK.PACK, GroupByOps.ema_decay, None, None, None, True),
     (GBF.GB_EMANORMAL, "ema_normal", GB_PACKUNPACK.PACK, GroupByOps.ema_normal, None, None, None, True),
     (GBF.GB_EMAWEIGHTED, "ema_weighted", GB_PACKUNPACK.PACK, GroupByOps.ema_weighted, None, None, None, True),
+    (GBF.GB_CUMMIN, "cummin", GB_PACKUNPACK.PACK, GroupByOps.cummin, None, None, None, True),
+    (GBF.GB_CUMMAX, "cummax", GB_PACKUNPACK.PACK, GroupByOps.cummax, None, None, None, True),
 ]
 
 # NOT DONE YET

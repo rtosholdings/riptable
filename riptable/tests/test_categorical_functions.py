@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
-import riptable as rt
 from typing import Tuple
 
 import pytest
 from numpy.testing import assert_array_almost_equal
 
 import riptable as rt
+from riptable.tests.utils import get_rc_version, parse_version
 
 
 def count(df, data=None):
@@ -61,6 +61,14 @@ def cummin(df, data=None):
     return df.cummin() if data is None else df.cummin(data)
 
 
+def cumnanmax(df, data=None):
+    return df.cummax(skipna=False) if data is None else df.cummax(data, skipna=False)
+
+
+def cumnanmin(df, data=None):
+    return df.cummin(skipna=False) if data is None else df.cummin(data, skipna=False)
+
+
 functions = [
     count,
     sum,
@@ -73,9 +81,14 @@ functions = [
     quantile,
     cumsum,
     cumprod,
-    # cummax,
-    # cummin
 ]
+if get_rc_version() >= parse_version("1.13.2a"):
+    functions += [
+        cummax,
+        cummin,
+        cumnanmax,
+        cumnanmin,
+    ]
 
 functions_str = [
     "count",
@@ -89,9 +102,14 @@ functions_str = [
     "quantile",
     "cumsum",
     "cumprod",
-    # 'cummax',
-    # 'cummin'
 ]
+if get_rc_version() >= parse_version("1.13.2a"):
+    functions_str += [
+        "cummax",
+        "cummin",
+        "cumnanmax",
+        "cumnanmin",
+    ]
 
 # list of (rt_cat_kwargs, pd_gb_kwargs)
 functions_kwargs = [
@@ -106,8 +124,10 @@ functions_kwargs = [
     ({"q": 0.1743}, {"q": 0.1743, "interpolation": "midpoint"}),
     ({}, {}),
     ({}, {}),
-    # ({}, {}),
-    # ({}, {}),
+    ({}, {}),
+    ({}, {}),
+    ({}, {}),
+    ({}, {}),
 ]
 
 type_list = [

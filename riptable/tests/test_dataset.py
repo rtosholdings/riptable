@@ -479,6 +479,39 @@ class TestDataset(unittest.TestCase):
         with self.assertRaises(KeyError):
             ds[[1, 2], ["F", "G"]] = 5
 
+        ds = Dataset({"time": [0], "symbol": ["a"]})
+        self.assertEqual(ds.shape, (1, 2))
+        ds[0, :] = Dataset({"time": [1], "symbol": ["b"]})
+        self.assertEqual(ds.shape, (1, 2))
+
+        ds = Dataset({"me": ["x"]})
+        ds2 = Dataset({"you": [42]})
+        ds["me"] = ds2
+        self.assertEqual(ds.shape, (1, 1))
+        self.assertEqual(ds.me[0], 42)
+
+        ds = Dataset({"me": [11]})
+        ds2 = Dataset({"you": [3.14]})
+        ds[0, :] = ds2
+        self.assertEqual(ds.shape, (1, 1))
+        self.assertEqual(ds.me[0], 3)
+
+        ds = Dataset({"me": [123]})
+        ds2 = Dataset({"you": [2.7]})
+        ds["True"] = ds2
+        self.assertEqual(ds.shape, (1, 2))
+        self.assertEqual(ds.true, [2.7])
+
+        ds = Dataset({"me": [11]})
+        ds2 = Dataset({"you": [2.7, 3.14]})
+        with self.assertRaises(TypeError):  # raised during column assignment...
+            ds["True"] = ds2
+
+        ds = Dataset({"me": [11]})
+        ds2 = Dataset({"you": [2.7, 3.14]})
+        with self.assertRaises(NotImplementedError):
+            ds[[0, 1], "True"] = ds2
+
         Struct.AllowAnyName = tempsave
 
     def test_broadcast(self):

@@ -422,8 +422,10 @@ The filtered category is entirely omitted from operations::
     B            14
 
 If you're creating a Categorical from integers and provided categories, another 
-way to filter a category is to map it to 0. The last category provided becomes 
-the 0/Filtered category::
+way to filter a category is to map it to 0. 
+
+Because 0 is reserved for the Filtered category, here 'a' is mapped to 1 and 'b' is 
+mapped to 2. And because there's no 3 to map to 'c', 'c' becomes Filtered::
 
     >>> c1 = rt.Categorical([0, 2, 1, 1, 0, 2, 2, 0], categories=['a','b','c'])
     >>> c1
@@ -1169,6 +1171,8 @@ Because the operations in this function are non-reducing operations, the
 resulting Dataset is expanded.
 
 Note that until a reported bug is fixed, column names might not persist through grouping operations.
+
+For more in-depth information about Categoricals, see the `Categoricals User Guide <categoricals_user_guide>`.
 
 In the next section, `Accums <tutorial_accums.rst>`__, we look at
 another way to do multi-key groupings with fancier output.

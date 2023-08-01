@@ -1224,6 +1224,9 @@ class Dataset(Struct):
         col_idx, row_idx, ncols, nrows, row_arg = self._extract_indexing(fld)
         if col_idx is None:
             col_idx = list(self.keys())
+        # Turn scalar row index into mask
+        if isinstance(row_idx, (int, np.integer)):
+            row_idx = [row_idx]
 
         # BUG: set item with dataset for only one column
         # print('col_idx',col_idx)
