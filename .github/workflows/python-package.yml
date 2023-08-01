@@ -74,7 +74,7 @@ jobs:
           activate-environment: "conda_build"
           python-version: ${{ env.python_version }}
           mamba-version: "*"
-          auto-update-conda: true
+          auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
           show-channel-urls: true
