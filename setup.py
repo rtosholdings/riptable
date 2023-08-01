@@ -8,7 +8,7 @@ install_requires = [
     "numpy >=1.23",
     "pandas >=1.0,<3.0",
     "python-dateutil",
-    "riptide_cpp >=1.12.2,<2",
+    "riptide_cpp >=1.14.0,<2",
 ]
 
 setup(

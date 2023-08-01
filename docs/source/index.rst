@@ -11,6 +11,7 @@ Welcome to Riptable's documentation!
    :caption: Contents:
    
    tutorial/tutorial
+   API Reference <autoapi/riptable/index>
 
 
 

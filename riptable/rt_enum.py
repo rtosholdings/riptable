@@ -526,6 +526,10 @@ class GB_FUNCTIONS(IntEnum):
     GB_FINDNTH = 303
     GB_EMANORMAL = 304
     GB_EMAWEIGHTED = 305
+    GB_CUMNANMAX = 306
+    GB_CUMNANMIN = 307
+    GB_CUMMAX = 308
+    GB_CUMMIN = 309
 
 
 # some groupby functions will work for strings

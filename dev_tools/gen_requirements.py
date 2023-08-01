@@ -33,8 +33,8 @@ if is_linux():
     toolchain_reqs += [
         "binutils",
         "binutils_linux-64",
-        "gcc==8.*",
-        "gxx==8.*",
+        "gcc==10.*",
+        "gxx==10.*",
         "ninja",
     ]
 
