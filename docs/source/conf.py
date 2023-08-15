@@ -101,6 +101,10 @@ autoapi_template_dir = "_autoapi_templates"
 # -- a page that is generated using an AutoAPI template, which can be customized (see above).
 autoapi_add_toctree_entry = False
 
+# Order members by their type then alphabetically.
+# https://sphinx-autoapi.readthedocs.io/en/latest/reference/config.html#confval-autoapi_member_order
+autoapi_member_order = "groupwise"
+
 # Remove typehints from html
 autodoc_typehints = "none"
 

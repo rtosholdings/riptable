@@ -35,6 +35,7 @@ from .rt_datetime import (
     TimeSpan,
     TimeSpanScalar,
 )
+from .rt_timezone import TimeZone
 from .rt_display import DisplayDetect, DisplayString, DisplayTable
 from .rt_enum import (
     DS_DISPLAY_TYPES,
@@ -3007,8 +3008,7 @@ class Dataset(Struct):
                 data[key]: pd.Categorical = pd.Categorical.from_codes(codes, categories=categories)
             elif isinstance(col, TypeRegister.DateTimeNano):
                 utc_datetime = pd.DatetimeIndex(col, tz="UTC")
-                tz = _RIPTABLE_TO_PANDAS_TZ[col._timezone._to_tz]
-                tz_datetime = utc_datetime.tz_convert(tz)
+                tz_datetime = utc_datetime.tz_convert(col._timezone._to_tz)
                 data[key] = tz_datetime
             elif isinstance(col, TypeRegister.TimeSpan):
                 data[key] = pd.to_timedelta(col._np)
@@ -3122,11 +3122,7 @@ class Dataset(Struct):
                 data[key] = np.asarray(col.fillna(INVALID_DICT[dtype.numpy_dtype.num]), dtype=dtype.numpy_dtype)
             elif dtype_kind == "M":
                 try:
-                    ptz = str(dtype.tz)
-                    try:
-                        _tz = _PANDAS_TO_RIPTABLE_TZ[ptz]
-                    except KeyError:
-                        raise ValueError("Unable to convert a datetime array with timezone={}".format(ptz))
+                    _tz = str(dtype.tz)
                 except AttributeError:
                     _tz = tz
                 data[key] = TypeRegister.DateTimeNano(np.asarray(col, dtype="i8"), from_tz="UTC", to_tz=_tz)
@@ -6389,7 +6385,7 @@ class Dataset(Struct):
 
     # --------------------------------------------------------------------------
     @classmethod
-    def concat_rows(cls: "Dataset", ds_list: Iterable["Dataset"], destroy: bool = False) -> "Dataset":
+    def concat_rows(cls: type["Dataset"], ds_list: Iterable["Dataset"], destroy: bool = False) -> "Dataset":
         """
         Stack columns from multiple `Dataset` objects vertically (row-wise).
 
@@ -6507,7 +6503,9 @@ class Dataset(Struct):
 
     # --------------------------------------------------------------------------
     @classmethod
-    def concat_columns(cls: "Dataset", dsets, do_copy: bool, on_duplicate: str = "raise", on_mismatch: str = "warn"):
+    def concat_columns(
+        cls: type["Dataset"], dsets, do_copy: bool, on_duplicate: str = "raise", on_mismatch: str = "warn"
+    ):
         r"""
         Stack columns from multiple `Dataset` objects horizontally (column-wise).
 
@@ -7776,9 +7774,6 @@ class Dataset(Struct):
 
         return result
 
-
-_RIPTABLE_TO_PANDAS_TZ = {"UTC": "UTC", "NYC": "US/Eastern", "DUBLIN": "Europe/Dublin", "GMT": "GMT"}
-_PANDAS_TO_RIPTABLE_TZ = dict([(v, k) for (k, v) in _RIPTABLE_TO_PANDAS_TZ.items()])
 
 # keep this as the last line
 from .rt_enum import TypeRegister

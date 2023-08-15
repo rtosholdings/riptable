@@ -54,7 +54,6 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-riptable/tests/temp/
 test-output/
 
 # Translations

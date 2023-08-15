@@ -6277,7 +6277,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         # Convert the pyarrow array's timezone (id from tz database) to a riptable TZ string,
         # then set that on the output array.
-        from_tz_str = TypeRegister.TimeZone.normalize_tz_to_short_name(arr.type.tz)
+        from_tz_str = TypeRegister.TimeZone.normalize_tz_to_tzdb_name(arr.type.tz)
 
         # Create a view of the underlying data as int64 epoch-nanoseconds.
         arr_int64 = arr.view(pa.int64())

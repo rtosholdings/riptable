@@ -900,6 +900,78 @@ Australia__Sydney_OFFSET_DST = -11
 Australia__Sydney_OFFSET = -10
 
 
+# Hong Kong had intermittent DST until 1979.
+# The following was sourced from https://www.hko.gov.hk/en/gts/time/Summertime.htm
+
+DST_CUTOFFS_Asia__Hong_Kong = FastArray(
+    [
+        "1970-04-19 03:30:00",
+        "1970-10-18 03:30:00",
+        "1971-04-18 03:30:00",
+        "1971-10-17 03:30:00",
+        "1972-04-16 03:30:00",
+        "1972-10-22 03:30:00",
+        "1973-04-22 03:30:00",
+        "1973-10-21 03:30:00",
+        "1973-12-30 03:30:00",
+        "1974-10-20 03:30:00",
+        "1975-04-20 03:30:00",
+        "1975-10-19 03:30:00",
+        "1976-04-18 03:30:00",
+        "1976-10-17 03:30:00",
+        "1979-05-13 03:30:00",
+        "1979-10-21 03:30:00",
+    ]
+)
+
+DST_REVERSE_Asia__Hong_Kong = FastArray(
+    [
+        "1970-04-18 19:30:00",
+        "1970-10-17 18:30:00",
+        "1971-04-17 19:30:00",
+        "1971-10-16 18:30:00",
+        "1972-04-15 19:30:00",
+        "1972-10-21 18:30:00",
+        "1973-04-21 19:30:00",
+        "1973-10-20 18:30:00",
+        "1973-12-29 19:30:00",
+        "1974-10-19 18:30:00",
+        "1975-04-19 19:30:00",
+        "1975-10-18 18:30:00",
+        "1976-04-17 19:30:00",
+        "1976-10-16 18:30:00",
+        "1979-05-12 19:30:00",
+        "1979-10-20 18:30:00",
+    ]
+)
+
+Asia__Hong_Kong_OFFSET_DST = -9
+Asia__Hong_Kong_OFFSET = -8
+
+Asia__Tokyo_OFFSET = -9
+
+DST_CUTOFFS_Asia__Seoul = FastArray(
+    [
+        "1987-05-10 02:00:00",
+        "1987-10-11 03:00:00",
+        "1988-05-08 02:00:00",
+        "1988-10-09 03:00:00",
+    ]
+)
+
+DST_REVERSE_Asia__Seoul = FastArray(
+    [
+        "1987-05-09 17:00:00",
+        "1987-10-10 17:00:00",
+        "1988-05-07 17:00:00",
+        "1988-10-08 17:00:00",
+    ]
+)
+
+Asia__Seoul_OFFSET_DST = -10
+Asia__Seoul_OFFSET = -9
+
+
 class TimeZone:
     """
     Stores daylight savings cutoff information so UTC times can be translated to zone-specific times.
@@ -914,13 +986,13 @@ class TimeZone:
     Attributes
     ----------
     _from_tz : str
-        shorthand timezone string from the constructor - the timezone that the time originates from
+        tz databse timezone name - the timezone that the time originates from
     _dst_cutoffs : numpy.ndarray
         lookup array for converting times from constructor to UTC nano in GMT time
     _to_tz : str
-        shorthand timezone string from the constructor - the timezone that the time will be displayed in
+        tz database timezone name - the timezone that the time will be displayed in
     _timezone_str
-        Python-friendly timezone string used for displaying individual times.
+        same as _to_str.
         NOTE: This is actually a property, not a regular attribute.
     _dst_reverse : numpy.ndarray
         lookup array for DateTimeNano to display time in the correct timezone, accounting for daylight savings.
@@ -934,28 +1006,32 @@ class TimeZone:
     'UTC' is not a timezone, but accepted as an alias for GMT
     """
 
-    _short_to_long_timezone_names = {
+    # These are supported aliases for the long tz names, only used for input.
+    _ALIAS_TIMEZONE_NAMES = {
         "NYC": "America/New_York",
         "DUBLIN": "Europe/Dublin",
-        # Everything below here must be a valid tz database identifier;
-        # the key and value should be the same for each entry.
-        "GMT": "GMT",
-        "UTC": "UTC",
-        "Australia/Sydney": "Australia/Sydney",
+        "Sydney": "Australia/Sydney",
+        "Hongkong": "Asia/Hong_Kong",
+        "Tokyo": "Asia/Tokyo",
+        "Seoul": "Asia/Seoul",
     }
-    _long_to_short_timezone_names = {
-        "America/New_York": "NYC",
-        "Europe/Dublin": "DUBLIN",
-        # Everything below here must be a valid tz database identifier;
-        # the key and value should be the same for each entry.
-        "UTC": "UTC",
-        "GMT": "GMT",
-        "Australia/Sydney": "Australia/Sydney",
-    }
-    # TODO: Assert `short_to_long_timezone_names` and `long_to_short_timezone_names` form a bimap (bijective map).
-    valid_timezones = tuple(
-        sorted(set(_short_to_long_timezone_names.keys()).union(_long_to_short_timezone_names.keys()))
-    )
+
+    # These are supported tz database names (tz identifiers).
+    # This will be replaced by idenfiers loaded from the tz database.
+    _TZDB_TIMEZONE_NAMES = [
+        "America/New_York",
+        "Europe/Dublin",
+        "UTC",
+        "GMT",
+        "Australia/Sydney",
+        "Asia/Hong_Kong",
+        "Asia/Tokyo",
+        "Asia/Seoul",
+    ]
+
+    # These are all the supported tz names.
+    valid_timezones = tuple(sorted(set(_TZDB_TIMEZONE_NAMES).union(_ALIAS_TIMEZONE_NAMES.keys())))
+
     tz_error_msg = f"If constructing from strings specify a timezone in `from_tz` keyword. Valid options: {valid_timezones}. Example: dtn = DateTimeNano(['2018-12-13 10:30:00'], from_tz='NYC')"
 
     # ------------------------------------------------------------
@@ -963,64 +1039,52 @@ class TimeZone:
         if from_tz is None:
             raise ValueError(self.tz_error_msg)
 
-        # might not need these, but hang on to them for now
-        # Normalize timezone names to 'short' names, because that's what some code
-        # in this class (and other parts of riptable) assumes will be used.
-        self._from_tz = TimeZone.normalize_tz_to_short_name(from_tz)
-        self._to_tz = TimeZone.normalize_tz_to_short_name(to_tz)
+        # Normalize timezone names to tzdb names, for storage and display.
+        self._from_tz = TimeZone.normalize_tz_to_tzdb_name(from_tz)
+        self._to_tz = TimeZone.normalize_tz_to_tzdb_name(to_tz)
 
         # get appropriate daylight savings dictionaries
         self._dst_cutoffs, self._fix_offset = self._init_from_tz(self._from_tz)
         self._dst_reverse, self._offset = self._init_to_tz(self._to_tz)
 
     @staticmethod
-    def normalize_tz_to_short_name(tz_name: str) -> str:
-        # Internal code expects the "short" (riptable) timezone strings,
-        # so if this is a "long" (tz database) timezone name, convert it
-        # to the short name before storing it.
-        if tz_name in TimeZone._short_to_long_timezone_names:
-            # Already a short name, return it.
-            return tz_name
-
-        # Maybe this is a "long" (tz database) timezone name;
-        # try converting to the short name.
-        tz_short_name = TimeZone._long_to_short_timezone_names.get(tz_name, None)
-        if tz_short_name is not None:
-            return tz_short_name
-
-        raise KeyError(
-            f"The timezone name '{tz_name}' is not recognized as either a 'short' (riptable) or 'long' (tz database) timezone name."
-        )
-
-    @staticmethod
     def normalize_tz_to_tzdb_name(tz_name: str) -> str:
-        if tz_name in TimeZone._long_to_short_timezone_names:
-            # Already a short name, return it.
+        if tz_name in TimeZone._TZDB_TIMEZONE_NAMES:
+            # Already a long name, return it.
             return tz_name
 
-        # Maybe this is a "long" (tz database) timezone name;
-        # try converting to the short name.
-        tz_long_name = TimeZone._short_to_long_timezone_names.get(tz_name, None)
+        # Maybe this is an alias timezone name;
+        # try converting to the long name.
+        tz_long_name = TimeZone._ALIAS_TIMEZONE_NAMES.get(tz_name, None)
         if tz_long_name is not None:
             return tz_long_name
 
-        raise KeyError(
-            f"The timezone name '{tz_name}' is not recognized as either a 'short' (riptable) or 'long' (tz database) timezone name."
+        raise ValueError(
+            f"The timezone name '{tz_name}' is not recognized as either a tz database timezone name or an alias timezone name."
         )
 
     # ------------------------------------------------------------
     @classmethod
     def _init_from_tz(cls, from_tz: str):
         # TODO: as we add more timezone support, put into a dictionary
-        if from_tz == "NYC" or from_tz == "America/New_York":
+        if from_tz == "America/New_York":
             _dst_cutoffs = DST_CUTOFFS_NYC
             _fix_offset = NYC_OFFSET
-        elif from_tz == "DUBLIN" or from_tz == "Europe/Dublin":
+        elif from_tz == "Europe/Dublin":
             _dst_cutoffs = DST_CUTOFFS_DUBLIN
             _fix_offset = DUBLIN_OFFSET
         elif from_tz == "Australia/Sydney":
             _dst_cutoffs = DST_CUTOFFS_Australia__Sydney
             _fix_offset = Australia__Sydney_OFFSET
+        elif from_tz == "Asia/Hong_Kong":
+            _dst_cutoffs = DST_CUTOFFS_Asia__Hong_Kong
+            _fix_offset = Asia__Hong_Kong_OFFSET
+        elif from_tz == "Asia/Tokyo":
+            _dst_cutoffs = None
+            _fix_offset = Asia__Tokyo_OFFSET
+        elif from_tz == "Asia/Seoul":
+            _dst_cutoffs = DST_CUTOFFS_Asia__Seoul
+            _fix_offset = Asia__Seoul_OFFSET
         elif from_tz in ("GMT", "UTC"):
             _dst_cutoffs = None
             _fix_offset = 0
@@ -1042,17 +1106,29 @@ class TimeZone:
         """
         # TODO: as we add more timezone support, put into a dictionary
         # probably dont need _timezone_str
-        if to_tz == "NYC" or to_tz == "America/New_York":
+        if to_tz == "America/New_York":
             _dst_reverse = DST_REVERSE_NYC
             _timezone_offset = NYC_OFFSET
 
-        elif to_tz == "DUBLIN" or to_tz == "Europe/Dublin":
+        elif to_tz == "Europe/Dublin":
             _dst_reverse = DST_REVERSE_DUBLIN
             _timezone_offset = DUBLIN_OFFSET
 
         elif to_tz == "Australia/Sydney":
             _dst_reverse = DST_REVERSE_Australia__Sydney
             _timezone_offset = Australia__Sydney_OFFSET
+
+        elif to_tz == "Asia/Hong_Kong":
+            _dst_reverse = DST_REVERSE_Asia__Hong_Kong
+            _timezone_offset = Asia__Hong_Kong_OFFSET
+
+        elif to_tz == "Asia/Tokyo":
+            _dst_reverse = None
+            _timezone_offset = Asia__Tokyo_OFFSET
+
+        elif to_tz == "Asia/Seoul":
+            _dst_reverse = DST_REVERSE_Asia__Seoul
+            _timezone_offset = Asia__Seoul_OFFSET
 
         elif to_tz in ("GMT", "UTC"):
             _dst_reverse = None
@@ -1066,14 +1142,15 @@ class TimeZone:
     # ------------------------------------------------------------
     @property
     def _timezone_str(self):
-        """Get the name for this timezone within the 'tz' database."""
-        return self._short_to_long_timezone_names[self._to_tz]
+        """Get _to_tz, which is the name for this timezone within the 'tz' database."""
+        return self._to_tz
 
     # ------------------------------------------------------------
     def _set_timezone(self, tz):
         """
         See DateTimeNano.set_timezone()
         """
+        tz = TimeZone.normalize_tz_to_tzdb_name(tz)
         self._dst_reverse, self._offset = self._init_to_tz(tz)
         self._to_tz = tz
 
@@ -1174,7 +1251,8 @@ class TimeZone:
             cutoffs = self._dst_reverse
 
         if cutoffs is None:
-            return arr
+            # If the timezone has never had DST we still need to adjust (e.g. Asia/Tokyo).
+            return arr - (NANOS_PER_HOUR * self._offset)
 
         # get whether or not daylight savings
         is_dst = self._mask_dst(arr, cutoffs=cutoffs)
@@ -1237,6 +1315,12 @@ DST_REVERSE_DUBLIN = rc.DateTimeStringToNanos(DST_REVERSE_DUBLIN)
 
 DST_CUTOFFS_Australia__Sydney = rc.DateTimeStringToNanos(DST_CUTOFFS_Australia__Sydney)
 DST_REVERSE_Australia__Sydney = rc.DateTimeStringToNanos(DST_REVERSE_Australia__Sydney)
+
+DST_CUTOFFS_Asia__Hong_Kong = rc.DateTimeStringToNanos(DST_CUTOFFS_Asia__Hong_Kong)
+DST_REVERSE_Asia__Hong_Kong = rc.DateTimeStringToNanos(DST_REVERSE_Asia__Hong_Kong)
+
+DST_CUTOFFS_Asia__Seoul = rc.DateTimeStringToNanos(DST_CUTOFFS_Asia__Seoul)
+DST_REVERSE_Asia__Seoul = rc.DateTimeStringToNanos(DST_REVERSE_Asia__Seoul)
 
 TypeRegister.TimeZone = TimeZone
 TypeRegister.Calendar = Calendar

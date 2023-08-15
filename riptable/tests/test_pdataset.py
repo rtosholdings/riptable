@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 
 import pytest
@@ -71,49 +72,45 @@ class PDataset_Test(unittest.TestCase):
         correct_auto = ["p0", "p1", "p2"]
         correct_custom = ["test1", "test2", "test3"]
         ds = Dataset({"col_" + str(i): arange(5) for i in range(5)})
-        paths = [rb"riptable/tests/temp/ds" + str(i).encode() + b".sds" for i in range(3)]
-        for i in range(3):
-            ds.save(paths[i])
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            paths = [f"{tmpdirname}/temp/ds{i}.sds".encode() for i in range(3)]
+            for i in range(3):
+                ds.save(paths[i])
 
-        # filepath only (found changing number)
-        pds = PDataset(paths)
-        self.assertTrue(pds._pfilenames == paths)
-        self.assertTrue(
-            bool(np.all(pds.pnames == ["0", "1", "2"])),
-            msg=f"{pds.pnames} vs. {correct_auto}",
-        )
-        self.assertTrue(bool(np.all(pds.pcutoffs == correct_cutoffs)))
-        self.assertEqual(pds.pcount, 3)
-        self.assertEqual(pds._nrows, 15)
-        self.assertTrue(isinstance(pds._pnames, dict))
+            # filepath only (found changing number)
+            pds = PDataset(paths)
+            self.assertTrue(pds._pfilenames == paths)
+            self.assertTrue(
+                bool(np.all(pds.pnames == ["0", "1", "2"])),
+                msg=f"{pds.pnames} vs. {correct_auto}",
+            )
+            self.assertTrue(bool(np.all(pds.pcutoffs == correct_cutoffs)))
+            self.assertEqual(pds.pcount, 3)
+            self.assertEqual(pds._nrows, 15)
+            self.assertTrue(isinstance(pds._pnames, dict))
 
-        # filepath with custom pnames
-        pds = PDataset(paths, pnames=correct_custom)
-        self.assertTrue(pds._pfilenames == paths)
-        self.assertTrue(
-            bool(np.all(pds.pnames == correct_custom)),
-            msg=f"{pds.pnames} vs. {correct_auto}",
-        )
-        self.assertTrue(bool(np.all(pds.pcutoffs == correct_cutoffs)))
-        self.assertEqual(pds.pcount, 3)
-        self.assertEqual(pds._nrows, 15)
-        self.assertTrue(isinstance(pds._pnames, dict))
-
-        for p in paths:
-            os.remove(p)
+            # filepath with custom pnames
+            pds = PDataset(paths, pnames=correct_custom)
+            self.assertTrue(pds._pfilenames == paths)
+            self.assertTrue(
+                bool(np.all(pds.pnames == correct_custom)),
+                msg=f"{pds.pnames} vs. {correct_auto}",
+            )
+            self.assertTrue(bool(np.all(pds.pcutoffs == correct_cutoffs)))
+            self.assertEqual(pds.pcount, 3)
+            self.assertEqual(pds._nrows, 15)
+            self.assertTrue(isinstance(pds._pnames, dict))
 
     def test_files_no_dates(self):
         ds = Dataset({"col_" + str(i): arange(5) for i in range(5)})
         correct_auto = ["p0", "p1", "p2"]
-        paths = [rb"riptable/tests/temp/ds" + str(i).encode() + b".sds" for i in ["a", "b", "c"]]
-        for i in range(3):
-            ds.save(paths[i])
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            paths = [f"{tmpdirname}/temp/ds{i}.sds".encode() for i in ["a", "b", "c"]]
+            for i in range(3):
+                ds.save(paths[i])
 
-        pds = PDataset(paths)
-        self.assertTrue(bool(np.all(pds.pnames == correct_auto)))
-
-        for p in paths:
-            os.remove(p)
+            pds = PDataset(paths)
+            self.assertTrue(bool(np.all(pds.pnames == correct_auto)))
 
     @pytest.mark.skip(reason="this test no longer works and is disabled")
     def test_constructor_errors(self):
@@ -263,17 +260,15 @@ class PDataset_Test(unittest.TestCase):
 
         correct_files = ["f20180201.sds", "f20180202.sds", "f20180203.sds"]
         correct_dates = ["20180201", "20180202", "20180203"]
-        path = "riptable/tests/temp/f{}.sds"
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            path = tmpdirname + "/temp/f{}.sds"
 
-        for i, fname in enumerate(correct_files):
-            dlist[i].save(r"riptable/tests/temp/" + fname)
+            for i, fname in enumerate(correct_files):
+                dlist[i].save(tmpdirname + "/temp/" + fname)
 
-        pds = PDataset.pload(path, 20180201, 20180203)
-        self.assertEqual(pds.pcount, 3)
-        self.assertTrue(bool(np.all(pds.pnames == correct_dates)))
-
-        for i, fname in enumerate(correct_files):
-            os.remove(r"riptable/tests/temp/" + fname)
+            pds = PDataset.pload(path, 20180201, 20180203)
+            self.assertEqual(pds.pcount, 3)
+            self.assertTrue(bool(np.all(pds.pnames == correct_dates)))
 
     def test_psave(self):
         ds1 = Dataset({"col_" + str(i): arange(5) for i in range(5)})

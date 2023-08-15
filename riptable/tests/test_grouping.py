@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 
 import pytest
@@ -349,23 +350,21 @@ class Grouping_Test(unittest.TestCase):
         ds1 = Dataset({"catcol": c1})
         ds2 = Dataset({"catcol": c2})
 
-        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
-        ds1.save(paths[0])
-        ds2.save(paths[1])
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            paths = [f"{tmpdirname}/temp/ds1.sds", f"{tmpdirname}/temp/ds2.sds"]
+            ds1.save(paths[0])
+            ds2.save(paths[1])
 
-        c_hstack = hstack([c1, c2])
-        self.assertTrue(isinstance(c_hstack, Categorical))
-        self.assertEqual(c_hstack.base_index, 0)
+            c_hstack = hstack([c1, c2])
+            self.assertTrue(isinstance(c_hstack, Categorical))
+            self.assertEqual(c_hstack.base_index, 0)
 
-        pds = load_sds(paths, stack=True)
-        self.assertTrue(isinstance(pds, PDataset))
-        c = pds.catcol
-        self.assertTrue(isinstance(c, Categorical))
-        self.assertEqual(c.base_index, 0)
-        self.assertTrue(arr_eq(c_hstack, c))
-
-        for p in paths:
-            os.remove(p)
+            pds = load_sds(paths, stack=True)
+            self.assertTrue(isinstance(pds, PDataset))
+            c = pds.catcol
+            self.assertTrue(isinstance(c, Categorical))
+            self.assertEqual(c.base_index, 0)
+            self.assertTrue(arr_eq(c_hstack, c))
 
     def test_hstack_ordered(self):
         c1 = Categorical([1, 2, 3], ["a", "b", "c"])
@@ -397,28 +396,28 @@ class Grouping_Test(unittest.TestCase):
 
         ds1 = Dataset({"catcol": c1})
         ds2 = Dataset({"catcol": c2})
-        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
-        ds1.save(paths[0])
-        ds2.save(paths[1])
 
-        ds1 = load_sds(paths[0])
-        self.assertTrue(isinstance(ds1.catcol, Categorical))
-        self.assertTrue(ds1.catcol.ordered)
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            paths = [f"{tmpdirname}/temp/ds1.sds", f"{tmpdirname}/temp/ds2.sds"]
 
-        ds2 = load_sds(paths[1])
-        self.assertTrue(isinstance(ds2.catcol, Categorical))
-        self.assertFalse(ds2.catcol.ordered)
+            ds1.save(paths[0])
+            ds2.save(paths[1])
 
-        ds3 = load_sds([paths[1], paths[0]], stack=True)
-        self.assertTrue(isinstance(ds3.catcol, Categorical))
-        self.assertFalse(ds3.catcol.ordered)
+            ds1 = load_sds(paths[0])
+            self.assertTrue(isinstance(ds1.catcol, Categorical))
+            self.assertTrue(ds1.catcol.ordered)
 
-        ds4 = load_sds([paths[0], paths[1]], stack=True)
-        self.assertTrue(isinstance(ds4.catcol, Categorical))
-        self.assertTrue(ds4.catcol.ordered)
+            ds2 = load_sds(paths[1])
+            self.assertTrue(isinstance(ds2.catcol, Categorical))
+            self.assertFalse(ds2.catcol.ordered)
 
-        for p in paths:
-            os.remove(p)
+            ds3 = load_sds([paths[1], paths[0]], stack=True)
+            self.assertTrue(isinstance(ds3.catcol, Categorical))
+            self.assertFalse(ds3.catcol.ordered)
+
+            ds4 = load_sds([paths[0], paths[1]], stack=True)
+            self.assertTrue(isinstance(ds4.catcol, Categorical))
+            self.assertTrue(ds4.catcol.ordered)
 
     def test_stack_load_sort_display(self):
         c = Categorical([1, 1, 2, 3, 1], ["b", "c", "a"])
@@ -431,21 +430,20 @@ class Grouping_Test(unittest.TestCase):
 
         ds1 = Dataset({"catcol": c})
         ds2 = Dataset({"catcol": d})
-        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
 
-        ds1.save(paths[0])
-        ds2.save(paths[1])
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            paths = [f"{tmpdirname}/temp/ds1.sds", f"{tmpdirname}/temp/ds2.sds"]
 
-        ds3 = load_sds(paths, stack=True)
-        gb_result = ds3.catcol.count()
-        self.assertFalse(issorted(gb_result.catcol))
+            ds1.save(paths[0])
+            ds2.save(paths[1])
 
-        ds4 = load_sds([paths[1], paths[0]], stack=True)
-        gb_result = ds4.catcol.count()
-        self.assertTrue(issorted(gb_result.catcol))
+            ds3 = load_sds(paths, stack=True)
+            gb_result = ds3.catcol.count()
+            self.assertFalse(issorted(gb_result.catcol))
 
-        for p in paths:
-            os.remove(p)
+            ds4 = load_sds([paths[1], paths[0]], stack=True)
+            gb_result = ds4.catcol.count()
+            self.assertTrue(issorted(gb_result.catcol))
 
     def testapply_reduce(self):
         c = Cat(ones(10))
