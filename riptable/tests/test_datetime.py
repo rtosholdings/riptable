@@ -1,5 +1,6 @@
 import datetime
 import os
+import tempfile
 import unittest
 import warnings
 
@@ -270,20 +271,21 @@ class DateTime_Test(unittest.TestCase):
         b = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
 
     def test_save_load(self):
-        temp_name = "dtset" + str(np.random.randint(1, 1_000_000))
-        temp_path = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + "temp" + os.path.sep + temp_name + ".sds"
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            temp_name = "dtset" + str(np.random.randint(1, 1_000_000))
+            temp_path = tmpdirname + os.path.sep + "temp" + os.path.sep + temp_name + ".sds"
 
-        a = DateTimeNano(
-            FA([start + step * i for i in range(7)], dtype=np.int64),
-            from_tz="GMT",
-            to_tz="NYC",
-        )
-        b = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
+            a = DateTimeNano(
+                FA([start + step * i for i in range(7)], dtype=np.int64),
+                from_tz="GMT",
+                to_tz="NYC",
+            )
+            b = TimeSpan(np.random.randint(-span_max, span_max, 7, dtype=np.int64).astype(np.float64))
 
-        ds1 = Dataset({"dt": a, "dtspan": b})
-        ds1.save(temp_path)
+            ds1 = Dataset({"dt": a, "dtspan": b})
+            ds1.save(temp_path)
 
-        ds2 = Dataset.load(temp_path)
+            ds2 = Dataset.load(temp_path)
 
         self.assertTrue(isinstance(ds2.dt, DateTimeNano))
         match = bool(np.all(ds1.dt._fa == ds2.dt._fa))
@@ -292,8 +294,6 @@ class DateTime_Test(unittest.TestCase):
         self.assertTrue(isinstance(ds2.dtspan, TimeSpan))
         match = bool(np.all(ds1.dtspan._fa == ds2.dtspan._fa))
         self.assertTrue(match)
-
-        os.remove(temp_path)
 
     def test_nano_index(self):
         a = DateTimeNano(
@@ -630,7 +630,7 @@ class DateTime_Test(unittest.TestCase):
         stamp2 = dtn2.to_iso()[0]
         self.assertEqual(correct2, stamp2)
 
-    def set_timezone(self):
+    def test_set_timezone(self):
         correct_utcnano = 1546875360000000000
 
         correct_nyc = b"2019-01-07T10:36:00.000000000"
@@ -647,7 +647,7 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(dtn._fa[0], correct_utcnano)
 
         self.assertEqual(dtn._timezone._timezone_str, "Europe/Dublin")
-        self.assertEqual(dtn._timezone._to_tz, "DUBLIN")
+        self.assertEqual(dtn._timezone._to_tz, "Europe/Dublin")
 
         dtn.set_timezone("GMT")
 
@@ -658,6 +658,32 @@ class DateTime_Test(unittest.TestCase):
 
         self.assertEqual(dtn._timezone._timezone_str, "GMT")
         self.assertEqual(dtn._timezone._to_tz, "GMT")
+
+        dtn.set_timezone("Hongkong")
+
+        correct_hongkong = b"2019-01-07T23:36:00.000000000"
+        stamp_hongkong = dtn.to_iso()[0]
+        self.assertEqual(stamp_hongkong, correct_hongkong)
+        self.assertEqual(dtn._fa[0], correct_utcnano)
+
+        self.assertEqual(dtn._timezone._timezone_str, "Asia/Hong_Kong")
+        self.assertEqual(dtn._timezone._to_tz, "Asia/Hong_Kong")
+
+        dtn.set_timezone("Asia/Seoul")
+        correct_seoul = b"2019-01-08T00:36:00.000000000"
+        stamp_seoul = dtn.to_iso()[0]
+        self.assertEqual(stamp_seoul, correct_seoul)
+
+        self.assertEqual(dtn._timezone._timezone_str, "Asia/Seoul")
+        self.assertEqual(dtn._timezone._to_tz, "Asia/Seoul")
+
+        dtn.set_timezone("Asia/Tokyo")
+        correct_tokyo = b"2019-01-08T00:36:00.000000000"
+        stamp_tokyo = dtn.to_iso()[0]
+        self.assertEqual(stamp_tokyo, correct_tokyo)
+
+        self.assertEqual(dtn._timezone._timezone_str, "Asia/Tokyo")
+        self.assertEqual(dtn._timezone._to_tz, "Asia/Tokyo")
 
         with self.assertRaises(ValueError):
             dtn.set_timezone("JUNK")
@@ -1084,16 +1110,15 @@ class DateTime_Test(unittest.TestCase):
         for dt in ds1.values():
             self.assertEqual(dt.to_iso()[0], timestring)
 
-        ds1.save(r"riptable/tests/temp/tempsave")
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            ds1.save(f"{tmpdirname}/temp/tempsave")
 
-        ds2 = Dataset.load(r"riptable/tests/temp/tempsave")
+            ds2 = Dataset.load(f"{tmpdirname}/temp/tempsave")
 
-        for dt, totz in zip(ds2.values(), ["NYC", "NYC", "GMT", "GMT"]):
+        for dt, totz in zip(ds2.values(), ["America/New_York", "America/New_York", "GMT", "GMT"]):
             self.assertEqual(dt._timezone._from_tz, "GMT")
             self.assertEqual(dt._timezone._to_tz, totz)
             self.assertEqual(dt.to_iso()[0], timestring)
-
-        os.remove(r"riptable/tests/temp/tempsave.sds")
 
     def test_timespan_nano_extension(self):
         # make sure previous bug with absolute value / mod was fixed
@@ -1131,9 +1156,14 @@ class DateTime_Test(unittest.TestCase):
 
     def test_internal_set_tz(self):
         tz = TimeZone(from_tz="NYC", to_tz="NYC")
+
         tz._set_timezone("GMT")
         self.assertEqual(tz._to_tz, "GMT")
         self.assertEqual(tz._timezone_str, "GMT")
+
+        tz._set_timezone("Sydney")
+        self.assertEqual(tz._to_tz, "Australia/Sydney")
+        self.assertEqual(tz._timezone_str, "Australia/Sydney")
 
     def test_vs_python_dst_fall(self):
         format_str = "%Y-%m-%dT%H:%M:%S.000000000"
@@ -1252,6 +1282,116 @@ class DateTime_Test(unittest.TestCase):
         dtn_first = DateTimeNano([t1], from_tz="GMT", to_tz="Australia/Sydney")
         dtn_last = DateTimeNano([t2], from_tz="GMT", to_tz="Australia/Sydney")
 
+        pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
+        dtn_str_first = dtn_first.to_iso()[0].decode()
+        self.assertEqual(pdt_str_first, dtn_str_first)
+
+        pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
+        dtn_str_last = dtn_last.to_iso()[0].decode()
+        self.assertEqual(pdt_str_last, dtn_str_last)
+
+        self.assertEqual(pdt_str_first, dtn_str_last)
+
+    def test_vs_python_dst_spring_hong_kong(self):
+        format_str = "%Y-%m-%dT%H:%M:%S.000000000"
+        zone = tz.gettz("Asia/Hong_Kong")
+
+        # Hong Kong only had DST intermittently until 1979
+        pdt_first = datetime.datetime(1975, 4, 19, 18, 31, 0, tzinfo=datetime.timezone.utc)
+        pdt_last = datetime.datetime(1975, 4, 19, 19, 31, 0, tzinfo=datetime.timezone.utc)
+
+        dtn_first = DateTimeNano(["1975-04-20 02:31"], from_tz="Asia/Hong_Kong", to_tz="Asia/Hong_Kong")
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz="GMT", to_tz="Asia/Hong_Kong")
+
+        correct_first = "1975-04-20T02:31:00.000000000"
+        pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
+        dtn_str_first = dtn_first.to_iso()[0].decode()
+        self.assertEqual(pdt_str_first, dtn_str_first)
+        self.assertEqual(dtn_str_first, correct_first)
+
+        correct_last = "1975-04-20T04:31:00.000000000"
+        pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
+        dtn_str_last = dtn_last.to_iso()[0].decode()
+        self.assertEqual(pdt_str_last, dtn_str_last)
+        self.assertEqual(dtn_str_last, correct_last)
+
+    def test_vs_python_dst_fall_hong_kong(self):
+        format_str = "%Y-%m-%dT%H:%M:%S.000000000"
+        zone = tz.gettz("Asia/Hong_Kong")
+
+        # Hong Kong only had DST intermittently until 1979
+        pdt_first = datetime.datetime(1975, 10, 18, 17, 31, 0, tzinfo=datetime.timezone.utc)
+        dtn_first = DateTimeNano(["1975-10-19 02:31"], from_tz="Asia/Hong_Kong", to_tz="Asia/Hong_Kong")
+        pdt_utc_first = pdt_first.timestamp() * NANOS_PER_SECOND
+        dtn_utc_first = dtn_first._fa[0]
+        self.assertTrue(pdt_utc_first == dtn_utc_first)
+
+        pdt_last = datetime.datetime(1975, 10, 18, 18, 31, 0, tzinfo=datetime.timezone.utc)
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz="GMT", to_tz="Asia/Hong_Kong")
+        pdt_utc_last = pdt_last.timestamp() * NANOS_PER_SECOND
+        dtn_utc_last = dtn_last._fa[0]
+        self.assertTrue(pdt_utc_last == dtn_utc_last)
+
+        # assert that the UTC timestamps are different for different hours
+        self.assertNotEqual(pdt_utc_first, pdt_utc_last)
+        self.assertNotEqual(dtn_utc_first, dtn_utc_last)
+
+        # because a timechange happens, the timestring will appear the same because of timezone adjustment
+        pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
+        dtn_str_first = dtn_first.to_iso()[0].decode()
+        self.assertEqual(pdt_str_first, dtn_str_first)
+
+        pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
+        dtn_str_last = dtn_last.to_iso()[0].decode()
+        self.assertEqual(pdt_str_last, dtn_str_last)
+
+        self.assertEqual(pdt_str_first, dtn_str_last)
+
+    def test_vs_python_dst_spring_korea(self):
+        format_str = "%Y-%m-%dT%H:%M:%S.000000000"
+        zone = tz.gettz("Asia/Seoul")
+
+        # Korea had DST during 1987/1988 for the olympics
+        pdt_first = datetime.datetime(1987, 5, 9, 16, 1, 0, tzinfo=datetime.timezone.utc)
+        pdt_last = datetime.datetime(1987, 5, 9, 17, 1, 0, tzinfo=datetime.timezone.utc)
+
+        dtn_first = DateTimeNano(["1987-05-10 01:01"], from_tz="Asia/Seoul", to_tz="Asia/Seoul")
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz="GMT", to_tz="Asia/Seoul")
+
+        correct_first = "1987-05-10T01:01:00.000000000"
+        pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
+        dtn_str_first = dtn_first.to_iso()[0].decode()
+        self.assertEqual(pdt_str_first, dtn_str_first)
+        self.assertEqual(dtn_str_first, correct_first)
+
+        correct_last = "1987-05-10T03:01:00.000000000"
+        pdt_str_last = pdt_last.astimezone(zone).strftime(format_str)
+        dtn_str_last = dtn_last.to_iso()[0].decode()
+        self.assertEqual(pdt_str_last, dtn_str_last)
+        self.assertEqual(dtn_str_last, correct_last)
+
+    def test_vs_python_dst_fall_korea(self):
+        format_str = "%Y-%m-%dT%H:%M:%S.000000000"
+        zone = tz.gettz("Asia/Seoul")
+
+        # Korea had DST during 1987/1988 for the olympics
+        pdt_first = datetime.datetime(1988, 10, 8, 16, 1, 0, tzinfo=datetime.timezone.utc)
+        dtn_first = DateTimeNano(["1988-10-09 02:01"], from_tz="Asia/Seoul", to_tz="Asia/Seoul")
+        pdt_utc_first = pdt_first.timestamp() * NANOS_PER_SECOND
+        dtn_utc_first = dtn_first._fa[0]
+        self.assertTrue(pdt_utc_first == dtn_utc_first)
+
+        pdt_last = datetime.datetime(1988, 10, 8, 17, 1, 0, tzinfo=datetime.timezone.utc)
+        dtn_last = DateTimeNano(dtn_first._fa + NANOS_PER_HOUR, from_tz="GMT", to_tz="Asia/Seoul")
+        pdt_utc_last = pdt_last.timestamp() * NANOS_PER_SECOND
+        dtn_utc_last = dtn_last._fa[0]
+        self.assertTrue(pdt_utc_last == dtn_utc_last)
+
+        # assert that the UTC timestamps are different for different hours
+        self.assertNotEqual(pdt_utc_first, pdt_utc_last)
+        self.assertNotEqual(dtn_utc_first, dtn_utc_last)
+
+        # because a timechange happens, the timestring will appear the same because of timezone adjustment
         pdt_str_first = pdt_first.astimezone(zone).strftime(format_str)
         dtn_str_first = dtn_first.to_iso()[0].decode()
         self.assertEqual(pdt_str_first, dtn_str_first)
@@ -1635,6 +1775,30 @@ class DateTime_Test(unittest.TestCase):
         dtn = DateTimeNano(["2019-03-30 12:34", "2019-03-31 12:34"], from_tz="DUBLIN", to_tz="DUBLIN")
         result = dtn.is_dst
         correct = FastArray([False, True])
+        self.assertTrue(bool(np.all(result == correct)))
+
+    def test_is_dst_hongkong(self):
+        dtn = DateTimeNano(
+            ["1972-04-16 02:35:00", "1972-04-17 02:35:00"], from_tz="Asia/Hong_Kong", to_tz="Asia/Hong_Kong"
+        )
+        result = dtn.is_dst
+        correct = FastArray([False, True])
+        self.assertTrue(bool(np.all(result == correct)))
+
+    def test_is_dst_korea(self):
+        dtn = DateTimeNano(
+            ["1987-05-01 10:00:00", "1987-05-10 10:00:00", "1987-10-10 10:00:00", "1987-10-20 10:00:00"],
+            from_tz="Asia/Seoul",
+            to_tz="Asia/Seoul",
+        )
+        result = dtn.is_dst
+        correct = FastArray([False, True, True, False])
+        self.assertTrue(bool(np.all(result == correct)))
+
+    def test_is_dst_tokyo(self):
+        dtn = DateTimeNano(["1970-06-01 12:00:00", "2023-01-01 12:00:00"], from_tz="Asia/Tokyo", to_tz="Asia/Tokyo")
+        result = dtn.is_dst
+        correct = FastArray([False, False])
         self.assertTrue(bool(np.all(result == correct)))
 
     def test_is_dst_gmt(self):
@@ -2893,7 +3057,7 @@ class TestTimeZone(unittest.TestCase):
         # Quick check that we can call repr() on the object (without some kind of
         # exception being raised) and that it returns a reasonable result.
         test_tz_repr = repr(test_tz)
-        self.assertEqual(test_tz_repr, "TimeZone(from_tz='NYC', to_tz='GMT')")
+        self.assertEqual(test_tz_repr, "TimeZone(from_tz='America/New_York', to_tz='GMT')")
 
 
 # TODO RIP-486 add tests for other date types from rt_datetime

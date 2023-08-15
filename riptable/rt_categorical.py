@@ -5922,8 +5922,11 @@ class Categorical(GroupByOps, FastArray):
         If the `Categorical` is constructed with an :py:class:`~enum.IntEnum` or a mapping
         dictionary, the integer mapping codes are returned.
 
-        Filtered `Categorical` values are returned as 'Filtered' for string
+        Filtered `Categorical` values are returned as "Filtered" for string
         arrays or numeric sentinel values for numeric arrays.
+
+        Note that because the expansion constructs the complete list of values from the
+        list of unique categories, it is an expensive operation.
 
         Returns
         -------
@@ -5947,20 +5950,20 @@ class Categorical(GroupByOps, FastArray):
         --------
         Single-key `Categorical`:
 
-        >>> c = rt.Categorical(['a','a','b','c','a'])
+        >>> c = rt.Categorical(["a", "a", "b", "c", "a"])
         >>> c.expand_array
         FastArray([b'a', b'a', b'b', b'c', b'a'], dtype='|S3')
 
         Multi-key `Categorical`:
 
-        >>> c = rt.Categorical([rt.FastArray(['a', 'b', 'c', 'a']), rt.FastArray([1, 2, 3, 1])])
+        >>> c = rt.Categorical([rt.FastArray(["a", "b", "c", "a"]), rt.FastArray([1, 2, 3, 1])])
         >>> c.expand_array
         (FastArray([b'a', b'b', b'c', b'a'], dtype='|S8'), FastArray([1, 2, 3, 1]))
 
         For a `Categorical` constructed with an :py:class:`~enum.IntEnum` or a mapping dictionary,
         the array of integer mapping codes (``c._fa``) is returned:
 
-        >>> c = rt.Categorical([2, 2, 2, 1, 3], {'a':1,'b':2,'c':3})
+        >>> c = rt.Categorical([2, 2, 2, 1, 3], {"a": 1, "b": 2, "c": 3})
         >>> c
         Categorical([b, b, b, a, c]) Length: 5
           FastArray([2, 2, 2, 1, 3]) Base Index: None
@@ -5970,9 +5973,9 @@ class Categorical(GroupByOps, FastArray):
         >>> c._fa
         FastArray([2, 2, 2, 1, 3])
 
-        Filtered string `Categorical` values are returned as the string 'Filtered':
+        Filtered string `Categorical` values are returned as the string "Filtered":
 
-        >>> a = rt.FastArray(['a', 'c', 'b', 'b', 'c', 'a'])
+        >>> a = rt.FastArray(["a", "c", "b", "b", "c", "a"])
         >>> f = rt.FastArray([False, False, True, True, True, True])
         >>> c = rt.Categorical(a, filter=f)
         >>> c

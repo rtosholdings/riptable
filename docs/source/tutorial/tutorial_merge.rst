@@ -396,7 +396,7 @@ Dataset by getting the values associated with the nearest earlier times.
     >>> # Right Dataset with spot prices and nearby times
     >>> spot_ds = rt.Dataset({'Symbol': ['AMZN', 'AMZN', 'AMZN', 'AAPL', 'AAPL', 'AAPL'],
     ...                       'Spot Price': [2000.0, 2025.0, 2030.0, 500.0, 510.0, 520.0],
-    ...                       'Time': rt.TimeSpan(['09:30', '10:00', '10:25', '09:25', '10:00', '10:21'])})
+    ...                       'Time': rt.TimeSpan(['09:30', '10:00', '10:25', '09:25', '10:00', '10:25'])})
     >>> ds
     #   Symbol   Venue                 Time
     -   ------   -----   ------------------
@@ -412,11 +412,15 @@ Dataset by getting the values associated with the nearest earlier times.
     2   AMZN       2,030.00   10:25:00.000000000
     3   AAPL         500.00   09:25:00.000000000
     4   AAPL         510.00   10:00:00.000000000
-    5   AAPL         520.00   10:21:00.000000000
+    5   AAPL         520.00   10:25:00.000000000
 
-But first, we need to make sure both Datasets are sorted by the key
-columns – in this case, the Time columns. It looks like ``ds`` has
-sorted times, but ``spot_ds`` doesn’t::
+Note that an as-of merge requires the ``on`` columns to be sorted. Before the merge,
+the ``on`` columns are always checked. If they're not sorted, by default they are
+sorted before the merge; the original order is then restored in the returned merged
+Dataset.
+
+If you don't need to preserve the existing ordering, it's faster to sort the
+``on`` columns in place first::
 
     >>> spot_ds.sort_inplace('Time')
     #   Symbol   Spot Price                 Time
@@ -425,45 +429,46 @@ sorted times, but ``spot_ds`` doesn’t::
     1   AMZN       2,000.00   09:30:00.000000000
     2   AMZN       2,025.00   10:00:00.000000000
     3   AAPL         510.00   10:00:00.000000000
-    4   AAPL         520.00   10:21:00.000000000
+    4   AAPL         520.00   10:25:00.000000000
     5   AMZN       2,030.00   10:25:00.000000000
 
 Now we can merge based on the nearest earlier time. But not just any
 nearest earlier time – we want to make sure it’s the nearest earlier
 time associated with the same symbol. We use the optional ``by``
 parameter to make sure we match on the symbol before getting the nearest
-earlier time::
+earlier time. We'll also use the ``matched_on`` argument to show which
+key in ``spot_ds`` was matched on::
 
-    >>> ds.merge_asof(spot_ds, on='Time', by='Symbol', direction='backward')
-    #   Symbol                 Time   Venue   Spot Price
-    -   ------   ------------------   -----   ----------
-    0   AAPL     09:30:00.000000000   A           500.00
-    1   AMZN     10:00:00.000000000   I         2,025.00
-    2   AAPL     10:20:00.000000000   A           510.00
+    >>> ds.merge_asof(spot_ds, on='Time', by='Symbol', direction='backward', matched_on=True)
+    #   Symbol                 Time   Venue   Spot Price           matched_on
+    -   ------   ------------------   -----   ----------   ------------------
+    0   AAPL     09:30:00.000000000   A           500.00   09:25:00.000000000
+    1   AMZN     10:00:00.000000000   I         2,025.00   10:00:00.000000000
+    2   AAPL     10:20:00.000000000   A           510.00   10:00:00.000000000
 
 We can see that both AAPL trades were matched based on the nearest
 earlier time.
 
 Merge based on the nearest later time::
 
-    >>> ds.merge_asof(spot_ds, on='Time', by='Symbol', direction='forward')
-    #   Symbol                 Time   Venue   Spot Price
-    -   ------   ------------------   -----   ----------
-    0   AAPL     09:30:00.000000000   A           510.00
-    1   AMZN     10:00:00.000000000   I         2,025.00
-    2   AAPL     10:20:00.000000000   A           520.00
+    >>> ds.merge_asof(spot_ds, on='Time', by='Symbol', direction='forward', matched_on=True)
+    #   Symbol                 Time   Venue   Spot Price           matched_on
+    -   ------   ------------------   -----   ----------   ------------------
+    0   AAPL     09:30:00.000000000   A           510.00   10:00:00.000000000
+    1   AMZN     10:00:00.000000000   I         2,025.00   10:00:00.000000000
+    2   AAPL     10:20:00.000000000   A           520.00   10:25:00.000000000
 
 Both AAPL trades were matched based on the nearest later time.
 
 Here, we get the spot price associated with whatever time is nearest,
 whether it’s earlier or later::
 
-    >>> ds.merge_asof(spot_ds, on='Time', by='Symbol', direction='nearest')
-    #   Symbol                 Time   Venue   Spot Price
-    -   ------   ------------------   -----   ----------
-    0   AAPL     09:30:00.000000000   A           500.00
-    1   AMZN     10:00:00.000000000   I         2,025.00
-    2   AAPL     10:20:00.000000000   A           520.00
+    >>> ds.merge_asof(spot_ds, on='Time', by='Symbol', direction='nearest', matched_on=True)
+    #   Symbol                 Time   Venue   Spot Price           matched_on
+    -   ------   ------------------   -----   ----------   ------------------
+    0   AAPL     09:30:00.000000000   A           500.00   09:25:00.000000000
+    1   AMZN     10:00:00.000000000   I         2,025.00   10:00:00.000000000
+    2   AAPL     10:20:00.000000000   A           520.00   10:25:00.000000000
 
 For the first AAPL trade, the nearest time is earlier. For the second
 AAPL trade, the nearest time is later.

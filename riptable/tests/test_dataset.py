@@ -19,6 +19,7 @@ from riptable import (
     NumpyCharTypes,
     Struct,
     TimeSpan,
+    TimeZone,
     utcnow,
 )
 from riptable.rt_enum import (
@@ -1876,14 +1877,18 @@ class TestDataset(unittest.TestCase):
         df["D"] = pd.Categorical.from_codes(codes, np.arange(3) ** 2)
         df["E"] = pd.Categorical.from_codes(codes, np.arange(0, 0.3, 0.1))
         df["F"] = pd.Categorical.from_codes(codes, np.arange(3, dtype="float32") ** 2)
-        df["G"] = pd.Series(pd.date_range("20190101", periods=4))
-        for key, tz in [
-            ("H", "UTC"),
-            ("I", "GMT"),
-            ("J", "US/Eastern"),
-            ("K", "Europe/Dublin"),
-        ]:
-            df[key] = pd.Series(pd.date_range("20190101", periods=4, tz=tz))
+
+        tz_keys = {}
+        tz_keys["G"] = None
+        for idx, tz in enumerate(TimeZone._TZDB_TIMEZONE_NAMES):
+            tz_keys[f"TZ{idx}"] = tz
+
+        for k, tz in tz_keys.items():
+            df[k] = (
+                pd.Series(pd.date_range("20190101", periods=4))
+                if not tz
+                else pd.Series(pd.date_range("20190101", periods=4, tz=tz))
+            )
 
         # Create a Dataset from the DataFrame and compare
         ds = Dataset.from_pandas(df)
@@ -1892,16 +1897,12 @@ class TestDataset(unittest.TestCase):
         self.assertTrue((df.A == ds.A.astype(str)).all())
         for key in "BCDEF":
             self.assertTrue((df[key] == _bytes_to_string(ds[key].expand_array)).all())
-        for key, tz in [
-            ("G", "UTC"),
-            ("H", "UTC"),
-            ("I", "GMT"),
-            ("J", "NYC"),
-            ("K", "DUBLIN"),
-        ]:
+
+        for key, tz in tz_keys.items():
             self.assertTrue((_datetime_to_int(df[key]) == ds[key].yyyymmdd).all())
             self.assertTrue(ds[key]._timezone._from_tz == "UTC")
-            self.assertTrue(ds[key]._timezone._to_tz == tz)
+            expected_to_tz = tz or "UTC"
+            self.assertEqual(ds[key]._timezone._to_tz, expected_to_tz)
 
         # Make two of the categoricals into enum type
         class MyEnum(IntEnum):

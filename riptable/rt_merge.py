@@ -3347,110 +3347,146 @@ def merge_asof(
     **kwargs,
 ) -> "Dataset":
     """
-    Perform an as-of merge. This is similar to a left-join except that we
-    match on nearest key rather than equal keys.
+    Combine two `.Dataset` objects by performing a database-style left-join based
+    on the nearest numeric key.
 
-    Both Datasets must be sorted by the key.
+    An as-of merge is useful for keys that are times (or other numeric values) that
+    aren't exact matches but are close enough to merge on.
 
-    For each row in the left Dataset:
-      - A "backward" search selects the last row in the right Dataset whose
-        'on' key is less than or equal to the left's key.
-      - A "forward" search selects the first row in the right Dataset whose
-        'on' key is greater than or equal to the left's key.
-      - A "nearest" search selects the row in the right Dataset whose 'on'
-        key is closest in absolute distance to the left's key.
-        The 'nearest' search has not been implemented yet.
+    Both `.Dataset` objects must be sorted by the key column.
 
-    Optionally match on equivalent keys with 'by' before searching with 'on'.
+    Use the ``direction`` argument to find the nearest key in the right `.Dataset`:
+
+      - A ``direction="backward"`` search selects the closest key that's less than or
+        equal to the key in the left `.Dataset`.
+      - A ``direction="forward"`` search selects the closest key that's greater than or
+        equal to the key in the left `.Dataset`.
+      - A ``direction="nearest"`` search selects the key that's closest in absolute
+        distance to the key in the left `.Dataset`.
+
+    Optionally, you can match on equivalent keys with ``by`` before performing an as-of
+    merge with ``on``.
 
     Parameters
     ----------
     left : Dataset
-        Left Dataset
+        The first `.Dataset` to merge. If a nearest match for a key in ``left``
+        isn't found in ``right``, the returned ``.Dataset`` includes a row with the
+        columns from ``left``, but with NaN values in each column from ``right``.
     right : Dataset
-        Right Dataset
-    on : str
-        Column name to join on. Must be found in both the `left` and `right` Datasets.
-        This column in both left and right Datasets MUST be ordered.
-        Furthermore this must be a numeric column, such as datetimelike,
-        integer, or float. Either `on` or `left_on`/`right_on` must be specified.
-    left_on : str or list of str, optional
-        Column name to join on in `left` Dataset.
-    right_on : str or list of str, optional
-        Column name to join on in `right` Dataset.
+        The second `.Dataset` to merge. If rows in ``right`` don't have nearest matches
+        in ``left`` they will be discarded. If they match multiple rows in ``left`` they
+        will be duplicated appropriately.
+    on : str or (str, str)
+        Name of the column to join on (the key column). If the column name is the
+        same in both `.Dataset` objects, use a single string. If the column names are
+        different, use a tuple of strings. The values must be numeric (such as integers,
+        floats, or datetimes). If ``on`` isn't specified, ``left_on`` and ``right_on``
+        must be specified.
+    left_on : str, optional
+        Use instead of ``on`` to specify the column in the left `.Dataset` to join on.
+    right_on : str, optional
+        Use instead of ``on`` to specify the column in the right `.Dataset` to join on.
     by : str or (str, str) or list of str or list of (str, str), optional
-        Column name or list of column names. Match on these columns before
-        performing merge operation.
+        Match equal keys in these columns before performing the as-of merge. Options
+        for types:
+
+        - Single string: Join on one column that has the same name in both `.Dataset`
+          objects.
+        - List: A list of strings is treated as a multi-key in which all associated key
+          column values in ``left`` must have matches in ``right``. The column names must
+          be the same in both `.Dataset` objects, unless they're in a tuple; see below.
+        - Tuple: Use a tuple to specify key columns that have different names. For
+          example, ``("col_a", "col_b")`` joins on ``col_a`` in ``left`` and ``col_b`` in
+          ``right``. Both columns are in the returned `.Dataset` unless you specify
+          otherwise using ``columns_left`` or ``columns_right``.
     left_by : str or list of str, optional
-        Column names to match on in the left Dataset.
+        Use instead of ``by`` to specify names of columns to match equivalent values on
+        in the left `.Dataset`.
     right_by : str or list of str, optional
-        Column names to match on in the right Dataset.
-    suffixes : (str, str), optional, default None
-        Suffix to apply to overlapping column names in the left and right
-        side, respectively.
-    copy: bool, default True
-        If False, avoid copying data when possible; this can reduce memory usage
-        but users must be aware that data can be shared between `left` and/or `right`
-        and the Dataset returned by this function.
+        Use instead of ``by`` to specify names of columns to match equivalent values on
+        in the right `.Dataset`.
+    suffixes : (str, str), optional
+        Suffixes to apply to returned overlapping non-key-column names in ``left`` and
+        ``right``, respectively. By default, an error is raised for any overlapping non-key
+        columns that will be in the returned `.Dataset`.
+    copy : bool, default True
+        Set to `False` to avoid copying data when possible. This can reduce memory
+        usage, but be aware that data can be shared among ``left``, ``right``, and the
+        `.Dataset` returned by this function.
     columns_left : str or list of str, optional
-        Column names to include in the merge from `left`, defaults to None which causes all columns to be included.
+        Names of columns from ``left`` to include in the merged `Dataset`. By default,
+        all columns are included.
     columns_right : str or list of str, optional
-        Column names to include in the merge from `right`, defaults to None which causes all columns to be included.
-    tolerance : integer or float or Timedelta, optional, default None
-        Tolerance allowed when performing the 'asof' part of the merge; whenever a row from
-        `left` doesn't have a key in `right` within this distance or less, that row will have
-        a null/missing/NA value for any columns from the `right` Dataset which appear in the
-        merged result.
-        **Not implemented yet.**
-    total_unique: integer, optional, default None
-        required in a faster version of merge_asof for the case
-        where both left and right Datasets are prebinned. Not implemented yet.
+        Names of columns from ``right`` to include in the merged `.Dataset`. By default,
+        all columns are included.
+    tolerance : int, float, or timedelta, optional
+        **Not implemented.** Tolerance allowed when performing the as-of part of the
+        merge. When a row from ``left`` doesn't have a key in ``right`` within this
+        distance, that row will have a NaN for any columns from ``right`` that appear
+        in the merged result.
     allow_exact_matches : boolean, default True
-        - If True, allow matching with the same 'on' value
-          (i.e. less-than-or-equal-to / greater-than-or-equal-to)
-        - If False, don't match the same 'on' value
-          (i.e., strictly less-than / strictly greater-than)
-    direction : 'backward' (default), 'forward', or 'nearest'
-        Whether to search for prior, subsequent, or closest matches.
-        The option 'nearest' has not been implemented yet.
+        If `True` (the default), allow matching with an equivalent ``on`` value (i.e.,
+        allow less-than-or-equal-to or greater-than-or-equal-to matches). If `False`,
+        don't match an equivalent ``on`` value (i.e., perform only strictly-less-than or
+        strictly-greater-than matches).
+    direction : {"backward", "forward", "nearest"}, default "backward"
+        Whether to search for prior, subsequent, or closest matches in the right
+        `.Dataset`.
     verbose : bool, default False
-        For the stdout debris; defaults to False.
-    action_on_unsorted : 'sort' (default), or 'raise'
-        Specifies action when the `on` column(s) are unsorted. Sortedness is *always* checked.
-        If `sort`, sorts `on` column(s) (if unsorted), performs merging, and restores
-        the original order in the result.
-        If `raise`, raises on any unsorted `on` column.
+        Show information used for debugging.
+    check_sorted : bool, default True
+        .. deprecated:: 1.10.0 See ``action_on_unsorted``.
+    action_on_unsorted : {"sort", "raise"}, default "sort"
+        .. versionadded:: 1.10.0 The ``on`` columns are always checked to see if they
+        are sorted. If they're unsorted, by default they are sorted before the merge;
+        the original order is then restored in the returned merged `.Dataset`. Set to
+        "raise" to raise an error for any unsorted ``on`` column.
     matched_on : bool or str, default False
-        If set to True or a string, an additional column is added to the result;
-        for each row, it contains the value from the `on` column in `right` that was matched.
-        When True, the column will use the default name 'matched_on'; specify a string
-        to explicitly name the column.
-    (check_sorted **deprecated**)
+        Add a column to the merged `.Dataset` that contains the ``on`` column value from
+        ``right`` that was matched. When `True`, the column uses the default name
+        "matched_on"; specify a string to name the column.
 
     Other Parameters
     ----------------
-    left_index : boolean, optional, default False
-        Unused. This parameter is only provided for compatibility with the pandas ``merge_asof``
-        function and will be removed in a later version of riptable.
-    right_index : boolean, optional, default False
-        Unused. This parameter is only provided for compatibility with the pandas ``merge_asof``
-        function and will be removed in a later version of riptable.
+    left_index : bool, default False
+        .. deprecated:: 1.10.0
+        This parameter is only provided for compatibility with `pandas.merge_asof` and
+        has no effect in a Riptable as-of merge.
+    right_index : bool, default False
+        .. deprecated:: 1.10.0
+        This parameter is only provided for compatibility with `pandas.merge_asof` and
+        has no effect in a Riptable as-of merge.
 
     Returns
     -------
-    merged : Dataset
+    Dataset
+        A new `.Dataset` of the two merged objects.
+
+    See Also
+    --------
+    merge_lookup : Merge two `Dataset` objects based on equivalent keys.
+    merge2 :
+        Merge two `.Dataset` objects using various database-style joins.
+    merge_indices :
+        Return the left and right indices created by the join engine.
+    .Dataset.merge_asof : Merge two `.Dataset` objects using the nearest key.
+    .Dataset.merge_lookup : Merge two `.Dataset` objects with an in-place option.
+    .Dataset.merge2 :
+        Merge two `.Dataset` objects using various database-style joins.
 
     Examples
     --------
-    >>> left = rt.Dataset({'a': [1, 5, 10], 'left_val': ['a', 'b', 'c']})
+    >>> left = rt.Dataset({"a": [1, 5, 10], "left_val": ["a", "b", "c"]})
+    >>> right = rt.Dataset({"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]})
     >>> left
     #    a   left_val
     -   --   --------
     0    1   a
     1    5   b
     2   10   c
-    >>> right = rt.Dataset({'a': [1, 2, 3, 6, 7],
-    ...                       'right_val': [1, 2, 3, 6, 7]})
+    <BLANKLINE>
+    [3 rows x 2 columns] total bytes: 15.0 B
     >>> right
     #   a   right_val
     -   -   ---------
@@ -3459,85 +3495,130 @@ def merge_asof(
     2   3           3
     3   6           6
     4   7           7
-    >>> rt.merge_asof(left, right, on='a')
-    #   a_x   left_val   a_y   right_val
-    -   ---   --------   ---   ---------
-    0     1   a            1           1
-    1     5   b            3           3
-    2    10   c            7           7
+    <BLANKLINE>
+    [5 rows x 2 columns] total bytes: 40.0 B
 
-    >>> rt.merge_asof(left, right, on='a', allow_exact_matches=False)
-     #   a_x   left_val   a_y   right_val
-    -   ---   --------   ---   ---------
-    0     1   a          Inv         Inv
-    1     5   b            3           3
-    2    10   c            7           7
+    Merge based on the integers in the "a" columns. The first match is exact; the
+    second two are "backward" nearest matches (the default direction):
 
-    >>> rt.merge_asof(left, right, on='a', direction='forward')
-    #   a_x   left_val   a_y   right_val
-    -   ---   --------   ---   ---------
-    0     1   a            1           1
-    1     5   b            6           6
-    2    10   c          Inv         Inv
+    >>> rt.merge_asof(left, right, on="a")
+    #    a   left_val   right_val
+    -   --   --------   ---------
+    0    1   a                  1
+    1    5   b                  3
+    2   10   c                  7
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 27.0 B
 
-    Here is a real-world time-series example
+    When ``allow_exact_matches=False``, a nearest match is used if there is one (as for
+    row 0). Here, also, there's no "forward" nearest match in ``right`` for row 2:
 
-    >>> quotes
-    #                   time  ticker   Bid   Ask
-    -   --------------------  ------  ----  ----
-    0   20191015 09:45:57.09    AAPL  3.40  3.50
-    1   20191015 11:35:09.76    AAPL  3.45  3.55
-    2   20191015 12:02:27.11    AAPL  3.50  3.60
-    3   20191015 12:43:13.73    MSFT  2.85  2.95
-    4   20191015 14:32:11.18    MSFT  2.90  3.00
+    >>> rt.merge_asof(left, right, on="a", direction="forward", allow_exact_matches=False)
+    #    a   left_val   right_val
+    -   --   --------   ---------
+    0    1   a                  2
+    1    5   b                  6
+    2   10   c                Inv
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 27.0 B
 
-    >>> trades
-    #                   time  ticker  TradePrice  TradeSize
-    -   --------------------  ------  ----------  ---------
-    0   20191015 10:03:24.73    AAPL        3.45       1.00
-    1   20191015 10:41:22.79    MSFT        2.85       1.00
-    2   20191015 10:41:35.69    MSFT        2.86       1.00
-    3   20191015 11:04:32.55    AAPL        3.47       1.00
-    4   20191015 11:44:35.63    MSFT        2.91       1.00
-    5   20191015 12:26:17.68    AAPL        3.55       1.00
-    6   20191015 14:24:10.93    MSFT        2.98       1.00
-    7   20191015 15:45:13.41    AAPL        3.60       7.00
-    8   20191015 15:50:42.53    AAPL        3.58       1.00
-    9   20191015 15:53:59.60    AAPL        3.56       5.00
+    If ``allow_exact_matches=False`` and there are no nearest matches, a NaN value is
+    filled in:
 
-    >>> rt.merge_asof(trades, quotes, on='time', by='ticker')
-    #                 time_x   ticker_x  TradePrice   TradeSize                 time_y   ticker_y    Bid    Ask
-    -   --------------------  ---------  ----------   ---------   --------------------   --------   ----   ----
-    0   20191015 10:03:24.73       AAPL        3.45        1.00   20191015 09:45:57.09       AAPL   3.40   3.50
-    1   20191015 10:41:22.79       MSFT        2.85        1.00                    Inv   Filtered    nan    nan
-    2   20191015 10:41:35.69       MSFT        2.86        1.00                    Inv   Filtered    nan    nan
-    3   20191015 11:04:32.55       AAPL        3.47        1.00   20191015 09:45:57.09       AAPL   3.40   3.50
-    4   20191015 11:44:35.63       MSFT        2.91        1.00                    Inv   Filtered    nan    nan
-    5   20191015 12:26:17.68       AAPL        3.55        1.00   20191015 12:02:27.11       AAPL   3.50   3.60
-    6   20191015 14:24:10.93       MSFT        2.98        1.00   20191015 12:43:13.73       MSFT   2.85   2.95
-    7   20191015 15:45:13.41       AAPL        3.60        7.00   20191015 12:02:27.11       AAPL   3.50   3.60
-    8   20191015 15:50:42.53       AAPL        3.58        1.00   20191015 12:02:27.11       AAPL   3.50   3.60
-    9   20191015 15:53:59.60       AAPL        3.56        5.00   20191015 12:02:27.11       AAPL   3.50   3.60
+    >>> rt.merge_asof(left, right, on="a", allow_exact_matches=False)
+    #    a   left_val   right_val
+    -   --   --------   ---------
+    0    1   a                Inv
+    1    5   b                  3
+    2   10   c                  7
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 27.0 B
 
-    only merge with the forward quotes
 
-    >>> rt.merge_asof(trades, quotes, on='time', by='ticker', direction='forward')
-    #                 time_x  ticker_x  TradePrice  TradeSize                time_y  ticker_y   Bid   Ask
-    -   --------------------  --------  ----------  ---------  --------------------  --------  ----  ----
-    0   20191015 10:03:24.73      AAPL        3.45       1.00  20191015 11:35:09.76      AAPL  3.45  3.55
-    1   20191015 10:41:22.79      MSFT        2.85       1.00  20191015 12:43:13.73      MSFT  2.85  2.95
-    2   20191015 10:41:35.69      MSFT        2.86       1.00  20191015 12:43:13.73      MSFT  2.85  2.95
-    3   20191015 11:04:32.55      AAPL        3.47       1.00  20191015 11:35:09.76      AAPL  3.45  3.55
-    4   20191015 11:44:35.63      MSFT        2.91       1.00  20191015 12:43:13.73      MSFT  2.85  2.95
-    6   20191015 14:24:10.93      MSFT        2.98       1.00  20191015 14:32:11.18      MSFT  2.90  3.00
-    7   20191015 15:45:13.41      AAPL        3.60       7.00                   Inv  Filtered   nan   nan
-    8   20191015 15:50:42.53      AAPL        3.58       1.00                   Inv  Filtered   nan   nan
-    9   20191015 15:53:59.60      AAPL        3.56       5.00                   Inv  Filtered   nan   nan
-    5   20191015 12:26:17.68      AAPL        3.55       1.00                   Inv  Filtered   nan   nan
+    As-of merges are good for time-series data. Here, the `.Dataset` objects are
+    merged with ``on="Time"`` and ``by="Symbol"`` to get the nearest time associated
+    with the same symbol:
 
-    See Also
-    --------
-    merge
+    >>> # Left Dataset with trades and times.
+    >>> ds = rt.Dataset({"Symbol": ["AAPL", "AMZN", "AAPL"],
+    ...                  "Venue": ["A", "I", "A"],
+    ...                  "Time": rt.TimeSpan(["09:30", "10:00", "10:20"])})
+    >>> # Right Dataset with spot prices and nearby times.
+    >>> spot_ds = rt.Dataset({"Symbol": ["AMZN", "AMZN", "AMZN", "AAPL", "AAPL", "AAPL"],
+    ...                       "Spot Price": [2000.0, 2025.0, 2030.0, 500.0, 510.0, 520.0],
+    ...                       "Time": rt.TimeSpan(["09:30", "10:00", "10:25", "09:25", "10:00", "10:25"])})
+    >>> ds
+    #   Symbol   Venue                 Time
+    -   ------   -----   ------------------
+    0   AAPL     A       09:30:00.000000000
+    1   AMZN     I       10:00:00.000000000
+    2   AAPL     A       10:20:00.000000000
+    <BLANKLINE>
+    [3 rows x 3 columns] total bytes: 39.0 B
+    >>> spot_ds
+    #   Symbol   Spot Price                 Time
+    -   ------   ----------   ------------------
+    0   AMZN       2,000.00   09:30:00.000000000
+    1   AMZN       2,025.00   10:00:00.000000000
+    2   AMZN       2,030.00   10:25:00.000000000
+    3   AAPL         500.00   09:25:00.000000000
+    4   AAPL         510.00   10:00:00.000000000
+    5   AAPL         520.00   10:25:00.000000000
+    <BLANKLINE>
+    [6 rows x 3 columns] total bytes: 120.0 B
+
+    Note that an as-of merge requires the ``on`` columns to be sorted. Before the merge,
+    the ``on`` columns are always checked. If they're not sorted, by default they are
+    sorted before the merge; the original order is then restored in the returned merged
+    `.Dataset`.
+
+    If you don't need to preserve the existing ordering, it's faster to sort the
+    ``on`` columns in place first:
+
+    >>> spot_ds.sort_inplace("Time")
+    #   Symbol   Spot Price                 Time
+    -   ------   ----------   ------------------
+    0   AAPL         500.00   09:25:00.000000000
+    1   AMZN       2,000.00   09:30:00.000000000
+    2   AMZN       2,025.00   10:00:00.000000000
+    3   AAPL         510.00   10:00:00.000000000
+    4   AAPL         520.00   10:25:00.000000000
+    5   AMZN       2,030.00   10:25:00.000000000
+    <BLANKLINE>
+    [6 rows x 3 columns] total bytes: 120.0 B
+
+    Get the nearest earlier time:
+
+    >>> rt.merge_asof(ds, spot_ds, on="Time", by="Symbol", direction="backward", matched_on=True)
+    #   Symbol                 Time   Venue   Spot Price           matched_on
+    -   ------   ------------------   -----   ----------   ------------------
+    0   AAPL     09:30:00.000000000   A           500.00   09:25:00.000000000
+    1   AMZN     10:00:00.000000000   I          2025.00   10:00:00.000000000
+    2   AAPL     10:20:00.000000000   A           510.00   10:00:00.000000000
+    <BLANKLINE>
+    [3 rows x 5 columns] total bytes: 87.0 B
+
+    Get the nearest later time:
+
+    >>> rt.merge_asof(ds, spot_ds, on="Time", by="Symbol", direction="forward", matched_on=True)
+    #   Symbol                 Time   Venue   Spot Price           matched_on
+    -   ------   ------------------   -----   ----------   ------------------
+    0   AAPL     09:30:00.000000000   A           510.00   10:00:00.000000000
+    1   AMZN     10:00:00.000000000   I          2025.00   10:00:00.000000000
+    2   AAPL     10:20:00.000000000   A           520.00   10:25:00.000000000
+    <BLANKLINE>
+    [3 rows x 5 columns] total bytes: 87.0 B
+
+    Get the nearest time, whether earlier or later:
+
+    >>> rt.merge_asof(ds, spot_ds, on="Time", by="Symbol", direction="nearest", matched_on=True)
+    #   Symbol                 Time   Venue   Spot Price           matched_on
+    -   ------   ------------------   -----   ----------   ------------------
+    0   AAPL     09:30:00.000000000   A           500.00   09:25:00.000000000
+    1   AMZN     10:00:00.000000000   I          2025.00   10:00:00.000000000
+    2   AAPL     10:20:00.000000000   A           520.00   10:25:00.000000000
+    <BLANKLINE>
+    [3 rows x 5 columns] total bytes: 87.0 B
     """
     # Process keyword arguments.
     left_index = bool(kwargs.pop("left_index", False))
@@ -3556,13 +3637,12 @@ def merge_asof(
         first_kwarg = next(iter(remaining_kwargs.keys()))
         raise ValueError(f"This function does not support the kwarg '{first_kwarg}'.")
 
+    # Riptable 1.10.1, 2023-07-26
     if left_index or right_index:
-        # Emit warning about 'left_index' and 'right_index' only being present for compatibility
-        # with the pandas merge signature. They don't actually do anything in riptable since our
-        # indexing is external (not internal) to Datasets.
-        warnings.warn(
-            "The 'left_index' and 'right_index' parameters are only present for pandas compatibility. They are not applicable for riptable and will have no effect."
-        )
+        # Emit warning about 'left_index' and 'right_index' deprecation. They were previously
+        # only present for compatibility with the pandas merge signature and didn't actually
+        # do anything in riptable since our  indexing is external (not internal) to Datasets.
+        warnings.warn("The 'left_index' and 'right_index' parameters are deprecated since Riptable 1.10.0.")
 
     #
     # TODO: Validate the 'direction' -- needs to be in {'forward', 'backward', 'nearest'};

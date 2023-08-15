@@ -24,6 +24,8 @@ from riptable.Utils.rt_testing import (
     name,
 )
 
+_TESTDIR = os.path.join(os.path.dirname(__file__), "test_files")
+
 # change to true since we write into /tests directory
 SDSMakeDirsOn()
 
@@ -1746,6 +1748,52 @@ def test_multi_section_sds_stacked_load_single_array_filtered(
                         # TEMP: assert_array_or_cat_equal() still checks names right now, unless check_cat_types is disabled.
                         check_cat_types=False,
                     )
+
+
+@pytest.mark.parametrize("kind", ["old", "new"])
+def test_save_load_timezone_names(kind: str):
+    old_std_names = [
+        # These are old names that are standard backwards-compatible tzdb names
+        "GMT",
+        "UTC",
+    ]
+
+    old_names = [
+        # These are all the old ("short") names stored in SDS files prior to v1.12.0
+        # when we switched to storing tzdb names.
+        "NYC",
+        "DUBLIN",
+    ] + old_std_names
+
+    testpath = os.path.join(_TESTDIR, f"{kind}_tz_names.sds")
+
+    # Ensure the sds file actually contains the expected _to_tz names
+    sdsinfo = rt.sds_info(testpath)
+
+    info = sdsinfo[0]
+    meta_str = info[0]
+    meta = MetaData(meta_str)
+    i_meta_strs = meta["item_meta"]
+    assert len(i_meta_strs) == len(old_names)
+    for i_meta_str in i_meta_strs:
+        i_meta = MetaData(i_meta_str)
+        vars = i_meta["instance_vars"]
+        totz = vars["_to_tz"]
+        if kind == "old":
+            assert totz in old_names
+        else:
+            assert totz in old_std_names or totz not in old_names
+
+    # Load the old tz names, which should be converted into tzdb names
+    ds = rt.load_sds(testpath)
+    assert len(ds.keys()) == len(old_names)
+
+    for name in old_names:
+        val = ds[name]
+        tzdb_name = rt.TimeZone.normalize_tz_to_tzdb_name(name)
+        actual_tz = val._timezone
+        assert actual_tz._from_tz == "GMT"  # converted on input to GMT
+        assert actual_tz._to_tz == tzdb_name
 
 
 if __name__ == "__main__":

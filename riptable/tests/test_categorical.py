@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 from enum import IntEnum
 
@@ -2086,35 +2087,36 @@ class TestCategorical(unittest.TestCase):
         c_flt = Categorical(fa_flt)
 
         # TODO move these into SDS save / load tests
-        paths = [r"riptable/tests/temp/ds1.sds", r"riptable/tests/temp/ds2.sds"]
-        ds1 = Dataset(
-            {
-                "mkcat": c1,
-                "strcat": c1_str,
-                "fltcat": c1_flt,
-                "strfa": strs,
-                "fltfa": flts,
-            }
-        )
-        ds2 = Dataset(
-            {
-                "mkcat": c2,
-                "strcat": c2_str,
-                "fltcat": c2_flt,
-                "strfa": strs2,
-                "fltfa": flts2,
-            }
-        )
-        ds1.save(paths[0])
-        ds2.save(paths[1])
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            paths = [f"{tmpdirname}/temp/ds1.sds", f"{tmpdirname}/temp/ds2.sds"]
+            ds1 = Dataset(
+                {
+                    "mkcat": c1,
+                    "strcat": c1_str,
+                    "fltcat": c1_flt,
+                    "strfa": strs,
+                    "fltfa": flts,
+                }
+            )
+            ds2 = Dataset(
+                {
+                    "mkcat": c2,
+                    "strcat": c2_str,
+                    "fltcat": c2_flt,
+                    "strfa": strs2,
+                    "fltfa": flts2,
+                }
+            )
+            ds1.save(paths[0])
+            ds2.save(paths[1])
 
-        # normal dataset hstack
-        hstack_ds = hstack([ds1, ds2])
-        assert isinstance(hstack_ds, Dataset)
+            # normal dataset hstack
+            hstack_ds = hstack([ds1, ds2])
+            assert isinstance(hstack_ds, Dataset)
 
-        # dataset hstack from load
-        stack_load_ds = load_sds(paths, stack=True)
-        assert isinstance(stack_load_ds, PDataset)
+            # dataset hstack from load
+            stack_load_ds = load_sds(paths, stack=True)
+            assert isinstance(stack_load_ds, PDataset)
 
         # multikey cat hstack
         hstack_mkcats = hstack([c1, c2])
@@ -2144,9 +2146,6 @@ class TestCategorical(unittest.TestCase):
         mktup3 = [*hstack_ds.mkcat.category_dict.values()]
         assert bool(np.all(hstack_ds.mkcat._expand_array(mktup3[0]) == fa_str))
         assert bool(np.all(hstack_ds.mkcat._expand_array(mktup3[1]) == fa_flt))
-
-        for p in paths:
-            os.remove(p)
 
     # TO TEST:
     # regular python Enum

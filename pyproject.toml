@@ -1,3 +1,49 @@
+[build-system]
+requires = ["setuptools>=65", "setuptools_scm[toml]>=7.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "riptable"
+description = "Python Package for riptable studies framework"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "RTOS Holdings", email = "rtosholdings-bot@sig.com" }]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ansi2html >=1.5.2",
+    "numba >=0.56.2",
+    "numpy >=1.23",
+    "pandas >=1.0,<3.0",
+    "python-dateutil",
+    "riptide_cpp >=1.14.0,<2",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/rtosholdings/riptable"
+Documentation = "https://readthedocs.org/projects/riptable"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["riptable*"]
+
+[tool.setuptools_scm]
+"version_scheme" = "post-release"
+"local_scheme" = "node-and-timestamp"
+"write_to" = "riptable/_version.py"
+"write_to_template" = "__version__ = '{version}'"
+
 # NOTE: you have to use single-quoted strings in TOML for regular expressions.
 # It's the equivalent of r-strings in Python.  Multiline strings are treated as
 # verbose regular expressions by Black.  Use [ ] to denote a significant space

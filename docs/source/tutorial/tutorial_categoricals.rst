@@ -347,7 +347,7 @@ We'll start with filtering values. Say we have a Dataset with symbols 'A' and
     24   B        X     
 
 We want to make the Symbol column a Categorical, but we're interested in only
-the symbol values that are associated with the 'X' exchange::
+the symbol values that are associated with the 'X' exchange.
 
 When we create the Categorical, we can use the ``filter`` keyword argument with
 a Boolean mask array that's True for symbol values associated with the 'X' 

@@ -1,4 +1,5 @@
 import os
+import tempfile
 import warnings
 
 import pytest
@@ -86,12 +87,12 @@ class TestCategoricalFilterInvalid:
         c = Categorical([0, 1, 1, 2, 3], ["a", "b", "c"], invalid="a")
         c.filtered_set_name("FILT")
         ds = Dataset({"catcol": c})
-        ds.save(r"riptable/tests/temp/ds")
-        ds2 = load_sds(r"riptable/tests/temp/ds")
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            ds.save(f"{tmpdirname}/temp/ds")
+            ds2 = load_sds(f"{tmpdirname}/temp/ds")
         c2 = ds2.catcol
         assert c.invalid_category == c2.invalid_category
         assert c.filtered_name == c2.filtered_name
-        os.remove(r"riptable/tests/temp/ds.sds")
 
     def test_isfiltered(self):
         c = Categorical(np.random.choice(4, 100), ["a", "b", "c"])

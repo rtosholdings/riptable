@@ -38,6 +38,11 @@ if is_linux():
         "ninja",
     ]
 
+setuptools_reqs = [
+    "setuptools>=65",
+    "setuptools_scm[toml]>=7.1",
+]
+
 # Conda-build requirements.
 # Most everything else will be specified in meta.yaml.
 conda_reqs = [
@@ -49,6 +54,7 @@ conda_reqs = [
 # PyPI setup build requirements.
 # Most everything else will be specified in setup.py.
 pypi_reqs = [
+    "build",  # PEP-517 py build frontend
     _ABSEIL_REQ,  # PyPI package doesn't exist
     _BENCHMARK_REQ,  # PyPI package doesn't exist
     _TBB_DEVEL_REQ,  # needed because PyPI tbb-devel pkg doesn't contain CMake files yet
@@ -125,9 +131,7 @@ pydocstyle_reqs = [
 
 # Complete developer requirements.
 developer_reqs = (
-    [
-        "setuptools_scm",
-    ]
+    setuptools_reqs
     + black_reqs
     + conda_reqs
     + flake8_reqs
