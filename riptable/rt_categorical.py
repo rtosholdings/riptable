@@ -4148,6 +4148,8 @@ class Categorical(GroupByOps, FastArray):
 
         # both ismember and == handle categorical specially
         if isinstance(x, (list, np.ndarray)):
+            if len(x) == 0:
+                return zeros(len(self), dtype=bool)
             if len(x) > 1:
                 return ismember(self, x)[0]
             elif np.isscalar(x[0]):

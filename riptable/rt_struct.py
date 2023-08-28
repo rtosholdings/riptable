@@ -10,9 +10,21 @@ import os
 import re
 import sys
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict, abc
 from re import IGNORECASE, compile
-from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    List,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    Literal,
+    Iterable,
+)
 
 import numpy as np
 import riptide_cpp as rc
@@ -48,7 +60,6 @@ from .Utils.rt_metadata import MetaData
 
 # from IPython import get_ipython
 # from IPython.display import display, HTML
-
 
 # Type-checking-only imports.
 if TYPE_CHECKING:
@@ -2549,23 +2560,6 @@ class Struct:
         setattr(self._all_items, attrib_name, attrib_value)
 
     # -------------------------------------------------------
-    def col_delete(self, name: Union[str, List[str]]) -> None:
-        """
-        Remove and item from the struct.
-
-        Parameters
-        ----------
-        name : str or list of str
-            Name or list of item names to be removed.
-
-        Raises
-        ------
-        IndexError
-            Item not found with given name.
-        """
-        self.col_remove(name)
-
-    # -------------------------------------------------------
     def col_get_value(self, name: str):
         """
         Return a single item.
@@ -3358,13 +3352,27 @@ class Struct:
             )
 
     # --------------------------------------------------------
-    def col_remove(self, flist):
+    def col_remove(
+        self,
+        flist: Union[str, Iterable[str]],
+        on_missing: Literal["raise", "warn", "ignore"] = "raise",
+    ):
         """
-        Remove single column or list of columns.
+        Remove single column or list of columns from a `.Dataset` or `Struct`.
+
+        This can be done only if the `.Dataset` or `Struct` is unlocked.
 
         Parameters
         ----------
-        flist : string, list, or dict
+        flist : str or iterable of str
+            Name or column names to be removed. If a dict is passed, will operate
+            on keys.
+        on_missing : {"raise", "warn", "ignore"}, default "raise"
+            Governs how to handle a column in ``flist`` that doesn't exist:
+
+              - "raise" (default): Raises an IndexError. No columns are removed.
+              - "warn": Issues a warning. Any columns in ``flist`` that do exist are removed.
+              - "ignore": No error or warning. Any columns in ``flist`` that do exist are removed.
 
         Returns
         -------
@@ -3372,8 +3380,8 @@ class Struct:
 
         Examples
         --------
-        >>> ds = Dataset({'col_'+str(i): rt.arange(5) for i in range(5)})
-        >>> ds.col_remove(['col_2', 'col_0'])
+        >>> ds = rt.Dataset({"col_" + str(i): rt.arange(5) for i in range(5)})
+        >>> ds.col_remove(["col_2", "col_0"])
         >>> ds
         #   col_1   col_3   col_4
         -   -----   -----   -----
@@ -3382,22 +3390,41 @@ class Struct:
         2       2       2       2
         3       3       3       3
         4       4       4       4
+
+        >>> ds.col_remove(["col_1", "col_2"], on_missing="warn")
+        UserWarning: Column col_2 doesn't exist and couldn't be removed.
+        >>> ds
+        #   col_3   col_4
+        -   -----   -----
+        0       0       0
+        1       1       1
+        2       2       2
+        3       3       3
+        4       4       4
         """
+        if on_missing not in ("raise", "warn", "ignore"):
+            raise ValueError(f"Invalid on_missing '{on_missing}'")
         if self.is_locked():
             raise AttributeError("Not allowed to call col_remove() on locked object.")
         # flip single strings to lists to use the same routine
         if isinstance(flist, (str, bytes)):
             flist = [flist]
-        if isinstance(flist, (np.ndarray, list, tuple, dict)):
-            # want to ensure atomic behavior:
+        if not isinstance(flist, abc.Iterable):
+            raise TypeError("flist must be str or iterable")
+        # want to ensure atomic behavior:
+        if on_missing == "raise":
             self._ensure_atomic(flist, self.col_remove)
+        for field in flist:
+            try:
+                self._deleteitem(field)
+            except IndexError as index_error:
+                if on_missing == "raise":
+                    raise index_error
+                elif on_missing == "warn":
+                    warnings.warn(f"UserWarning: Column {field} doesn't exist and couldn't be removed.")
 
-            for i in flist:
-                self._deleteitem(i)
-        else:
-            raise TypeError(
-                "Fields must be list, tuple, ndarray, dictionary (keys) or a single unicode or byte string."
-            )
+    # -------------------------------------------------------
+    col_delete = col_remove
 
     # --------------------------------------------------------
     def col_pop(self, colspec):

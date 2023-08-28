@@ -1,5 +1,6 @@
 import math
 import unittest
+import itertools
 
 import pytest
 from numpy.testing import assert_array_equal
@@ -7,6 +8,7 @@ from numpy.testing import assert_array_equal
 import riptable as rt
 from riptable import *
 from riptable.rt_utils import alignmk
+from riptable.tests.utils import get_rc_version, parse_version
 
 
 class TestRTNumpy:
@@ -17,22 +19,82 @@ class TestRTNumpy:
         result = where(arr, True, False)
         assert_array_equal(result, arr, err_msg=f"Results did not match for where. {arr} vs. {result}")
 
-        x = Categorical(["a", "b", "a", "c", "b"])
-        y = Categorical(["b", "a", "b", "b", "e"])
-        z = FastArray(["a", "c", "f", "g", "a"])
-        f = FastArray([True, False, True, False, False])
+        x_raw = ["a", "b", "a", "c", "b"]
+        y_raw = ["b", "a", "b", "b", "e"]
+        z_raw = ["a", "c", "f", "g", "a"]
+        f_raw = [True, False, True, False, False]
+
+        x = Categorical(x_raw)
+        y = Categorical(y_raw)
+        z = FastArray(z_raw)
+        f = FastArray(f_raw)
+
         out1 = where(f, x, y)
         out2 = where(f, x, z)
         out3 = where(f, z, y)
+        out4 = where(f_raw, x, y)
+        out5 = where(f_raw, x, z)
         assert_array_equal(out1, FastArray(["a", "a", "a", "b", "e"]))
         assert isinstance(out1, Categorical)
         assert_array_equal(out2, FastArray(["a", "c", "a", "g", "a"]))
         assert not isinstance(out2, Categorical)
         assert_array_equal(out3, FastArray(["a", "a", "f", "b", "e"]))
         assert not isinstance(out3, Categorical)
+        assert_array_equal(out4, FastArray(["a", "a", "a", "b", "e"]))
+        assert isinstance(out4, Categorical)
+        assert_array_equal(out5, FastArray(["a", "c", "a", "g", "a"]))
+        assert not isinstance(out5, Categorical)
+
+        # make sure python list results match with np.where
+        assert_array_equal(where(f_raw, x_raw, y_raw), np.where(f_raw, x_raw, y_raw))
+        assert_array_equal(where(f_raw, x_raw, z_raw), np.where(f_raw, x_raw, z_raw))
+        assert_array_equal(where(f_raw, z_raw, y_raw), np.where(f_raw, z_raw, y_raw))
 
     def test_where_length_one(self):
         assert_array_equal(rt.where(rt.FA([False]))[0], np.array([]))
+
+    def test_where_empty_condition(self):
+        f = FastArray([])
+        x = FastArray(["a", "b", "c"])
+        y = FastArray(["b", "c"])
+        empty = FastArray([], dtype=get_common_dtype(x, y))
+
+        res1 = rt.where(f, x, y)
+        res2 = rt.where(f, y, x)
+        assert_array_equal(res1, empty)
+        assert_array_equal(res2, empty)
+
+    def test_where_array_edge_cases(self):
+        empty = FastArray([])
+        c1 = FastArray([False])
+        c2 = FastArray([False, False])
+        c3 = FastArray([False, False, False])
+        l1 = FastArray([1])
+        l2 = FastArray([1, 2])
+        l3 = FastArray([1, 2, 3])
+        # all empty
+        assert_array_equal(rt.where(empty, empty, empty), FastArray([]))
+
+        def ensure_error(f, *args):
+            with pytest.raises((ValueError, SystemError)):
+                f(*args)
+
+        # if either x or y is empty error
+        ensure_error(rt.where, False, l1, empty)
+        ensure_error(rt.where, c1, empty, l1)
+        ensure_error(rt.where, c3, empty, empty)
+
+        # if length is mismatched
+        ensure_error(rt.where, c1, l2, l3)
+        ensure_error(rt.where, c2, l2, l3)
+        ensure_error(rt.where, c2, l3, l1)
+        ensure_error(rt.where, c3, l2, l3)
+
+        # valid args
+        assert_array_equal(rt.where(c1, l2, FastArray([4, 5])), FastArray([4, 5]))
+        assert_array_equal(rt.where(c3, FastArray([4, 5, 6]), l1), FastArray([1, 1, 1]))
+        assert_array_equal(rt.where(c3, 1, 2), FastArray([2, 2, 2]))
+        assert_array_equal(rt.where(c3, l1, l1), FastArray([1, 1, 1]))
 
     def test_interp(self):
         x = interp(arange(3.0).astype(float32), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
@@ -185,6 +247,35 @@ class TestRTNumpy:
         ds2["Ticker"] = rt.FastArray(["Test", "Blah"] * 5)
         res = alignmk(ds1.Ticker, ds2.Ticker, ds1.Time, ds2.Time)
         target = rt.FastArray([0, 0, 0, 2, 4, 4, 4, 6, 8, 8])
+        assert_array_equal(res, target)
+
+    @pytest.mark.xfail(
+        get_rc_version() < parse_version("1.14.2a"), strict=False, reason="Broken nan handling and unsupported uints"
+    )
+    @pytest.mark.parametrize(
+        "nans",
+        [
+            pytest.param(-1, id="left"),
+            pytest.param(0, id="both"),
+            pytest.param(1, id="right"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "tdt",
+        [
+            pytest.param(np.dtype(int32), id="int32"),
+            pytest.param(np.dtype(int64), id="int64"),
+            pytest.param(np.dtype(float32), id="float32"),
+            pytest.param(np.dtype(float64), id="float64"),
+            pytest.param(np.dtype(uint32), id="uint32"),
+            pytest.param(np.dtype(uint64), id="uint64"),
+        ],
+    )
+    def test_alignmk_invalids(self, tdt, nans):
+        ds1 = rt.Dataset(dict(time=rt.FA([1, 2, np.nan if nans <= 0 else 3, 4]).astype(tdt), data1=[1, 2, 3, 4]))
+        ds2 = rt.Dataset(dict(time=rt.FA([1, 2, np.nan if nans >= 0 else 3, 4]).astype(tdt), data2=[1, 2, 3, 4]))
+        res = alignmk(ds1.data1, ds2.data2, ds1.time, ds2.time)
+        target = rt.FA([0, 1, rt.nan, 3])
         assert_array_equal(res, target)
 
     def test_sample(self):

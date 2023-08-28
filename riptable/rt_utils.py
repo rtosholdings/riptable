@@ -1052,6 +1052,8 @@ def sample(
         N = min(N, obj.shape[0])
     else:
         if filter.dtype.char == "?":  # Bool
+            if filter.size != obj.shape[0]:
+                raise ValueError("sample: boolean mask array must be the same size as the array")
             M = bool_to_fancy(filter)
         else:
             M = filter

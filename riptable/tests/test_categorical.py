@@ -501,6 +501,16 @@ class TestCategorical(unittest.TestCase):
 
         assert (multi_set_results == multi_list_results).all(), "Failed check 3, .isin(set())"
 
+        empty_list_results = c.isin([])
+        empty_set_results = c.isin({})
+        empty_fa_results = c.isin(rt.FA([]))
+
+        expected = rt.FA([False] * len(c))
+
+        assert (empty_list_results == expected).all(), "Failed check 4, .isin(list())"
+        assert (empty_set_results == expected).all(), "Failed check 5, .isin(set())"
+        assert (empty_fa_results == expected).all(), "Failed check 6, .isin(FA())"
+
     # -------------------------------------------- MATLAB ----------------------------------
     def test_ctor_matlab(self):
         idx_list = [1.0, 2.0, 3.0, 4.0, 5.0]

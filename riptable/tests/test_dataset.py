@@ -2071,6 +2071,24 @@ class TestDataset(unittest.TestCase):
         )
         self.assertTrue(np.all(test == result))
 
+    def test_isin(self):
+        ds = rt.Dataset({"A": rt.FA(["a", "b", "c", "d"]), "B": rt.FA([1, 2, 3, 4]), "C": rt.FA([5, 6, 7, 8])})
+        res = ds.isin(rt.FA(["b", 3, 5]))
+
+        assert_array_equal(res["A"], rt.FA([False, True, False, False]))
+        assert_array_equal(res["B"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["C"], rt.FA([False, False, False, False]))
+
+        res = ds.isin(rt.FA([1, 4, 6, 7]))
+        assert_array_equal(res["A"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["B"], rt.FA([True, False, False, True]))
+        assert_array_equal(res["C"], rt.FA([False, True, True, False]))
+
+        res = ds.isin(rt.FA([]))
+        assert_array_equal(res["A"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["B"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["C"], rt.FA([False, False, False, False]))
+
     def test_dataset_footer_copy(self):
         ds = Dataset({"x1": ["A", "B"]})
         ds.footer_set_values("sum", {"x1": 3})

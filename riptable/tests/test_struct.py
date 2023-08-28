@@ -396,14 +396,16 @@ class Struct_Test(unittest.TestCase):
         dict1 = {_k: [_i] for _i, _k in enumerate(cols)}
         st1 = Struct(dict1)
         self.assertEqual(list(st1.keys()), cols)
-        st1.col_remove("aa")
+        with self.assertRaises(ValueError):
+            st1.col_remove("c", on_missing="invalid_on_missing_param")
+        st1.col_remove({"aa"})
         self.assertEqual(list(st1.keys()), cols[1:])
         with self.assertRaises(IndexError):
             st1.col_remove("aa")
         st1.col_remove(["b", "c"])
         self.assertEqual(list(st1.keys()), cols[3:])
         with self.assertRaises(IndexError):
-            st1.col_remove(["μεαν", "b", "c"])
+            st1.col_remove(rt.FA(["μεαν", "b", "c"]))
         with self.assertRaises(TypeError):
             st1.col_remove(2)
         self.assertEqual(list(st1.keys()), cols[3:])
@@ -411,6 +413,9 @@ class Struct_Test(unittest.TestCase):
         self.assertEqual(list(st1.keys()), [])
         st1.col_remove([])
         self.assertEqual(list(st1.keys()), [])
+        st1.col_remove("d", on_missing="ignore")
+        with self.assertWarns(UserWarning):
+            st1.col_remove("c", on_missing="warn")
 
     def test_col_filter(self):
         x = arange(3)

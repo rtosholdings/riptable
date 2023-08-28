@@ -1018,8 +1018,6 @@ class DisplayTable(object):
 
     # ------------------------------------------------------------------------------------
     def build_final_ends(self, plain=False, badcols=None, badrows=None):
-        """ """
-
         final_headers = []
         final_footers = []
         gray_style = DisplayColumnColors.GrayItalic
@@ -1168,7 +1166,6 @@ class DisplayTable(object):
 
     # -------------------------------------------------------------------------------------
     def fix_multiline_footers(self, plain=False, badcols=None, badrows=None):
-        """ """
         final_footers = []
         gray_style = DisplayColumnColors.GrayItalic
 

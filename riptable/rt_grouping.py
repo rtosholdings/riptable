@@ -2266,7 +2266,6 @@ class Grouping:
     def _return_dataset(
         self, origdict, accumdict: dict, func_num, return_all=False, col_idx=None, keychain=None, **kwargs
     ) -> "Dataset":
-        """ """
         showfilter = kwargs.get("showfilter", False)
         invalid = kwargs.get("invalid", False)
         showkeys = kwargs.get("showkeys", True)
