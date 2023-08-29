@@ -18,3 +18,4 @@ dependencies:
   - riptide_cpp
   - sphinx_rtd_theme>=0.5.1
   - sphinx-autoapi
+  - sphinx-design

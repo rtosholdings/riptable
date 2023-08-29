@@ -10,6 +10,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from datetime import datetime
 import os
 import sys
 
@@ -19,11 +20,10 @@ sys.path.insert(0, os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 
 project = "riptable"
-copyright = "2022, rtosholdings"
 author = "rtosholdings"
-
-# The full version, including alpha/beta/rc tags
-release = "1.3"
+copyright = f"{datetime.now().year}, {author}"
+# Leave the release version unspecified, for now. Tricky to obtain dynamically.
+# release = "1.x"
 
 
 # -- General configuration ---------------------------------------------------
