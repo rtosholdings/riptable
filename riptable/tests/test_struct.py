@@ -405,8 +405,8 @@ class Struct_Test(unittest.TestCase):
         self.assertEqual(list(st1.keys()), cols[3:])
         with self.assertRaises(IndexError):
             st1.col_remove(rt.FA(["μεαν", "b", "c"]), on_missing="raise")
-        with self.assertRaises(TypeError):
-            st1.col_remove(2)
+        with self.assertRaises(IndexError):
+            st1.col_remove(st1.shape[1])
         self.assertEqual(list(st1.keys()), cols[3:])
         st1.col_remove(["μεαν"])
         self.assertEqual(list(st1.keys()), [])
@@ -415,6 +415,17 @@ class Struct_Test(unittest.TestCase):
         st1.col_remove("d", on_missing="ignore")
         with self.assertWarns(UserWarning):
             st1.col_remove("c", on_missing="warn")
+
+        # items includes a str and int that both refer to same column - test doesn't throw exception
+        cols = ["aa", "b", "c", "μεαν"]
+        dict1 = {_k: [_i] for _i, _k in enumerate(cols)}
+        st1 = Struct(dict1)
+        st1.col_remove([0, "aa"])
+        self.assertEqual(list(st1.keys()), cols[1:])
+
+        # test items=int
+        st1.col_remove(0)
+        self.assertEqual(list(st1.keys()), cols[2:])
 
     def test_aggregate_column_matches(self):
         cols = ["a", "aa", "AAPL", "b", "c", "μεαν", "pnl", "PnL", "test", "test_rt", "ENVELOPE__"]
@@ -441,6 +452,15 @@ class Struct_Test(unittest.TestCase):
         ret_cols = st1._aggregate_column_matches(items=["a", "a"])
         self.assertEqual(ret_cols, ["a"])
 
+        ret_cols = st1._aggregate_column_matches(items=4)
+        self.assertEqual(ret_cols, cols[4:5])
+
+        ret_cols = st1._aggregate_column_matches(items=4, like="c")
+        self.assertEqual(ret_cols, cols[4:5])
+
+        ret_cols = st1._aggregate_column_matches(items=3, like="c")
+        self.assertEqual(ret_cols, cols[3:5])
+
         ret_cols = st1._aggregate_column_matches(items=["a", "a"], regex="A^")
         self.assertEqual(ret_cols, ["a"])
 
@@ -455,6 +475,18 @@ class Struct_Test(unittest.TestCase):
 
         ret_cols = st1._aggregate_column_matches(regex="bad_regex")
         self.assertEqual(ret_cols, [])
+
+        ret_cols = st1._aggregate_column_matches(items=[1, 2, 3], regex="bad_regex")
+        self.assertEqual(ret_cols, cols[1:4])
+
+        ret_cols = st1._aggregate_column_matches(items=[1, 2, "b"], like="c")
+        self.assertEqual(ret_cols, cols[1:5])
+
+        ret_cols = st1._aggregate_column_matches(items=[1, 2, "AAPL"], like="b")
+        self.assertEqual(ret_cols, cols[1:4])
+
+        correct_column_order = st1._aggregate_column_matches(items=[10, 8, "PnL"], like="n", regex="a")
+        self.assertEqual(correct_column_order, ["ENVELOPE__", "test", "PnL", "pnl", "a", "aa"])
 
     def test_col_remove_like_and_regex(self):
         cols = ["a", "aa", "b", "c", "μεαν", "test", "test_rt", "ENVELOPE__"]
@@ -546,11 +578,26 @@ class Struct_Test(unittest.TestCase):
 
     def test_col_filter(self):
         x = arange(3)
-        ds = Dataset({"a": x, "b": x, "ca": x, "cb": x, "d": x, "e": x, "ear": x})
+        cols = ["a", "b", "ca", "cb", "d", "e", "ear"]
+        ds = Dataset({col: x for col in cols})
         self.assertEqual(ds.col_filter(["a", "b"], "c", "e.r").keys(), ["a", "b", "ca", "cb", "ear"])
 
         with self.assertRaises(ValueError):
-            ds.col_filter("DNE", on_missing="warn")
+            ds.col_filter("DNE", on_missing="warn")  # this raises bc can't return DS with no cols
+
+        self.assertEqual(ds.col_filter(items=0).keys(), cols[:1])
+        self.assertEqual(ds.col_filter(items=[0, 1]).keys(), cols[:2])
+        self.assertEqual(ds.col_filter(items=[0, "b"]).keys(), cols[:2])
+        self.assertEqual(ds.col_filter(items=([0]) + (["a"]), regex="^b$").keys(), cols[:2])  # test tuple of lists
+
+        with self.assertRaises(IndexError):
+            ds.col_filter(items=[len(cols)])
+
+        cols = ["a", "aa", "AAPL", "b", "c", "μεαν", "pnl", "PnL", "test", "test_rt", "ENVELOPE__"]
+        dict1 = {_k: [_i] for _i, _k in enumerate(cols)}
+        st1 = Struct(dict1)
+        correct_column_order = st1.col_filter(items=[10, 8, "PnL"], like="n", regex="a")
+        self.assertEqual(correct_column_order.keys(), ["ENVELOPE__", "test", "PnL", "pnl", "a", "aa"])
 
     def test_col_pop(self):
         cols = ["aa", "b", "c", "μεαν"]
