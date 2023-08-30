@@ -1,6 +1,5 @@
 # $Id: //Depot/Source/SFW/riptable/Python/core/riptable/tests/test_struct.py#14 $
 
-
 import keyword
 import re
 import sys
@@ -391,7 +390,7 @@ class Struct_Test(unittest.TestCase):
             st.col_move_to_back("q")
         self.assertEqual(list(st), list("cimpabejklndfogh"))
 
-    def test_col_remove(self):
+    def test_col_remove_basic(self):
         cols = ["aa", "b", "c", "μεαν"]
         dict1 = {_k: [_i] for _i, _k in enumerate(cols)}
         st1 = Struct(dict1)
@@ -401,11 +400,11 @@ class Struct_Test(unittest.TestCase):
         st1.col_remove({"aa"})
         self.assertEqual(list(st1.keys()), cols[1:])
         with self.assertRaises(IndexError):
-            st1.col_remove("aa")
+            st1.col_remove("aa", on_missing="raise")
         st1.col_remove(["b", "c"])
         self.assertEqual(list(st1.keys()), cols[3:])
         with self.assertRaises(IndexError):
-            st1.col_remove(rt.FA(["μεαν", "b", "c"]))
+            st1.col_remove(rt.FA(["μεαν", "b", "c"]), on_missing="raise")
         with self.assertRaises(TypeError):
             st1.col_remove(2)
         self.assertEqual(list(st1.keys()), cols[3:])
@@ -417,10 +416,141 @@ class Struct_Test(unittest.TestCase):
         with self.assertWarns(UserWarning):
             st1.col_remove("c", on_missing="warn")
 
+    def test_aggregate_column_matches(self):
+        cols = ["a", "aa", "AAPL", "b", "c", "μεαν", "pnl", "PnL", "test", "test_rt", "ENVELOPE__"]
+        dict1 = {_k: [_i] for _i, _k in enumerate(cols)}
+        st1 = Struct(dict1)
+        method_name = self.test_aggregate_column_matches
+
+        with self.assertRaises(IndexError):
+            st1._aggregate_column_matches(items="DNE", func=method_name)
+
+        with self.assertWarns(UserWarning):
+            ret_cols = st1._aggregate_column_matches(items=["DNE"], on_missing="warn", func=method_name)
+        self.assertEqual(ret_cols, [])
+
+        with self.assertWarns(UserWarning):
+            ret_cols = st1._aggregate_column_matches(
+                ["a", "a", ""], like="a", regex="n|N", on_missing="warn", func=method_name
+            )
+        self.assertEqual(ret_cols, ["a", "aa", "pnl", "PnL", "ENVELOPE__"])
+
+        ret_cols = st1._aggregate_column_matches(like="a", regex="n|N|A")
+        self.assertEqual(ret_cols, ["a", "aa", "AAPL", "pnl", "PnL", "ENVELOPE__"])
+
+        ret_cols = st1._aggregate_column_matches(items=["a", "a"])
+        self.assertEqual(ret_cols, ["a"])
+
+        ret_cols = st1._aggregate_column_matches(items=["a", "a"], regex="A^")
+        self.assertEqual(ret_cols, ["a"])
+
+        ret_cols = st1._aggregate_column_matches(items=["a", "a"], like="A")
+        self.assertEqual(ret_cols, ["a", "AAPL"])
+
+        ret_cols = st1._aggregate_column_matches(regex="_")
+        self.assertEqual(ret_cols, cols[-2:])
+
+        ret_cols = st1._aggregate_column_matches(items="a", regex="aa|A")
+        self.assertEqual(ret_cols, cols[:3])
+
+        ret_cols = st1._aggregate_column_matches(regex="bad_regex")
+        self.assertEqual(ret_cols, [])
+
+    def test_col_remove_like_and_regex(self):
+        cols = ["a", "aa", "b", "c", "μεαν", "test", "test_rt", "ENVELOPE__"]
+        dict1 = {_k: [_i] for _i, _k in enumerate(cols)}
+        st1 = Struct(dict1)
+        st1_copy = st1.copy(deep=True)
+
+        # test multiple params
+        self.assertEqual(list(st1.keys()), cols)
+        st1_copy.col_remove({"ENVELOPE__": "key_ENVELOPE__"})
+        self.assertEqual(list(st1_copy.keys()), cols[:-1])
+        with self.assertWarns(UserWarning):
+            st1_copy.col_remove(items={"ENVELOPE__": "key_ENVELOPE__"}, like="aa", regex="test", on_missing="warn")
+        self.assertEqual(list(st1_copy.keys()), ["a", "b", "c", "μεαν"])
+
+        st1_copy.col_remove(items={"b"}, like="nothing", regex="nothing", on_missing="raise")
+        self.assertEqual(list(st1_copy.keys()), ["a", "c", "μεαν"])
+
+        # test no matches
+        st1_keys = st1_copy.keys()
+        st1_copy.col_remove(like="aa", regex="test")
+        self.assertEqual(list(st1_copy.keys()), st1_keys)
+
+        # test regex
+        st1_copy = st1.copy(deep=True)
+        st1_copy.col_remove(regex="rt$|__$")
+        self.assertEqual(list(st1_copy.keys()), cols[:-2])
+
+        # test simple regex vs like
+        st1_like = st1.copy(deep=True)
+        st1_regex = st1.copy(deep=True)
+        st1_like.col_remove(like="a")
+        st1_regex.col_remove(regex="a")
+        self.assertTrue(st1_like.equals(st1_regex))
+
+        # test str vs set
+        st1_copy = st1.copy(deep=True)
+        st2_copy = st1.copy(deep=True)
+
+        st1_copy.col_remove(items={"a"})
+        st2_copy.col_remove(items="a")
+        self.assertTrue(st1_copy.equals(st2_copy))
+
+        # test params are duped
+        st1_copy = st1.copy(deep=True)
+        st1_copy.col_remove(items=["a", "aa"], like="a", regex="aa")
+        self.assertEqual(list(st1_copy.keys()), ["b", "c", "μεαν", "test", "test_rt", "ENVELOPE__"])
+
+        # test FA, np
+        st1_copy = st1.copy(deep=True)
+        st1_copy.col_remove(items=rt.FA(["a", "aa"]).astype(str), like="a", regex="ν")
+        self.assertEqual(list(st1_copy.keys()), ["b", "c", "test", "test_rt", "ENVELOPE__"])
+
+    def test_col_remove_opposite_of_col_filter(self):
+        cols = ["a", "aa", "b", "c", "μεαν", "test", "test_rt", "ENVELOPE__"]
+        dict1 = {_k: [_i] for _i, _k in enumerate(cols)}
+        st1 = Struct(dict1)
+        st1_copy = st1.copy(deep=True)
+        self.assertEqual(list(st1.keys()), cols)
+
+        # -----test regex= -----
+        regex = "a"
+        str_filtered = st1.col_filter(regex=regex)
+        st1_copy.col_remove(regex=regex)
+
+        self.assertEqual(len(set(st1_copy.keys()) & set(str_filtered.keys())), 0)
+        self.assertEqual(len(set(st1_copy.keys()) | set(str_filtered.keys())), len(st1.keys()))
+
+        # -----test like= -----
+        st1_copy = st1.copy(deep=True)
+        like = "a"
+        str_filtered = st1.col_filter(like=like)
+        st1_copy.col_remove(like=like)
+
+        self.assertEqual(len(set(st1_copy.keys()) & set(str_filtered.keys())), 0)
+        self.assertEqual(len(set(st1_copy.keys()) | set(str_filtered.keys())), len(st1.keys()))
+
+        # -----test multiple params-----
+        st1_copy = st1.copy(deep=True)
+        flist = "a"
+        like = "c"
+        regex = "test"
+
+        str_filtered = st1.col_filter(items=flist, like=like, regex=regex)
+        st1_copy.col_remove(items=flist, like=like, regex=regex)
+
+        self.assertEqual(len(set(st1_copy.keys()) & set(str_filtered.keys())), 0)
+        self.assertEqual(len(set(st1_copy.keys()) | set(str_filtered.keys())), len(st1.keys()))
+
     def test_col_filter(self):
         x = arange(3)
         ds = Dataset({"a": x, "b": x, "ca": x, "cb": x, "d": x, "e": x, "ear": x})
         self.assertEqual(ds.col_filter(["a", "b"], "c", "e.r").keys(), ["a", "b", "ca", "cb", "ear"])
+
+        with self.assertRaises(ValueError):
+            ds.col_filter("DNE", on_missing="warn")
 
     def test_col_pop(self):
         cols = ["aa", "b", "c", "μεαν"]

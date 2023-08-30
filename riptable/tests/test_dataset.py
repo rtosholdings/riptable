@@ -1882,6 +1882,7 @@ class TestDataset(unittest.TestCase):
         tz_keys["G"] = None
         for idx, tz in enumerate(TimeZone._TZDB_TIMEZONE_NAMES):
             tz_keys[f"TZ{idx}"] = tz
+        tz_keys["H"] = "US/Eastern"  # previous Pandas alias for America/New_York
 
         for k, tz in tz_keys.items():
             df[k] = (
@@ -1901,7 +1902,7 @@ class TestDataset(unittest.TestCase):
         for key, tz in tz_keys.items():
             self.assertTrue((_datetime_to_int(df[key]) == ds[key].yyyymmdd).all())
             self.assertTrue(ds[key]._timezone._from_tz == "UTC")
-            expected_to_tz = tz or "UTC"
+            expected_to_tz = "America/New_York" if key == "H" else (tz or "UTC")
             self.assertEqual(ds[key]._timezone._to_tz, expected_to_tz)
 
         # Make two of the categoricals into enum type

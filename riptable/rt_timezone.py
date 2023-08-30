@@ -1014,6 +1014,7 @@ class TimeZone:
         "Hongkong": "Asia/Hong_Kong",
         "Tokyo": "Asia/Tokyo",
         "Seoul": "Asia/Seoul",
+        "US/Eastern": "America/New_York",
     }
 
     # These are supported tz database names (tz identifiers).
