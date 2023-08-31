@@ -1,0 +1,53 @@
+/* This file was copied from NumPy: 
+https://github.com/numpy/numpy/blob/main/doc/source/_static/numpy.css
+All the fonts were removed to keep the defaults of the sphinx-rtd-theme; this
+now controls only the "cards" that are on the landing page.
+To use this file, add the following to /riptable/riptable/docs/source/conf.py:
+html_css_files = ["riptable.css"]
+*/
+
+/* Main page overview cards */
+
+.sd-card {
+  background: #fff;
+  border-radius: 0;
+  padding: 30px 10px 20px 10px;
+  margin: 10px 0px;
+}
+
+.sd-card .sd-card-header {
+  text-align: center;
+}
+
+.sd-card .sd-card-header .sd-card-text {
+  margin: 0px;
+}
+
+/* Images on cards*/
+
+.sd-card .sd-card-img-top {
+  height: 100px;
+  width: 100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sd-card .sd-card-header {
+  border: none;
+  background-color: white;
+  color: #150458 !important;
+  font-size: var(--pst-font-size-h5);
+  font-weight: bold;
+  padding: 2.5rem 0rem 0.5rem 0rem;
+}
+
+.sd-card .sd-card-footer {
+  border: none;
+  background-color: white;
+}
+
+.sd-card .sd-card-footer .sd-card-text {
+  max-width: 220px;
+  margin-left: auto;
+  margin-right: auto;
+}

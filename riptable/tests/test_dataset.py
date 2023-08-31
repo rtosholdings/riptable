@@ -1882,6 +1882,7 @@ class TestDataset(unittest.TestCase):
         tz_keys["G"] = None
         for idx, tz in enumerate(TimeZone._TZDB_TIMEZONE_NAMES):
             tz_keys[f"TZ{idx}"] = tz
+        tz_keys["H"] = "US/Eastern"  # previous Pandas alias for America/New_York
 
         for k, tz in tz_keys.items():
             df[k] = (
@@ -1901,7 +1902,7 @@ class TestDataset(unittest.TestCase):
         for key, tz in tz_keys.items():
             self.assertTrue((_datetime_to_int(df[key]) == ds[key].yyyymmdd).all())
             self.assertTrue(ds[key]._timezone._from_tz == "UTC")
-            expected_to_tz = tz or "UTC"
+            expected_to_tz = "America/New_York" if key == "H" else (tz or "UTC")
             self.assertEqual(ds[key]._timezone._to_tz, expected_to_tz)
 
         # Make two of the categoricals into enum type
@@ -2070,6 +2071,24 @@ class TestDataset(unittest.TestCase):
             ]
         )
         self.assertTrue(np.all(test == result))
+
+    def test_isin(self):
+        ds = rt.Dataset({"A": rt.FA(["a", "b", "c", "d"]), "B": rt.FA([1, 2, 3, 4]), "C": rt.FA([5, 6, 7, 8])})
+        res = ds.isin(rt.FA(["b", 3, 5]))
+
+        assert_array_equal(res["A"], rt.FA([False, True, False, False]))
+        assert_array_equal(res["B"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["C"], rt.FA([False, False, False, False]))
+
+        res = ds.isin(rt.FA([1, 4, 6, 7]))
+        assert_array_equal(res["A"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["B"], rt.FA([True, False, False, True]))
+        assert_array_equal(res["C"], rt.FA([False, True, True, False]))
+
+        res = ds.isin(rt.FA([]))
+        assert_array_equal(res["A"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["B"], rt.FA([False, False, False, False]))
+        assert_array_equal(res["C"], rt.FA([False, False, False, False]))
 
     def test_dataset_footer_copy(self):
         ds = Dataset({"x1": ["A", "B"]})

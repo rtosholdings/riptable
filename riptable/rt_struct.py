@@ -10,9 +10,22 @@ import os
 import re
 import sys
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict, abc
 from re import IGNORECASE, compile
-from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    List,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    Literal,
+    Iterable,
+)
 
 import numpy as np
 import riptide_cpp as rc
@@ -48,14 +61,6 @@ from .Utils.rt_metadata import MetaData
 
 # from IPython import get_ipython
 # from IPython.display import display, HTML
-
-
-# Type-checking-only imports.
-if TYPE_CHECKING:
-    # py36 doesn't have re.Pattern so we can't do a normal import of it above.
-    # Work around it by using the 'forward reference' style annotation below.
-    import re
-
 
 # Create a logger for this module.
 # TODO: Maybe just put this inside Struct as e.g. cls._logger?
@@ -2549,23 +2554,6 @@ class Struct:
         setattr(self._all_items, attrib_name, attrib_value)
 
     # -------------------------------------------------------
-    def col_delete(self, name: Union[str, List[str]]) -> None:
-        """
-        Remove and item from the struct.
-
-        Parameters
-        ----------
-        name : str or list of str
-            Name or list of item names to be removed.
-
-        Raises
-        ------
-        IndexError
-            Item not found with given name.
-        """
-        self.col_remove(name)
-
-    # -------------------------------------------------------
     def col_get_value(self, name: str):
         """
         Return a single item.
@@ -2689,22 +2677,133 @@ class Struct:
         return self._all_items.item_exists(name)
 
     # -------------------------------------------------------
-    def col_filter(self, items=None, like=None, regex: Optional["re.Pattern"] = None):
+    def _aggregate_column_matches(
+        self,
+        items: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
+        like: Optional[str] = None,
+        regex: Optional["re.Pattern"] = None,
+        on_missing: Literal["raise", "warn", "ignore"] = "raise",
+        func: Optional[Callable] = None,
+    ) -> list[str]:
+        """
+        Aggregate the matches returned by the methods defined for ``items``, ``like``,
+        and ``regex``, and return them in order.
+
+        At least one of ``items``, ``like``, or ``regex`` must be specified.
+
+        Parameters
+        ----------
+        items : str, int, or iterable of str or int, optional
+            Names or indices of columns to be removed. An iterable can contain both
+            string and int values.
+        like : str, optional
+            Substring to match in column names.
+        regex : str, optional
+            Regular expression string to match in column names.
+        on_missing : {"raise", "warn", "ignore"}, default "raise"
+            Governs how to handle a column in ``items`` that doesn't exist:
+
+              - "raise" (default): Raises an IndexError. No columns are returned.
+              - "warn": Issues a warning. All columns in ``items`` that do exist are included in match list.
+              - "ignore": No error or warning. All columns in ``items`` that do exist are included in match list.
+        func : callable, optional
+            Method calling ``_aggregate_column_matches``. Used to enrich exception / log messages.
+
+        Returns
+        -------
+        list of str
+            A list of strings corresponding to column name matches.
+        """
+
+        calling_func = func.__name__ if func else ""
+        if (items is None) and not like and not regex:
+            raise TypeError("Must pass either `items`, `like`, or `regex`")
+        if (items is not None) and not isinstance(items, (int, abc.Iterable)):
+            raise TypeError("items must be int, str or iterable")
+        if on_missing not in ("raise", "warn", "ignore"):
+            raise ValueError(f"Invalid on_missing '{on_missing}'. Cannot proceed with function {calling_func}")
+
+        item_match = []
+        if items is not None:
+            # flip single strings to lists to use the same routine
+            if isinstance(items, (str, bytes, int)):
+                items = [items]
+            else:
+                # this correctly handles np.ndarray, dict, set, list... essentially non-string iterables
+                items = list(items)
+
+            item_match = items
+
+            # handle indexes passed to items
+            def index_to_col(col_num: Union[str, int]) -> str:
+                if isinstance(col_num, int):
+                    try:
+                        return self._extract_indexing(col_num)[0]
+                    except IndexError:  # this exception message isn't great, so recatch and throw
+                        raise IndexError(
+                            f"Index {col_num} passed to ``items`` is out bounds for dataset with shape {self.shape}"
+                        )
+                else:
+                    return col_num
+
+            item_match = [index_to_col(item) for item in item_match]
+
+            # check for missing columns in item_match
+            missing = set(item_match) - set(self)
+            item_match = [col for col in item_match if col not in missing]
+
+            if len(missing) != 0 and on_missing != "ignore":
+                if on_missing == "raise":
+                    raise IndexError(
+                        f"Unknown column{'s' if len(missing) > 1 else ''} {', '.join(missing)} do{'' if len(missing) > 1 else 'es'} not exist. Cannot proceed with function {calling_func}"
+                    )
+                if on_missing == "warn":
+                    warnings.warn(
+                        f"UserWarning: Unknown column{'s' if len(missing) > 1 else ''} {', '.join(missing)} do{'' if len(missing) > 1 else 'es'} not exist, and will be ignored in operation {calling_func}."
+                    )
+
+        like_match = [key for key in self.keys() if like in key] if like else []
+
+        regex_match = []
+        if regex:
+            matcher = re.compile(regex)
+            regex_match = [key for key in self.keys() if matcher.search(key) is not None]
+
+        match_list = list(OrderedDict.fromkeys(item_match + like_match + regex_match))
+
+        return match_list
+
+    # -------------------------------------------------------
+    def col_filter(
+        self,
+        items: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
+        like: Optional[str] = None,
+        regex: Optional["re.Pattern"] = None,
+        on_missing: Literal["raise", "warn", "ignore"] = "raise",
+    ):
         """
         Return the columns specified by indices or matches on column names.
 
         Note that this method doesn't filter a `.Dataset` or `Struct` on
         its contents, only on the column index or name.
 
+        At least one of ``items``, ``like``, or ``regex`` must be specified.
+
         Parameters
         ----------
-        items : list, default None
-            Names or indices of columns. If `items` is used, neither `like`
-            nor `regex` can be used.
-        like : str, default None
+        items : str, int, or iterable of str or int, optional
+            Names or indices of columns to be removed. An iterable can contain both
+            string and int values.
+        like : str, optional
             Substring to match in column names.
-        regex : str, default None
+        regex : str, optional
             Regular expression string to match in column names.
+        on_missing : {"raise", "warn", "ignore"}, default "raise"
+            Governs how to handle a column in ``items`` that doesn't exist:
+
+              - "raise" (default): Raises an IndexError. Nothing is returned.
+              - "warn": Issues a warning. Any columns in ``items`` that do exist are returned.
+              - "ignore": No error or warning. Any columns in ``items`` that do exist are returned.
 
         Returns
         -------
@@ -2721,6 +2820,13 @@ class Struct:
         Select columns by name:
 
         >>> ds = rt.Dataset({"one": rt.arange(3), "two": rt.arange(3) % 2, "three": rt.arange(3) % 3})
+        >>> ds
+        #   one   two   three
+        -   ---   ---   -----
+        0     0     0       0
+        1     1     1       1
+        2     2     0       2
+
         >>> ds.col_filter(items=["one", "three"])
         #   one   three
         -   ---   -----
@@ -2730,7 +2836,7 @@ class Struct:
 
         Select columns by index:
 
-        >>> ds.col_filter(items = [0, 1])
+        >>> ds.col_filter(items=[0, 1])
         #   one   two
         -   ---   ---
         0     0     0
@@ -2739,7 +2845,7 @@ class Struct:
 
         Select columns by substring:
 
-        >>> ds.col_filter(like = "thr")
+        >>> ds.col_filter(like="thr")
         #   three
         -   -----
         0       0
@@ -2748,7 +2854,7 @@ class Struct:
 
         Select columns by regular expression:
 
-        >>> ds.col_filter(regex = "e$")
+        >>> ds.col_filter(regex="e$")
         #   one   three
         -   ---   -----
         0     0       0
@@ -2772,25 +2878,13 @@ class Struct:
         -   ----   -----   ----   -   -   -
         0   fa     int32   3      1   2   3
         """
-        import re
-
-        newlist = []
-        if items is not None:
-            newlist = items
-            if not isinstance(items, list):
-                newlist = [items]
-
-        if like:
-            for k in self.keys():
-                if like in k:
-                    newlist.append(k)
-        if regex:
-            matcher = re.compile(regex)
-            for k in self.keys():
-                if matcher.search(k) is not None:
-                    newlist.append(k)
-        if (items is None) and not like and not regex:
-            raise TypeError("Must pass either `items`, `like`, or `regex`")
+        newlist = self._aggregate_column_matches(
+            items=items,
+            like=like,
+            regex=regex,
+            on_missing=on_missing,
+            func=self.col_filter,
+        )
 
         if len(newlist) == 0:
             raise ValueError("All columns were removed")
@@ -2878,8 +2972,6 @@ class Struct:
         john        0.82    1.19    0.96
         mary ann    2.85    2.05    2.08
         """
-        import re
-
         labels = self.label_get_names()
         if labels is None:
             raise TypeError(f"Dataset has no label columns. Cannot filter rows from label column.")
@@ -3354,17 +3446,42 @@ class Struct:
         missing = set(colnames) - set(self)
         if len(missing) != 0:
             raise IndexError(
-                f"Unknown column(s) {missing} do(es) not exist. Cannot proceed with function {func.__name__}"
+                f"Unknown column{'s' if len(missing) > 1 else ''} {', '.join(missing)} do{'' if len(missing) > 1 else 'es'} not exist. Cannot proceed with function {func.__name__}"
             )
 
     # --------------------------------------------------------
-    def col_remove(self, flist):
+    def col_remove(
+        self,
+        items: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
+        like: Optional[str] = None,
+        regex: Optional["re.Pattern"] = None,
+        on_missing: Literal["raise", "warn", "ignore"] = "warn",
+    ):
         """
-        Remove single column or list of columns.
+        Remove the columns specified by indices or matches on column names.
+
+        This can be done only if the `.Dataset` or `Struct` is unlocked.
+
+        At least one of ``items``, ``like``, or ``regex`` must be specified.
 
         Parameters
         ----------
-        flist : string, list, or dict
+        items : str, int, or iterable of str or int, optional
+            Names or indices of columns to be removed. An iterable can contain both
+            string and int values.
+        like : str, optional
+            Substring to match in column names.
+        regex : str, optional
+            Regular expression string to match in column names.
+        on_missing : {"warn", "raise", "ignore"}, default "warn"
+            Governs how to handle a column in ``items`` that doesn't exist:
+
+              - "warn" (default): Issues a warning. All columns in ``items`` that do exist are removed.
+
+                ..  versionchanged:: 1.13.0
+                    Previously, the default value was `"raise"`.
+              - "raise" : Raises an IndexError. No columns are removed.
+              - "ignore": No error or warning. All columns in ``items`` that do exist are removed.
 
         Returns
         -------
@@ -3372,8 +3489,17 @@ class Struct:
 
         Examples
         --------
-        >>> ds = Dataset({'col_'+str(i): rt.arange(5) for i in range(5)})
-        >>> ds.col_remove(['col_2', 'col_0'])
+        >>> ds = rt.Dataset({"col_" + str(i): rt.arange(5) for i in range(5)})
+        >>> ds
+        #   col_0   col_1   col_2   col_3   col_4
+        -   -----   -----   -----   -----   -----
+        0       0       0       0       0       0
+        1       1       1       1       1       1
+        2       2       2       2       2       2
+        3       3       3       3       3       3
+        4       4       4       4       4       4
+
+        >>> ds.col_remove(["col_2", "col_0"])
         >>> ds
         #   col_1   col_3   col_4
         -   -----   -----   -----
@@ -3382,22 +3508,78 @@ class Struct:
         2       2       2       2
         3       3       3       3
         4       4       4       4
+
+        Try to remove a column that doesn't exist with the default ``on_missing="warn"``.
+        A warning is raised, and any columns that do exist are removed:
+
+        >>> ds.col_remove(["col_1", "col_2"])
+        UserWarning: Column col_2 doesn't exist and couldn't be removed.
+        >>> ds
+        #   col_3   col_4
+        -   -----   -----
+        0       0       0
+        1       1       1
+        2       2       2
+        3       3       3
+        4       4       4
+
+        Remove a column by its index:
+
+        >>> ds.col_remove([0])
+        >>> ds
+        #   col_4
+        -   -----
+        0       0
+        1       1
+        2       2
+        3       3
+        4       4
+
+        >>> ds2 = rt.Dataset({"aabb": rt.arange(3), "abab": rt.arange(3), "ccdd": rt.arange(3),
+        ...                   "cdcd": rt.arange(3)})
+        >>> ds2
+        #   aabb   abab   ccdd   cdcd
+        -   ----   ----   ----   ----
+        0      0      0      0      0
+        1      1      1      1      1
+        2      2      2      2      2
+
+        Remove columns by substring:
+
+        >>> ds2.col_remove(like="cd")
+        >>> ds2
+        #   aabb   abab
+        -   ----   ----
+        0      0      0
+        1      1      1
+        2      2      2
+
+        Remove columns by regular expression:
+
+        >>> ds2.col_remove(regex="^ab")
+        >>> ds2
+        #   aabb
+        -   ----
+        0      0
+        1      1
+        2      2
         """
         if self.is_locked():
             raise AttributeError("Not allowed to call col_remove() on locked object.")
-        # flip single strings to lists to use the same routine
-        if isinstance(flist, (str, bytes)):
-            flist = [flist]
-        if isinstance(flist, (np.ndarray, list, tuple, dict)):
-            # want to ensure atomic behavior:
-            self._ensure_atomic(flist, self.col_remove)
 
-            for i in flist:
-                self._deleteitem(i)
-        else:
-            raise TypeError(
-                "Fields must be list, tuple, ndarray, dictionary (keys) or a single unicode or byte string."
-            )
+        remove_list = self._aggregate_column_matches(
+            items=items,
+            like=like,
+            regex=regex,
+            on_missing=on_missing,
+            func=self.col_remove,
+        )
+
+        for field in remove_list:
+            self._deleteitem(field)
+
+    # -------------------------------------------------------
+    col_delete = col_remove
 
     # --------------------------------------------------------
     def col_pop(self, colspec):

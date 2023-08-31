@@ -1,0 +1,21 @@
+channels:
+  - rtosholdings
+  - conda-forge
+  - defaults
+dependencies:
+  - ansi2html>=1.5.2
+  - arrow
+  - ipykernel
+  - ipython
+  - matplotlib
+  - nbsphinx
+  - numba>=0.56.2
+  - pandas>=1.0,<3.0
+  - pip
+  - pyarrow
+  - pytest
+  - python-dateutil
+  - riptide_cpp
+  - sphinx_rtd_theme>=0.5.1
+  - sphinx-autoapi
+  - sphinx-design

@@ -1342,6 +1342,8 @@ class FastArray_Test(unittest.TestCase):
 
     def test_isin(self):
         self.assertFalse(FastArray(["A"]).isin(["AA"])[0])
+        self.assertTrue((FastArray(["A", "B", "C"]).isin([]) == FastArray([False, False, False])).all())
+        self.assertTrue((FastArray(["A", "B", "C"]).isin(rt.FA([])) == FastArray([False, False, False])).all())
 
     def test_between(self):
         # test endpoint configs

@@ -32,6 +32,7 @@ import subprocess
 import sys
 import tempfile
 import typing
+import warnings
 
 try:
     import tomllib
@@ -52,11 +53,18 @@ import riptable
 # With template backend, matplotlib plots nothing
 matplotlib.use("template")
 
+# Standardize on these display settings when executing examples
+riptable.Display.options.COL_ALL = True  # display all Dataset columns
+riptable.Display.options.E_MAX = 100_000_000  # render up to 100MM before using scientific notation
+riptable.Display.options.P_THRESHOLD = 0  # truncate small decimals, rather than scientific notation
+riptable.Display.options.NUMBER_SEPARATOR = True  # put commas in numbers
+
 
 ERROR_MSGS = {
     "GL99": "Error parsing docstring: {doc_parse_error}",
     "GL98": "Private classes ({mentioned_private_classes}) should not be " "mentioned in public docstrings",
     "GL97": "Use 'array-like' rather than 'array_like' in docstrings.",
+    "GL96": "Warning validating docstring: {doc_validation_warning}",
     "SA99": "{reference_name} in `See Also` section does not need `riptable` " "prefix, use {right_reference} instead.",
     "EX99": "Examples do not pass tests:\n{doctest_log}",
     "EX98": "flake8 error {error_code}: {error_message}{times_happening}",
@@ -289,6 +297,7 @@ def riptable_validate(
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
     flake8_errors: typing.Optional(list[str]) = None,
+    flake8_not_errors: typing.Optional(list[str]) = None,
 ):
     """
     Call the numpydoc validation, and add the errors specific to riptable.
@@ -305,72 +314,86 @@ def riptable_validate(
     """
     func_obj = Validator._load_obj(func_name)
     doc_parse_error = None
-    try:
-        doc_obj = get_doc_object(func_obj, doc=func_obj.__doc__)
-    except ValueError as ex:
-        doc_parse_error = str(ex)
-        doc_obj = get_doc_object(func_obj, doc="")
-    doc = RiptableDocstring(func_name, doc_obj)
-    result = validate(doc_obj)
-    if doc_parse_error:
-        result["errors"].insert(0, riptable_error("GL99", doc_parse_error=doc_parse_error))
 
-    mentioned_errs = doc.mentioned_private_classes
-    if mentioned_errs:
-        result["errors"].append(riptable_error("GL98", mentioned_private_classes=", ".join(mentioned_errs)))
+    with warnings.catch_warnings(record=True) as doc_warnings:
+        try:
+            doc_obj = get_doc_object(func_obj, doc=func_obj.__doc__)
+        except ValueError as ex:
+            doc_parse_error = str(ex)
+            doc_obj = get_doc_object(func_obj, doc="")
+        doc = RiptableDocstring(func_name, doc_obj)
+        result = validate(doc_obj)
+        if doc_parse_error:
+            result["errors"].insert(0, riptable_error("GL99", doc_parse_error=doc_parse_error))
 
-    if doc.see_also:
-        for rel_name in doc.see_also:
-            if rel_name.startswith("riptable."):
+        mentioned_errs = doc.mentioned_private_classes
+        if mentioned_errs:
+            result["errors"].append(riptable_error("GL98", mentioned_private_classes=", ".join(mentioned_errs)))
+
+        if doc.see_also:
+            for rel_name in doc.see_also:
+                if rel_name.startswith("riptable."):
+                    result["errors"].append(
+                        riptable_error(
+                            "SA99",
+                            reference_name=rel_name,
+                            right_reference=rel_name[len("riptable.") :],
+                        )
+                    )
+
+        def matches(test: str, matches: list[str]):
+            for match in matches:
+                if test.startswith(match):
+                    return True
+            return False
+
+        result["examples_errs"] = ""
+        if doc.examples:
+            result["examples_errs"] = doc.examples_errors
+            if result["examples_errs"]:
+                result["errors"].append(riptable_error("EX99", doctest_log=result["examples_errs"]))
+
+            for error_code, error_message, error_count in doc.validate_pep8():
+                times_happening = f" ({error_count} times)" if error_count > 1 else ""
                 result["errors"].append(
                     riptable_error(
-                        "SA99",
-                        reference_name=rel_name,
-                        right_reference=rel_name[len("riptable.") :],
+                        "EX98"
+                        if error_code == "ERROR"
+                        or (
+                            flake8_errors
+                            and matches(error_code, flake8_errors)
+                            and (not flake8_not_errors or not matches(error_code, flake8_not_errors))
+                        )
+                        else "EX96",
+                        error_code=error_code,
+                        error_message=error_message,
+                        times_happening=times_happening,
+                    )
+                )
+            examples_source_code = "".join(doc.examples_source_code)
+            for wrong_import in [v.__name__ for v in IMPORT_CONTEXT.values()]:
+                if re.search(f"import {wrong_import}\W+", examples_source_code):
+                    result["errors"].append(riptable_error("EX97", imported_library=wrong_import))
+
+            for error_message in doc.validate_format():
+                result["errors"].append(
+                    riptable_error(
+                        "EX95",
+                        error_message=error_message,
                     )
                 )
 
-    def matches(test: str, matches: list[str]):
-        for match in matches:
-            if test.startswith(match):
-                return True
-        return False
+        if doc.non_hyphenated_array_like():
+            result["errors"].append(riptable_error("GL97"))
 
-    result["examples_errs"] = ""
-    if doc.examples:
-        result["examples_errs"] = doc.examples_errors
-        if result["examples_errs"]:
-            result["errors"].append(riptable_error("EX99", doctest_log=result["examples_errs"]))
+        plt.close("all")
 
-        for error_code, error_message, error_count in doc.validate_pep8():
-            times_happening = f" ({error_count} times)" if error_count > 1 else ""
-            result["errors"].append(
-                riptable_error(
-                    "EX98"
-                    if error_code == "ERROR" or (flake8_errors and matches(error_code, flake8_errors))
-                    else "EX96",
-                    error_code=error_code,
-                    error_message=error_message,
-                    times_happening=times_happening,
-                )
-            )
-        examples_source_code = "".join(doc.examples_source_code)
-        for wrong_import in [v.__name__ for v in IMPORT_CONTEXT.values()]:
-            if re.search(f"import {wrong_import}\W+", examples_source_code):
-                result["errors"].append(riptable_error("EX97", imported_library=wrong_import))
-
-        for error_message in doc.validate_format():
-            result["errors"].append(
-                riptable_error(
-                    "EX95",
-                    error_message=error_message,
-                )
-            )
-
-    if doc.non_hyphenated_array_like():
-        result["errors"].append(riptable_error("GL97"))
-
-    plt.close("all")
+    if doc_warnings:
+        for doc_warning in doc_warnings:
+            doc_validation_warning = warnings.formatwarning(
+                doc_warning.message, doc_warning.category, doc_warning.filename, doc_warning.lineno
+            ).strip()
+            result["errors"].append(riptable_error("GL96", doc_validation_warning=doc_validation_warning))
 
     if errors or not_errors:
         filtered_errors = []
@@ -420,6 +443,7 @@ def validate_all(
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
     flake8_errors: typing.Optional(list[str]) = None,
+    flake8_not_errors: typing.Optional(list[str]) = None,
     ignore_deprecated: bool = False,
     verbose: int = 0,
 ) -> dict:
@@ -472,6 +496,7 @@ def validate_all(
             errors=errors,
             not_errors=not_errors,
             flake8_errors=flake8_errors,
+            flake8_not_errors=flake8_not_errors,
         )
         if ignore_deprecated and doc_info["deprecated"]:
             if verbose > 1:
@@ -505,6 +530,7 @@ def print_validate_all_results(
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
     flake8_errors: typing.Optional(list[str]) = None,
+    flake8_not_errors: typing.Optional(list[str]) = None,
     out_format: str = OUT_FORMAT_OPTS[0],
     ignore_deprecated: bool = False,
     outfile: typing.IO = sys.stdout,
@@ -520,6 +546,7 @@ def print_validate_all_results(
         errors=errors,
         not_errors=not_errors,
         flake8_errors=flake8_errors,
+        flake8_not_errors=flake8_not_errors,
         ignore_deprecated=ignore_deprecated,
         verbose=verbose,
     )
@@ -552,6 +579,7 @@ def print_validate_one_results(
     errors: typing.Optional(list[str]) = None,
     not_errors: typing.Optional(list[str]) = None,
     flake8_errors: typing.Optional(list[str]) = None,
+    flake8_not_errors: typing.Optional(list[str]) = None,
     outfile: typing.IO = sys.stdout,
     verbose: int = 0,
 ):
@@ -564,13 +592,17 @@ def print_validate_one_results(
         return f"\n{full_line}\n{title_line}\n{full_line}\n\n"
 
     if verbose:
-        print(f"Validating {func_name}...")
+        print(f"Validating {func_name}... ", end="", flush=True)
     result = riptable_validate(
         func_name,
         errors=errors,
         not_errors=not_errors,
         flake8_errors=flake8_errors,
+        flake8_not_errors=flake8_not_errors,
     )
+    if verbose:
+        status = "FAILED" if len(result["errors"]) else "OK"
+        print(status)
 
     outfile.write(header(f"Docstring ({func_name})"))
     outfile.write(f"{result['docstring']}\n")
@@ -580,7 +612,7 @@ def print_validate_one_results(
         outfile.write(f'{len(result["errors"])} Errors found:\n')
         for err_code, err_desc in result["errors"]:
             if err_code == "EX99":  # Failing examples are printed at the end
-                outfile.write("\tExamples do not pass tests\n")
+                outfile.write(f"\t{err_code}: Examples do not pass tests\n")
                 continue
             outfile.write(f"\t{err_code}: {err_desc}\n")
     else:
@@ -681,6 +713,16 @@ def main():
         help="Comma separated list of flake8 error codes to treat as errors. Others are treated as warnings.",
     )
     argparser.add_argument(
+        "--flake8-not-errors",
+        default=None,
+        help="Comma separated list of flake8 error codes not to validate. Empty by default",
+    )
+    argparser.add_argument(
+        "--example-prelude",
+        default=None,
+        help="Optional code to execute before the examples.",
+    )
+    argparser.add_argument(
         "--out",
         "-o",
         default=None,
@@ -713,6 +755,7 @@ def main():
         errors = args.errors.split(",") if args.errors is not None else None
         not_errors = args.not_errors.split(",") if args.not_errors is not None else None
         flake8_errors = args.flake8_errors.split(",") if args.flake8_errors is not None else None
+        flake8_not_errors = args.flake8_not_errors.split(",") if args.flake8_not_errors is not None else None
 
         if args.function is None:
             return print_validate_all_results(
@@ -722,6 +765,7 @@ def main():
                 errors=errors,
                 not_errors=not_errors,
                 flake8_errors=flake8_errors,
+                flake8_not_errors=flake8_not_errors,
                 out_format=args.format,
                 ignore_deprecated=args.ignore_deprecated,
                 outfile=outfile,
@@ -733,6 +777,7 @@ def main():
                 errors=errors,
                 not_errors=not_errors,
                 flake8_errors=flake8_errors,
+                flake8_not_errors=flake8_not_errors,
                 outfile=outfile,
                 verbose=args.verbose,
             )

@@ -6358,7 +6358,7 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
 # ========================================================
 class TimeSpanBase:
-    """ """
+    """Parent class for TimeSpan"""
 
     ReduceFuncs = False
     unit_convert_factors = {

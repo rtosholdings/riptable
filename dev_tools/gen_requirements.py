@@ -72,6 +72,15 @@ runtime_reqs = [
     _TBB_REQ,
 ]
 
+# Optional runtime requirements for riptable and riptide_cpp.
+runtime_opt_reqs = [
+    "arrow",
+    "ipykernel",
+    "ipython<8.13" if is_python(3, 8) else "ipython",
+    "matplotlib",
+    "pyarrow",
+]
+
 # Black formatting requirements.
 black_reqs = [
     "black==23.*",
@@ -84,31 +93,28 @@ flake8_reqs = [
 
 # Complete test requirements for riptable tests.
 tests_reqs = [
-    "arrow",
     "bokeh",
     "bottleneck",
     "hypothesis",
-    "ipykernel",
-    "ipython<8.13" if is_python(3, 8) else "ipython",
-    "matplotlib",
     "nose",
-    "pyarrow",
     "pymoo",
     "pytest",
     "pytest-cov",
-]
+] + runtime_opt_reqs
 
 # Sphinx requirements for docs generation.
+# Any changes should be reflected in docs/environment.yml as well for ReadTheDocs use.
 sphinx_reqs = (
     [
         "sphinx_rtd_theme>=0.5.1",
         "sphinx-autoapi",
         "nbsphinx",
+        "sphinx-design",
+        "pytest",
     ]
     + runtime_reqs
-    + tests_reqs
+    + runtime_opt_reqs
 )
-
 
 # Docstrings validation requirements.
 # Validation requires complete riptable for iteration and evaluating examples.
@@ -150,6 +156,7 @@ target_reqs = {
     "pydocstyle": pydocstyle_reqs,
     "pypi": pypi_reqs,
     "runtime": runtime_reqs,
+    "runtime_opt": runtime_opt_reqs,
     "sphinx": sphinx_reqs,
     "tests": tests_reqs,
     "toolchain": toolchain_reqs,

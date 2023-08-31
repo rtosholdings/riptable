@@ -10,6 +10,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from datetime import datetime
 import os
 import sys
 
@@ -19,11 +20,10 @@ sys.path.insert(0, os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 
 project = "riptable"
-copyright = "2022, rtosholdings"
 author = "rtosholdings"
-
-# The full version, including alpha/beta/rc tags
-release = "1.3"
+copyright = f"{datetime.now().year}, {author}"
+# Leave the release version unspecified, for now. Tricky to obtain dynamically.
+# release = "1.x"
 
 
 # -- General configuration ---------------------------------------------------
@@ -43,6 +43,7 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.napoleon",
     "nbsphinx",
+    "sphinx_design",
 ]
 
 # Napoleon settings
@@ -69,8 +70,7 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
+# a list of builtin themes. There's also https://sphinx-themes.org/.
 html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -78,45 +78,53 @@ html_theme = "sphinx_rtd_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+# CSS file -- copied from NumPy; makes the landing page look better.
+html_css_files = ["riptable.css"]
+
 # TJD -- needed or sphinx fails near final stages
 master_doc = "index"
 
 # Autoapi settings
-
 autoapi_dirs = ["../../riptable"]
-autoapi_ignore = ["*test*", "*benchmarks*"]
+autoapi_ignore = [
+    "*/riptable/benchmarks/*",
+    "*/riptable/hypothesis_tests/*",
+    "*/riptable/test_tooling_integration/*",
+    "*/riptable/testing/*",
+    "*/riptable/tests/*",
+    "*/riptable/Utils/rt_test*.py",
+]
 
-# When using AutoAPI, use autoapi_template_dir (see below).
-# templates_path = ["_templates"]
+# Sphinx template dir. Sphinx needs this setting, and the AutoAPI extension needs the one below.
+templates_path = ["_autoapi_templates"]
 
+# AutoAPI-specific template dir. Any modified AutoApI templates go here.
+# The default templates live in /site-packages/autoapi/templates/python.
 # https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#customise-templates
 autoapi_template_dir = "_autoapi_templates"
 
-# Setting autoapi_add_toctree_entry = False prevents a table of contents entry for the
-# API Reference (/riptable/riptable/autoapi/index.html) from being automatically created.
-# See https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#how-to-remove-the-index-page.
-# That API Reference page doesn't seem to allow any sidebar TOC entries.
-# Instead, manually add a link to /autoapi/riptable/index in /docs/source/index.rst as
-# suggested at the sphinx-autoapi link above. This link goes to /autoapi/riptable/index.html
-# -- a page that is generated using an AutoAPI template, which can be customized (see above).
+# When autoapi_add_toctree_entry=True, an index page is automatically generated that
+# can't have a TOC added to the sidebar. To get around that, set it to False. A different
+# index page is then created that uses the AutoAPI templates, which can be modified to put
+# a TOC in the sidebar. See:
+# https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#how-to-remove-the-index-page
+# https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#customise-templates
 autoapi_add_toctree_entry = False
 
 # Order members by their type then alphabetically.
 # https://sphinx-autoapi.readthedocs.io/en/latest/reference/config.html#confval-autoapi_member_order
 autoapi_member_order = "groupwise"
 
-# Remove typehints from html
+# Remove typehints from html.
 autodoc_typehints = "none"
 
-# Suppress Sphinx build warnings
-
+# Suppress some specific Sphinx build warnings.
 suppress_warnings = ["autodoc"]
 
-# Default role -- defines what to do with text surrounded by single backticks:
+# Default role -- defines how to link text surrounded by single backticks:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-default_role
 # py:obj references Python objects:
 # https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#python-roles
-
 default_role = "py:obj"
 
 # --Intersphinx configuration--------------------------------------------------

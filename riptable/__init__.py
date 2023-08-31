@@ -274,8 +274,6 @@ from .rt_utils import (
     to_str,
 )
 from .Utils.rt_display_nested import treedir
-from .Utils.rt_testdata import TestData as td
-from .Utils.rt_testdata import load_test_data
 
 # matplotlib may not be installed.
 try:

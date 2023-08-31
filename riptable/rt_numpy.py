@@ -2899,15 +2899,29 @@ def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
     if missing == 1:
         raise ValueError(f"where: must provide both 'x' and 'y' or neither. x={x}  y={y}")
 
+    def delegate_to_numpy(condition, x, y):
+        if not np.isscalar(x) and len(x) == 0:
+            raise ValueError(f"where: x must not be empty")
+        if not np.isscalar(y) and len(y) == 0:
+            raise ValueError(f"where: y must not be empty")
+
+        return LedgerFunction(np.where, condition, x, y)
+
+    common_dtype = get_common_dtype(x, y)
+
     if not isinstance(condition, np.ndarray):
         if condition is False or condition is True:
             # punt to normal numpy instead of error which may process None differently
-            return LedgerFunction(np.where, condition, x, y)
+            return delegate_to_numpy(condition, x, y)
 
         condition = TypeRegister.FastArray(condition)
-    elif len(condition) == 1:
+
+    if len(condition) == 1:
         # punt to normal numpy since an array of 1
-        return LedgerFunction(np.where, condition, x, y)
+        return delegate_to_numpy(condition, x, y)
+
+    if len(condition) == 0:
+        return TypeRegister.FastArray([], dtype=common_dtype)
 
     if condition.ndim > 1:
         # punt to normal numpy since more than one dimension
@@ -2918,7 +2932,6 @@ def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
         condition = condition != 0
 
     # this is the normal 3 argument where
-    common_dtype = get_common_dtype(x, y)
 
     # see if we can accelerate where
     if common_dtype.char in NumpyCharTypes.SupportedAlternate:

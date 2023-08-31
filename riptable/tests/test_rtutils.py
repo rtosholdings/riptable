@@ -36,6 +36,34 @@ def test_crc_match(arrs, expected):
     assert result == expected
 
 
+def test_sample():
+    # fast array
+    fa = rt.FA([1, 2, 3, 4, 5])
+    f = fa >= 3
+
+    # test with boolean mask
+    assert_array_equal(fa.sample(3, f), rt.FA([3, 4, 5]))
+
+    # bad length
+    with pytest.raises(ValueError):
+        fa.sample(2, rt.FA([False, False, True]))
+
+    # index-array
+    assert_array_equal(fa.sample(2, rt.FA([0, 3])), rt.FA([1, 4]))
+
+    # dataset
+    ds = rt.Dataset({"A": rt.FA([1, 2, 3, 4, 5]), "B": rt.FA(["a", "b", "c", "d", "e"])})
+
+    f = ds.A >= 3
+    res = ds.sample(3, filter=f)
+
+    assert_array_equal(res["A"], rt.FA([3, 4, 5]))
+    assert_array_equal(res["B"], rt.FA(["c", "d", "e"]))
+
+    with pytest.raises(ValueError):
+        ds.sample(3, filter=rt.FA([False, False, True, False]))
+
+
 def test_mbget_no_default_uses_invalid():
     data = np.arange(start=3, stop=53, dtype=np.int8).view(rt.FA)
     indices = rt.FA([0, 25, -40, 17, 100, -80, 50, -51, 35])
