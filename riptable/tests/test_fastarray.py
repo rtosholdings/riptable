@@ -1263,8 +1263,8 @@ class FastArray_Test(unittest.TestCase):
     def test_contiguous_isnan(self):
         a = arange(100.0)
         a[[2, 3, 23, 34]] = np.nan
-        a[[57, 83]] = np.inf
-        a[[67, 73]] = -np.inf
+        a[[57, 83]] = rt.inf
+        a[[67, 73]] = -rt.inf
 
         # add some funky looking nans
         b = a.view(np.uint64)
@@ -1280,8 +1280,8 @@ class FastArray_Test(unittest.TestCase):
 
         a = arange(100.0, dtype=np.float32)
         a[[2, 3, 23, 34]] = np.nan
-        a[[57, 83]] = np.inf
-        a[[67, 73]] = -np.inf
+        a[[57, 83]] = rt.inf
+        a[[67, 73]] = -rt.inf
         # add some funky looking nans
         b = a.view(np.uint32)
         b[10] = 0x7FFFFFFF
@@ -1370,8 +1370,8 @@ class FastArray_Test(unittest.TestCase):
         self.assertTrue(x.issorted())
         x[99_999] = np.nan
         self.assertTrue(x.issorted())
-        x[0] = -np.inf
-        x[99_998] = np.inf
+        x[0] = -rt.inf
+        x[99_998] = rt.inf
         self.assertTrue(x.issorted())
         x[50_000] = 4.0
         self.assertTrue(x.issorted() == False)

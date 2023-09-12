@@ -3,7 +3,7 @@ import pytest
 
 import numpy as np
 
-from riptable import FA, Categorical, FastArray, arange, cut, qcut, unique
+from riptable import FA, Categorical, FastArray, arange, inf, cut, qcut, unique
 
 from riptable.testing.array_assert import assert_categorical_equal
 
@@ -101,7 +101,7 @@ class Cut_Test(unittest.TestCase):
 
         # inf upcast test
         x = np.array([0, 1, 10, 100, 5])
-        knots = [-np.inf, 2, 11, 50, np.inf]
+        knots = [-inf, 2, 11, 50, inf]
         c = cut(x, knots)
         self.assertTrue((c._fa == FA([1, 1, 2, 4, 2])).all())
 

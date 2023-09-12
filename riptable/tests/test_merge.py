@@ -7012,7 +7012,7 @@ class MergeAsofTest(unittest.TestCase):
         ds = ds1.merge_asof(ds2, on="Time", by="Ticker", matched_on=True)
 
         for key in ds.keys():
-            # TODO: Switch to assert_array_equal here once a string-based Categorical allows np.inf to be used in an equality check
+            # TODO: Switch to assert_array_equal here once a string-based Categorical allows rt.inf to be used in an equality check
             # assert_array_equal(ds[key], target[key], err_msg=f"Column '{key}' differs between the actual and expected.")
             self.assertTrue((ds[key] == target[key]).all())
 
@@ -7307,12 +7307,12 @@ def test_merge_asof_sorting():
     left.time = left.time / 1e10
     right.time = right.time / 1e10
 
-    left.time[rng.random(N_left) < 0.2] = np.inf
-    left.time[rng.random(N_left) < 0.2] = -np.inf
+    left.time[rng.random(N_left) < 0.2] = rt.inf
+    left.time[rng.random(N_left) < 0.2] = -rt.inf
     check_equivalent_merge_asof(left, right)
 
-    right.time[rng.random(N_right) < 0.2] = np.inf
-    right.time[rng.random(N_right) < 0.2] = -np.inf
+    right.time[rng.random(N_right) < 0.2] = rt.inf
+    right.time[rng.random(N_right) < 0.2] = -rt.inf
     check_equivalent_merge_asof(left, right)
 
     left.time[:] = np.nan

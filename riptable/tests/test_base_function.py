@@ -147,8 +147,8 @@ class TestSearchSorted:
     def test_searchsorted(self):
         a = rt.arange(10.0)
         b = rt.arange(20.0) / 2
-        b[3] = -np.inf
-        b[7] = np.inf
+        b[3] = -rt.inf
+        b[7] = rt.inf
         b[5] = np.nan
         b[2] = 100
         b[1] = -100

@@ -21,7 +21,7 @@ class TestPyarrowConvertFastArray:
         [
             pytest.param(rt.FA([], dtype=np.int8), id="empty(int8)"),
             pytest.param(rt.FA([-120, rt.int8.inv, -1, 0, 1, 101, 127], dtype=np.int8), id="int8"),
-            pytest.param(rt.FA([0.01, -0.0, np.nan, 1e10, -1e10, np.inf, np.pi], dtype=np.float32), id="float32"),
+            pytest.param(rt.FA([0.01, -0.0, np.nan, 1e10, -1e10, rt.inf, np.pi], dtype=np.float32), id="float32"),
             # bool
             pytest.param(rt.FA([b"ABC", b"abcde"], dtype="S"), id="ascii"),
             # FAILS# pytest.param(rt.FA(['ABC', 'abcde'], unicode=True), id='unicode'),

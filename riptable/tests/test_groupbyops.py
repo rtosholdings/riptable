@@ -492,8 +492,8 @@ category = {category}"""
 
                 if nan_fraction > 0:
                     ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = np.nan
-                    ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = np.inf
-                    ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = -np.inf
+                    ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = rt.inf
+                    ds[f"data_{char}"][rng.random(size=N) < nan_fraction / 3] = -rt.inf
 
             elif data_type in integral_types:
                 ds[f"data_{char}"] = rng.integers(-10_000, 10_000, size=N)
@@ -656,8 +656,8 @@ minus_inf_fraction = {minus_inf_fraction}"""
         # use gb_np_quantile for comparison
 
         rand_idxs = rng.random(size=N)
-        ds.data[rand_idxs < (nan_fraction + inf_fraction + minus_inf_fraction)] = -np.inf
-        ds.data[rand_idxs < (nan_fraction + inf_fraction)] = np.inf
+        ds.data[rand_idxs < (nan_fraction + inf_fraction + minus_inf_fraction)] = -rt.inf
+        ds.data[rand_idxs < (nan_fraction + inf_fraction)] = rt.inf
         ds.data[rand_idxs < (nan_fraction)] = np.nan
 
         data_quant = ds.categ.quantile(ds.data, q=q)
@@ -988,8 +988,8 @@ minus_inf_fraction = {minus_inf_fraction}"""
             ds[f"data{i}"] = rng.normal(rng.uniform(-10_000, 10_000), rng.uniform(0.00, 10_000), size=N)
 
             rand_idxs = rng.random(size=N)
-            ds[f"data{i}"][rand_idxs < (nan_fraction + inf_fraction + minus_inf_fraction)] = -np.inf
-            ds[f"data{i}"][rand_idxs < (nan_fraction + inf_fraction)] = np.inf
+            ds[f"data{i}"][rand_idxs < (nan_fraction + inf_fraction + minus_inf_fraction)] = -rt.inf
+            ds[f"data{i}"][rand_idxs < (nan_fraction + inf_fraction)] = rt.inf
             ds[f"data{i}"][rand_idxs < (nan_fraction)] = np.nan
 
             data_quant[f"data{i}"] = ds.categ.rolling_quantile(ds[f"data{i}"], q=q, window=window)[f"data{i}"]

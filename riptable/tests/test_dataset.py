@@ -1846,17 +1846,36 @@ class TestDataset(unittest.TestCase):
         self.assertTrue((df.c == [4, 5]).all())
 
     def test_from_pandas(self):
-        cols = ["c", "b", "a"]
-        df = pd.DataFrame({"a": [0, 1], "b": [2, 3], "c": [4, 5]}, columns=cols)
+        df = pd.DataFrame(
+            {
+                "a": [0, 1],
+                "b": [2, 3],
+                "c": [4, 5],
+                "d": [np.nan, "a"],
+                "e": [np.nan, 1.0],
+                "f": pd.to_datetime(["20230808 11:00:00", "20230808 11:00:00"]),
+                "g": pd.to_timedelta(["11:00:00", "12:00:00"]),
+                "h": pd.Categorical(["X", "Y"]),
+                "i": [True, False],
+                "J": ["A", "B"],
+            }
+        )
+        df = df[df.columns[::-1]]  # test that column ordering is preserved
         ds = Dataset.from_pandas(df)
-        self.assertEqual(list(ds.keys()), cols)
+        self.assertEqual(list(ds.keys()), list(df))
         check_type = FastArray if Dataset.UseFastArray else np.ndarray
-        self.assertIsInstance(ds.a, check_type)
-        self.assertIsInstance(ds.b, check_type)
-        self.assertIsInstance(ds.c, check_type)
-        self.assertTrue((ds.a == [0, 1]).all())
-        self.assertTrue((ds.b == [2, 3]).all())
-        self.assertTrue((ds.c == [4, 5]).all())
+        for key in df:
+            self.assertIsInstance(ds[key], check_type)
+
+        for key in ["a", "b", "c", "f", "g", "i"]:
+            expected = df[key].values.astype(ds[key].dtype)
+            self.assertTrue((ds[key] == expected).all(), msg=key)
+
+        self.assertTrue(ds["d"].dtype.char == "S")
+        self.assertTrue(ds["e"].dtype == float)
+        self.assertTrue(isinstance(ds["f"], rt.DateTimeNano))
+        self.assertTrue(isinstance(ds["g"], rt.TimeSpan))
+        self.assertTrue(isinstance(ds["h"], rt.Categorical))
 
     def test_ds_df_roundtrip_with_categoricals_and_datetimes(self):
         from enum import IntEnum
@@ -2035,6 +2054,7 @@ class TestDataset(unittest.TestCase):
         expected_arr = ds["a"].strftime(fmt_string)
         arr = df["a"].dt.strftime(fmt_string)
         assert_array_equal(arr, expected_arr)
+        assert not isinstance(df["a"].values, rt.FastArray)
 
     def test_as_pandas_df_warn(self):
         ds = Dataset({"a": [1, 2, 3]})
@@ -2369,6 +2389,22 @@ class TestDataset(unittest.TestCase):
             dt_expected = dt_converted if dt_converted is not None else obj.dtype
             dt_actual = ra_converted.dtype[k]
             assert dt_actual == dt_expected, f"incorrect conversion for {k}:{repr(obj)}; {dt_expected=}, {dt_actual=}"
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.RangeIndex(10, name="the_index"),
+        pd.RangeIndex(10, 20),
+        pd.DatetimeIndex(np.arange(10, dtype=int)),
+        pd.Index(list("qwertyuiop")),
+    ],
+)
+def test_from_pandas_preserve_index(index):
+    df = pd.DataFrame({"a": np.arange(10)}, index)
+    ds = rt.Dataset.from_pandas(df)
+    index_name = index.name or "index"
+    assert ds.keys() == [index_name, "a"]
 
 
 @pytest.mark.parametrize("categorical", get_all_categorical_data())

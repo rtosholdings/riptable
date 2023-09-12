@@ -57,6 +57,7 @@ import riptide_cpp as rc
 # short hand class names
 from numpy import nan
 from numpy import ndarray as NPA
+from numpy import inf
 
 from .rt_bin import cut, qcut, quantile
 from .rt_categorical import Categorical as Cat
