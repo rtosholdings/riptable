@@ -1,114 +1,109 @@
-# RipTable
+# Riptable
 
-![](docs/riptable_logo.PNG)
+![](https://riptable.readthedocs.io/en/stable/_static/riptable_logo.PNG)
 
-All in one, high performance 64 bit python analytics engine for numpy arrays with multithreaded support.
+An open-source, 64-bit Python analytics engine for high-performance data analysis with multithreading support. Riptable supports Python 3.9 through 3.11 on 64-bit Linux and Windows.
 
-Support for Python 3.9 thru 3.11 on 64 bit Linux, Windows, and Mac OS.
+Similar to Pandas and based on NumPy, Riptable optimizes analyzing large volumes of data interactively, in real time. Riptable can crunch numbers often at 1.5x to 10x the speed of NumPy or Pandas.
 
-Enhances or replaces numpy, pandas, and includes high speed cross platform SDS file format.
-RipTable can often crunch numbers at 1.5x to 10x the speed of numpy or pandas.
+Riptable achieves maximum speed through the use of:
 
-Maximum speed is achieved through the use of **[vector instrinsics](https://software.intel.com/sites/landingpage/IntrinsicsGuide/)**: hand rolled loops, using [AVX-256](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#CPUs_with_AVX2)  with [AVX-512](https://en.wikipedia.org/wiki/AVX-512) support coming; **[parallel computing](https://www.drdobbs.com/go-parallel/article/print?articleId=212903586)**: for large arrays, multiple threads are deployed; **[recycling](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science))**: built in array garbage collection; **[hashing](https://en.wikipedia.org/wiki/Hash_function)** and **parallel sorts** for core algorithms.
+* **[Vector instrinsics](https://software.intel.com/sites/landingpage/IntrinsicsGuide/)** with hand-rolled loops using [AVX-256](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#CPUs_with_AVX2) and with [AVX-512](https://en.wikipedia.org/wiki/AVX-512) support coming.
+* **[Parallel computing](https://www.drdobbs.com/go-parallel/article/print?articleId=212903586)** with multiple-thread deployment for large arrays.
+* **[Recycling](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science))** with built-in array garbage collection.
+* **[Hashing](https://en.wikipedia.org/wiki/Hash_function)** and **parallel sorts** for core algorithms.
 
-Install
--------
+Intro to Riptable and reference documentation is available at: [riptable.readthedocs.io](https://riptable.readthedocs.io/en/stable/index.html)
 
-```
-pip install riptable
-```
-
-Documentation: [readthedocs](https://riptable.readthedocs.io/en/latest/py-modindex.html)
-
-Basic Concepts and Classes
+Basic concepts and classes
 --------------------------
 
-**[FastArray](https://riptable.readthedocs.io/en/latest/riptable.html#riptable.rt_fastarray.FastArray)**: subclasses from a numpy array with builtin multithreaded number crunching.  All scikit routines that expect a numpy array will also accept a FastArray since it is subclassed.  isinstance(fastarray, np.ndarray) will return True.
+**[FastArray](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_fastarray/index.html)** is a subclass of NumPy's `ndarray` that enables built-in multithreaded number crunching. All scikit routines that expect a NumPy array also accept a `FastArray`.
 
-**[Dataset](https://riptable.readthedocs.io/en/latest/riptable.html#module-riptable.rt_dataset)**: replaces the pandas DataFrame class and holds equal row length numpy arrays (including > 1 dimension).
+**[Dataset](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_dataset/index.html)** replaces the Pandas `DataFrame` class and holds NumPy arrays of equal length.
 
-**Struct**: replaces the pandas Series class.  A **Struct** is a grab bag collection class that **Dataset** subclasses from.
+**[Struct](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_struct/index.html)** replaces the Pandas `Series` class. The `Struct` class is a collection of mixed-type data members, with `Dataset` as a subclass.
 
-**[Categorical](https://riptable.readthedocs.io/en/latest/riptable.html#module-riptable.rt_categorical)**: replaces both pandas groupby and Categorical class.  RipTable **Categoricals** are multikey, filterable, stackable, archivable, and can chain computations such as apply_reduce loops.  They can do everything groupby can plus more.
+**[Categorical](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_categorical/index.html)** replaces both the Pandas `DataFrame.groupby()` method and the Pandas `Categorical` class. A Riptable `Categorical` supports multi-key, filterable groupings with the same functionality of Pandas `groupby` and more.
 
-**Date/Time Classes**: DateTimeNano, Date, TimeSpan, and DateSpan are designed more like Java, C++, or C# classes.  Replaces most numpy and pandas date time classes.
+**[Datetime](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_datetime/index.html)** classes replace most NumPy and Pandas date/time classes. Riptable's `DateTimeNano`, `Date`, `TimeSpan`, and `DateSpan` classes have a design that's closer to Java, C++, or C# date/time classes.
 
-**Accum2/AccumTable**: For cross tabulation.
+**[Accum2](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_accum2/index.html)** and **[AccumTable](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_accumtable/index.html)** enable cross-tabulation functionality.
 
-**[SDS](https://riptable.readthedocs.io/en/latest/riptable.html#riptable.rt_sds.save_sds)**: a new file format which can stack multiple datasets in multiple files with [zstd](https://github.com/facebook/zstd) compression, threads, and no extra memory copies.  SDS also supports loading and writing datasets to shared memory.
+**[SDS](https://riptable.readthedocs.io/en/stable/autoapi/riptable/rt_sds/index.html)** provides a new file format which can stack multiple datasets in multiple files with [zstd](https://github.com/facebook/zstd) compression, threads, and no extra memory copies. SDS also supports loading and writing datasets to shared memory.
 
-Getting Started
----------------
+Small, medium, and large array performance
+------------------------------------------
+
+Riptable is designed for arrays of *all* sizes. For small arrays (< 100 length), low processing overhead is important. Riptable's `FastArray` is written in hand-coded C and processes simple arithmetic functions faster than NumPy arrays. For medium arrays (< 100,000 length), Riptable has vector-instrinic loops. For large arrays (>= 100,000) Riptable knows how to dynamically scale out threading, waking up threads efficiently using a [futex](https://man7.org/linux/man-pages/man7/futex.7.html).
+
+Install and import Riptable
+-------
+
+Create a Conda environment and run this command to install Riptable on Windows or Linux:
+
+```
+conda install riptable
+```
+
+Import Riptable in your Python code to access its functions, methods, and classes:
 
 ```
 import riptable as rt
-ds = rt.Dataset({'intarray': rt.arange(1_000_000), 'floatarray': rt.arange(1_000_000.0)})
-ds
-ds.intarray.sum()
 ```
 
-Numpy Users
+>**Note**: We shorten the name of the Riptable module to `rt` to improve the readability of code.
+
+Use NumPy arrays with Riptable
 -----------
 
-FastArray is a numpy array, however they can be flipped back and forth with no array copies taking place (it just changes the view).
+Easily change between NumPy's `ndarray` and Riptable's `FastArray` without producing a copy of the array.
 
 ```
 import riptable as rt
 import numpy as np
-a = rt.arange(100)
-numpyarray = a._np
-fastarray = rt.FA(numpyarray)
+rtarray = rt.arange(100)
+numpyarray = rtarray._np
+fastarray = rt.FastArray(numpyarray)
 ```
 
-or directly by changing the view, note how a FastArray is a numpy array
+Change the view of the two instances to confirm that `FastArray` is a subclass of `ndarray`.
 
 ```
 numpyarray.view(rt.FastArray)
-fastarry.view(np.ndarray)
-ininstance(fastarray, np.ndarray)
+fastarray.view(np.ndarray)
+isinstance(fastarray, np.ndarray)
 ```
 
-Pandas Users
+Use Pandas DataFrames with Riptable
 ------------
 
-Simply drop a pandas DataFrame class into a riptable Dataset and it will be auto converted.
+Construct a Riptable `Dataset` directly from a Pandas `DataFrame`.
 
 ```
 import riptable as rt
 import numpy as np
 import pandas as pd
-df = pd.DataFrame({'intarray': np.arange(1_000_000), 'floatarray': np.arange(1_000_000.0)})
+df = pd.DataFrame({"intarray": np.arange(1_000_000), "floatarray": np.arange(1_000_000.0)})
 ds = rt.Dataset(df)
 ```
+
+How can I trust Riptable calculations?
+--------------------------------------
+
+Riptable has undergone years of development, and dozens of quants at a large financial firm have tested its capabilities. We also provide a full suite of [tests](https://github.com/rtosholdings/riptable/tree/master/riptable/tests) to ensure that the modules are functioning as expected. But as with any project, there are still bugs and opportunities for improvement, which can be reported using GitHub issues.
+
+How can Riptable perform calculations faster?
+------------------------------------------------------
+
+Riptable was written from day one to handle large data and mulithreading using the riptide_cpp layer for basic arithmetic functions and algorithms. Many core algorithms have been painstakingly rewritten for multithreading.
 
 How can I contribute?
 ---------------------
 
-RipTable has been public open sourced because it needs more users and
-contributions to take it to the next level.  The RipTable team is confident
-the engine is the next generation building block for python data analytics
-computing.  We need help from reporting bugs, docs, improved functionality,
-and new functionality.  Please consider a github pull request or email the
-team.
+The Riptable engine is another building block for Python data analytics
+computing, and we need help from users and contributors to take it to the next level. As you encounter bugs, issues with the documentation, and opportunities for new or improved functionality, please consider reaching out to the team.
 
-See the [contributing guide](docs/CONTRIBUTING.md) for more information.
+See the [contributing guide](https://github.com/rtosholdings/riptable/blob/master/docs/CONTRIBUTING.md) for more information.
 
-How can I trust RipTable calculations?
---------------------------------------
 
-RipTable has been in development for 3 years and tested by dozens of quants at a large financial firm.  It has a full suite of [testing](riptable/tests).  However just like any project, we still disover bugs and improvements.  Please report them using github issues.
-
-How can RipTable perform the same calculations faster?
-------------------------------------------------------
-
-RipTable was written from day one to handle large data and mulithreading using the riptide_cpp layer for basic arithmetic functions and algorithms.  Many core algorithms have been painstakingly rewritten for multithreading.
-
-Why doesn't numpy or pandas just pick up the same code?
--------------------------------------------------------
-
-numpy does not have a multithreaded layer (we are in discussions with the numpy team to add such a layer), nor is it designed to use C++ templates or hashing algorithms.  pandas does not have a C++ layer (it uses cython instead) and is a victim of its own success making early design mistakes difficult to change (such as the block manager and lack of powerful Categoricals).
-
-Small, Medium, and Large array performance
-------------------------------------------
-
-RipTable is designed for *all* sizes of arrays.  For small arrays (< 100 length), low processing overhead is important.  RipTable's **FastArray** is written in hand coded 'C' and processes simple arithmetic functions faster than numpy arrays.  For medium arrays (< 100,000 length), RipTable has vector instrinic loops.  For large arrays (>= 100,000) RipTable knows how to dynamically scale out threading, waking up threads efficiently using a [futex](https://man7.org/linux/man-pages/man7/futex.7.html).

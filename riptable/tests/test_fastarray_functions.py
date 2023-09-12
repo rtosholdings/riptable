@@ -741,8 +741,8 @@ dtype = {dtype}"""
     C_array[rand_idxs < (inf_fraction + minus_inf_fraction + nan_fraction)] = np.nan
     if dtype not in [np.int32, np.int64]:
         # infs only work for non-intergal
-        C_array[rand_idxs < (inf_fraction + minus_inf_fraction)] = -np.inf
-        C_array[rand_idxs < (inf_fraction)] = np.inf
+        C_array[rand_idxs < (inf_fraction + minus_inf_fraction)] = -rt.inf
+        C_array[rand_idxs < (inf_fraction)] = rt.inf
     np_data = copy.copy(C_array)
     rt_data = rt.FA(copy.copy(C_array)).astype(dtype)
 

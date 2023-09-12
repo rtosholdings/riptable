@@ -1535,8 +1535,8 @@ class TestUfunc(object):
         assert_equal(np.maximum.reduce([], initial=0), 0)
 
         # For cases like reduction of an empty array over the reals.
-        assert_equal(np.minimum.reduce([], initial=np.inf), np.inf)
-        assert_equal(np.maximum.reduce([], initial=-np.inf), -np.inf)
+        assert_equal(np.minimum.reduce([], initial=rt.inf), rt.inf)
+        assert_equal(np.maximum.reduce([], initial=-rt.inf), -rt.inf)
 
         # Random tests
         assert_equal(np.minimum.reduce([5], initial=4), 4)
@@ -1583,11 +1583,11 @@ class TestUfunc(object):
         ("axis", "where"),
         ((0, np.array([True, False, True])), (1, [True, True, False]), (None, True)),
     )
-    @pytest.mark.parametrize("initial", (-np.inf, 5.0))
+    @pytest.mark.parametrize("initial", (-rt.inf, 5.0))
     def test_reduction_with_where_and_initial(self, axis, where, initial):
         a = np.arange(9.0).reshape(3, 3)
         a_copy = a.copy()
-        a_check = np.full(a.shape, -np.inf)
+        a_check = np.full(a.shape, -rt.inf)
         np.positive(a, out=a_check, where=where)
 
         res = np.maximum.reduce(a, axis=axis, where=where, initial=initial)

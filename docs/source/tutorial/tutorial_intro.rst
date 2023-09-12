@@ -6,8 +6,8 @@ What Is Riptable?
 
 Riptable is an open source library built for high-performance data
 analysis. It’s similar to Pandas by design, but it’s been optimized to
-meet the needs of Riptable’s core users: quantitative traders analyzing
-large volumes of trading data interactively, in real time.
+meet the needs of Riptable's core users: quantitative analysts interacting live
+with large volumes of trading data.
 
 Riptable is based on NumPy, so it shares many core NumPy methods for
 array-based operations. Riptable has also implemented its own Pandas-like 

@@ -2976,58 +2976,14 @@ class Dataset(Struct):
         riptable.Dataset.from_pandas
         """
         import pandas as pd
+        from .Utils.pandas_utils import fastarray_to_pandas_series
 
-        def _to_unicode_if_string(arr):
-            if arr.dtype.char == "S":
-                arr = arr.astype("U")
-            return arr
-
-        data = self.asdict()
-        for key, col in self.items():
-            dtype = col.dtype
-            if isinstance(col, TypeRegister.Categorical):
-                if col.category_mode in (CategoryMode.Default, CategoryMode.StringArray, CategoryMode.NumericArray):
-                    pass  # already compatible with pandas; no special handling needed
-                elif col.category_mode in (CategoryMode.Dictionary, CategoryMode.MultiKey, CategoryMode.IntEnum):
-                    # Pandas does not have a notion of a IntEnum, Dictionary, and Multikey category mode.
-                    # Encode dictionary codes to a monotonically increasing sequence and construct
-                    # pandas Categorical as if it was a string or numeric array category mode.
-                    old_category_mode = col.category_mode
-                    col = col.as_singlekey()
-                    warnings.warn(
-                        f"Dataset.to_pandas: column '{key}' converted from {repr(CategoryMode(old_category_mode))} to {repr(CategoryMode(col.category_mode))}."
-                    )
-                else:
-                    raise NotImplementedError(
-                        f"Dataset.to_pandas: Unhandled category mode {repr(CategoryMode(col.category_mode))}"
-                    )
-
-                base_index = 0 if col.base_index is None else col.base_index
-                codes = np.asarray(col) - base_index
-                categories = _to_unicode_if_string(col.category_array) if unicode else col.category_array
-                data[key]: pd.Categorical = pd.Categorical.from_codes(codes, categories=categories)
-            elif isinstance(col, TypeRegister.DateTimeNano):
-                utc_datetime = pd.DatetimeIndex(col, tz="UTC")
-                tz_datetime = utc_datetime.tz_convert(col._timezone._to_tz)
-                data[key] = tz_datetime
-            elif isinstance(col, TypeRegister.TimeSpan):
-                data[key] = pd.to_timedelta(col._np)
-            # TODO: riptable.DateSpan doesn't have a counterpart in pandas, what do we want to do?
-            elif use_nullable and np.issubdtype(dtype, np.integer):
-                # N.B. Has to use the same dtype for `isin` otherwise riptable will convert the dtype
-                #      and the invalid value.
-                is_invalid = col.isin(FastArray([INVALID_DICT[dtype.num]], dtype=dtype))
-                # N.B. Have to make a copy of the array to numpy array otherwise pandas seg
-                #      fault in DataFrame.
-                # NOTE: not all versions of pandas have pd.arrays
-                if hasattr(pd, "arrays"):
-                    data[key] = pd.arrays.IntegerArray(np.array(col), mask=is_invalid)
-                else:
-                    data[key] = np.array(col)
-
-            else:
-                data[key] = _to_unicode_if_string(col) if unicode else col
-        return pd.DataFrame(data)
+        return pd.DataFrame(
+            {
+                key: fastarray_to_pandas_series(col, use_nullable=use_nullable, unicode=unicode)
+                for key, col in self.items()
+            }
+        )
 
     def as_pandas_df(self):
         """
@@ -3054,7 +3010,7 @@ class Dataset(Struct):
         return self.to_pandas()
 
     @classmethod
-    def from_pandas(cls, df: "pd.DataFrame", tz: str = "UTC") -> "Dataset":
+    def from_pandas(cls, df: "pd.DataFrame", tz: str = "UTC", preserve_index: bool = None) -> "Dataset":
         """
         Creates a riptable Dataset from a pandas DataFrame. Pandas categoricals
         and datetime arrays are converted to their riptable counterparts.
@@ -3081,72 +3037,20 @@ class Dataset(Struct):
         riptable.Dataset.to_pandas
         """
         import pandas as pd
+        from .Utils.pandas_utils import pandas_series_to_riptable
 
+        if preserve_index is None:
+            index = df.index
+            has_default_index = (
+                isinstance(index, pd.RangeIndex) and index.start == 0 and index.stop == len(df) and index.name is None
+            )
+            preserve_index = not has_default_index
+        if preserve_index:
+            df = df.reset_index()
         data = {}
-        for key in df.columns:
-            col = df[key]
-            dtype = col.dtype
-            dtype_kind = dtype.kind
-            iscat = False
-            if hasattr(pd, "CategoricalDtype"):
-                iscat = isinstance(dtype, pd.CategoricalDtype)
-            else:
-                iscat = dtype.num == 100
+        for key, col in df.items():
+            data[key] = pandas_series_to_riptable(col, tz=tz)
 
-            if iscat or isinstance(col, pd.Categorical):
-                codes = col.cat.codes
-                categories = col.cat.categories
-
-                # check for newer version of pandas
-                if hasattr(codes, "to_numpy"):
-                    codes = codes.to_numpy()
-                    categories = categories.to_numpy()
-                else:
-                    codes = np.asarray(codes)
-                    categories = np.asarray(categories)
-
-                data[key] = TypeRegister.Categorical(codes + 1, categories=categories)
-            elif hasattr(pd, "Int8Dtype") and isinstance(
-                dtype,
-                (
-                    pd.Int8Dtype,
-                    pd.Int16Dtype,
-                    pd.Int32Dtype,
-                    pd.Int64Dtype,
-                    pd.UInt8Dtype,
-                    pd.UInt16Dtype,
-                    pd.UInt32Dtype,
-                    pd.UInt64Dtype,
-                ),
-            ):
-                data[key] = np.asarray(col.fillna(INVALID_DICT[dtype.numpy_dtype.num]), dtype=dtype.numpy_dtype)
-            elif dtype_kind == "M":
-                try:
-                    _tz = str(dtype.tz)
-                except AttributeError:
-                    _tz = tz
-                data[key] = TypeRegister.DateTimeNano(np.asarray(col, dtype="i8"), from_tz="UTC", to_tz=_tz)
-            elif dtype_kind == "m":
-                arr = np.asarray(col, dtype="i8")
-                data[key] = TypeRegister.TimeSpan(arr)
-                data[key][arr == pd.NaT.value] = data[key].inv
-            elif dtype_kind == "O":
-                if len(col) > 0:
-                    first_element = col.iloc[0]
-                    if isinstance(first_element, (int, float, np.number)):
-                        # An object array with number (int or float) in it probably means there is
-                        # NaN in it so convert to float64.
-                        new_col = np.asarray(col, dtype="f8")
-                    else:
-                        try:
-                            new_col = np.asarray(col, dtype="S")
-                        except UnicodeEncodeError:
-                            new_col = np.asarray(col, dtype="U")
-                else:
-                    new_col = np.asarray(col, dtype="S")
-                data[key] = new_col
-            else:
-                data[key] = df[key]
         return cls(data)
 
     @staticmethod
@@ -4287,7 +4191,7 @@ class Dataset(Struct):
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': [1, 2, np.inf], 'b': [0, np.inf, rt.nan]})
+        >>> ds = rt.Dataset({'a': [1, 2, rt.inf], 'b': [0, rt.inf, rt.nan]})
         >>> ds
         #      a      b
         -   ----   ----
@@ -4331,7 +4235,7 @@ class Dataset(Struct):
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': [1.0, 2.0, 3.0], 'b': [0, rt.nan, np.inf]})
+        >>> ds = rt.Dataset({'a': [1.0, 2.0, 3.0], 'b': [0, rt.nan, rt.inf]})
         >>> ds
         #      a      b
         -   ----   ----
@@ -4372,7 +4276,7 @@ class Dataset(Struct):
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': [1, 2, np.inf], 'b': [0, np.inf, rt.nan]})
+        >>> ds = rt.Dataset({'a': [1, 2, rt.inf], 'b': [0, rt.inf, rt.nan]})
         >>> ds
         #      a      b
         -   ----   ----
@@ -4413,7 +4317,7 @@ class Dataset(Struct):
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': [1.0, np.inf, 3.0], 'b': [np.inf, np.NINF, rt.nan]})
+        >>> ds = rt.Dataset({'a': [1.0, rt.inf, 3.0], 'b': [rt.inf, -rt.inf, rt.nan]})
         >>> ds
         #      a      b
         -   ----   ----
@@ -5523,10 +5427,8 @@ class Dataset(Struct):
             Number of rows to select. The entire `Dataset` is returned if `N`
             is greater than the number of `Dataset` rows.
         filter : array (bool or int), optional
-            A boolean mask or index array to filter values before selection.
-            Note that until a reported bug is fixed, no error is raised and
-            unexpected results may occur when a boolean mask array with a length
-            different from that of the array it's masking is passed as a filter.
+            A boolean mask or index array to filter values before selection. A boolean
+            mask must have the same length as the columns of the original `Dataset`.
         seed : int or other types, optional
             A seed to initialize the random number generator. If one is not
             provided, the generator is initialized using random data from the OS.

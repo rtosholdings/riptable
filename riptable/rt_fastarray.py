@@ -1820,10 +1820,8 @@ class FastArray(np.ndarray):
             Number of values to select. The entire array is returned if `N` is
             greater than the size of the array.
         filter : array (bool or int), optional
-            A boolean mask or index array to filter values before selection. Note
-            that until a reported bug is fixed, no error is raised and unexpected
-            results may occur when a boolean mask array with a length different
-            from that of the array it's masking is passed as a filter.
+            A boolean mask or index array to filter values before selection. A boolean
+            mask must have the same length as the original `FastArray`.
         seed : int or other types, optional
             A seed to initialize the random number generator. If one is not provided,
             the generator is initialized using random data from the OS. For details
@@ -2777,7 +2775,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> a = rt.FastArray([rt.nan, rt.nan, np.inf, 3])
+        >>> a = rt.FastArray([rt.nan, rt.nan, rt.inf, 3])
         >>> a.isnan()
         FastArray([ True,  True, False, False])
 
@@ -2817,7 +2815,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> a = rt.FastArray([rt.nan, np.inf, 2])
+        >>> a = rt.FastArray([rt.nan, rt.inf, 2])
         >>> a.isnotnan()
         FastArray([False,  True,  True])
 
@@ -2856,7 +2854,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> a = rt.FastArray([0, rt.nan, np.inf, 3])
+        >>> a = rt.FastArray([0, rt.nan, rt.inf, 3])
         >>> a.isnanorzero()
         FastArray([ True,  True, False, False])
 
@@ -2904,7 +2902,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+        >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
         >>> a.isfinite()
         FastArray([False, False, False,  True])
 
@@ -2952,7 +2950,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+        >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
         >>> a.isnotfinite()
         FastArray([ True,  True,  True, False])
 
@@ -2997,7 +2995,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+        >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
         >>> a.isinf()
         FastArray([ True,  True, False, False])
 
@@ -3042,7 +3040,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+        >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
         >>> a.isnotinf()
         FastArray([False, False,  True,  True])
 

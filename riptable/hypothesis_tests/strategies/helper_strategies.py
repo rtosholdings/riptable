@@ -425,8 +425,8 @@ def generate_sample_test_floats(draw):
         -0.0,
         1,
         -1,
-        np.inf,
-        -np.inf,
+        rt.inf,
+        -rt.inf,
         np.nan,
         draw(floats(min_value=0, max_value=1)),  # [0, 1]
         draw(floats(min_value=1)),  # [1, inf]

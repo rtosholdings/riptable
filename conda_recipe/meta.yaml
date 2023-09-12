@@ -22,7 +22,7 @@ requirements:
     - numba >=0.56.2
     - pandas >=1.0,<3.0
     - python-dateutil
-    - riptide_cpp >=1.14.0,<2 # run with any (compatible) version in this range
+    - riptide_cpp >=1.14.1,<2 # run with any (compatible) version in this range
 
 about:
   home: https://github.com/rtosholdings/riptable

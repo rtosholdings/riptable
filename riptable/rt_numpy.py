@@ -3961,9 +3961,9 @@ def gb_np_quantile_infs(a, q, is_nan_function, **kwargs):
     https://github.com/numpy/numpy/issues/21932
     https://github.com/numpy/numpy/issues/21091
     Example:
-    np.quantile([np.inf, np.inf], q=0.5, method="midpoint") returns np.nan,
+    np.quantile([rt.inf, rt.inf], q=0.5, method="midpoint") returns np.nan,
     while
-    np.median([np.inf, np.inf]) returns np.inf,
+    np.median([rt.inf, rt.inf]) returns rt.inf,
     although arguably these should give the same result. The behaviour of
     np.median is also more expected.
     the following will always give the same result as np.median(a):
@@ -4063,7 +4063,7 @@ def isnan(*args, **kwargs) -> FastArray | bool:
 
     Examples
     --------
-    >>> a = rt.FastArray([rt.nan, np.inf, 2])
+    >>> a = rt.FastArray([rt.nan, rt.inf, 2])
     >>> rt.isnan(a)
     FastArray([ True, False, False])
 
@@ -4109,7 +4109,7 @@ def isnotnan(*args, **kwargs) -> FastArray | bool:
 
     Examples
     --------
-    >>> a = rt.FastArray([rt.nan, np.inf, 2])
+    >>> a = rt.FastArray([rt.nan, rt.inf, 2])
     >>> rt.isnotnan(a)
     FastArray([False,  True,  True])
 
@@ -4154,7 +4154,7 @@ def isnanorzero(*args, **kwargs) -> FastArray | bool:
 
     Examples
     --------
-    >>> a = rt.FastArray([0, rt.nan, np.inf, 3])
+    >>> a = rt.FastArray([0, rt.nan, rt.inf, 3])
     >>> rt.isnanorzero(a)
     FastArray([ True,  True, False, False])
 
@@ -4210,7 +4210,7 @@ def isfinite(*args, **kwargs) -> FastArray | bool:
 
     Examples
     --------
-    >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+    >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
     >>> rt.isfinite(a)
     FastArray([False, False, False,  True])
 
@@ -4263,7 +4263,7 @@ def isnotfinite(*args, **kwargs) -> FastArray | bool:
 
     Examples
     --------
-    >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+    >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
     >>> rt.isnotfinite(a)
     FastArray([ True,  True,  True, False])
 
@@ -4314,7 +4314,7 @@ def isinf(*args, **kwargs) -> FastArray | bool:
 
     Examples
     --------
-    >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+    >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
     >>> rt.isinf(a)
     FastArray([ True,  True, False, False])
 
@@ -4366,7 +4366,7 @@ def isnotinf(*args, **kwargs) -> FastArray | bool:
 
     Examples
     --------
-    >>> a = rt.FastArray([np.inf, np.NINF, rt.nan, 0])
+    >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
     >>> rt.isnotinf(a)
     FastArray([False, False,  True,  True])
 

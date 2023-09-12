@@ -401,7 +401,7 @@ class TestMergeAsof2:
         ds = merge_asof2(ds1, ds2, on="Time", by="Ticker", matched_on=True)
 
         for key in ds.keys():
-            # TODO: Switch to assert_array_equal here once a string-based Categorical allows np.inf to be used in an equality check
+            # TODO: Switch to assert_array_equal here once a string-based Categorical allows rt.inf to be used in an equality check
             # assert_array_or_cat_equal(ds[key], target[key], err_msg=f"Column '{key}' differs between the actual and expected.")
             assert (ds[key] == target[key]).all()
 
