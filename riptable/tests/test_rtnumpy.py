@@ -343,6 +343,7 @@ class TestHStackAny:
     _ts2 = _dtn2 - _dtn1
     _ds1 = rt.Dataset({"a": 11})
     _ds2 = rt.Dataset({"b": 22})
+    _ds3 = rt.Dataset({})
     _pds1 = rt.PDataset(_ds1)
     _pds2 = rt.PDataset(_ds2)
 
@@ -361,6 +362,7 @@ class TestHStackAny:
             pytest.param([_ds1, _pds2], rt.Dataset, id="Dataset,PDataset"),
             pytest.param([_pds1, _ds2], rt.Dataset, id="PDataset,Dataset"),
             pytest.param([_fa1, _ds2], None, id="FastArray,Dataset"),
+            pytest.param([_ds1, _ds3], rt.Dataset, id="Dataset,Dataset"),
         ],
     )
     def test_hstack_any(self, inputs, expected):

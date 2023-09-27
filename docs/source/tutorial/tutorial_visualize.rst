@@ -262,4 +262,4 @@ values: `Working with Missing Data <tutorial_missing_data.rst>`__.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

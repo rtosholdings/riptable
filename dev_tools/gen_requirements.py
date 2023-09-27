@@ -107,7 +107,8 @@ tests_reqs = [
 sphinx_reqs = (
     [
         "sphinx_rtd_theme>=0.5.1",
-        "sphinx-autoapi",
+        "sphinx-autoapi<3",  # latest conda-forge version that works with astroid-2
+        "astroid<3",  # latest conda-forge version that works with sphinx-autoapi-2
         "nbsphinx",
         "sphinx-design",
         "pytest",

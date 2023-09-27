@@ -835,7 +835,7 @@ class Grouping:
         grouping, arr_len = data_as_fastarray(grouping, unicode)
 
         # check for user defined bins
-        if categories is not None:
+        if categories is not None and len(categories) != 0:
             # all user defined bins take this path
             if is_enumlike(categories):
                 # print('categories was enumlike')

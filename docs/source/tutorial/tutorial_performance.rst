@@ -45,4 +45,4 @@ https://github.com/joblib/loky.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

@@ -91,7 +91,10 @@ class SaveLoad_Test(unittest.TestCase):
             # multikey
             cmk = Categorical([FastArray(["a", "b", "c", "d", "e"]), arange(5)])
 
-            ds = Dataset({"cstr": cstr, "cnum": cnum, "cmap": cmap, "cmk": cmk})
+            # multikey Cat of Categoricals
+            mcc = Categorical([cstr, cstr])
+
+            ds = Dataset({"cstr": cstr, "cnum": cnum, "cmap": cmap, "cmk": cmk, "mcc": mcc})
             ds.save(f"{tmpdirname}/tempsave")
             ds2 = Dataset.load(f"{tmpdirname}/tempsave")
 
@@ -99,6 +102,7 @@ class SaveLoad_Test(unittest.TestCase):
             self.assertEqual(ds2.cnum.category_mode, CategoryMode.NumericArray)
             self.assertEqual(ds2.cmap.category_mode, CategoryMode.Dictionary)
             self.assertEqual(ds2.cmk.category_mode, CategoryMode.MultiKey)
+            self.assertEqual(ds2.mcc.category_mode, CategoryMode.MultiKey)
 
     def test_load_single_item(self):
         with tempfile.TemporaryDirectory() as tmpdirname:

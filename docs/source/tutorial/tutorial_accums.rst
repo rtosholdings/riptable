@@ -291,4 +291,4 @@ Next, for something completely different, we’ll explore ways to
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

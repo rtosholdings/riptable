@@ -239,4 +239,4 @@ cover how to `Merge Datasets <tutorial_merge.rst>`__.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

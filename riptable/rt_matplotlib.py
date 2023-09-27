@@ -410,7 +410,7 @@ class DateTimeNanoScalarConverter(units.ConversionInterface):
     @staticmethod
     def axisinfo(unit, axis):
         (u, rt_tz) = unit
-        if rt_tz == "NYC":
+        if rt_tz == "America/New_York":
             tz = pytz.timezone("America/New_York")
         else:
             tz = pytz.utc

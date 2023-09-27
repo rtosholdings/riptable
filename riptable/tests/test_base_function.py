@@ -7,6 +7,7 @@ from numpy.testing import assert_almost_equal, assert_array_equal
 
 import riptable as rt
 from riptable.Utils.teamcity_helper import is_running_in_teamcity
+from riptable.tests.utils import get_rc_version, parse_version
 
 
 class TestCat2Keys:
@@ -98,8 +99,9 @@ class TestSearchSorted:
             err_msg=f"using array {arr}\nvalues to insert {v}\nside {side}",
         )
 
-    @pytest.mark.xfail(reason="RIP-345 - expected insertion points at position 3, got 2")
-    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
+    @pytest.mark.xfail(
+        get_rc_version() < parse_version("1.15.1a"), reason="RIP-345 - expected insertion points at position 3, got 2"
+    )
     def test_simple_right_xfail(self):
         side = "right"
 
@@ -128,8 +130,9 @@ class TestSearchSorted:
             err_msg=f"using array {arr}\nvalues to insert {v}\nside {side}",
         )
 
-    @pytest.mark.xfail(reason="RIP-345: expected insertion points at position 1, got 2")
-    @pytest.mark.skipif(is_running_in_teamcity(), reason="Please remove alongside xfail removal.")
+    @pytest.mark.xfail(
+        get_rc_version() < parse_version("1.15.1a"), reason="RIP-345: expected insertion points at position 1, got 2"
+    )
     def test_simple_left2_xfail(self):
         side = "left"
 

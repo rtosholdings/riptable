@@ -493,6 +493,11 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy: bool = False):
         # is_binned = t[0] in binned_types
         for ds in ds_list:
             nrows = ds._nrows
+
+            # skip if empty dataset
+            if nrows is None:
+                continue
+
             # column was found in current dataset
             if name in ds:
                 col = ds[name]
