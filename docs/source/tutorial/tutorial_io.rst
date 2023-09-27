@@ -369,4 +369,4 @@ Considerations <tutorial_performance.rst>`__.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

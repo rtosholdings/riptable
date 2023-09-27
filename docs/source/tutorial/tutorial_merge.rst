@@ -484,4 +484,4 @@ Transpose <tutorial_reshape.rst>`__.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

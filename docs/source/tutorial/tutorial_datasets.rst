@@ -1010,4 +1010,4 @@ of Data Using Filters <tutorial_filters.rst>`__.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

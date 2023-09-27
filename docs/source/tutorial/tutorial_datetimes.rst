@@ -650,4 +650,4 @@ Group Operations with Categoricals <tutorial_categoricals.rst>`__.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

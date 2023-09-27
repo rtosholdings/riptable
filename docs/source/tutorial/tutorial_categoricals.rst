@@ -1180,4 +1180,4 @@ another way to do multi-key groupings with fancier output.
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

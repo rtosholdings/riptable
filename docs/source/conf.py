@@ -46,6 +46,10 @@ extensions = [
     "sphinx_design",
 ]
 
+rst_prolog = f"""
+.. |rtosholdings_docs| replace:: {os.getenv("RTOSHOLDINGS_DOCS", "rtosholdings-docs@sig.com")}
+"""
+
 # Napoleon settings
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True

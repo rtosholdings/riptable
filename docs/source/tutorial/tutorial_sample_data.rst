@@ -155,4 +155,4 @@ Next we cover ways to get data in and out of Riptable: `Work with Riptable Files
 --------------
 
 Questions or comments about this guide? Email
-RiptableDocumentation@sig.com.
+|rtosholdings_docs|.

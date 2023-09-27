@@ -3,7 +3,7 @@ Intro to Riptable
 
 Welcome to Riptable. This intro guide is intended to help get you familiar with Riptable's basic functionality and syntax.
 
-Questions or suggestions? Email RiptableDocumentation@sig.com.
+Questions or suggestions? Email |rtosholdings_docs|.
 
 
 .. toctree::
