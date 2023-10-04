@@ -266,6 +266,26 @@ class TestCategorical(unittest.TestCase):
         codes = [1, 44, 44, 133, 75]
         c = Categorical(codes, LikertDecision)
 
+    def test_ctor_empty(self):
+        empty_category = Categorical([0], rt.FA([]))
+        assert len(empty_category.categories()) == 1
+        assert isnan(empty_category.categories()[0])
+
+    @pytest.mark.xfail(
+        reason="RIPTABLE-357 Passing an empty category as dictionary ({}) fails. It should be supported."
+    )
+    def test_ctor_empty_dict(self):
+        class _EmptyEnum(IntEnum):
+            pass
+
+        empty_enum_cat = Categorical([0], _EmptyEnum)
+        assert len(empty_enum_cat.categories()) == 1
+        assert isnan(empty_enum_cat.categories()[0])
+
+        empty_dict_category = Categorical([0], {})
+        assert len(empty_dict_category.categories()) == 1
+        assert isnan(empty_dict_category.categories()[0])
+
     # ---------------------------------------------------------------------------
     def test_compare_enum_int(self):
         compare_func_names = [
