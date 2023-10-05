@@ -274,6 +274,8 @@ jobs:
     needs: [conda_build, conda_test, pypi_test]
     runs-on: ubuntu-latest
     env:
+      # pin to py3.11, as anaconda-client broken on py3.12 (see https://github.com/Anaconda-Platform/anaconda-client/issues/689)
+      python_version: 3.11
       ANACONDA_USER: rtosholdings
       ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
     steps:
@@ -283,6 +285,7 @@ jobs:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
           activate-environment: "conda_deploy"
+          python-version: ${{ env.python_version }}
           miniforge-version: latest
           use-mamba: true
           auto-update-conda: false
