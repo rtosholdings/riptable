@@ -34,7 +34,8 @@ jobs:
         with:
           activate-environment: "flake8_env"
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
+          miniforge-version: latest
+          use-mamba: true
           auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
@@ -73,7 +74,8 @@ jobs:
         with:
           activate-environment: "conda_build"
           python-version: ${{ env.python_version }}
-          mamba-version: "*"
+          miniforge-version: latest
+          use-mamba: true
           auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
@@ -160,7 +162,8 @@ jobs:
         with:
           activate-environment: "conda_test"
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
+          miniforge-version: latest
+          use-mamba: true
           auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
@@ -220,7 +223,8 @@ jobs:
         with:
           activate-environment: "pypi_test"
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
+          miniforge-version: latest
+          use-mamba: true
           auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible
@@ -279,7 +283,8 @@ jobs:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
           activate-environment: "conda_deploy"
-          mamba-version: "*"
+          miniforge-version: latest
+          use-mamba: true
           auto-update-conda: false
           channels: conda-forge
           channel-priority: flexible

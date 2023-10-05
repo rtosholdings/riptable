@@ -3462,7 +3462,7 @@ class Categorical(GroupByOps, FastArray):
             cats = dict(zip(arrdict["codes"], arrdict["values"]))
         else:
             catmode = True
-            cats = arrdict
+            cats = None if len(arrdict) == 0 else arrdict
 
         grp = Grouping(
             instance,
