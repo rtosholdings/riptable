@@ -181,6 +181,7 @@ from .rt_numpy import (
     median,
     min,
     minimum,
+    min_scalar_type,
     multikeyhash,
     nan_to_num,
     nan_to_zero,
@@ -286,14 +287,14 @@ except ModuleNotFoundError:
 try:
     from IPython import get_ipython
 
+    # disable outputcache for all terminals, and current one if present.
+    output_cache_none()
+
     ipconfig = get_ipython()
 except ModuleNotFoundError:
     ipconfig = None
 
 if ipconfig is not None:
-    # disable outputcache only for ipython by default
-    output_cache_none()
-
     # turn greedy on for better autocompletions on riptable classes
     ipconfig.Completer.greedy = True
 

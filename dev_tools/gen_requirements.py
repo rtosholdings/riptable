@@ -18,7 +18,6 @@ def is_python(major: int, minor: int) -> bool:
     return ver.major == major and ver.minor == minor
 
 
-_ABSEIL_REQ = "abseil-cpp==20220623.*"
 _BENCHMARK_REQ = "benchmark>=1.7,<1.8"
 _NUMPY_REQ = "numpy>=1.23"
 _TBB_VER = "==2021.6.*"
@@ -33,8 +32,9 @@ if is_linux():
     toolchain_reqs += [
         "binutils",
         "binutils_linux-64",
-        "gcc==10.*",
-        "gxx==10.*",
+        "gcc==13.*",
+        "gxx==13.*",
+        "libstdcxx-ng=13.*",
         "ninja",
     ]
 
@@ -55,13 +55,13 @@ conda_reqs = [
 # Most everything else will be specified in setup.py.
 pypi_reqs = [
     "build",  # PEP-517 py build frontend
-    _ABSEIL_REQ,  # PyPI package doesn't exist
     _BENCHMARK_REQ,  # PyPI package doesn't exist
     _TBB_DEVEL_REQ,  # needed because PyPI tbb-devel pkg doesn't contain CMake files yet
     _ZSTD_REQ,  # PyPI package doesn't exist
 ] + toolchain_reqs
 
 # Core runtime requirements for riptable and riptide_cpp.
+# Must be available as Conda and PyPI packages
 runtime_reqs = [
     # No riptide_cpp as that must be handled separately
     "ansi2html>=1.5.2",

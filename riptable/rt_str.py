@@ -82,7 +82,7 @@ def _warn_deprecated_naming(old_func, new_func):
 SliceBoundType = Union[int, npt.NDArray[np.integer]]
 
 
-@nb.njit
+@nb.njit(cache=get_global_settings().enable_numba_cache)
 def _str_equal(str1, str2):
     for char1, char2 in zip(str1, str2):
         if char1 != char2:

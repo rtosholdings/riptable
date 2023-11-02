@@ -215,20 +215,22 @@ class CacheWarning(UserWarning):
 # ------------------------------------------------------------------------
 def output_cache_none():
     """
-    used in ipython, jupyter, or spyder
-    sets the terminalInteractiveShell output cache size to none
-    Out[#] will no longer work
-    the Out dictionary will be empty
-    _# will no longer work
+    Used in ipython, jupyter, or spyder
+    Sets the InteractiveShell output cache size config to 0.
+    Affects all shells, including current one if present.
+
+    Out[#] will no longer work.
+    the Out dictionary will be empty.
+    _# will no longer work.
     """
     try:
         import IPython
 
-        t = IPython.terminal.interactiveshell.TerminalInteractiveShell()
+        t = IPython.InteractiveShell  # base class for all interactive shells
         # stop the interactiveshell from caching (this is the Out[])
         t.cache_size = 0
         # note: do we set the use_ns Out back to something to allow to kick back in?
-        # stop the displayhook from caching
+        # stop the current shell displayhook from caching
         ipython = IPython.get_ipython()
         if ipython:
             ipython.displayhook.do_full_cache = False
@@ -240,16 +242,16 @@ def output_cache_none():
 # ------------------------------------------------------------------------
 def output_cache_setsize(cache_size=100):
     """
-    used in ipython, jupyter, or spyder
-    sets the terminalInteractiveShell output cache size to cache_size (100 is the default)
+    Used in ipython, jupyter, or spyder
+    Sets the InteractiveShell output cache size config to cache_size (100 is the default)
     """
     try:
         import IPython
 
-        t = IPython.terminal.interactiveshell.TerminalInteractiveShell()
-        # stop the interactiveshell from caching (this is the Out[])
+        t = IPython.InteractiveShell  # base class for all interactive shells
+        # set the interactiveshell caching (this is the Out[])
         t.cache_size = cache_size
-        # stop the displayhook from caching
+        # allow the current shell displayhook to cache
         ipython = IPython.get_ipython()
         if ipython:
             ipython.displayhook.do_full_cache = True
@@ -268,7 +270,6 @@ def output_cache_flush():
     try:
         from IPython import get_ipython
 
-        # from IPython import InteractiveShell
         ipython = get_ipython()
         if not ipython:
             return

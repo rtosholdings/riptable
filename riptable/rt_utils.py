@@ -930,7 +930,7 @@ def describe(arr, q: Optional[List[float]] = None, fill_value=None):
         if name is None:
             name = "Col0"
 
-        retval = TypeRegister.Dataset({name: describe_helper(arr)})
+        retval = TypeRegister.Dataset({name: describe_helper(arr, q=q)})
 
     retval.Stats = labels
     retval.col_move_to_front(["Stats"])

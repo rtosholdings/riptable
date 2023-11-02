@@ -1727,6 +1727,14 @@ class TestDataset(unittest.TestCase):
         self.assertEqual(result[1], 0)
         self.assertTrue(bool(np.all(isnan(result[2:]))))
 
+        q = [0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.9, 0.95, 0.99, 0.999]
+        labels = describe(None, q=q)
+        arr = rt.arange(1000.0)
+        result = arr.describe(q=q)
+        self.assertEqual(result.shape, (len(labels), 2))
+        self.assertIsInstance(res.Stats, FastArray)
+        self.assertEqual([s.decode("unicode_escape") for s in result.Stats.tolist()], labels)
+
     # Regression test for RIP-442 - Error displaying dataset with multiple 'key' columns with zero rows
     def test_repr_multikey_columns_with_zero_rows(self):
         ds = Dataset({"K1": Categorical(["A", "A", "A"]), "K2": Categorical(["B", "B", "B"]), "V": [1, 2, 3]})
@@ -2394,17 +2402,31 @@ class TestDataset(unittest.TestCase):
 @pytest.mark.parametrize(
     "index",
     [
+        None,
         pd.RangeIndex(10, name="the_index"),
         pd.RangeIndex(10, 20),
         pd.DatetimeIndex(np.arange(10, dtype=int)),
         pd.Index(list("qwertyuiop")),
     ],
 )
-def test_from_pandas_preserve_index(index):
+@pytest.mark.parametrize("preserve", [True, False, None])
+def test_from_pandas_preserve_index(index, preserve):
     df = pd.DataFrame({"a": np.arange(10)}, index)
-    ds = rt.Dataset.from_pandas(df)
-    index_name = index.name or "index"
-    assert ds.keys() == [index_name, "a"]
+    ds1 = rt.Dataset.from_pandas(df, preserve_index=preserve)
+
+    def _expected():
+        has_custom_index = index is not None
+        index_name = index.name or "index" if has_custom_index else "index"
+
+        if preserve == False:
+            return ["a"]
+
+        if preserve == True:
+            return [index_name, "a"]
+
+        return [index_name, "a"] if has_custom_index else ["a"]
+
+    assert ds1.keys() == _expected()
 
 
 @pytest.mark.parametrize("categorical", get_all_categorical_data())

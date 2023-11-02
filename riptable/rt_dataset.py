@@ -3010,7 +3010,7 @@ class Dataset(Struct):
         return self.to_pandas()
 
     @classmethod
-    def from_pandas(cls, df: "pd.DataFrame", tz: str = "UTC", preserve_index: bool = None) -> "Dataset":
+    def from_pandas(cls, df: "pd.DataFrame", tz: str = "UTC", preserve_index: Optional[bool] = False) -> "Dataset":
         """
         Creates a riptable Dataset from a pandas DataFrame. Pandas categoricals
         and datetime arrays are converted to their riptable counterparts.
@@ -3023,10 +3023,13 @@ class Dataset(Struct):
 
         Parameters
         ----------
-        df: pandas.DataFrame
-            The pandas DataFrame to be converted
-        tz: string
+        df : pandas.DataFrame
+            The pandas DataFrame to be converted.
+        tz : string
             A riptable-supported timezone ('UTC', 'NYC', 'DUBLIN', 'GMT') as fallback timezone.
+        preserve_index : bool, optional
+            Whether to preserve the index from Dataframe as a column. Defaults to False.
+            If set to None, the index will be preserved only if it's not the default index.
 
         Returns
         -------
@@ -3034,7 +3037,7 @@ class Dataset(Struct):
 
         See Also
         --------
-        riptable.Dataset.to_pandas
+        Dataset.to_pandas
         """
         import pandas as pd
         from .Utils.pandas_utils import pandas_series_to_riptable

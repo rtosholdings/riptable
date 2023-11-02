@@ -30,6 +30,7 @@ from typing import (
 import numba as nb
 import numpy as np
 
+from .config import get_global_settings
 from .rt_enum import (
     FILTERED_LONG_NAME,
     GB_FUNCTIONS,
@@ -6437,7 +6438,7 @@ class Categorical(GroupByOps, FastArray):
             return TypeRegister.Dataset({column_name(args[0]): res})
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def _scalar_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
         ngrp = iFirstGroup.shape[0] - 1  # exclude the filtered group
         res = np.full(ngrp, np.nan)
@@ -6449,7 +6450,7 @@ class Categorical(GroupByOps, FastArray):
         return res
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def _transformed_scalar_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
         ngrp = iFirstGroup.shape[0] - 1
         res = np.full((iGroup.shape[0],), np.nan)
@@ -6465,7 +6466,7 @@ class Categorical(GroupByOps, FastArray):
         return res
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def _array_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args):
         ngrp = iFirstGroup.shape[0] - 1
         res = np.full((iGroup.shape[0],), np.nan)
@@ -6572,7 +6573,7 @@ def CatZero(
 # functions which replicate this behavior.
 class CompareCheckHelper:
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def __eq__(a, x, y):
         out = np.full(len(x), False)
         for i in nb.prange(len(x)):
@@ -6580,7 +6581,7 @@ class CompareCheckHelper:
         return out
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def __ne__(a, x, y):
         out = np.full(len(x), False)
         for i in nb.prange(len(x)):
@@ -6588,7 +6589,7 @@ class CompareCheckHelper:
         return out
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def __gt__(a, x, y):
         out = np.full(len(x), False)
         for i in nb.prange(len(x)):
@@ -6596,7 +6597,7 @@ class CompareCheckHelper:
         return out
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def __ge__(a, x, y):
         out = np.full(len(x), False)
         for i in nb.prange(len(x)):
@@ -6604,7 +6605,7 @@ class CompareCheckHelper:
         return out
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def __le__(a, x, y):
         out = np.full(len(x), False)
         for i in nb.prange(len(x)):
@@ -6612,7 +6613,7 @@ class CompareCheckHelper:
         return out
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
     def __lt__(a, x, y):
         out = np.full(len(x), False)
         for i in nb.prange(len(x)):
