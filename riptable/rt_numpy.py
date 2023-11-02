@@ -1,4 +1,5 @@
 from __future__ import annotations
+import numbers
 
 __all__ = [
     # types listed first
@@ -78,6 +79,7 @@ __all__ = [
     "mean",
     "median",
     "min",
+    "min_scalar_type",
     "multikeyhash",
     "minimum",
     "maximum",
@@ -215,6 +217,63 @@ def _args_to_fast_arrays(*arg_names) -> Callable:
     return decorator
 
 
+def min_scalar_type(val, promote_invalid=False, prefer_signed=False):
+    """
+    For scalar `val`, returns the data type of smallest size and smallest kind
+    that can hold its value. If passed a non-scalar ndarray/FastArray,
+    returns the `val.dtype` unmodified.
+
+    Parameters
+    ----------
+    val: scalar or array_like
+        The value to get the minimal dtype of.
+
+    promote_invalid: bool
+        Whether to promote this value as a valid value of the next larger dtype if it's an riptable invalid sentinel.
+        Defaults to False.
+
+    prefer_signed: bool
+        Whether to prefer signed type for positive values.
+        Defaults to False.
+
+    Returns
+    -------
+    out: dtype
+        The minimal data type.
+
+
+    Examples
+    --------
+    >>> rt.min_scalar_type(255)
+    dtype('uint8')
+
+    >>> rt.min_scalar_type(255, promote_invalid=True)
+    dtype('uint16')
+
+    >>> rt.min_scalar_type(255, promote_invalid=True, prefer_signed=True)
+    dtype('int16')
+
+    >>> rt.min_scalar_type(rt.uint64(255))
+    dtype('uint8')
+
+    >>> rt.min_scalar_type(3.13)
+    dtype('float16')
+
+    >>> rt.min_scalar_type("foo")
+    dtype('<U3')
+    """
+    if not np.isscalar(val) or not isinstance(val, numbers.Number) or isinstance(val, bool):
+        return np.min_scalar_type(val)
+
+    if promote_invalid:
+        val += 1 if val >= 0 else -1
+
+    if prefer_signed and val >= 0:
+        val = -val if val != 0 else -1
+
+    return np.min_scalar_type(val)
+
+
 # --------------------------------------------------------------
 def get_dtype(val) -> np.dtype:
     """
@@ -233,7 +292,7 @@ def get_dtype(val) -> np.dtype:
 
     Notes
     -----
-    if a python integer, will use int32 or int64 (never uint)
+    if a python integer, return smallest integer type that can hold this value (always prefers unsigned)
     for a python float, always returns float64
     for a string, will return U or S with size
 
@@ -253,36 +312,7 @@ def get_dtype(val) -> np.dtype:
     >>> get_dtype(b'hello')
     dtype('S5')
     """
-    try:
-        # check first if it has a dtype
-        final = val.dtype
-    except:
-        if isinstance(val, bool):
-            final = np.dtype(bool)
-
-        elif isinstance(val, int):
-            val = abs(val)
-            if val <= (2**32 - 1):
-                final = np.dtype(np.int32)
-            elif val <= (2**64 - 1):
-                final = np.dtype(np.int64)
-            else:
-                final = np.dtype(np.float64)
-
-        elif isinstance(val, float):
-            final = np.dtype(np.float64)
-
-        elif isinstance(val, str):
-            final = np.dtype("U" + str(len(val)))
-
-        elif isinstance(val, bytes):
-            final = np.dtype("S" + str(len(val)))
-
-        else:
-            temp = np.asanyarray(val)
-            final = temp.dtype
-
-    return final
+    return val.dtype if hasattr(val, "dtype") else min_scalar_type(val)
 
 
 # --------------------------------------------------------------

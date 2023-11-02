@@ -1,6 +1,7 @@
 import math
 import unittest
-import itertools
+
+import numpy as np
 
 import pytest
 from numpy.testing import assert_array_equal
@@ -50,6 +51,17 @@ class TestRTNumpy:
         assert_array_equal(where(f_raw, x_raw, z_raw), np.where(f_raw, x_raw, z_raw))
         assert_array_equal(where(f_raw, z_raw, y_raw), np.where(f_raw, z_raw, y_raw))
 
+        # make sure numeric args are resolved to the correct type
+        f = [False, True, True, False]
+        y = [1, 2, 3, 4]
+        assert_array_equal(rt.where(f, 0, y), np.where(f, 0, y))
+        assert_array_equal(rt.where(f, -5, y), np.where(f, -5, y))
+        assert_array_equal(rt.where(f, 0.0, y), np.where(f, 0.0, y))
+        assert_array_equal(rt.where(f, 10**50, y), np.where(f, 10**50, y))
+
+        # test invalid
+        assert_array_equal(rt.where(f, 255, 0), rt.FA([0, 255, 255, 0], dtype=rt.uint8))
+
     def test_where_length_one(self):
         assert_array_equal(rt.where(rt.FA([False]))[0], np.array([]))
 
@@ -95,6 +107,67 @@ class TestRTNumpy:
         assert_array_equal(rt.where(c3, FastArray([4, 5, 6]), l1), FastArray([1, 1, 1]))
         assert_array_equal(rt.where(c3, 1, 2), FastArray([2, 2, 2]))
         assert_array_equal(rt.where(c3, l1, l1), FastArray([1, 1, 1]))
+
+    def test_min_scalar_type(self):
+        i8 = np.iinfo(np.int8)
+        u8 = np.iinfo(np.uint8)
+        i16 = np.iinfo(np.int16)
+        u16 = np.iinfo(np.uint16)
+        i32 = np.iinfo(np.int32)
+        u32 = np.iinfo(np.uint32)
+        i64 = np.iinfo(np.int64)
+        u64 = np.iinfo(np.uint64)
+
+        # 1st: (False, False) Don't promote invalids and don't prefer signed
+        # 2nd: (True, False) Promote invalids and don't prefer signed
+        # 3rd (False, True) Don't promote invalids but prefer signed
+        # 4th (True, True) Promote invalids and prefer signed
+
+        test_cases = [
+            (0, np.dtype("uint8"), np.dtype("uint8"), np.dtype("int8"), np.dtype("int8")),
+            (1, np.dtype("uint8"), np.dtype("uint8"), np.dtype("int8"), np.dtype("int8")),
+            (-1, np.dtype("int8"), np.dtype("int8"), np.dtype("int8"), np.dtype("int8")),
+            (i8.min, np.dtype("int8"), np.dtype("int16"), np.dtype("int8"), np.dtype("int16")),
+            (i8.max, np.dtype("uint8"), np.dtype("uint8"), np.dtype("int8"), np.dtype("int8")),
+            (u8.max, np.dtype("uint8"), np.dtype("uint16"), np.dtype("int16"), np.dtype("int16")),
+            (i16.min, np.dtype("int16"), np.dtype("int32"), np.dtype("int16"), np.dtype("int32")),
+            (i16.max, np.dtype("uint16"), np.dtype("uint16"), np.dtype("int16"), np.dtype("int16")),
+            (u16.max, np.dtype("uint16"), np.dtype("uint32"), np.dtype("int32"), np.dtype("int32")),
+            (i32.min, np.dtype("int32"), np.dtype("int64"), np.dtype("int32"), np.dtype("int64")),
+            (i32.max, np.dtype("uint32"), np.dtype("uint32"), np.dtype("int32"), np.dtype("int32")),
+            (u32.max, np.dtype("uint32"), np.dtype("uint64"), np.dtype("int64"), np.dtype("int64")),
+            (i64.min, np.dtype("int64"), np.dtype("O"), np.dtype("int64"), np.dtype("O")),
+            (i64.max, np.dtype("uint64"), np.dtype("uint64"), np.dtype("int64"), np.dtype("int64")),
+            (u64.max, np.dtype("uint64"), np.dtype("O"), np.dtype("O"), np.dtype("O")),
+        ]
+
+        for inp, ex1, ex2, ex3, ex4 in test_cases:
+            assert rt.min_scalar_type(inp, False, False) == ex1
+            assert rt.min_scalar_type(inp, True, False) == ex2
+            assert rt.min_scalar_type(inp, False, True) == ex3
+            assert rt.min_scalar_type(inp, True, True) == ex4
+
+        assert rt.min_scalar_type("string_value") == np.min_scalar_type("string_value")
+        assert rt.min_scalar_type(b"string_value") == np.min_scalar_type(b"string_value")
+        assert rt.min_scalar_type([1, 2, 3, 4]) == np.min_scalar_type([1, 2, 3, 4])
+        assert rt.min_scalar_type(rt.FA([1, 2, 3, 4], dtype="uint64")) == np.dtype("uint64")
+        assert rt.min_scalar_type(9.93620693e37) == np.min_scalar_type(9.93620693e37)
+        assert rt.min_scalar_type(False) == np.min_scalar_type(False)
+        assert rt.min_scalar_type(rt.Date("2020-08-04")) == np.dtype("int32")
+        assert rt.min_scalar_type(rt.int64(1234)) == np.min_scalar_type(rt.int64(1234))
+
+    def test_get_dtype(self):
+        assert rt.get_dtype(rt.int64(-2)) == np.dtype("int64")
+        assert rt.get_dtype(np.int64(0)) == np.dtype("int64")
+
+        assert rt.get_dtype(10) == np.dtype("uint8")
+        assert rt.get_dtype(255) == np.dtype("uint8")
+        assert rt.get_dtype(-10) == np.dtype("int8")
+        assert rt.get_dtype(123.45) == np.dtype("float16")
+        assert rt.get_dtype("hello") == np.dtype("<U5")
+        assert rt.get_dtype(b"hello") == np.dtype("S5")
+
+        assert rt.get_dtype(rt.FA(10, dtype="int64")) == np.dtype("int64")
 
     def test_interp(self):
         x = interp(arange(3.0).astype(float32), [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])

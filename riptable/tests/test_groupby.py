@@ -831,5 +831,32 @@ def test_count_uniques_with_nans(showfilter, use_filter):
         assert (result[k] == expected[k]).all()
 
 
+def test_mode_objects():
+    ds = rt.Dataset(
+        {
+            "key": ["a", "b", "b", "b"],
+            "v_int": [1, 1, 2, 2],
+            "v_cat": rt.Cat(["x", "x", "y", "y"]),
+            "v_str": ["x", "x", "y", "y"],
+            "v_byt": [b"R", b"R", b"S", b"S"],
+            "v_dtn": rt.DateTimeNano(["2023-10-25", "2023-10-26", "2023-10-27", "2023-10-27"], from_tz="UTC"),
+            "v_ts": rt.TimeSpan(["1s", "1s", "2m", "2m"]),
+        }
+    )
+    gb = ds.gb("key")
+
+    expected = {
+        "key": ["a", "b"],
+        "v_int": [1, 2],
+        "v_cat": ["x", "y"],
+        "v_dtn": rt.DateTimeNano(["2023-10-25", "2023-10-27"], from_tz="UTC"),
+        "v_ts": rt.TimeSpan(["1s", "2m"]),
+    }
+    actual = gb.mode()
+    assert len(actual.keys()) == len(expected.keys())
+    for k in expected.keys():
+        assert (actual[k] == expected[k]).all()
+
+
 if __name__ == "__main__":
     tester = unittest.main()

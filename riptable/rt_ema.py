@@ -43,7 +43,7 @@
 #    return gb.calculate_custom_packed(rolling_window, 2)
 
 
-# @njit(parallel=True)
+# @njit(parallel=True, cache=get_global_settings().enable_numba_cache)
 # def ema_decay(iGroup, nFirstGroup, nCountGroup, time, data, ema, decay):
 #    # decay = np.log(2)/(1e3*100)
 #    # start on group 1 to skip over 0 bin

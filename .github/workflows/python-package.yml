@@ -90,6 +90,8 @@ jobs:
         id: build_package
         run: |
           set -ex
+          conda config --set conda_build.pkg_format 2 # create .conda package format
+          conda config --set conda_build.zstd_compression_level 19 # set .conda package format compression level
           export BUILD_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(version_scheme='post-release'))")
           echo "BUILD_VERSION=${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
           mkdir conda_pkgs_output
@@ -98,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: conda-build-artifacts
-          path: conda_pkgs_output/*/riptable-*.tar.bz2
+          path: conda_pkgs_output/*/riptable-*.conda
           if-no-files-found: "error"
     outputs:
       build_version: ${{steps.build_package.outputs.BUILD_VERSION}}
@@ -305,7 +307,7 @@ jobs:
         shell: bash -l {0}
         run: |
           set -ex
-          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.tar.bz2
+          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.conda
 
   pypi_deploy:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}

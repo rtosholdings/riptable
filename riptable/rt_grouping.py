@@ -23,6 +23,7 @@ import riptide_cpp as rc
 from .config import get_global_settings
 from .rt_enum import (
     FILTERED_LONG_NAME,
+    GB_CATEGORICAL_ALLOWED,
     GB_DATE_ALLOWED,
     GB_FUNC_COUNT,
     GB_FUNC_NUMBA,
@@ -2471,12 +2472,21 @@ class Grouping:
                             )
                             removelist.append(k)
 
+                    elif isinstance(npdict[k], TypeRegister.Categorical):
+                        if funcNum == GB_FUNC_USER or funcNum not in GB_CATEGORICAL_ALLOWED:
+                            if Grouping.DebugMode:
+                                print("calc removing", k, funcNum)
+                            logging.warning(
+                                f"Categorial data in column {k} is not supported for {funcNum}, column is ignored."
+                            )
+                            removelist.append(k)
+
                     elif TypeRegister.is_string_or_object(npdict[k]):
                         if funcNum == GB_FUNC_USER or funcNum not in GB_STRING_ALLOWED:
                             if Grouping.DebugMode:
                                 print("calc removing", k, funcNum)
                             logging.warning(
-                                f"Data in column {k} (possibly strings or categorical) "
+                                f"Data in column {k} (possibly strings or object) "
                                 + f"is not supported for {funcNum}, column is ignored."
                             )
                             removelist.append(k)
@@ -3679,7 +3689,7 @@ class Grouping:
         # Create the output array.
         result = empty(output_length, dtype=grouped_data.dtype)
 
-        @nb.njit(cache=True)
+        @nb.njit(cache=get_global_settings().enable_numba_cache)
         def impl(grouped_data, indices, ncountgroup, ifirstgroup, out):
             # TODO: If we ever want to use nb.prange() in the loop below, we'll need to
             #       do something like a partial cumsum() on ncountgroup[indices] to determine
@@ -3770,7 +3780,7 @@ class Grouping:
         if output_length == 0:
             return result
 
-        @nb.njit(cache=True)
+        @nb.njit(cache=get_global_settings().enable_numba_cache)
         def impl(grouped_data, condition, ncountgroup, ifirstgroup, out):
             # TODO: If we ever want to use nb.prange() in the loop below, we'll need to
             #       do something like a partial cumsum() on ncountgroup[condition] to determine

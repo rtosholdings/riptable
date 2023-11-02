@@ -1345,6 +1345,26 @@ class FastArray_Test(unittest.TestCase):
         self.assertTrue((FastArray(["A", "B", "C"]).isin([]) == FastArray([False, False, False])).all())
         self.assertTrue((FastArray(["A", "B", "C"]).isin(rt.FA([])) == FastArray([False, False, False])).all())
 
+        assert_array_equal(
+            FastArray(
+                [
+                    11532462276864758257,
+                    10979838254148086493,
+                    18250652160818244581,
+                    15997088291653832538,
+                    12210180765234503900,
+                ],
+                dtype=np.dtype("uint64"),
+            ).isin([11532462276864758257, 10979838254148086493, 18250652160818244581]),
+            FastArray([True, True, True, False, False]),
+        )
+
+        x1 = rt.FA([1, 2, 3])
+        s1 = rt.FA(["a", "b", "c"])
+        assert_array_equal(x1.isin({1, 3}), rt.FA([True, False, True]))
+        assert_array_equal(s1.isin("a"), rt.FA([True, False, False]))
+        assert_array_equal(rt.FA([1]).isin(1, invert=True), rt.FA([False]))
+
     def test_between(self):
         # test endpoint configs
         x = FastArray([0, 1, 2, 3, 4])

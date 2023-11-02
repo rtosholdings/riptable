@@ -23,6 +23,7 @@ import numpy.typing as npt
 import riptide_cpp as rc
 from numpy.core.numeric import ScalarType
 
+from .config import get_global_settings
 from .rt_enum import (
     INVALID_DICT,
     MATH_OPERATION,
@@ -61,6 +62,7 @@ from .rt_numpy import (
     unique,
     where,
     zeros,
+    min_scalar_type,
 )
 from .rt_sds import save_sds
 from .rt_stats import statx
@@ -145,7 +147,7 @@ def __isnan(x):
         return lambda x: math.isnan(x)
 
 
-@nb.njit(parallel=True)
+@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
 def _fnansumhelper(x, filter):
     ret = 0
     length = 0
@@ -165,7 +167,7 @@ def _fnanmean(x, filter):
     return tot / n
 
 
-@nb.njit(parallel=True)
+@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
 def _fnanvar(x, filter):
     abc = 0.0
     length = 0
@@ -194,7 +196,7 @@ def _fnanstd(x, filter):
     return math.sqrt(_fnanvar(x, filter))
 
 
-@nb.njit(parallel=True)
+@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
 def _fsumhelper(x, filter):
     ret = 0
     length = 0
@@ -214,7 +216,7 @@ def _fmean(x, filter):
     return tot / n
 
 
-@nb.njit(parallel=True)
+@nb.njit(parallel=True, cache=get_global_settings().enable_numba_cache)
 def _fvar(x, filter):
     abc = 0.0
     length = 0
@@ -1727,7 +1729,7 @@ class FastArray(np.ndarray):
                     raise ValueError(
                         "isin does not currently support tuples.  In the future a tuple will be used to represent a multi-key."
                     )
-                test_elements = rc.AsFastArray(test_elements)
+                test_elements = rc.AsFastArray(test_elements, dtype=min_scalar_type(test_elements))
 
         try:
             # optimization: if we have just one element, we can just parallel compare that one element

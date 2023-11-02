@@ -424,38 +424,39 @@ def cut(
     Partition values into discrete bins.
 
     This function is also useful for converting a continuous variable to a
-    `.Categorical` variable.
+    :py:class:`~.rt_categorical.Categorical` variable.
 
     Values can be partitioned into a specified number of equal-width bins
     or bins bounded by specified endpoints.
 
     For bins bounded by specified endpoints, values that fall outside of the
-    bin range are put into the 'Filtered' bin, which is mapped to 0 in the
-    returned `.Categorical`. See the exception (caused by a known issue) noted
-    in the description of the `right` parameter, below.
+    bin range are put into the "Filtered" bin, which is mapped to 0 in the
+    returned :py:class:`~.rt_categorical.Categorical`. See the exception (caused by a
+    known issue) noted in the description of the ``right`` parameter, below.
 
-    Other known issues are noted in the parameter descriptions and shown in the
-    Examples section, below.
+    Known issues are noted in the parameter descriptions, summarized in the Notes
+    section, and shown in the Examples section, below.
 
     Parameters
     ----------
     x : `array`
         The input array to be partitioned. Must be 1-dimensional. NaN values are
-        put into the 'Filtered' bin.
+        put into the "Filtered" bin.
     bins : `int` or sequence of scalar
         Determines how bins are created:
 
-            - `int`: Creates `int` number of equal-width bins in the range of `x`.
-            - sequence of scalar: Creates bins based on the specified endpoints.
-              Bins can be of non-uniform width.
+        - `int`: Creates `int` number of equal-width bins based on the minimum and
+          maximum values of ``x``.
+        - sequence of scalar: Creates bins based on the specified endpoints. Bins can
+          be of non-uniform width.
     right : `bool`, default `True`
         Indicates whether each bin includes its right endpoint or not.
         Note: Until known issues are fixed:
 
-        - Each bin includes its right endpoint, even if `right` is set to `False`.
-        - If `right` is `True` (the default), the first bin includes its left
-          endpoint even if `include_lowest` is `False` (the default).
-        - If `right` is `False`, values of `x` that fall outside of the last
+        - Each bin includes its right endpoint, even if ``right`` is set to `False`.
+        - If ``right`` is `True` (the default), the first bin includes its left
+          endpoint even if ``include_lowest`` is `False` (the default).
+        - If ``right`` is `False`, values of ``x`` that fall outside of the last
           bin's right endpoint are put into a bin labeled with an integer representing
           the bin number. For example, if ``bins=[1, 2, 3, 4]``, a value of 5
           in `x` is put in a bin labeled ``!<4>``. This bin is mapped to 4 in
@@ -465,9 +466,10 @@ def cut(
         same length as the number of resulting bins (that is, its length should
         be one fewer than the number of endpoints). If `True` (the default) or
         `None`, the labels are created based on the bin endpoints. If `False`,
-        only a `.FastArray` of the integer bin mappings is returned.
+        only a :py:class:`~.rt_fastarray.FastArray` of the integer bin mappings
+        is returned.
     retbins : `bool`, default `False`
-        Whether to return an array of the bin endpoints. Useful when `bins`
+        Whether to return an array of the bin endpoints. Useful when ``bins``
         is provided as a scalar or other labels are specified. See the Returns
         section below for details of the output.
     precision : int, default 3
@@ -476,38 +478,64 @@ def cut(
     include_lowest : `bool`, default `False`
         Indicates whether the first bin should include its left endpoint
         or not. Note: Until a known issue is fixed, the first bin always
-        includes its left endpoint, except when `right` is set to `False`.
+        includes its left endpoint, except when ``right`` is set to `False`.
     filter: `array` of `bool`, optional
-        A boolean mask array. If a filter is provided, any values of `x`
-        corresponding to `False` values are put in the 'Filtered' bin and mapped
+        A boolean mask array. If a filter is provided, any values of ``x``
+        corresponding to `False` values are put in the "Filtered" bin and mapped
         to 0 in the integer bin mapping array. Note that until a known issue
-        is fixed, this parameter accepts a mask array that is shorter than `x`
-        and ignores values of `x` that are past the last corresponding value of
-        the mask.
-    duplicates : {'raise', 'drop'}, default 'raise'
+        is fixed, this parameter accepts a mask array that is shorter than ``x``,
+        and values of ``x`` that are past the last corresponding value of the mask
+        are ignored by the ``cut`` operation.
+    duplicates : {"raise", "drop"}, default "raise"
         If bin endpoints are not unique, raise an error or drop duplicate values.
 
     Returns
     -------
-    bins : Categorical or FastArray
-        - If `labels` is `True` or `None`, a `.Categorical` is returned,
-          consisting of the bins, the integer mapping codes for the bins, and
-          the unique bin labels.
-        - If `labels` is `False`, a `.FastArray` is returned that contains the
-          integer mapping codes.
+    bins : :py:class:`.rt_categorical.Categorical` or :py:class:`.rt_fastarray.FastArray`
+        - If ``labels`` is `True` or `None`, a :py:class:`~.rt_categorical.Categorical`
+          is returned, consisting of the bins, the integer mapping codes for the bins,
+          and the unique bin labels.
+        - If ``labels`` is `False`, a :py:class:`~.rt_fastarray.FastArray` is returned
+          that contains the integer mapping codes.
 
-    endpoints (optional) : `~numpy.ndarray` of str
+    endpoints (optional) : :py:class:`numpy.ndarray` of `str`
         An array of the bin endpoints. Returned as a separate value, only
-        when `retbins` is `True`.
+        when ``retbins`` is `True`.
 
     See Also
     --------
-    riptable.qcut :
+    :py:func:`.rt_bin.qcut` :
         Partition values into bins based on rank or sample quantiles.
+
+    Notes
+    -----
+    There are a few known issues with ``rt.cut()`` bin boundaries that can cause unexpected
+    behavior. They're described in the Parameters section above and shown in the Examples
+    section below. This table shows how the values of ``x`` are partitioned when
+    ``x=rt.FA([-1, 0, 1, 2, 3, 4, 5])`` and ``bins=[0, 1, 2, 3, 4]``.
+
+    +-------------------------+-------------------------------+--------------------+
+    |                         |include_lowest=False (default) |include_lowest=True |
+    |                         |                               |                    |
+    +=========================+===============================+====================+
+    |**right=True (default)** |- -1: Filtered                 |- -1: Filtered      |
+    |                         |- 0, 1: [0.0->1.0]             |- 0, 1: [0.0->1.0]  |
+    |                         |- 2: (1.0->2.0]                |- 2: (1.0->2.0]     |
+    |                         |- 3: (2.0->3.0]                |- 3: (2.0->3.0]     |
+    |                         |- 4: (3.0->4.0]                |- 4: (3.0->4.0]     |
+    |                         |- 5: Filtered                  |- 5: Filtered       |
+    +-------------------------+-------------------------------+--------------------+
+    |**right=False**          |- -1, 0: Filtered              |- -1, 0: Filtered   |
+    |                         |- 1: (0.0->1.0]                |- 1: (0.0->1.0]     |
+    |                         |- 2: (1.0->2.0]                |- 2: (1.0->2.0]     |
+    |                         |- 3: (2.0->3.0]                |- 3: (2.0->3.0]     |
+    |                         |- 4: (3.0->4.0]                |- 4: (3.0->4.0]     |
+    |                         |- 5: !<5>                      |- 5: !<5>           |
+    +-------------------------+-------------------------------+--------------------+
 
     Examples
     --------
-    Partition values into three equal-sized bins.
+    Partition values into three equal-width bins.
 
     >>> rt.cut(x=rt.FA([1, 7, 5, 4, 6, 3]), bins=3)
     Categorical([1.0->3.0, 5.0->7.0, 3.0->5.0, 3.0->5.0, 5.0->7.0, 1.0->3.0]) Length: 6
@@ -529,8 +557,8 @@ def cut(
     >>> rt.cut(x=rt.FA([1, 7, 5, 4, 6, 3]), bins=3, labels=False)
     FastArray([1, 3, 2, 2, 3, 1], dtype=int8)
 
-    Assign the bins specific labels. Notice that the returned `.Categorical`
-    object's categories are `labels`.
+    Assign the bins specific labels. Notice that the returned :py:class:`~.rt_categorical.Categorical`
+    object's categories are ``labels``.
 
     >>> rt.cut(x=rt.FA([1, 7, 5, 4, 6, 3]),
     ...        bins=3, labels=["bad", "medium", "good"])
@@ -539,31 +567,38 @@ def cut(
       FastArray([b'bad', b'medium', b'good'], dtype='|S6') Unique count: 3
 
     Partition values into bins with specified endpoints. Values that fall outside
-    of the bins are put in the 'Filtered' category.
+    of the bins are put in the "Filtered" category.
 
     >>> rt.cut(x=rt.FA([1, 7, 5, 4, 6, 3]), bins=[1, 3, 6])
     Categorical([1.0->3.0, Filtered, 3.0->6.0, 3.0->6.0, 3.0->6.0, 1.0->3.0]) Length: 6
       FastArray([1, 0, 2, 2, 2, 1], dtype=int8) Base Index: 1
       FastArray([b'1.0->3.0', b'3.0->6.0'], dtype='|S8') Unique count: 2
 
+    NaN values are also "Filtered".
+
+    >>> rt.cut(x=rt.FA([rt.nan, rt.nan, 1.0, 2.0, 5.0]), bins=2)
+    Categorical([Filtered, Filtered, 1.0->3.0, 1.0->3.0, 3.0->5.0]) Length: 5
+      FastArray([0, 0, 1, 1, 2], dtype=int8) Base Index: 1
+      FastArray([b'1.0->3.0', b'3.0->5.0'], dtype='|S8') Unique count: 2
+
     **Known Issues**
 
-    Each bin includes its right endpoint, even if `right` is set to `False`.
+    Each bin includes its right endpoint, even if ``right`` is set to `False`.
 
     >>> rt.cut(x=rt.FA([2, 3, 4]), bins=[1, 2, 3, 4], right=False)
     Categorical([1.0->2.0, 2.0->3.0, 3.0->4.0]) Length: 3
       FastArray([1, 2, 3], dtype=int8) Base Index: 1
       FastArray([b'1.0->2.0', b'2.0->3.0', b'3.0->4.0'], dtype='|S8') Unique count: 3
 
-    If `right` is `True` (the default), the first bin includes its left endpoint
-    even if `include_lowest` is `False` (the default).
+    If ``right`` is `True` (the default), the first bin includes its left endpoint
+    even if ``include_lowest`` is `False` (the default).
 
     >>> rt.cut(x=rt.FA([1, 2, 3, 4]), bins=3, include_lowest=False)
     Categorical([1.0->2.0, 1.0->2.0, 2.0->3.0, 3.0->4.0]) Length: 4
       FastArray([1, 1, 2, 3], dtype=int8) Base Index: 1
       FastArray([b'1.0->2.0', b'2.0->3.0', b'3.0->4.0'], dtype='|S8') Unique count: 3
 
-    If `right` is `False`, values of `x` that fall outside of the last bin's
+    If ``right`` is `False`, values of ``x`` that fall outside of the last bin's
     right endpoint are put into a bin labeled with an integer representing
     the bin number.
 
@@ -572,8 +607,8 @@ def cut(
       FastArray([0, 1, 2, 3, 4, 4], dtype=int8) Base Index: 1
       FastArray([b'1.0->2.0', b'2.0->3.0', b'3.0->4.0'], dtype='|S8') Unique count: 3
 
-    If a boolean mask filter is provided that's shorter than the length of `x`,
-    values of `x` that are past the length of the mask are ignored.
+    If a boolean mask filter is provided that's shorter than the length of ``x``,
+    values of ``x`` that are past the length of the mask are ignored.
 
     >>> rt.cut(x=rt.FA([1, 2, 3, 4]), bins=2, filter=rt.FA([False, True, True]))
     Categorical([Filtered, 2.0->2.5, 2.5->3.0]) Length: 3
