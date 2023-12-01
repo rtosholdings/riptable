@@ -151,59 +151,68 @@ def fill_forward(arr: np.ndarray, fill_val=None, inplace: bool = False, limit: i
     Replace NaN and invalid array values by propagating the last encountered valid value
     forward.
 
-    Note that this method can be called either as a `FastArray` method
-    (:meth:`riptable.rt_fastarraynumba.fill_forward`) or a function
-    (:meth:`riptable.fill_forward()`) that takes an array or `FastArray` as input. The
-    function returns either an array or a `FastArray`, depending on the original input.
+    Note that this method can be called either as a :py:class:`~.rt_fastarray.FastArray`
+    method (``rt.FastArray.fill_forward()``) or a function (``rt.fill_forward()``) that
+    takes an array or :py:class:`~.rt_fastarray.FastArray` as input. The function
+    returns either an array or a :py:class:`~.rt_fastarray.FastArray`, depending on the
+    original input.
 
     Parameters
     ----------
-    fill_val : scalar, default None
+    arr : array
+        The array for which the NaN and invalid array values are replaced. If
+        :py:func:`~.rt_fastarraynumba.fill_forward` is called as a class method, ``arr``
+        is the :py:class:`~.rt_fastarray.FastArray` instance. If
+        :py:func:`~.rt_fastarraynumba.fill_forward` is called as a function, an array or
+        :py:class:`~.rt_fastarray.FastArray` must be passed to ``arr``.
+    fill_val : scalar, default `None`
         The value to use where there is no valid value to propagate forward. If
-        `fill_val` is not specified, NaN and invalid values aren't replaced where there
-        is no valid value to propagate forward.
-    inplace : bool, default False
-        If False, return a copy of the array. If True, modify original data. This will
-        modify any other views on this object.
+        ``fill_val`` is not specified, NaN and invalid values aren't replaced where
+        there is no valid value to propagate forward.
+    inplace : bool, default `False`
+        If `False`, return a copy of the array. If `True`, modify original data. This
+        modifies any other views on this object.
     limit : int, default 0
         The maximium number of consecutive NaN or invalid values to fill. If there is a
         gap with more than this number of consecutive NaN or invalid values, the gap
-        will be only partially filled. If no `limit` is specified, all consecutive NaN
+        are only partially filled. If no ``limit`` is specified, all consecutive NaN
         and invalid values are replaced.
 
     Returns
     -------
-    `FastArray`
-        The `FastArray` will be the same size and have the same dtype as the original
-        input.
+    :py:class:`~.rt_fastarray.FastArray`
+        The :py:class:`~.rt_fastarray.FastArray` are the same size and have the same
+        dtype as the original input.
 
     See Also
     --------
-    riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with the
-        next valid value.
-    riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with the
-        last valid value.
-    riptable.fill_forward : Replace NaN and invalid values with the last valid value.
-    FastArray.fillna : Replace NaN and invalid values with a specified value or nearby
-        data.
-    FastArray.replacena : Replace NaN and invalid values with a specified value.
-    Dataset.fillna : Replace NaN and invalid values with a specified value or nearby
-        data.
-    Categorical.fill_forward : Replace NaN and invalid values with the last valid
-        group value.
-    GroupBy.fill_forward : Replace NaN and invalid values with the last valid group
-        value.
+    :py:meth:`.rt_fastarraynumba.fill_backward` :
+        Replace NaN and invalid values with the next valid value.
+    :py:meth:`.rt_fastarraynumba.fill_forward` :
+        Replace NaN and invalid values with the last valid value.
+    :py:func:`.rt_numpy.fill_forward` :
+        Replace NaN and invalid values with the last valid value.
+    :py:meth:`.rt_fastarray.FastArray.fillna` :
+        Replace NaN and invalid values with a specified value or nearby data.
+    :py:meth:`.rt_fastarray.FastArray.replacena` :
+        Replace NaN and invalid values with a specified value.
+    :py:meth:`.rt_dataset.Dataset.fillna` :
+        Replace NaN and invalid values with a specified value or nearby data.
+    :py:meth:`.rt_categorical.Categorical.fill_forward` :
+        Replace NaN and invalid values with the last valid group value.
+    :py:meth:`.rt_groupby.GroupBy.fill_forward` :
+        Replace NaN and invalid values with the last valid group value.
 
     Examples
     --------
-    Use a `fill_val` to replace values where there's no valid value to propagate
+    Use a ``fill_val`` to replace values where there's no valid value to propagate
     forward:
 
     >>> a = rt.FastArray([rt.nan, 1.0, rt.nan, rt.nan, rt.nan, 5.0])
     >>> a.fill_forward(fill_val = 0)
     FastArray([0., 1., 1., 1., 1., 5.])
 
-    Using :meth:`riptable.fill_forward`:
+    Call :py:func:`~.rt_fastarraynumba.fill_forward` as a function:
 
     >>> a = rt.FastArray([0.0, rt.nan, rt.nan, rt.nan, 4.0, rt.nan])
     >>> rt.fill_forward(a, fill_val = 0)
@@ -213,7 +222,7 @@ def fill_forward(arr: np.ndarray, fill_val=None, inplace: bool = False, limit: i
     invalid values:
 
     >>> a.fill_forward(limit = 1)
-    FastArray([nan,  1.,  1., nan, nan,  5.])
+    FastArray([ 0.,  0., nan, nan,  4.,  4.])
     """
     # TODO: handle axis
     arr, fill_val, inv, dtype, limit = _check_fill_values(arr, fill_val, inplace, limit)
@@ -234,59 +243,66 @@ def fill_backward(arr: np.ndarray, fill_val=None, inplace: bool = False, limit: 
     Replace NaN and invalid array values by propagating the next encountered valid value
     backward.
 
-    Note that this method can be called either as a `FastArray` method
-    (:meth:`riptable.rt_fastarraynumba.fill_backward`) or a function
-    (:meth:`riptable.fill_backward`) that takes an array or `FastArray` as input. The
-    function returns either an array or a `FastArray`, depending on the original input.
+    Note that this method can be called either as a :py:class:`~.rt_fastarray.FastArray`
+    method (``rt.FastArray.fill_backward()``) or a function (``rt.fill_backward()``)
+    that takes an array or :py:class:`~.rt_fastarray.FastArray` as input. The
+    function returns either an array or a :py:class:`~.rt_fastarray.FastArray`,
+    depending on the original input.
 
     Parameters
     ----------
-    fill_val : scalar, default None
+    arr : array
+        The array for which the NaN and invalid array values are replaced. If
+        :py:func:`~.rt_fastarraynumba.fill_backward` is called as a class method,
+        ``arr`` is the :py:class:`~.rt_fastarray.FastArray` instance. If
+        :py:func:`~.rt_fastarraynumba.fill_backward` is called as a function, an array
+        or :py:class:`~.rt_fastarray.FastArray` must be passed to ``arr``.
+    fill_val : scalar, default `None`
         The value to use where there is no valid value to propagate backward. If
-        `fill_val` is not specified, NaN and invalid values aren't replaced where there
-        is no valid value to propagate backward.
-    inplace : bool, default False
-        If False, return a copy of the array. If True, modify original data. This will
-        modify any other views on this object.
+        ``fill_val`` is not specified, NaN and invalid values aren't replaced where
+        there is no valid value to propagate backward.
+    inplace : bool, default `False`
+        If `False`, return a copy of the array. If `True`, modify original data. This
+        modifies any other views on this object.
     limit : int, default 0
         The maximium number of consecutive NaN or invalid values to fill. If there is a
         gap with more than this number of consecutive NaN or invalid values, the gap
-        will be only partially filled. If no `limit` is specified, all consecutive NaN
+        is only partially filled. If no ``limit`` is specified, all consecutive NaN
         and invalid values are replaced.
 
     Returns
     -------
-    `FastArray`
-        The `FastArray` will be the same size and have the same dtype as the original
-        input.
+    :py:class:`~.rt_fastarray.FastArray`
+        The :py:class:`~.rt_fastarray.FastArray` is the same size and have the same
+        dtype as the original input.
 
     See Also
     --------
-    riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with the
-        last valid value.
-    riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with the
-        next valid value.
-    riptable.fill_backward : Replace NaN and invalid values with the next valid value.
-    FastArray.fillna : Replace NaN and invalid values with a specified value or nearby
-        data.
-    FastArray.replacena : Replace NaN and invalid values with a specified value.
-    Dataset.fillna : Replace NaN and invalid values with a specified value or nearby
-        data.
-    Categorical.fill_backward : Replace NaN and invalid values with the next valid
-        group value.
-    GroupBy.fill_backward : Replace NaN and invalid values with the next valid group
-        value.
+    :py:meth:`.rt_fastarraynumba.fill_forward` :
+        Replace NaN and invalid values with the last valid value.
+    :py:meth:`.rt_fastarraynumba.fill_backward` :
+        Replace NaN and invalid values with the next valid value.
+    :py:meth:`.rt_fastarray.FastArray.fillna` :
+        Replace NaN and invalid values with a specified value or nearby data.
+    :py:meth:`.rt_fastarray.FastArray.replacena` :
+        Replace NaN and invalid values with a specified value.
+    :py:meth:`.rt_dataset.Dataset.fillna` :
+        Replace NaN and invalid values with a specified value or nearby data.
+    :py:meth:`.rt_categorical.Categorical.fill_backward` :
+        Replace NaN and invalid values with the next valid group value.
+    :py:meth:`.rt_groupby.GroupBy.fill_backward` :
+        Replace NaN and invalid values with the next valid group value.
 
     Examples
     --------
-    Use a `fill_val` to replace values where there's no valid value to propagate
+    Use a ``fill_val`` to replace values where there's no valid value to propagate
     backward:
 
     >>> a = rt.FastArray([0.0, rt.nan, rt.nan, rt.nan, 4.0, rt.nan])
     >>> a.fill_backward(fill_val = 0)
     FastArray([0., 4., 4., 4., 4., 0.])
 
-    Using :meth:`riptable.fill_backward`:
+    Call :py:func:`~.rt_fastarraynumba.fill_backward` as a function:
 
     >>> a = rt.FastArray([0.0, rt.nan, rt.nan, rt.nan, 4.0, rt.nan])
     >>> rt.fill_backward(a, fill_val = 0)

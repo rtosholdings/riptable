@@ -6838,6 +6838,33 @@ def test_merge_lookup_inplace_multi():
     assert_array_equal(foo.strcol, rt.FA([b"", b"Lombard", b"", b"", b"", b""]))
 
 
+@pytest.mark.parametrize(
+    "empty_flag",
+    [
+        pytest.param((True, False), id="left"),
+        pytest.param((False, True), id="right"),
+        pytest.param((True, True), id="both"),
+    ],
+)
+def test_merge_lookup_empty_input(empty_flag: tuple[bool, bool]):
+    left_ds = rt.Dataset({"a": rt.FA([1], dtype="i8"), "b": rt.FA([10], dtype="i8")})
+    right_ds = rt.Dataset({"a": rt.FA([1], dtype="i8"), "c": rt.FA([100], dtype="i8")})
+    expected_ds = rt.Dataset(
+        {"a": rt.FA([1], dtype="i8"), "b": rt.FA([10], dtype="i8"), "c": rt.FA([rt.int64.inv], dtype="i8")}
+    )
+    if empty_flag[0]:
+        left_ds = left_ds[:0, :]
+        expected_ds = expected_ds[:0, :]
+    if empty_flag[1]:
+        right_ds = right_ds[:0, :]
+    actual_ds = rt.merge_lookup(left_ds, right_ds, on="a")
+    assert actual_ds.keys() == expected_ds.keys()
+    for name, actual_array in actual_ds.items():
+        expected_array = expected_ds[name]
+        assert actual_array.dtype == expected_array.dtype, name
+        assert_array_equal(actual_array, expected_array, err_msg=name)
+
+
 def test_merge2_keep_equals_first():
     # Testing for correct behavior on merge2 (and thus merge_lookup) with a keep = 'first' kwarg.
     # As in RIPTABLE-88 this gave incorrect behavior in some cases, ultimately related to a bug with

@@ -5081,38 +5081,43 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     def count(self, filter: Optional[np.ndarray] = None, transform: bool = False) -> "Dataset":
         """
-        Return the unique values of a `Categorical` and their counts.
+        Count the number of times each value appears in a :py:class:`~.rt_categorical.Categorical`.
 
-        Unlike other `Categorical` operations, this does not take a parameter
-        for data.
+        Unlike other :py:class:`~.rt_categorical.Categorical` operations, this does not take
+        a parameter for data.
 
         Parameters
         ----------
         filter : array of bool, optional
-            `Categorical` values that correspond to False filter values are
-            excluded from the count. The array must be the same length as the
-            `Categorical`.
+            :py:class:`~.rt_categorical.Categorical` values that correspond to `False` filter
+            values are excluded from the count. The filter array must be the same length as
+            the :py:class:`~.rt_categorical.Categorical`.
         transform : bool, default False
-            Set to True to return a `Dataset` that's the length of the
-            `Categorical`, with counts aligned to the ungrouped `Categorical`
-            values. Only the counts are included.
+            Set to `True` to return a :py:class:`~.rt_dataset.Dataset` that's the length of the
+            :py:class:`~.rt_categorical.Categorical`, with counts aligned to the ungrouped
+            :py:class:`~.rt_categorical.Categorical` values. Only the counts are included.
 
         Returns
         -------
-        `Dataset`
-            A `Dataset` containing each unique category and its count. If
-            `transform` is True, the `Dataset` is the same length as the
-            original `Categorical` and contains only the counts.
+        :py:class:`.rt_dataset.Dataset`
+            A :py:class:`~.rt_dataset.Dataset` containing each unique category and its count.
+            If ``transform`` is `True`, the :py:class:`~.rt_dataset.Dataset` is the same length
+            as the original :py:class:`~.rt_categorical.Categorical` and contains only the counts.
 
         See Also
         --------
-        .Grouping.count : Called by this method.
-        Categorical.unique_count : Return the number of unique values in a `Categorical`.
-        .FastArray.count : Return the unique values of a `FastArray` and their counts.
+        :py:meth:`.rt_grouping.Grouping.count` : Called by this method.
+        :py:meth:`.rt_categorical.Categorical.unique_count` :
+            Return the number of unique values in a :py:class:`~.rt_categorical.Categorical`.
+        :py:meth:`.rt_fastarray.FastArray.count` :
+            Return the unique values of a :py:class:`~.rt_fastarray.FastArray` and their counts.
 
         Examples
         --------
-        >>> c = rt.Categorical(['a','a','b','c','a','c'])
+        Create a :py:class:`~.rt_categorical.Categorical` and count its values:
+
+        >>> c = rt.Categorical(["a", "a", "b", "c", "a", "c"])
+        >>> c
         Categorical([a, a, b, c, a, c]) Length: 6
           FastArray([1, 1, 2, 3, 1, 3], dtype=int8) Base Index: 1
           FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
@@ -5122,27 +5127,36 @@ class Categorical(GroupByOps, FastArray):
         a            3
         b            1
         c            2
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 15.0 B
 
-        With a filter:
+        Filter based on :py:class:`~.rt_categorical.Categorical` values:
 
-        >>> f = c.count(c == 'a')  # Filter based on Categorical values
+        >>> f = (c == "a")
         >>> c.count(filter=f)
         *key_0   Count
         ------   -----
         a            3
         b            0
         c            0
-        >>> vals = rt.arange(6)  # Filter based on a same-length array of values
-        >>> f = vals > 2
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 15.0 B
+
+        Filter based on a separate array of values:
+
+        >>> vals = rt.arange(6)
+        >>> f = (vals > 2)
         >>> c.count(filter=f)
         *key_0   Count
         ------   -----
         a            1
         b            0
         c            2
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 15.0 B
 
-        With ``transform=True``, a `Dataset` is returned with counts aligned to
-        the ungrouped `Categorical` values:
+        With ``transform=True``, a :py:class:`~.rt_dataset.Dataset` is returned with counts
+        aligned to the ungrouped :py:class:`~.rt_categorical.Categorical` values:
 
         >>> c.count(transform=True)
         #   Count
@@ -5153,6 +5167,8 @@ class Categorical(GroupByOps, FastArray):
         3       2
         4       3
         5       2
+        <BLANKLINE>
+        [6 rows x 1 columns] total bytes: 24.0 B
         """
         # grouping and groupbykeys objects will always be built for count
         # TJD bug here
@@ -5252,12 +5268,13 @@ class Categorical(GroupByOps, FastArray):
     @_use_autocomplete_placeholder(placeholder=lambda _: FastArray([""]))
     def as_string_array(self) -> FastArray:
         """
-        Return the full list of values of a `Categorical` as a string array.
+        Return the full list of values of a :py:class:`~.rt_categorical.Categorical` as
+        a string array.
 
-        For multi-key `Categorical` objects, the corresponding keys are
-        concatenated with a '_' separator.
+        For multi-key :py:class:`~.rt_categorical.Categorical` objects, the corresponding
+        keys are concatenated with a "_" separator.
 
-        Filtered values become the string 'Filtered'. Values from invalid
+        Filtered values become the string "Filtered". Values from invalid
         categories are treated the same way as values from valid categories.
 
         NOTE: This routine is costly because it re-expands the full list of
@@ -5265,12 +5282,14 @@ class Categorical(GroupByOps, FastArray):
 
         Returns
         -------
-        FastArray
-            A `FastArray` of the string values of the `Categorical`.
+        :py:class:`rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of the string values of the
+            :py:class:`~.rt_categorical.Categorical`.
 
         See Also
         --------
-        Categorical.expand_array : Return the full list of `Categorical` values.
+        :py:meth:`.rt_categorical.Categorical.expand_array` :
+            Return the full list of :py:class:`~.rt_categorical.Categorical` values.
 
         Notes
         -----
@@ -5278,9 +5297,9 @@ class Categorical(GroupByOps, FastArray):
 
         Examples
         --------
-        Single-key string `Categorical`:
+        Single-key string :py:class:`~.rt_categorical.Categorical`:
 
-        >>> c = rt.Categorical(['AAPL','MSFT','AAPL','TSLA','MSFT','TSLA','AAPL'])
+        >>> c = rt.Categorical(["AAPL", "MSFT", "AAPL", "TSLA", "MSFT", "TSLA", "AAPL"])
         >>> c
         Categorical([AAPL, MSFT, AAPL, TSLA, MSFT, TSLA, AAPL]) Length: 7
           FastArray([1, 2, 1, 3, 2, 3, 1], dtype=int8) Base Index: 1
@@ -5288,15 +5307,15 @@ class Categorical(GroupByOps, FastArray):
         >>> c.as_string_array
         FastArray([b'AAPL', b'MSFT', b'AAPL', b'TSLA', b'MSFT', b'TSLA', b'AAPL'], dtype='|S8')
 
-        Single-key integer `Categorical`:
+        Single-key integer :py:class:`~.rt_categorical.Categorical`:
 
         >>> c = rt.Categorical([1, 2, 1, 1, 3, 2, 3])
         >>> c.as_string_array
-        FastArray(['1', '2', '1', '1', '3', '2', '3'], dtype='<U11')
+        FastArray([b'1', b'2', b'1', b'1', b'3', b'2', b'3'], dtype='|S21')
 
-        Multi-key `Categorical`:
+        Multi-key :py:class:`~.rt_categorical.Categorical`:
 
-        >>> key1 = rt.FastArray(['AAPL','MSFT','AAPL','TSLA','MSFT','TSLA','AAPL'])
+        >>> key1 = rt.FastArray(["AAPL", "MSFT", "AAPL", "TSLA", "MSFT", "TSLA", "AAPL"])
         >>> key2 = rt.FastArray([1, 1, 2, 2, 3, 3, 4])
         >>> mk_cat = rt.Categorical([key1, key2])
         >>> mk_cat
@@ -5305,7 +5324,8 @@ class Categorical(GroupByOps, FastArray):
           {'key_0': FastArray([b'AAPL', b'MSFT', b'AAPL', b'TSLA', b'MSFT', b'TSLA', b'AAPL'], dtype='|S4'), 'key_1': FastArray([1, 1, 2, 2,
         3, 3, 4])} Unique count: 7
         >>> mk_cat.as_string_array
-        FastArray([b'AAPL_1', b'MSFT_1', b'AAPL_2', b'TSLA_2', b'MSFT_3', b'TSLA_3', b'AAPL_4'], dtype='|S16')
+        FastArray([b'AAPL_1', b'MSFT_1', b'AAPL_2', b'TSLA_2', b'MSFT_3',
+                   b'TSLA_3', b'AAPL_4'], dtype='|S26')
         """
         if self.isenum:
             return self.as_singlekey().expand_array

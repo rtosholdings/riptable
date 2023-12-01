@@ -22,6 +22,7 @@ from riptable import (
     TimeZone,
     utcnow,
 )
+from riptable.tests.utils import get_rc_version, parse_version
 from riptable.rt_enum import (
     FILTERED_LONG_NAME,
     INVALID_DICT,
@@ -30,6 +31,7 @@ from riptable.rt_enum import (
 )
 from riptable.rt_numpy import arange, isnan, logical, tile
 from riptable.rt_utils import describe
+
 
 from .test_utils import get_all_categorical_data
 
@@ -1493,6 +1495,45 @@ class TestDataset(unittest.TestCase):
         s = ds.sample(N=50, filter=f)
         self.assertEqual(s._nrows, 50)
         self.assertTrue(bool(np.all(s.arr == 20)))
+
+    def test_sort_values(self):
+        ds1 = rt.Dataset({"a": [2, 2, 1, 1, 3, 3], "b": [1, 2, 3, 4, 5, 6]})
+        ds2 = rt.Dataset({"a": ["b", "b", "a", "a", "c", "c"], "b": ["a", "b", "c", "d", "e", "f"]})
+
+        def _test_sort(ds: Dataset, asc):
+            pdf = ds.to_pandas()
+            pd_res = Dataset.from_pandas(pdf.sort_values(by=["a", "b"], ascending=asc, ignore_index=True))
+            rt_res = ds._sort_values(by=["a", "b"], ascending=asc, copy=True)
+            return pd_res.equals(rt_res)
+
+        for ds in [ds1, ds2]:
+            assert _test_sort(ds, [True, True])
+            assert _test_sort(ds, [True, False])
+            assert _test_sort(ds, [False, True])
+            assert _test_sort(ds, [False, False])
+            assert _test_sort(ds, True)
+            assert _test_sort(ds, False)
+
+    def test_sort_view(self):
+        ds1 = rt.Dataset({"a": [6, 5, 4, 3, 2, 1], "b": [1, 2, 3, 4, 5, 6]})
+        ds1.sort_view(by=["a", "b"], ascending=[True, False])
+
+        def _get_index_col(ds_str):
+            return list(map(int, [line.split()[0] for line in ds_str.split("\n")][2:]))
+
+        asc = list(range(len(ds1)))
+        des = list(range(len(ds1) - 1, -1, -1))
+        res1 = str(ds1)
+        ds1_copy = ds1.copy()
+        res1_copy = str(ds1_copy)
+        self.assertListEqual(_get_index_col(res1_copy), des)
+        self.assertListEqual(_get_index_col(res1), des)
+        ds1.col_remove("a")
+        res2 = str(ds1)
+        self.assertListEqual(_get_index_col(res2), asc)
+        ds1.c = "a"
+        res3 = str(ds1)
+        self.assertListEqual(_get_index_col(res3), asc)
 
     def test_dataset_pandas(self):
         import pandas as pd

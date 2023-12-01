@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import argparse
 import doctest
+import enum
+import functools
 import importlib
 import inspect
 import io
@@ -49,15 +51,13 @@ from numpydoc.validate import (
 )
 import pandas
 import riptable
+from riptable.Utils.common import cached_weakref_property
 
 # With template backend, matplotlib plots nothing
 matplotlib.use("template")
 
-# Standardize on these display settings when executing examples
-riptable.Display.options.COL_ALL = True  # display all Dataset columns
-riptable.Display.options.E_MAX = 100_000_000  # render up to 100MM before using scientific notation
-riptable.Display.options.P_THRESHOLD = 0  # truncate small decimals, rather than scientific notation
-riptable.Display.options.NUMBER_SEPARATOR = True  # put commas in numbers
+# Apply riptable docstring configuration for examples.
+from _docstring_config import *
 
 
 ERROR_MSGS = {
@@ -65,11 +65,12 @@ ERROR_MSGS = {
     "GL98": "Private classes ({mentioned_private_classes}) should not be " "mentioned in public docstrings",
     "GL97": "Use 'array-like' rather than 'array_like' in docstrings.",
     "GL96": "Warning validating docstring: {doc_validation_warning}",
+    "GL95": "Expected fail docstring not failed; remove from xfails list",
     "SA99": "{reference_name} in `See Also` section does not need `riptable` " "prefix, use {right_reference} instead.",
     "EX99": "Examples do not pass tests:\n{doctest_log}",
-    "EX98": "flake8 error {error_code}: {error_message}{times_happening}",
+    "EX98": "flake8 error: line {line_number}, col {col_number}: {error_code} {error_message}",
     "EX97": "Do not import {imported_library}, as it is imported automatically for the examples",
-    "EX96": "flake8 warning {error_code}: {error_message}{times_happening}",
+    "EX96": "flake8 warning: line {line_number}, col {col_number}: {error_code} {error_message}",
     "EX95": "black format error:\n{error_message}",
 }
 
@@ -139,52 +140,52 @@ def get_api_items(api_doc_fd):
     previous_line = current_section = current_subsection = ""
     position = None
     for line in api_doc_fd:
-        line = line.strip()
-        if len(line) == len(previous_line):
-            if set(line) == set("-"):
+        line_stripped = line.strip()
+        if len(line_stripped) == len(previous_line):
+            if set(line_stripped) == set("-"):
                 current_section = previous_line
                 continue
-            if set(line) == set("~"):
+            if set(line_stripped) == set("~"):
                 current_subsection = previous_line
                 continue
 
-        if line.startswith(".. currentmodule::"):
-            current_module = line.replace(".. currentmodule::", "").strip()
+        if line_stripped.startswith(".. currentmodule::"):
+            current_module = line_stripped.replace(".. currentmodule::", "").strip()
             continue
 
-        if line == ".. autosummary::":
+        if line_stripped == ".. autosummary::":
             position = "autosummary"
             continue
 
         if position == "autosummary":
-            if line == "":
+            if line_stripped == "":
                 position = "items"
                 continue
 
         if position == "items":
-            if line == "":
+            if line_stripped == "":
                 position = None
                 continue
-            item = line.strip()
-            if item in IGNORE_VALIDATION:
+            if line_stripped in IGNORE_VALIDATION:
                 continue
             func = importlib.import_module(current_module)
-            for part in item.split("."):
+            for part in line_stripped.split("."):
                 func = getattr(func, part)
 
             yield (
-                ".".join([current_module, item]),
+                f"{current_module}.{line_stripped}",
                 func,
                 current_section,
                 current_subsection,
             )
 
-        previous_line = line
+        previous_line = line_stripped
 
 
 class RiptableDocstring(Validator):
-    def __init__(self, func_name: str, doc_obj=None) -> None:
+    def __init__(self, func_name: str, doc_obj=None, verbose: bool = False) -> None:
         self.func_name = func_name
+        self.verbose = verbose
         if doc_obj is None:
             doc_obj = get_doc_object(Validator._load_obj(func_name))
         super().__init__(doc_obj)
@@ -201,13 +202,17 @@ class RiptableDocstring(Validator):
     def examples_errors(self):
         flags = doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
         finder = doctest.DocTestFinder()
-        runner = doctest.DocTestRunner(optionflags=flags)
+        runner = doctest.DocTestRunner(
+            optionflags=flags,
+            verbose=self.verbose,  # set this explicitly to avoid default inspection of sys.argv
+        )
         error_msgs = ""
         current_dir = set(os.listdir())
         for test in finder.find(self.raw_doc, self.name, globs=IMPORT_CONTEXT):
             f = io.StringIO()
-            runner.run(test, out=f.write)
-            error_msgs += f.getvalue()
+            failed_examples, total_examples = runner.run(test, out=f.write)
+            if failed_examples:
+                error_msgs += f.getvalue()
         leftovers = set(os.listdir()).difference(current_dir)
         if leftovers:
             for leftover in leftovers:
@@ -238,27 +243,35 @@ class RiptableDocstring(Validator):
         content += "".join((*self.examples_source_code,))
 
         error_messages = []
+
+        file = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False)
         try:
-            fd, fname = tempfile.mkstemp(prefix="val-", suffix=".py")
-            file = os.fdopen(fd, mode="w", encoding="utf-8")
             file.write(content)
-            file.close()
-            cmd = ["python", "-m", "flake8", "--quiet", "--statistics", fname]
+            file.flush()
+            cmd = [
+                "python",
+                "-m",
+                "flake8",
+                "--format=%(row)d\t%(col)d\t%(code)s\t%(text)s",
+                file.name,
+            ]
             response = subprocess.run(cmd, capture_output=True, text=True)
             if response.stderr:
                 stderr = response.stderr.strip("\n")
-                error_messages.append(f"1 ERROR {stderr}")
+                error_messages.append(f"0\t1\tERROR\t{stderr}")
             stdout = response.stdout
-            stdout = stdout.replace(fname, "")
-            messages = stdout.strip("\n")
+            stdout = stdout.replace(file.name, "")
+            messages = stdout.strip("\n").splitlines()
             if messages:
-                error_messages.append(messages)
+                error_messages.extend(messages)
         finally:
-            os.remove(fname)
+            file.close()
+            os.remove(file.name)
 
         for error_message in error_messages:
-            error_count, error_code, message = error_message.split(maxsplit=2)
-            yield error_code, message, int(error_count)
+            line_number, col_number, error_code, message = error_message.split("\t", maxsplit=3)
+            # Subtract the added context lines from line counter
+            yield error_code, message, int(line_number) - len(IMPORT_CONTEXT), int(col_number)
 
     def validate_format(self):
         if not self.examples:
@@ -267,23 +280,31 @@ class RiptableDocstring(Validator):
         content = "".join((*self.examples_source_code,))
 
         error_messages = []
+
+        file = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False)
         try:
-            fd, fname = tempfile.mkstemp(prefix="val-", suffix=".py")
-            file = os.fdopen(fd, mode="w", encoding="utf-8")
             file.write(content)
-            file.close()
-            cmd = ["python", "-m", "black", "--quiet", "--diff", fname]
+            file.flush()
+            cmd = [
+                "python",
+                "-m",
+                "black",
+                "--quiet",
+                "--diff",
+                file.name,
+            ]
             response = subprocess.run(cmd, capture_output=True, text=True)
             if response.stderr:
                 stderr = response.stderr.strip("\n")
-                error_messages.append(stderr)
+                error_messages.extend(stderr)
             stdout = response.stdout
-            stdout = stdout.replace(fname, "<example>")
+            stdout = stdout.replace(file.name, "<example>")
             messages = stdout.strip("\n")
             if messages:
                 error_messages.append(messages)
         finally:
-            os.remove(fname)
+            file.close()
+            os.remove(file.name)
 
         for error_message in error_messages:
             yield error_message
@@ -298,6 +319,8 @@ def riptable_validate(
     not_errors: typing.Optional(list[str]) = None,
     flake8_errors: typing.Optional(list[str]) = None,
     flake8_not_errors: typing.Optional(list[str]) = None,
+    xfails: typing.Optional(list[str]) = None,
+    verbose: bool = False,
 ):
     """
     Call the numpydoc validation, and add the errors specific to riptable.
@@ -321,10 +344,14 @@ def riptable_validate(
         except ValueError as ex:
             doc_parse_error = str(ex)
             doc_obj = get_doc_object(func_obj, doc="")
-        doc = RiptableDocstring(func_name, doc_obj)
+        doc = RiptableDocstring(func_name, doc_obj, verbose=verbose)
         result = validate(doc_obj)
         if doc_parse_error:
             result["errors"].insert(0, riptable_error("GL99", doc_parse_error=doc_parse_error))
+
+        # Remove improper failures for undocumented enum class parameters
+        if inspect.isclass(func_obj) and issubclass(func_obj, enum.Enum):
+            result["errors"] = [item for item in result["errors"] if item not in doc.parameter_mismatches]
 
         mentioned_errs = doc.mentioned_private_classes
         if mentioned_errs:
@@ -353,21 +380,20 @@ def riptable_validate(
             if result["examples_errs"]:
                 result["errors"].append(riptable_error("EX99", doctest_log=result["examples_errs"]))
 
-            for error_code, error_message, error_count in doc.validate_pep8():
-                times_happening = f" ({error_count} times)" if error_count > 1 else ""
+            for error_code, error_message, line_number, col_number in doc.validate_pep8():
                 result["errors"].append(
                     riptable_error(
                         "EX98"
                         if error_code == "ERROR"
                         or (
-                            flake8_errors
-                            and matches(error_code, flake8_errors)
+                            (not flake8_errors or (flake8_errors and matches(error_code, flake8_errors)))
                             and (not flake8_not_errors or not matches(error_code, flake8_not_errors))
                         )
                         else "EX96",
                         error_code=error_code,
                         error_message=error_message,
-                        times_happening=times_happening,
+                        line_number=line_number,
+                        col_number=col_number,
                     )
                 )
             examples_source_code = "".join(doc.examples_source_code)
@@ -402,38 +428,99 @@ def riptable_validate(
                 filtered_errors.append((err_code, err_desc))
         result["errors"] = filtered_errors
 
+    result["xerrors"] = []
+    if xfails and func_name in xfails:
+        if result["errors"]:
+            result["xerrors"] = result["errors"]
+            result["errors"] = []
+        elif not result["errors"]:
+            result["errors"].append(riptable_error("GL95"))
+
     return result
 
 
-def get_all_objects(root: object) -> set[object]:
-    objs = set()
-    for name, obj in inspect.getmembers(root):
-        # ignore any private names
-        if name.startswith("_"):
-            continue
-        # ignore if obj is not class or routine
-        if not inspect.isclass(obj) and not inspect.isroutine(obj):
-            continue
-        objs.add(obj)
-        if inspect.isclass(obj):
-            objs |= get_all_objects(obj)
-    return objs
+def resolve_obj(obj: object) -> object:
+    """
+    Resolves obj by unwrapping any known wrappers to the most innermost object.
+    """
+    while True:
+        obj = inspect.unwrap(obj)
+        if isinstance(obj, property):
+            obj = obj.fget
+        elif isinstance(obj, functools.cached_property) or isinstance(obj, cached_weakref_property):
+            obj = obj.func
+        else:
+            return obj
 
 
-def get_module_items(modulename) -> list[str]:
+def get_all_objects(root: object, modulename: str) -> typing.Iterable[(str, object)]:
+    """
+    Retrieves a sequence of resolved unique names and objects that are part of modulename found within root.
+    """
+    found = {}
+
+    def populate_all_objects(base: object):
+        for name in dir(base):
+            # Resolve to the innermost object.
+            obj = resolve_obj(getattr(base, name))
+
+            # Ignore any system dunder names
+            if name.startswith("__"):
+                continue
+
+            # Collect objects that are part of this module and have a qualified name.
+            modname = getattr(obj, "__module__", None)
+            qualname = getattr(obj, "__qualname__", None)
+            if modname and qualname and modname.startswith(modulename):
+                fullname = modname + "." + qualname
+                if not fullname in found:
+                    found[fullname] = obj
+                    if inspect.isclass(obj):
+                        populate_all_objects(obj)
+
+    populate_all_objects(root)
+
+    return found.items()
+
+
+def get_module_items(modulename: str) -> list[str]:
     module = importlib.import_module(modulename)
-    items = []
-    for obj in get_all_objects(module):
-        # extract the obj full name, ignoring anything not named
-        try:
-            fullname = obj.__module__ + "." + obj.__qualname__
-        except (AttributeError, TypeError):
-            continue
-        # ignore any objects not part of this module
-        if not modulename in fullname:
-            continue
-        items.append((fullname, obj, None, None))
+    items = [(fullname, obj, None, None) for fullname, obj in get_all_objects(module, modulename)]
     return items
+
+
+def is_default_excluded(fullname: str) -> bool:
+    """Indicates whether the fullname is excluded from validation by default."""
+    for name in fullname.split("."):
+        # Exclude any private names by default.
+        if name.startswith("_"):
+            return True
+    # Exclude any names that are defined in local/global context (confuses numpydoc name parsing)
+    if ".<locals>" in fullname or ".<globals>" in fullname:
+        return True
+    return False
+
+
+def is_included(
+    fullname: str,
+    includes: typing.Optional(list[str]) = None,
+    excludes: typing.Optional(list[str]) = None,
+) -> bool:
+    """Indicates whether the name should be included in validation."""
+
+    def matches(name, namelist):
+        for n in namelist:
+            if name.startswith(n):
+                if len(name) == len(n) or name[len(n)] == ".":
+                    return True
+        return False
+
+    do_include = not is_default_excluded(fullname)
+    if includes and matches(fullname, includes):
+        do_include = True
+    if excludes and matches(fullname, excludes):
+        do_include = False
+    return do_include
 
 
 def validate_all(
@@ -445,6 +532,9 @@ def validate_all(
     flake8_errors: typing.Optional(list[str]) = None,
     flake8_not_errors: typing.Optional(list[str]) = None,
     ignore_deprecated: bool = False,
+    includes: typing.Optional(list[str]) = None,
+    excludes: typing.Optional(list[str]) = None,
+    xfails: typing.Optional(list[str]) = None,
     verbose: int = 0,
 ) -> dict:
     """
@@ -479,12 +569,20 @@ def validate_all(
     else:
         api_items.extend(get_module_items("riptable"))
 
+    api_items = [item for item in api_items if is_included(item[0], includes=includes, excludes=excludes)]
+
     api_items.sort(key=lambda v: v[0])
 
     match_re = re.compile(match) if match else None
     not_match_re = re.compile(not_match) if not_match else None
 
+    processed = set()
+
     for func_name, _, section, subsection in api_items:
+        if func_name in processed:
+            continue
+        processed.add(func_name)
+
         if match_re and not match_re.search(func_name) or not_match_re and not_match_re.search(func_name):
             if verbose > 1:
                 print(f"Ignoring {func_name} not matching prefix {match}")
@@ -497,14 +595,29 @@ def validate_all(
             not_errors=not_errors,
             flake8_errors=flake8_errors,
             flake8_not_errors=flake8_not_errors,
+            xfails=xfails,
+            verbose=False,  # don't generate verbose output for each test
         )
         if ignore_deprecated and doc_info["deprecated"]:
             if verbose > 1:
                 print(f"Ignoring deprecated {func_name}")
             continue
+
         if verbose:
-            status = "FAILED" if len(doc_info["errors"]) else "OK"
+
+            def get_errlist(errs):
+                return ",".join([c for c, _ in errs])
+
+            status = (
+                f"FAILED ({get_errlist(doc_info['errors'])})"
+                if doc_info["errors"]
+                else f"XFAILED ({get_errlist(doc_info['xerrors'])})"
+                if doc_info["xerrors"]
+                else "OK"
+            )
             print(status)
+            for err_code, err_desc in doc_info["errors"]:
+                print(f'{doc_info["file"]}:{doc_info["file_line"]}: {func_name}: {err_code}: {err_desc}')
         result[func_name] = doc_info
 
         shared_code_key = doc_info["file"], doc_info["file_line"]
@@ -533,6 +646,9 @@ def print_validate_all_results(
     flake8_not_errors: typing.Optional(list[str]) = None,
     out_format: str = OUT_FORMAT_OPTS[0],
     ignore_deprecated: bool = False,
+    includes: typing.Optional(list[str]) = None,
+    excludes: typing.Optional(list[str]) = None,
+    xfails: typing.Optional(list[str]) = None,
     outfile: typing.IO = sys.stdout,
     verbose: int = 0,
 ):
@@ -548,6 +664,9 @@ def print_validate_all_results(
         flake8_errors=flake8_errors,
         flake8_not_errors=flake8_not_errors,
         ignore_deprecated=ignore_deprecated,
+        includes=includes,
+        excludes=excludes,
+        xfails=xfails,
         verbose=verbose,
     )
 
@@ -559,18 +678,21 @@ def print_validate_all_results(
     else:
         prefix = "##[error]" if out_format == "actions" else ""
         for name, res in result.items():
-            for err_code, err_desc in res["errors"]:
+            for err_code, err_desc in res["errors"] + res["xerrors"]:
                 outfile.write(f'{prefix}{res["file"]}:{res["file_line"]}: {name}: {err_code}: {err_desc}\n')
 
-    exit_status = 0
+    errors_count = 0
+    xerrors_count = 0
+
     for name, res in result.items():
-        if len(res["errors"]):
-            exit_status = 1
-            break
+        errors_count += 1 if res["errors"] else 0
+        xerrors_count += 1 if res["xerrors"] else 0
 
     if verbose:
-        print("Validation " + ("OK!" if exit_status == 0 else "FAILED!"))
+        print(f"{len(result)} validated: {errors_count} failed, {xerrors_count} expected failed")
+        print("Validation " + ("FAILED" if errors_count else ("XFAILED!" if xerrors_count else "OK!")))
 
+    exit_status = 1 if errors_count else 0
     return exit_status
 
 
@@ -580,6 +702,7 @@ def print_validate_one_results(
     not_errors: typing.Optional(list[str]) = None,
     flake8_errors: typing.Optional(list[str]) = None,
     flake8_not_errors: typing.Optional(list[str]) = None,
+    xfails: typing.Optional(list[str]) = None,
     outfile: typing.IO = sys.stdout,
     verbose: int = 0,
 ):
@@ -599,28 +722,31 @@ def print_validate_one_results(
         not_errors=not_errors,
         flake8_errors=flake8_errors,
         flake8_not_errors=flake8_not_errors,
+        xfails=xfails,
+        verbose=True,  # generate verbose output for each test
     )
+    exit_status = 1 if result["errors"] else 0
     if verbose:
-        status = "FAILED" if len(result["errors"]) else "OK"
-        print(status)
+        print(("XFAILED!" if result["xerrors"] else "OK!") if exit_status == 0 else "FAILED!")
 
     outfile.write(header(f"Docstring ({func_name})"))
     outfile.write(f"{result['docstring']}\n")
 
     outfile.write(header("Validation"))
-    if result["errors"]:
-        outfile.write(f'{len(result["errors"])} Errors found:\n')
-        for err_code, err_desc in result["errors"]:
-            if err_code == "EX99":  # Failing examples are printed at the end
-                outfile.write(f"\t{err_code}: Examples do not pass tests\n")
-                continue
-            outfile.write(f"\t{err_code}: {err_desc}\n")
+    errors = result["errors"] if result["errors"] else result["xerrors"]
+    if errors:
+        outfile.write(f"{len(errors)} Errors found:\n")
+        for err_code, err_desc in errors:
+            desc = "Examples do not pass tests (see details below)" if err_code == "EX99" else err_desc
+            outfile.write(f'\t{result["file"]}:{result["file_line"]}: {func_name}: {err_code}: {desc}\n')
     else:
-        outfile.write(f'Docstring for "{func_name}" correct. :)\n')
+        outfile.write(f'Docstring for "{func_name}" is OK.\n')
 
     if result["examples_errs"]:
         outfile.write(header("Doctests"))
         outfile.write(result["examples_errs"])
+
+    return exit_status
 
 
 def find_parent_dir_containing(filename: str) -> typing.Optional[str]:
@@ -636,6 +762,27 @@ def find_pyproject_toml() -> typing.Optional[str]:
     pyproj_toml_filename = "pyproject.toml"
     root_dir = find_parent_dir_containing(pyproj_toml_filename)
     return os.path.join(root_dir, pyproj_toml_filename) if root_dir else None
+
+
+def parse_commented_strings(iter: typing.Iterable[str]) -> list[str]:
+    stripped = [line.split("#")[0].strip() for line in iter]
+    return [line for line in stripped if line]
+
+
+def parse_filters(filterpath):
+    includes = []
+    excludes = []
+    filters = parse_commented_strings(open(filterpath))
+    for filter in filters:
+        if len(filter) > 1:
+            if filter[0] == "+":
+                includes.append(filter[1:])
+                continue
+            if filter[0] == "-":
+                excludes.append(filter[1:])
+                continue
+        raise ValueError("Unexpected filter: " + filter)
+    return includes if includes else None, excludes if excludes else None
 
 
 def main():
@@ -723,6 +870,16 @@ def main():
         help="Optional code to execute before the examples.",
     )
     argparser.add_argument(
+        "--xfails",
+        default=None,
+        help="Path to file of known expected failures.",
+    )
+    argparser.add_argument(
+        "--filters",
+        default=None,
+        help="Path to file of include/exclude filters.",
+    )
+    argparser.add_argument(
         "--out",
         "-o",
         default=None,
@@ -749,6 +906,10 @@ def main():
 
     argparser.parse_args(namespace=args)
 
+    xfails = parse_commented_strings(open(args.xfails)) if args.xfails else None
+
+    includes, excludes = parse_filters(args.filters) if args.filters else (None, None)
+
     with open(args.out, "w", encoding="utf-8", errors="backslashreplace") if args.out else open(
         sys.stdout.fileno(), "w", closefd=False
     ) as outfile:
@@ -768,20 +929,23 @@ def main():
                 flake8_not_errors=flake8_not_errors,
                 out_format=args.format,
                 ignore_deprecated=args.ignore_deprecated,
+                includes=includes,
+                excludes=excludes,
+                xfails=xfails,
                 outfile=outfile,
                 verbose=args.verbose,
             )
         else:
-            print_validate_one_results(
+            return print_validate_one_results(
                 args.function,
                 errors=errors,
                 not_errors=not_errors,
                 flake8_errors=flake8_errors,
                 flake8_not_errors=flake8_not_errors,
+                xfails=xfails,
                 outfile=outfile,
                 verbose=args.verbose,
             )
-            return 0
 
 
 if __name__ == "__main__":

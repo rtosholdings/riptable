@@ -1622,7 +1622,7 @@ class Struct:
                 uid = data._uniqueid
                 sortlist = [data[col] for col in data._col_sortlist]
                 sortidx = arrays[arr_idx]
-                TypeRegister.SortCache.store_sort(uid, sortlist, sortidx)
+                TypeRegister.SortCache.store_sort(uid, sortlist, sortidx, data._sort_ascending)
                 arr_idx += 1
 
             # attach footers (accum2 operation results)
@@ -4598,8 +4598,6 @@ class Struct:
             # check to see if already in the sort cache
             sort_id = self.get_row_sort_info()
             sorted_row_idx = TypeRegister.SortCache.get_sorted_row_index(*sort_id)
-            if self._sort_ascending is False:
-                sorted_row_idx = sorted_row_idx[::-1]
         else:
             # remove all row sorts
             sorted_row_idx = None

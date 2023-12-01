@@ -1493,6 +1493,7 @@ class CatString:
         General purpose factory for FAString property wrappers.
         """
 
+        @wraps(getattr(FAString, name))
         def wrapper(self):
             return self._convert_fastring_output(getattr(self.fastring, name))
 

@@ -691,9 +691,18 @@ class Dataset(Struct):
         """
         # copy over the sort list
         if self._col_sortlist is not None:
-            new_sortlist = [_k for _k in self._col_sortlist if _k in ds]
-            if len(new_sortlist) > 0:
-                ds._col_sortlist = new_sortlist
+            if isinstance(self._sort_ascending, bool):
+                new_sortlist = [_k for _k in self._col_sortlist if _k in ds]
+                if len(new_sortlist) > 0:
+                    ds._col_sortlist = new_sortlist
+                    ds._sort_ascending = self.sort_ascending
+            else:
+                new_sort = [(_k, _v) for _k, _v in zip(self._col_sortlist, self._sort_ascending) if _k in ds]
+                if len(new_sort) > 0:
+                    ds._col_sortlist = [x[0] for x in new_sort]
+                    ds._sort_ascending = [x[1] for x in new_sort]
+
+            ds._sort_display = self._sort_display
 
         # reassign labels
         ds.label_set_names(self.label_get_names())
@@ -782,11 +791,11 @@ class Dataset(Struct):
     # --------------------------------------------------------
     def copy(self, deep=True):
         """
-        Make a copy of the `Dataset`.
+        Make a copy of the :py:class:`~.rt_dataset.Dataset`.
 
         Parameters
         ----------
-        deep : bool, default True
+        deep : bool, default `True`
             Whether the underlying data should be copied. When ``deep = True`` (the
             default), changes to the copy do not modify the underlying data (and vice
             versa). When ``deep = False``, the copy is shallow: Only references to the
@@ -795,11 +804,12 @@ class Dataset(Struct):
 
         Returns
         -------
-        `Dataset`
+        :py:class:`~.rt_dataset.Dataset`
+            The copy of the :py:class:`~.rt_dataset.Dataset`.
 
         Examples
         --------
-        Create a `Dataset`:
+        Create a :py:class:`~.rt_dataset.Dataset`:
 
         >>> ds = rt.Dataset({'a': rt.arange(-3,3), 'b':3*['A', 'B'], 'c':3*[True, False]})
         >>> ds
@@ -811,6 +821,8 @@ class Dataset(Struct):
         3    0   B   False
         4    1   A    True
         5    2   B   False
+        <BLANKLINE>
+        [6 rows x 3 columns] total bytes: 60.0 B
 
         When ``deep = True`` (the default), changes to the original ``ds`` do not modify
         the copy, ``ds1``.
@@ -826,34 +838,38 @@ class Dataset(Struct):
         3    0   B   False
         4    1   A    True
         5    2   B   False
+        <BLANKLINE>
+        [6 rows x 3 columns] total bytes: 60.0 B
         """
         return self._copy(deep)
 
     # --------------------------------------------------------
     def filter(self, rowfilter: npt.ArrayLike, inplace: bool = False) -> "Dataset":
         """
-        Return a copy of the `Dataset` containing only the rows that meet the specified
-        condition.
+        Return a copy of the :py:class:`~.rt_dataset.Dataset` containing only the rows
+        that meet the specified condition.
 
         Parameters
         ----------
         rowfilter : array: fancy index or boolean mask
             A fancy index specifies both the desired rows and their order in the
-            returned `Dataset`. When a boolean mask is passed, only rows that meet the
-            specified condition are in the returned `Dataset`.
-        inplace : bool, default False
+            returned :py:class:`~.rt_dataset.Dataset`. When a boolean mask is passed,
+            only rows that meet the specified condition are in the returned
+            :py:class:`~.rt_dataset.Dataset`.
+        inplace : bool, default `False`
             When set to `True`, reduces memory overhead by modifying the original
-            `Dataset` instead of making a copy.
+            :py:class:`~.rt_dataset.Dataset` instead of making a copy.
 
         Returns
         -------
-        `Dataset`
-            A `Dataset` containing only the rows that meet the filter condition.
+        :py:class:`~.rt_dataset.Dataset`
+            A :py:class:`~.rt_dataset.Dataset` containing only the rows that meet the
+            filter condition.
 
         Notes
         -----
-        Making a copy of a large `Dataset` is expensive. Use ``inplace=True`` when
-        possible.
+        Making a copy of a large :py:class:`~.rt_dataset.Dataset` is expensive. Use
+        ``inplace=True`` when possible.
 
         If you want to perform an operation on a filtered column, get the column and
         then perform the operation using the ``filter`` keyword argument. For example,
@@ -864,7 +880,7 @@ class Dataset(Struct):
 
         Examples
         --------
-        Create a `Dataset`:
+        Create a :py:class:`~.rt_dataset.Dataset`:
 
         >>> ds = rt.Dataset({"a": rt.arange(-3, 3), "b": 3 * ['A', 'B'], "c": 3 * [True, False]})
         >>> ds
@@ -877,7 +893,7 @@ class Dataset(Struct):
         4    1   A    True
         5    2   B   False
         <BLANKLINE>
-        [6 rows x 3 columns] total bytes: 36.0 B
+        [6 rows x 3 columns] total bytes: 60.0 B
 
         Filter using a fancy index:
 
@@ -888,7 +904,7 @@ class Dataset(Struct):
         1   -3   A    True
         2   -2   B   False
         <BLANKLINE>
-        [3 rows x 3 columns] total bytes: 18.0 B
+        [3 rows x 3 columns] total bytes: 30.0 B
 
         Filter using a condition that creates a boolean mask array:
 
@@ -899,7 +915,7 @@ class Dataset(Struct):
         1   -1   A   True
         2    1   A   True
         <BLANKLINE>
-        [3 rows x 3 columns] total bytes: 18.0 B
+        [3 rows x 3 columns] total bytes: 30.0 B
 
         Filter a large `Dataset` using the least memory possible with
         ``inplace=True``.
@@ -907,17 +923,17 @@ class Dataset(Struct):
         >>> ds = rt.Dataset({"a": rt.arange(10_000_000), "b": rt.arange(10_000_000.0)})
         >>> f = rt.logical(rt.arange(10_000_000) % 2)
         >>> ds.filter(f, inplace=True)
-              #         a           b
-        -------   -------   ---------
-              0         1        1.00
-              1         3        3.00
-              2         5        5.00
-            ...       ...         ...
-        4999997   9999995   1.000e+07
-        4999998   9999997   1.000e+07
-        4999999   9999999   1.000e+07
+                #           a              b
+        ---------   ---------   ------------
+                0           1           1.00
+                1           3           3.00
+                2           5           5.00
+              ...         ...            ...
+        4,999,997   9,999,995   9,999,995.00
+        4,999,998   9,999,997   9,999,997.00
+        4,999,999   9,999,999   9,999,999.00
         <BLANKLINE>
-        [5000000 rows x 2 columns] total bytes: 57.2 MB
+        [5000000 rows x 2 columns] total bytes: 76.3 MB
         """
         # TODO: Accept slice and ellipsis for rowfilter, for parity with __getitem__().
         # normalize rowfilter
@@ -968,21 +984,23 @@ class Dataset(Struct):
 
     def get_nrows(self):
         """
-        The number of elements in each column of the `Dataset`.
+        The number of elements in each column of the :py:class:`~.rt_dataset.Dataset`.
 
         Returns
         -------
         int
-            The number of elements in each column of the `Dataset`.
+            The number of elements in each column of the :py:class:`~.rt_dataset.Dataset`.
 
         See Also
         --------
-        Dataset.size : The number of elements in the `Dataset` (nrows x ncols).
-        Struct.get_ncols :
-            The number of items in a `Struct` or the number of elements in each row
-            of a `Dataset`.
-        Struct.shape : A tuple containing the number of rows and columns in a `Struct`
-                       or `Dataset`.
+        :py:meth:`.rt_dataset.Dataset.size` :
+            The number of elements in the :py:class:`~.rt_dataset.Dataset` (nrows x ncols).
+        :py:meth:`.rt_struct.Struct.get_ncols` :
+            The number of items in a :py:class:`~.rt_struct.Struct` or the number of
+            elements in each row of a :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_struct.Struct.shape` :
+            A tuple containing the number of rows and columns in a
+            :py:class:`~.rt_struct.Struct` or :py:class:`~.rt_dataset.Dataset`.
 
         Examples
         --------
@@ -1147,22 +1165,24 @@ class Dataset(Struct):
     @property
     def size(self) -> int:
         """
-        The number of elements in the `Dataset` (the number of rows times the number of
-        columns).
+        The number of elements in the :py:class:`~.rt_dataset.Dataset` (the number of
+        rows times the number of columns).
 
         Returns
         -------
         int
-            The number of elements in the `Dataset` (nrows x ncols).
+            The number of elements in the :py:class:`~.rt_dataset.Dataset` (nrows x ncols).
 
         See Also
         --------
-        Dataset.get_nrows : The number of elements in each column of a `Dataset`.
-        Struct.get_ncols :
-            The number of items in a `Struct` or the number of elements in each row
-            of a `Dataset`.
-        Struct.shape : A tuple containing the number of rows and columns in a `Struct`
-                       or `Dataset`.
+        :py:meth:`.rt_dataset.Dataset.get_nrows` :
+            The number of elements in each column of a :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_struct.Struct.get_ncols` :
+            The number of items in a :py:class:`~.rt_struct.Struct` or the number of
+            elements in each row of a :py:class:`~.rt_dataset.Dataset`.
+        Struct.shape :
+            A tuple containing the number of rows and columns in a
+            :py:class:`~.rt_struct.Struct` or :py:class:`~.rt_dataset.Dataset`.
 
         Examples
         --------
@@ -2067,59 +2087,64 @@ class Dataset(Struct):
         """
         Replace NaN and invalid values with a specified value or nearby data.
 
-        Optionally, you can modify the original `Dataset` if it's not locked.
+        Optionally, you can modify the original :py:class:`~.rt_dataset.Dataset` if it's
+        not locked.
 
         Parameters
         ----------
-        value : scalar, default None
+        value : scalar, default `None`
             A value to replace all NaN and invalid values. Required if
-            ``method = None``. Note that this **cannot** be a `dict` yet. If a `method`
-            is also provided, the `value` will be used to replace NaN and invalid values
+            ``method = None``. Note that this **cannot** be a `dict` yet. If a ``method``
+            is also provided, the ``value`` is used to replace NaN and invalid values
             only where there's not a valid value to propagate forward or backward.
-        method : {None, 'backfill', 'bfill', 'pad', 'ffill'}, default None
+        method : {None, 'backfill', 'bfill', 'pad', 'ffill'}, default `None`
             Method to use to propagate valid values within each column.
 
             * backfill/bfill: Propagates the next encountered valid value backward.
-              Calls :meth:`FastArray.fill_backward`.
+              Calls :py:meth:`~.rt_fastarrray.FastArray.fill_backward`.
             * pad/ffill: Propagates the last encountered valid value forward. Calls
-              :meth:`FastArray.fill_forward`.
+              :py:meth:`~.rt_fastarray.FastArray.fill_forward`.
             * None: A replacement value is required if ``method = None``. Calls
-              :meth:`FastArray.replacena`.
+              :py:meth:`~.rt_fastarray.FastArray.replacena`.
             If there's not a valid value to propagate forward or backward, the NaN or
-            invalid value is not replaced unless you also specify a `value`.
-        inplace : bool, default False
-            If False, return a copy of the `Dataset`. If True, modify original column
-            arrays. This will modify any other views on this object. This fails if the
+            invalid value is not replaced unless you also specify a ``value``.
+        inplace : bool, default `False`
+            If Fal`se, return a copy of the :py:class:`~.rt_dataset.Dataset`. If `True`,
+            modify original column arrays. This modifies any other views on this object. This fails if the
             `Dataset` is locked.
-        limit : int, default None
-            If `method` is specified, this is the maximium number of consecutive NaN or
+        limit : int, default `None`
+            If ``method`` is specified, this is the maximium number of consecutive NaN or
             invalid values to fill. If there is a gap with more than this number of
-            consecutive NaN or invalid values, the gap will be only partially filled.
+            consecutive NaN or invalid values, the gap is only partially filled.
 
         Returns
         -------
-        `Dataset`
-            The `Dataset` will be the same size and have the same dtypes as the original
-            input.
+        :py:class:`~.rt_dataset.Dataset`
+            The :py:class:`~.rt_dataset.Dataset` is the same size and have the same
+            dtypes as the original input.
 
         See Also
         --------
-        riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with
-            the last valid value.
-        riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with
-            the next valid value.
-        riptable.fill_forward : Replace NaN and invalid values with the last valid value.
-        riptable.fill_backward : Replace NaN and invalid values with the next valid value.
-        FastArray.replacena : Replace NaN and invalid values with a specified value.
-        FastArray.fillna : Replace NaN and invalid values with a specified value or nearby data.
-        Categorical.fill_forward : Replace NaN and invalid values with the last valid group value.
-        Categorical.fill_backward : Replace NaN and invalid values with the next valid group value.
-        GroupBy.fill_forward : Replace NaN and invalid values with the last valid group value.
-        GroupBy.fill_backward : Replace NaN and invalid values with the next valid group value.
+        :py:func:`.rt_fastarraynumba.fill_forward` :
+            Replace NaN and invalid values with the last valid value.
+        :py:func:`.rt_fastarraynumba.fill_backward` :
+            Replace NaN and invalid values with the next valid value.
+        :py:meth:`.rt_fastarray.FastArray.replacena` :
+            Replace NaN and invalid values with a specified value.
+        :py:meth:`.rt_fastarray.FastArray.fillna` :
+            Replace NaN and invalid values with a specified value or nearby data.
+        :py:meth:`.rt_categorical.Categorical.fill_forward` :
+            Replace NaN and invalid values with the last valid group value.
+        :py:meth:`.rt_categorical.Categorical.fill_backward` :
+            Replace NaN and invalid values with the next valid group value.
+        :py:meth:`.rt_groupby.GroupBy.fill_forward` :
+            Replace NaN and invalid values with the last valid group value.
+        :py:meth:`.rt_groupby.GroupBy.fill_backward` :
+            Replace NaN and invalid values with the next valid group value.
 
         Examples
         --------
-        Replace all NaN and invalid values with 0s.
+        Replace all NaN and invalid values with 0.
 
         >>> ds = rt.Dataset({'A': rt.arange(3), 'B': rt.arange(3.0)})
         >>> ds.A[2]=ds.A.inv  # Replace with the invalid value for the column's dtype.
@@ -2130,14 +2155,18 @@ class Dataset(Struct):
         0     0   0.00
         1     1    nan
         2   Inv   2.00
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.fillna(0)
         #   A      B
         -   -   ----
         0   0   0.00
         1   1   0.00
         2   0   2.00
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
 
-        The following examples will use this `Dataset`:
+        The following examples will use this :py:class:`~.rt_dataset.Dataset`:
 
         >>> ds = rt.Dataset({'A':[rt.nan, 2, rt.nan, 0], 'B': [3, 4, 2, 1],
         ...                  'C':[rt.nan, rt.nan, rt.nan, 5], 'D':[rt.nan, 3, rt.nan, 4]})
@@ -2149,6 +2178,8 @@ class Dataset(Struct):
         1   2.00     4    nan   3.00
         2    nan   Inv    nan    nan
         3   0.00     1   5.00   4.00
+        <BLANKLINE>
+        [4 rows x 4 columns] total bytes: 128.0 B
 
         Propagate the last encountered valid value forward. Note that where there's no
         valid value to propagate, the NaN or invalid value isn't replaced.
@@ -2160,8 +2191,10 @@ class Dataset(Struct):
         1   2.00   4    nan   3.00
         2   2.00   4    nan   3.00
         3   0.00   1   5.00   4.00
+        <BLANKLINE>
+        [4 rows x 4 columns] total bytes: 128.0 B
 
-        You can use the `value` parameter to specify a value to use where there's no
+        You can use the ``value`` parameter to specify a value to use where there's no
         valid value to propagate.
 
         >>> ds.fillna(value = 10, method = 'ffill')
@@ -2171,6 +2204,8 @@ class Dataset(Struct):
         1    2.00   4   10.00    3.00
         2    2.00   4   10.00    3.00
         3    0.00   1    5.00    4.00
+        <BLANKLINE>
+        [4 rows x 4 columns] total bytes: 128.0 B
 
         Replace only the first NaN or invalid value in any consecutive series of NaN or
         invalid values.
@@ -2182,6 +2217,8 @@ class Dataset(Struct):
         1   2.00   4    nan   3.00
         2   0.00   1   5.00   4.00
         3   0.00   1   5.00   4.00
+        <BLANKLINE>
+        [4 rows x 4 columns] total bytes: 128.0 B
         """
 
         if method is not None:
@@ -2649,7 +2686,7 @@ class Dataset(Struct):
     @property
     def dtypes(self) -> Mapping[str, np.dtype]:
         """
-        The data type of each `Dataset` column.
+        The data type of each :py:class:`~.rt_dataset.Dataset` column.
 
         Returns
         -------
@@ -2660,34 +2697,39 @@ class Dataset(Struct):
         --------
         >>> ds = rt.Dataset({'Int' : [1], 'Float' : [1.0], 'String': ['aaa']})
         >>> ds.dtypes
-        {'Int': dtype('int32'), 'Float': dtype('float64'), 'String': dtype('S3')}
+        {'Int': dtype('int64'), 'Float': dtype('float64'), 'String': dtype('S3')}
         """
         return {colname: getattr(self, colname).dtype for colname in self.keys()}
 
     def astype(self, new_type, ignore_non_computable: bool = True):
         """
-        Return a new `Dataset` with values converted to the specified data type.
+        Return a new :py:class:`~.rt_dataset.Dataset` with values converted to the
+        specified data type.
 
-        This method ignores string and `Categorical` columns unless forced with
-        ``ignore_non_computable = False``. Do not do this unless you know they
-        will convert nicely.
+        This method ignores string and :py:class:`~.rt_categorical.Categorical` columns
+        unless forced with ``ignore_non_computable = False``. Do not do this unless you
+        know they convert nicely.
 
         Parameters
         ----------
         new_type : str or Riptable dtype or NumPy dtype
             The data type to convert values to.
-        ignore_non_computable : bool, default True
-            If True (the default), ignore string and `Categorical` values. Set
-            to False to convert them.
+        ignore_non_computable : bool, default `True`
+            If `True` (the default), ignore string and
+            :py:class:`~.rt_categorical.Categorical` values. Set to `False` to convert
+            them.
 
         Returns
         -------
-        `Dataset`
-            A new `Dataset` with values converted to the specified data type.
+        :py:class:`~.rt_dataset.Dataset`
+            A new :py:class:`~.rt_dataset.Dataset` with values converted to the
+            specified data type.
 
         See Also
         --------
-        FastArray.astype
+        :py:meth:`.rt_fastarray.FastArray.astype` :
+            Return a :py:class:`~.rt_fastarray.FastArray` with values converted to the
+            specified data type.
 
         Examples
         --------
@@ -2700,6 +2742,8 @@ class Dataset(Struct):
         1   -1.00   B   False
         2    0.00   A    True
         3    1.00   B   False
+        <BLANKLINE>
+        [4 rows x 3 columns] total bytes: 40.0 B
 
         By default, string columns are ignored:
 
@@ -2710,9 +2754,11 @@ class Dataset(Struct):
         1   -1   B   0
         2    0   A   1
         3    1   B   0
+        <BLANKLINE>
+        [4 rows x 3 columns] total bytes: 68.0 B
 
-        When converting numerical values to booleans, only 0 is False. All
-        other numerical values are True.
+        When converting numerical values to booleans, only 0 is `False`. All
+        other numerical values are `True`.
 
         >>> ds.astype(bool)
         #       a   b       c
@@ -2721,6 +2767,8 @@ class Dataset(Struct):
         1    True   B   False
         2   False   A    True
         3    True   B   False
+        <BLANKLINE>
+        [4 rows x 3 columns] total bytes: 12.0 B
 
         You can use ``ignore_non_computable = False`` to convert a string
         representation of a numerical value to a numerical type that doesn't
@@ -2733,18 +2781,24 @@ class Dataset(Struct):
         0         1.10
         1         2.20
         2         3.30
+        <BLANKLINE>
+        [3 rows x 1 columns] total bytes: 24.0 B
 
-        When you force a `Categorical` to be converted, it's replaced with
-        a conversion of its underlying integer `FastArray`:
+        When you force a :py:class:`~.rt_categorical.Categorical` to be converted, it's
+        replaced with a conversion of its underlying integer
+        :py:class:`~.rt_fastarray.FastArray`:
 
         >>> ds = rt.Dataset({'c': rt.Cat(2*['3', '4'])})
         >>> ds2 = ds.astype(float, ignore_non_computable = False)
+        >>> ds2
         #      c
         -   ----
         0   1.00
         1   2.00
         2   1.00
         3   2.00
+        <BLANKLINE>
+        [4 rows x 1 columns] total bytes: 32.0 B
         >>> ds2.c
         FastArray([1., 2., 1., 2.])
         """
@@ -2791,13 +2845,14 @@ class Dataset(Struct):
 
     def head(self, n: int = 20) -> "Dataset":
         """
-        Return the first `n` rows.
+        Return the first ``n`` rows.
 
-        This function returns the first `n` rows of the Dataset, based on position. It's
-        useful for spot-checking your data.
+        This function returns the first ``n`` rows of the
+        :py:class:`~.rt_dataset.Dataset`, based on position. It's useful for
+        spot-checking your data.
 
-        For negative values of `n`, this function returns all rows except the last `n`
-        rows (equivalent to ``ds[:-n, :]``).
+        For negative values of ``n``, this function returns all rows except the last
+        ``n`` rows (equivalent to ``ds[:-n, :]``).
 
         Parameters
         ----------
@@ -2806,13 +2861,15 @@ class Dataset(Struct):
 
         Returns
         -------
-        Dataset
-            A view of the first `n` rows of the Dataset.
+        :py:class:`~.rt_dataset.Dataset`
+            A view of the first ``n`` rows of the :py:class:`~.rt_dataset.Dataset`.
 
         See Also
         --------
-        Dataset.tail : Returns the last `n` rows of the Dataset.
-        Dataset.sample : Returns `N` randomly selected rows of the Dataset.
+        :py:meth:`.rt_dataset.Dataset.tail` :
+            Returns the last ``n`` rows of the :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_dataset.Dataset.sample` :
+            Returns ``N`` randomly selected rows of the :py:class:`~.rt_dataset.Dataset`.
         """
         if self._nrows is None:
             self._nrows = 0
@@ -2821,13 +2878,14 @@ class Dataset(Struct):
 
     def tail(self, n: int = 20) -> "Dataset":
         """
-        Return the last `n` rows.
+        Return the last ``n`` rows.
 
-        This function returns the last `n` rows of the Dataset, based on position. It's
-        useful for spot-checking your data, especially after sorting or appending rows.
+        This function returns the last ``n`` rows of the
+        :py:class:`~.rt_dataset.Dataset`, based on position. It's useful for
+        spot-checking your data, especially after sorting or appending rows.
 
-        For negative values of `n`, this function returns all rows except the first `n`
-        rows (equivalent to ``ds[n:, :]``).
+        For negative values of ``n``, this function returns all rows except the first
+        ``n`` rows (equivalent to ``ds[n:, :]``).
 
         Parameters
         ----------
@@ -2836,13 +2894,15 @@ class Dataset(Struct):
 
         Returns
         -------
-        Dataset
-            A view of the last `n` rows of the Dataset.
+        :py:class:`~.rt_dataset.Dataset`
+            A view of the last `n`` rows of the :py:class:`~.rt_dataset.Dataset`.
 
         See Also
         --------
-        Dataset.head : Returns the first `n` rows of the Dataset.
-        Dataset.sample : Returns `N` randomly selected rows of the Dataset.
+        :py:meth:`.rt_dataset.Dataset.head` :
+            Returns the first ``n`` rows of the :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_dataset.Dataset.sample` :
+            Returns ``N`` randomly selected rows of the :py:class:`~.rt_dataset.Dataset`.
         """
         if self._nrows is None:
             self._nrows = 0
@@ -3193,23 +3253,138 @@ class Dataset(Struct):
     # -------------------------------------------------------------
     def any(self, axis: Optional[int] = 0, as_dataset: bool = True):
         """
-        Returns truth 'any' value along `axis`. Behavior for ``axis=None`` differs from pandas!
+        Check whether a :py:class:`~.rt_dataset.Dataset`, its columns, or its rows
+        contain at least one element that is `True`, non-zero, or non-empty.
+
+        If the checked :py:class:`~.rt_dataset.Dataset`, column, or row contains one or
+        more `True`, non-zero, or non-empty values, the method returns a corresponding
+        `True` value. If the checked :py:class:`~.rt_dataset.Dataset` contains only
+        `False`, zero, or empty values, the method returns a corresponding `False` value.
+
+        Note that NaN value is not an empty value.
 
         Parameters
         ----------
-        axis : int, optional, default axis=0
-            * axis=0 (dflt.) -> over columns          (returns Struct (or Dataset) of bools)
-                                string synonyms: c, C, col, COL, column, COLUMN
-            * axis=1         -> over rows             (returns array of bools)
-                                string synonyms: r, R, row, ROW
-            * axis=None      -> over rows and columns (returns bool)
-                                string synonyms: all, ALL
-        as_dataset : bool
-            When ``axis=0``, return Dataset instead of Struct. Defaults to False.
+        axis : {0, 1, None}, default ``0``
+            Controls whether :py:meth:`~.rt_dataset.Dataset.any` returns a boolean for
+            the entire :py:class:`~.rt_dataset.Dataset`, for each column, or for each
+            row:
+
+            - ``0`` checks whether each column has at least one `True`, non-zero or
+              non-empty value. Returns either a :py:class:`~.rt_dataset.Dataset` or a
+              :py:class:`~.rt_struct.Struct` of booleans, depending on the value of
+              ``as_dataset``. You can also pass the following strings to ``axis``
+              instead of ``0``: "c", "C", "col", "COL", "column", or "COLUMN".
+            - ``1`` checks whether each row has at least one `True`, non-zero, or
+              non-empty value. Returns a :py:class:`~.rt_fastarray.FastArray` of
+              booleans. Note that if the :py:class:`~.rt_dataset.Dataset` contains a
+              :py:class:`~.rt_categorical.Categorical`, the method returns an error.
+              You can also pass the following strings to ``axis`` instead of ``1``: "r",
+              "R", "row", or "ROW".
+            - `None` checks whether the :py:class:`~.rt_dataset.Dataset` has at least
+              one `True`, non-zero, or non-empty value. Returns a boolean. You can also
+              pass the following strings to ``axis`` instead of `None`: "all" or "ALL".
+        as_dataset : bool, default `True`
+            Controls the return type when ``axis=0``. If `True`, the method returns a
+            :py:class:`~.rt_dataset.Dataset`. If `False`, the method returns a
+            :py:class:`~.rt_struct.Struct`.
 
         Returns
         -------
-        Struct (or Dataset) or list or bool
+        :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct` or :py:class:`~.rt_fastarray.FastArray` or bool
+            The return type depends on ``axis`` and ``as_dataset``:
+
+             - :py:class:`~.rt_dataset.Dataset` if ``axis=0`` and ``as_dataset=True``
+             - :py:class:`~.rt_struct.Struct` if ``axis=0`` and ``as_dataset=False``
+             - :py:class:`~.rt_fastarray.FastArray` if ``axis=1``
+             - bool if ``axis=None``
+
+        See Also
+        --------
+        :py:meth:`.rt_dataset.Dataset.all`
+        :py:func:`.rt_numpy.any`
+        :py:meth:`.rt_struct.Struct.any`
+
+        Examples
+        --------
+        Construct an empty :py:class:`~.rt_dataset.Dataset` and call
+        :py:meth:`~.rt_dataset.Dataset.any` along all axes:
+
+        >>> ds = rt.Dataset()
+        >>> ds.any(axis=0)
+        #
+        -
+        <BLANKLINE>
+        [None rows x 0 columns] total bytes: 0.0 B
+        >>> ds.any(axis=1)
+        FastArray([], dtype=bool)
+        >>> ds.any(axis=None)
+        False
+
+        Add columns to the :py:class:`~.rt_dataset.Dataset` for the following examples:
+
+        >>> ds.Trues = [True, True, True, True, True]
+        >>> ds.Falses = [False, False, False, False, False]
+        >>> ds.Mixed = [True, False, True, True, False]
+        >>> ds.Zeros = [0, 0, 0, 0, 0]
+        >>> ds.Ones = [1, 1, 1, 1, 1]
+        >>> ds.Ints = [0, 1, 2, 3, 4]
+        >>> ds.Nans = [rt.nan, rt.nan, rt.nan, rt.nan, rt.nan]
+        >>> ds.Groups = ["Group1", "Group2", "Group1", "Group1", "Group2"]
+        >>> ds
+        #   Trues   Falses   Mixed   Zeros   Ones   Ints   Nans   Groups
+        -   -----   ------   -----   -----   ----   ----   ----   ------
+        0    True    False    True       0      1      0    nan   Group1
+        1    True    False   False       0      1      1    nan   Group2
+        2    True    False    True       0      1      2    nan   Group1
+        3    True    False    True       0      1      3    nan   Group1
+        4    True    False   False       0      1      4    nan   Group2
+        <BLANKLINE>
+        [5 rows x 8 columns] total bytes: 205.0 B
+
+        Call :py:meth:`~.rt_dataset.Dataset.any` using default arguments. This returns a
+        :py:class:`~.rt_dataset.Dataset` with a boolean for each column that describes
+        whether the column contains at least one `True`, non-zero, or non-empty value:
+
+        >>> ds.any()
+        #   Trues   Falses   Mixed   Zeros   Ones   Ints   Nans   Groups
+        -   -----   ------   -----   -----   ----   ----   ----   ------
+        0    True    False    True   False   True   True   True     True
+        <BLANKLINE>
+        [1 rows x 8 columns] total bytes: 8.0 B
+
+        The returned :py:class:`~.rt_dataset.Dataset` shows that all columns, except for
+        the Zeros column, have at least one `True`, non-zero, or non-empty value.
+
+        Pass `False` to ``as_dataset`` to return a :py:class:`~.rt_struct.Struct`
+        instead of a :py:class:`~.rt_dataset.Dataset`:
+
+        >>> ds.any(as_dataset=False)
+          #   Name     Type   Size   0       1     2
+        ---   ------   ----   ----   -----   ---   ---
+          0   Trues    bool   0      True
+          1   Falses   bool   0      False
+          2   Mixed    bool   0      True
+        ...   ...      ...    ...    ...     ...   ...
+          5   Ints     bool   0      True
+          6   Nans     bool   0      True
+          7   Groups   bool   0      True
+        <BLANKLINE>
+        [8 columns]
+
+        Pass ``1`` to ``axis`` to return a :py:class:`~.rt_fastarray.FastArray` with a
+        boolean for each row that describes whether the row contrains at least one
+        `True`, non-zero, or non-empty value:
+
+        >>> ds.any(axis=1)
+        FastArray([ True,  True,  True,  True,  True])
+
+        Pass `None` to ``axis`` to return a single boolean that describes whether the
+        entire :py:class:`~.rt_dataset.Dataset` contains at least one `True`, non-zero,
+        or non-empty value:
+
+        >>> ds.any(axis=None)
+        True
         """
 
         def _col_any(_col):
@@ -3460,6 +3635,7 @@ class Dataset(Struct):
                 # swap out all column data
                 self._nrows = deduplicated._nrows
                 self._col_sortlist = None
+                self._sort_ascending = True
                 self.col_replace_all(deduplicated, check_exists=False)
                 return self
 
@@ -3483,23 +3659,137 @@ class Dataset(Struct):
     # -------------------------------------------------------------
     def all(self, axis=0, as_dataset: bool = True):
         """
-        Returns truth value 'all' along axis.  Behavior for ``axis=None`` differs from pandas!
+        Check whether a :py:class:`~.rt_dataset.Dataset`, its columns, or its rows
+        contain only `True`, non-zero, or non-empty values.
+
+        If the checked :py:class:`~.rt_dataset.Dataset`, column, or row
+        contains only `True`, non-zero, or non-empty values, the method returns a
+        corresponding `True` value. If the checked :py:class:`~.rt_dataset.Dataset`,
+        column, or row contains one or more `False`, zero, or empty values, the method
+        returns a corresponding `False` value.
+
+        Note that a NaN value is not an empty value.
 
         Parameters
         ----------
-        axis : int, optional
-            * axis=0 (dflt.) -> over columns          (returns Struct (or Dataset) of bools)
-                                string synonyms: c, C, col, COL, column, COLUMN
-            * axis=1         -> over rows             (returns array of bools)
-                                string synonyms: r, R, row, ROW
-            * axis=None      -> over rows and columns (returns bool)
-                                string synonyms: all, ALL
-        as_dataset : bool
-            When ``axis=0``, return Dataset instead of Struct. Defaults to False.
+        axis : {0, 1, None}, default ``0``
+            Controls whether :py:meth:`~.rt_dataset.Dataset.all` returns a boolean for
+            the entire :py:class:`~.rt_dataset.Dataset`, for each column, or for each
+            row:
+
+            - ``0`` checks whether each column has only `True`, non-zero, or non-empty
+              values. Returns either a :py:class:`~.rt_dataset.Dataset` or a
+              :py:class:`~.rt_struct.Struct` of booleans, depending on the value of
+              ``as_dataset``. You can also pass the following strings to ``axis``
+              instead of ``0``: "c", "C", "col", "COL", "column", or "COLUMN".
+            - ``1`` checks whether each row has only `True`, non-zero, or non-empty
+              values. Returns a :py:class:`~.rt_fastarray.FastArray` of booleans. Note
+              that if the :py:class:`~.rt_dataset.Dataset` contains a
+              :py:class:`~.rt_categorical.Categorical`, the method returns an error.
+              You can also pass the following strings to ``axis`` instead of ``1``: "r",
+              "R", "row", or "ROW".
+            - `None` checks whether the :py:class:`~.rt_dataset.Dataset` has only
+              `True`, non-zero, or non-empty values. Returns a boolean. You can also
+              pass the following strings to ``axis`` instead of `None`: "all" or "ALL".
+        as_dataset : bool, default `True`
+            Controls the return type when ``axis=0``. If `True`, the method returns a
+            :py:class:`~rt_dataset.Dataset`. If `False`, the method returns a
+            :py:class:`~.rt_struct.Struct`.
 
         Returns
         -------
-        Struct (or Dataset) or list or bool
+        :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct` or :py:class:`~.rt_fastarray.FastArray` or bool
+            The return type depends on ``axis`` and ``as_dataset``:
+
+             - :py:class:`~.rt_dataset.Dataset` if ``axis=0`` and ``as_dataset=True``
+             - :py:class:`~.rt_struct.Struct` if ``axis=0`` and ``as_dataset=False``
+             - :py:class:`~.rt_fastarray.FastArray` if ``axis=1``
+             - bool if ``axis=None``
+
+        See Also
+        --------
+        :py:meth:`.rt_dataset.Dataset.any`
+        :py:func:`.rt_numpy.all`
+        :py:meth:`.rt_multiset.Multiset.all`
+        :py:meth:`.rt_struct.Struct.all`
+
+        Examples
+        --------
+        Construct an empty :py:class:`~.rt_dataset.Dataset` and call
+        :py:meth:`~.rt_dataset.Dataset.all` along all axes:
+
+        >>> ds = rt.Dataset()
+        >>> ds.all(axis=0)
+        #
+        -
+        <BLANKLINE>
+        [None rows x 0 columns] total bytes: 0.0 B
+        >>> ds.all(axis=1)
+        FastArray([], dtype=bool)
+        >>> ds.all(axis=None)
+        True
+
+        Add columns to the :py:class:`~.rt_dataset.Dataset` for the following examples:
+
+        >>> ds.Trues = [True, True, True, True, True]
+        >>> ds.Falses = [False, False, False, False, False]
+        >>> ds.Mixed = [True, False, True, True, False]
+        >>> ds.Zeros = [0, 0, 0, 0, 0]
+        >>> ds.Ones = [1, 1, 1, 1, 1]
+        >>> ds.Ints = [0, 1, 2, 3, 4]
+        >>> ds.Nans = [rt.nan, rt.nan, rt.nan, rt.nan, rt.nan]
+        >>> ds.Groups = ["Group1", "Group2", "Group1", "Group1", "Group2"]
+        >>> ds
+        #   Trues   Falses   Mixed   Zeros   Ones   Ints   Nans   Groups
+        -   -----   ------   -----   -----   ----   ----   ----   ------
+        0    True    False    True       0      1      0    nan   Group1
+        1    True    False   False       0      1      1    nan   Group2
+        2    True    False    True       0      1      2    nan   Group1
+        3    True    False    True       0      1      3    nan   Group1
+        4    True    False   False       0      1      4    nan   Group2
+        <BLANKLINE>
+        [5 rows x 8 columns] total bytes: 205.0 B
+
+        Call :py:meth:`~.rt_dataset.Dataset.all` using default arguments. This returns a
+        :py:class:`~.rt_dataset.Dataset` with a boolean for each column that describes
+        whether the column contains only `True`, non-zero, or non-empty values:
+
+        >>> ds.all()
+        #   Trues   Falses   Mixed   Zeros   Ones    Ints   Nans   Groups
+        -   -----   ------   -----   -----   ----   -----   ----   ------
+        0    True    False   False   False   True   False   True     True
+        <BLANKLINE>
+        [1 rows x 8 columns] total bytes: 8.0 B
+
+        Pass `False` to ``as_dataset`` to return a :py:class:`~.rt_struct.Struct`
+        instead of a :py:class:`~.rt_dataset.Dataset`:
+
+        >>> ds.all(as_dataset=False)
+          #   Name     Type   Size   0       1     2
+        ---   ------   ----   ----   -----   ---   ---
+          0   Trues    bool   0      True
+          1   Falses   bool   0      False
+          2   Mixed    bool   0      False
+        ...   ...      ...    ...    ...     ...   ...
+          5   Ints     bool   0      False
+          6   Nans     bool   0      True
+          7   Groups   bool   0      True
+        <BLANKLINE>
+        [8 columns]
+
+        Pass ``1`` to ``axis`` to return a :py:class:`~.rt_fastarray.FastArray` with a
+        boolean for each row that describes whether the row contrains only `True`,
+        non-zero, or non-empty values:
+
+        >>> ds.all(axis=1)
+        FastArray([False, False, False, False, False])
+
+        Pass `None` to ``axis`` to return a single boolean that describes whether the
+        entire :py:class:`~.rt_dataset.Dataset` contains only `True`, non-zero, or
+        non-empty values:
+
+        >>> ds.all(axis=None)
+        False
         """
 
         def _col_all(_col):
@@ -3554,6 +3844,7 @@ class Dataset(Struct):
         :return: None
         """
         self._col_sortlist = None
+        self._sort_ascending = True
         self._sort_display = False
 
     # -------------------------------------------------------
@@ -3565,13 +3856,14 @@ class Dataset(Struct):
                 if col not in self:
                     print(str(col), "is not a valid key to sort by.")
                     # clear invalid sort from dataset
+                    self._sort_ascending = True
                     self._col_sortlist = None
                     break
             else:
                 # sortdict = {col: self.__getattribute__(col) for col in self._col_sortlist}
                 sortdict = {col: self.col_get_value(col) for col in self._col_sortlist}
 
-        return self._uniqueid, self._nrows, sortdict
+        return self._uniqueid, self._nrows, sortdict, self._sort_ascending
 
     # -------------------------------------------------------
     def _sort_lexsort(self, by, ascending=True):
@@ -3584,22 +3876,14 @@ class Dataset(Struct):
         for col in bylist:
             sortkeys.append(self.col_get_value(col))
 
-        # larger sort
-        sort_rows = lexsort([sortkeys[i] for i in range(len(sortkeys) - 1, -1, -1)])
-
-        # need to truly reverse it inplace
-        if ascending is False:
-            sort_rows = sort_rows[::-1].copy()
-
-        # print("**lexsort", sort_rows)
-        return sort_rows
+        return lexsort([sortkeys[i] for i in range(len(sortkeys) - 1, -1, -1)], ascending=ascending)
 
     # -------------------------------------------------------
     def _sort_values(
         self,
         by,
         axis=0,
-        ascending=True,
+        ascending: Union[bool, List[bool], np.ndarray, FastArray] = True,
         inplace=False,
         kind="mergesort",
         na_position="last",
@@ -3622,8 +3906,10 @@ class Dataset(Struct):
             The column name or list of column names by which to sort
         axis : int
             not used
-        ascending : bool
-            not used
+        ascending : bool or list of bools, default True
+            Whether the sort is ascending. When True (the default), the sort is
+            ascending. When False, the sort is descending.
+            If passed a list of bool, then the length must match the number of columns.
         inplace : bool
             Sort the dataset itself.
         kind : str
@@ -3642,15 +3928,25 @@ class Dataset(Struct):
         # test sort keys
         bylist = by
 
-        if not isinstance(ascending, bool):
-            raise TypeError("ascending parameter must be a single boolean")
-
         if not isinstance(by, list):
             bylist = [bylist]
 
         for col in bylist:
             if col not in self:
                 raise ValueError(f"{col} is not a valid key to sort by.")
+
+        if not isinstance(ascending, np.ndarray):
+            ascending = TypeRegister.FastArray(ascending)
+
+        if ascending.dtype != np.dtype(bool):
+            raise ValueError("_sort_values: Ascending array must be a list of booleans.")
+
+        if len(ascending) == 1:
+            ascending = bool(ascending[0])
+        else:
+            if len(ascending) != len(by):
+                raise ValueError("_sort_values: Length of the ascending array must match columns.")
+            ascending = ascending[::-1].copy()
 
         if inplace or copy:
             if self._sort_display is True and copy is False:
@@ -3698,8 +3994,8 @@ class Dataset(Struct):
                 return newds
 
         # if drops into here, sort_view was called
-        if ascending is False:
-            self._sort_ascending = False
+
+        self._sort_ascending = ascending
         self._col_sortlist = bylist
         self.sorts_on()
 
@@ -3707,7 +4003,9 @@ class Dataset(Struct):
         return self
 
     # -------------------------------------------------------
-    def sort_view(self, by, ascending=True, kind="mergesort", na_position="last"):
+    def sort_view(
+        self, by, ascending: Union[bool, List[bool], np.ndarray, FastArray] = True, kind="mergesort", na_position="last"
+    ):
         """
         Sort the specified columns only when displayed.
 
@@ -3718,254 +4016,264 @@ class Dataset(Struct):
         by : string or list of strings
             The column name or list of column names to sort by. The columns are sorted
             in the order given.
-        ascending : bool, default True
-            Whether the sort is ascending. When True (the default), the sort is
-            ascending. When False, the sort is descending.
+        ascending : bool or list of bools, default `True`
+            Whether the sort is ascending. When `True` (the default), the sort is
+            ascending. When `False`, the sort is descending.
+            If passed a list of bool, then the length must match the number of columns.
         kind : str
             **Not used.** The sorting algorithm used is 'mergesort'; user-provided
             values for this parameter are ignored.
         na_position : str
-            **Not used.** If `ascending` is True (the default), NaN values are put last.
-            If `ascending` is False, NaN values are put first. User-provided values for
+            **Not used.** If `ascending` is `True` (the default), NaN values are put last.
+            If ``ascending`` is `False`, NaN values are put first. User-provided values for
             this parameter are ignored.
 
         Returns
         -------
-        `Dataset`
+        :py:class:`~.rt_dataset.Dataset` :
+            A sorted view of the :py:class:`~.rt_dataset.Dataset`.
 
         See Also
         --------
-        Dataset.sort_copy : Return a sorted copy of the `Dataset`.
-        Dataset.sort_inplace : Sort the `Dataset`, modifying the original data.
+        :py:meth:`.rt_dataset.Dataset.sort_copy` :
+            Return a sorted copy of the :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_dataset.Dataset.sort_inplace` :
+            Sort the :py:class:`~.rt_dataset.Dataset`, modifying the original data.
 
         Examples
         --------
-        Create a `Dataset`:
+        Create a :py:class:`~.rt_dataset.Dataset`:
 
         >>> ds = rt.Dataset({'a': rt.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
         >>> ds
-        #   a   b    c
-        -   -   -   --
-        0   0   A   10
-        1   1   B   20
-        2   2   A   30
-        3   3   B   10
-        4   4   A   20
-        5   5   B   30
-        6   6   A   10
-        7   7   B   20
-        8   8   A   30
-        9   9   B   10
+          #     a   b       c
+        ---   ---   ---   ---
+          0     0   A      10
+          1     1   B      20
+          2     2   A      30
+        ...   ...   ...   ...
+          7     7   B      20
+          8     8   A      30
+          9     9   B      10
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
 
         Sort column ``b``, then column ``c``:
 
         >>> ds.sort_view(['b','c'])
-        #   a   b    c
-        -   -   -   --
-        0   0   A   10
-        1   6   A   10
-        2   4   A   20
-        3   2   A   30
-        4   8   A   30
-        5   3   B   10
-        6   9   B   10
-        7   1   B   20
-        8   7   B   20
-        9   5   B   30
+          #   b       c     a
+        ---   ---   ---   ---
+          0   A      10     0
+          6   A      10     6
+          4   A      20     4
+        ...   ...   ...   ...
+          1   B      20     1
+          7   B      20     7
+          5   B      30     5
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
 
         Sort column ``a`` in descending order:
 
-        >>> ds.sort_view('a', ascending = False)
-        #   a   b    c
-        -   -   -   --
-        0   9   B   10
-        1   8   A   30
-        2   7   B   20
-        3   6   A   10
-        4   5   B   30
-        5   4   A   20
-        6   3   B   10
-        7   2   A   30
-        8   1   B   20
-        9   0   A   10
+        >>> ds.sort_view('a', ascending=False)
+          #     a   b       c
+        ---   ---   ---   ---
+          9     9   B      10
+          8     8   A      30
+          7     7   B      20
+        ...   ...   ...   ...
+          2     2   A      30
+          1     1   B      20
+          0     0   A      10
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
         """
         self._sort_values(by, ascending=ascending, inplace=False, kind=kind, na_position=na_position, copy=False)
         return self
 
     # -------------------------------------------------------
     def sort_inplace(
-        self, by: Union[str, List[str]], ascending: bool = True, kind: str = "mergesort", na_position: str = "last"
+        self,
+        by: Union[str, List[str]],
+        ascending: Union[bool, List[bool], np.ndarray, FastArray] = True,
+        kind: str = "mergesort",
+        na_position: str = "last",
     ) -> "Dataset":
         """
-        Return a `Dataset` with the specified columns sorted in place.
+        Return a :py:class:`~.rt_dataset.Dataset` with the specified columns sorted in
+        place.
 
         The columns are sorted in the order given. To preserve data alignment, this
-        method modifies the order of all `Dataset` rows.
+        method modifies the order of all :py:class:`~.rt_dataset.Dataset` rows.
 
         Parameters
         ----------
         by : str or list of str
             The column name or list of column names to sort by. The columns are sorted
             in the order given.
-        ascending : bool, default True
-            Whether the sort is ascending. When True (the default), the sort is
-            ascending. When False, the sort is descending.
+        ascending : bool or list of bools, default `True`
+            Whether the sort is ascending. When `True` (the default), the sort is
+            ascending. When `False`, the sort is descending.
+            If passed a list of bool, then the length must match the number of columns.
         kind : str
             **Not used.** The sorting algorithm used is 'mergesort'; user-provided
             values for this parameter are ignored.
         na_position : str
-            **Not used.** If `ascending` is True (the default), NaN values are put last.
-            If `ascending` is False, NaN values are put first. User-provided values for
+            **Not used.** If `ascending` is `True` (the default), NaN values are put last.
+            If `ascending` is `False`, NaN values are put first. User-provided values for
             this parameter are ignored.
 
         Returns
         -------
-        `Dataset`
-            The reference to the input `Dataset` is returned to allow for method
-            chaining.
+        :py:class:`~.rt_dataset.Dataset`
+            The reference to the input :py:class:`~.rt_dataset.Dataset` is returned to
+            allow for method chaining.
 
         See Also
         --------
-        Dataset.sort_copy : Returns a sorted copy of the `Dataset`.
-        Dataset.sort_view : Sorts the `Dataset` columns only when displayed.
+        :py:meth:`.rt_dataset.Dataset.sort_copy` :
+            Returns a sorted copy of the :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_dataset.Dataset.sort_view` :
+            Sorts the :py:class:`~.rt_dataset.Dataset` columns only when displayed.
 
         Examples
         --------
-        Create a `Dataset`:
+        Create a :py:class:`~.rt_dataset.Dataset`:
 
         >>> ds = rt.Dataset({'a': rt.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
         >>> ds
-        #   a   b    c
-        -   -   -   --
-        0   0   A   10
-        1   1   B   20
-        2   2   A   30
-        3   3   B   10
-        4   4   A   20
-        5   5   B   30
-        6   6   A   10
-        7   7   B   20
-        8   8   A   30
-        9   9   B   10
+          #     a   b       c
+        ---   ---   ---   ---
+          0     0   A      10
+          1     1   B      20
+          2     2   A      30
+        ...   ...   ...   ...
+          7     7   B      20
+          8     8   A      30
+          9     9   B      10
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
 
         Sort column ``b``, then column ``c``:
 
         >>> ds.sort_inplace(['b','c'])
-        #   a   b    c
-        -   -   -   --
-        0   0   A   10
-        1   6   A   10
-        2   4   A   20
-        3   2   A   30
-        4   8   A   30
-        5   3   B   10
-        6   9   B   10
-        7   1   B   20
-        8   7   B   20
-        9   5   B   30
+          #     a   b       c
+        ---   ---   ---   ---
+          0     0   A      10
+          1     6   A      10
+          2     4   A      20
+        ...   ...   ...   ...
+          7     1   B      20
+          8     7   B      20
+          9     5   B      30
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
 
         Sort column ``a`` in descending order:
 
-        >>> ds.sort_inplace('a', ascending = False)
-        #   a   b    c
-        -   -   -   --
-        0   9   B   10
-        1   8   A   30
-        2   7   B   20
-        3   6   A   10
-        4   5   B   30
-        5   4   A   20
-        6   3   B   10
-        7   2   A   30
-        8   1   B   20
-        9   0   A   10
+        >>> ds.sort_inplace('a', ascending=False)
+          #     a   b       c
+        ---   ---   ---   ---
+          0     9   B      10
+          1     8   A      30
+          2     7   B      20
+        ...   ...   ...   ...
+          7     2   A      30
+          8     1   B      20
+          9     0   A      10
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
         """
         return self._sort_values(by, ascending=ascending, inplace=True, kind=kind, na_position=na_position, copy=False)
 
     def sort_copy(
-        self, by: Union[str, List[str]], ascending: bool = True, kind: str = "mergesort", na_position: str = "last"
+        self,
+        by: Union[str, List[str]],
+        ascending: Union[bool, List[bool], np.ndarray, FastArray] = True,
+        kind: str = "mergesort",
+        na_position: str = "last",
     ) -> "Dataset":
         """
-        Return a copy of the `Dataset` that's sorted by the specified columns.
+        Return a copy of the :py:class:`~.rt_dataset.Dataset` that's sorted by the
+        specified columns.
 
-        The columns are sorted in the order given. The original `Dataset` is not
-        modified.
+        The columns are sorted in the order given. The original
+        :py:class:`~.rt_dataset.Dataset` is not modified.
 
         Parameters
         ----------
         by : str or list of str
             The column name or list of column names to sort by. The columns are sorted
             in the order given.
-        ascending : bool, default True
-            Whether the sort is ascending. When True (the default), the sort is
-            ascending. When False, the sort is descending.
+        ascending : bool or list of bools, default `True`
+            Whether the sort is ascending. When `True` (the default), the sort is
+            ascending. When `False`, the sort is descending.
+            If passed a list of bool, then the length must match the number of columns.
         kind : str
             **Not used.** The sorting algorithm used is 'mergesort'; user-provided
             values for this parameter are ignored.
         na_position : str
-            **Not used.** If `ascending` is True (the default), NaN values are put last.
-            If `ascending` is False, NaN values are put first. User-provided values for
+            **Not used.** If ``ascending`` is `True` (the default), NaN values are put last.
+            If ``ascending`` is `False`, NaN values are put first. User-provided values for
             this parameter are ignored.
 
         Returns
         -------
-        `Dataset`
+        :py:class:`~.rt_dataset.Dataset` :
+            The copied :py:class:`~.rt_dataset.Dataset`.
 
         See Also
         --------
-        Dataset.sort_inplace : Sort the `Dataset`, modifying the original data.
-        Dataset.sort_view : Sort the `Dataset` columns only when displayed.
+        :py:class:`.rt_dataset.Dataset.sort_inplace` : Sort the :py:class:`~.rt_dataset.Dataset`, modifying the original data.
+        :py:class:`.rt_dataset.Dataset.sort_view` : Sort the :py:class:`~.rt_dataset.Dataset` columns only when displayed.
 
         Examples
         --------
-        Create a `Dataset`:
+        Create a :py:class:`~.rt_dataset.Dataset`:
 
         >>> ds = rt.Dataset({'a': rt.arange(10), 'b':5*['A', 'B'], 'c':3*[10,20,30]+[10]})
         >>> ds
-        #   a   b    c
-        -   -   -   --
-        0   0   A   10
-        1   1   B   20
-        2   2   A   30
-        3   3   B   10
-        4   4   A   20
-        5   5   B   30
-        6   6   A   10
-        7   7   B   20
-        8   8   A   30
-        9   9   B   10
+          #     a   b       c
+        ---   ---   ---   ---
+          0     0   A      10
+          1     1   B      20
+          2     2   A      30
+        ...   ...   ...   ...
+          7     7   B      20
+          8     8   A      30
+          9     9   B      10
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
 
         Sort column ``b``, then column ``c``:
 
         >>> ds.sort_copy(['b','c'])
-        #   a   b    c
-        -   -   -   --
-        0   0   A   10
-        1   6   A   10
-        2   4   A   20
-        3   2   A   30
-        4   8   A   30
-        5   3   B   10
-        6   9   B   10
-        7   1   B   20
-        8   7   B   20
-        9   5   B   30
+          #     a   b       c
+        ---   ---   ---   ---
+          0     0   A      10
+          1     6   A      10
+          2     4   A      20
+        ...   ...   ...   ...
+          7     1   B      20
+          8     7   B      20
+          9     5   B      30
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
 
         Sort column ``a`` in descending order:
 
         >>> ds.sort_copy('a', ascending = False)
-        #   a   b    c
-        -   -   -   --
-        0   9   B   10
-        1   8   A   30
-        2   7   B   20
-        3   6   A   10
-        4   5   B   30
-        5   4   A   20
-        6   3   B   10
-        7   2   A   30
-        8   1   B   20
-        9   0   A   10
+          #     a   b       c
+        ---   ---   ---   ---
+          0     9   B      10
+          1     8   A      30
+          2     7   B      20
+        ...   ...   ...   ...
+          7     2   A      30
+          8     1   B      20
+          9     0   A      10
+        <BLANKLINE>
+        [10 rows x 3 columns] total bytes: 170.0 B
         """
         return self._sort_values(by, ascending=ascending, inplace=False, kind=kind, na_position=na_position, copy=True)
 
@@ -4098,22 +4406,23 @@ class Dataset(Struct):
 
     def mask_or_isnan(self) -> FastArray:
         """
-        Return a boolean array that's True for each `Dataset` row that contains at least
-        one NaN, otherwise False.
+        Return a boolean array that's `True` for each :py:class:`~.rt_datset.Dataset`
+        row that contains at least one NaN, otherwise `False`.
 
-        This method applies ``OR`` to all columns using :meth:`riptable.isnan`.
+        This method applies ``OR`` to all columns using :py:func:`riptable.isnan`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` that's True for each `Dataset` row that contains at least one
-            NaN, otherwise False.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains at least one NaN,
+            otherwise `False`.
 
         See Also
         --------
-        riptable.isnan
-        Dataset.mask_and_isnan : Return a boolean array that's True for each all-NaN
-            `Dataset` row.
+        :py:func:`.isnan`
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` : Return a boolean array that's
+            `True` for each all-NaN :py:class:`~.rt_dataset.Dataset` row.
 
         Examples
         --------
@@ -4124,6 +4433,8 @@ class Dataset(Struct):
         0   1.00   0.00
         1   2.00    nan
         2    nan    nan
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.mask_or_isnan()
         FastArray([False, True,  True])
         """
@@ -4131,22 +4442,24 @@ class Dataset(Struct):
 
     def mask_and_isnan(self) -> FastArray:
         """
-        Return a boolean array that's True for each `Dataset` row in which every value
-        is NaN, otherwise False.
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row in which every value is NaN, otherwise `False`.
 
-        This method applies ``AND`` to all columns using :meth:`riptable.isnan`.
+        This method applies ``AND`` to all columns using :py:func:`riptable.isnan`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` that's True for each `Dataset` row that contains all NaNs,
-            otherwise False.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all NaNs, otherwise
+            `False`.
 
         See Also
         --------
-        riptable.isnan
-        Dataset.mask_or_isnan : Return a boolean array that's True for each `Dataset`
-            row that contains at least one NaN.
+        :py:func:`.isnan`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` : Return a boolean array that's
+            `True` for each :py:class:`~.rt_dataset.Dataset` row that contains at least
+            one NaN.
 
         Examples
         --------
@@ -4157,6 +4470,8 @@ class Dataset(Struct):
         0   1.00   0.00
         1   2.00    nan
         2    nan    nan
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.mask_and_isnan()
         FastArray([False, False,  True])
         """
@@ -4164,33 +4479,40 @@ class Dataset(Struct):
 
     def mask_or_isfinite(self) -> FastArray:
         """
-        Return a boolean array that's True for each `Dataset` row that has at least one
-        finite value, False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one finite value, `False` otherwise.
 
         A value is considered to be finite if it's not positive or negative infinity
         or a NaN (Not a Number).
 
-        This method applies ``OR`` to all columns using :meth:`riptable.isfinite`.
+        This method applies ``OR`` to all columns using :py:func:`riptable.isfinite`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` that's True for each `Dataset` row that has at least one
-            finite value, False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one finite value,
+            `False` otherwise.
 
         See Also
         --------
-        riptable.isfinite, riptable.isnotfinite, riptable.isinf, riptable.isnotinf,
-        FastArray.isfinite, FastArray.isnotfinite, FastArray.isinf, FastArray.isnotinf
-        Dataset.mask_and_isfinite :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            finite values.
-        Dataset.mask_or_isinf :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one value that's positive or negative infinity.
-        Dataset.mask_and_isinf :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            infinite values.
+        :py:func:`.isfinite`
+        :py:func:`.isnotfinite`
+        :py:func:`.isinf`
+        :py:func:`.isnotinf`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one value that's positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all infinite values.
 
         Examples
         --------
@@ -4201,6 +4523,8 @@ class Dataset(Struct):
         0   1.00   0.00
         1   2.00    inf
         2    inf    nan
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.mask_or_isfinite()
         FastArray([ True,  True, False])
         """
@@ -4208,33 +4532,40 @@ class Dataset(Struct):
 
     def mask_and_isfinite(self) -> FastArray:
         """
-        Return a boolean array that's True for each `Dataset` row in which all values
-        are finite, False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row in which all values are finite, `False` otherwise.
 
         A value is considered to be finite if it's not positive or negative infinity
         or a NaN (Not a Number).
 
-        This method applies ``AND`` to all columns using :meth:`riptable.isfinite`.
+        This method applies ``AND`` to all columns using :py:func:`riptable.isfinite`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` that's True for each `Dataset` row in which all values are
-            finite, False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row in which all values are finite, `False`
+            otherwise.
 
         See Also
         --------
-        riptable.isfinite, riptable.isnotfinite, riptable.isinf, riptable.isnotinf,
-        FastArray.isfinite, FastArray.isnotfinite, FastArray.isinf, FastArray.isnotinf
-        Dataset.mask_or_isfinite :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one finite value.
-        Dataset.mask_or_isinf :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one value that's positive or negative infinity.
-        Dataset.mask_and_isinf :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            infinite values.
+        :py:func:`.isfinite`
+        :py:func:`.isnotfinite`
+        :py:func:`.isinf`
+        :py:func:`.isnotinf`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one value that's positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all infinite values.
 
         Examples
         --------
@@ -4245,6 +4576,8 @@ class Dataset(Struct):
         0   1.00   0.00
         1   2.00    nan
         2   3.00    inf
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.mask_and_isfinite()
         FastArray([ True, False, False])
         """
@@ -4252,30 +4585,38 @@ class Dataset(Struct):
 
     def mask_or_isinf(self) -> FastArray:
         """
-        Return a boolean array that's True for each `Dataset` row that has at least one
-        value that's positive or negative infinity, False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one value that's positive or negative infinity, `False`
+        otherwise.
 
-        This method applies ``OR`` to all columns using :meth:`riptable.isinf`.
+        This method applies ``OR`` to all columns using :py:func:`riptable.isinf`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` that's True for each `Dataset` row that has at least one
-            value that's positive or negative infinity, False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one value that's
+            positive or negative infinity, `False` otherwise.
 
         See Also
         --------
-        riptable.isinf, riptable.isnotinf, riptable.isfinite, riptable.isnotfinite,
-        FastArray.isinf, FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite
-        Dataset.mask_and_isinf :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            infinite values.
-        Dataset.mask_or_isfinite :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one finite value.
-        Dataset.mask_and_isfinite :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            finite values.
+        :py:func:`.isinf`
+        :py:func:`.isnotinf`
+        :py:func:`.isfinite`
+        :py:func:`.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all infinite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all finite values.
 
         Examples
         --------
@@ -4286,6 +4627,8 @@ class Dataset(Struct):
         0   1.00   0.00
         1   2.00    inf
         2    inf    nan
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.mask_or_isinf()
         FastArray([False,  True,  True])
         """
@@ -4293,30 +4636,37 @@ class Dataset(Struct):
 
     def mask_and_isinf(self) -> FastArray:
         """
-        Return a boolean array that's True for each `Dataset` row in which all values
-        are positive or negative infinity, False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row in which all values are positive or negative infinity, `False` otherwise.
 
-        This method applies ``AND`` to all columns using :meth:`riptable.isinf`.
+        This method applies ``AND`` to all columns using :py:func:`riptable.isinf`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` that's True for each `Dataset` row in which all values are
-            positive or negative infinity, False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row in which all values are positive or
+            negative infinity, `False` otherwise.
 
         See Also
         --------
-        riptable.isinf, riptable.isnotinf, riptable.isfinite, riptable.isnotfinite,
-        FastArray.isinf, FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite
-        Dataset.mask_or_isinf :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one value that's positive or negative infinity.
-        Dataset.mask_or_isfinite :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one finite value.
-        Dataset.mask_and_isfinite :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            finite values.
+        :py:func:`.isinf`
+        :py:func:`.isnotinf`
+        :py:func:`.isfinite`
+        :py:func:`.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one value that's positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all finite values.
 
         Examples
         --------
@@ -4327,6 +4677,8 @@ class Dataset(Struct):
         0   1.00    inf
         1    inf   -inf
         2   3.00    nan
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.mask_and_isinf()
         FastArray([False,  True, False])
         """
@@ -4462,138 +4814,153 @@ class Dataset(Struct):
         suffixes: Optional[Tuple[str, str]] = None,
     ) -> "Dataset":
         """
-        Combine two `Dataset` objects by performing a database-style left-join
-        operation on columns.
+        Combine two :py:class:`~.rt_dataset.Dataset` objects by performing a
+        database-style left-join operation on columns.
 
         This method has an option to perform an in-place merge, in which columns from
-        the right `Dataset` are added to the left `Dataset` (`self`).
+        the right :py:class:`~.rt_dataset.Dataset` are added to the left
+        :py:class:`~.rt_dataset.Dataset` (`self`).
 
-        Also note that this method has both `suffix` and `suffixes` as optional
+        Also note that this method has both ``suffix`` and ``suffixes`` as optional
         parameters. At most one can be specified; see usage details below.
 
         Parameters
         ----------
-        right : `Dataset`
-            The `Dataset` to merge with the left `Dataset` (`self`). If rows in `right`
-            don't have matches in the left `Dataset` they will be discarded. If they
-            match multiple rows in the left `Dataset` they will be duplicated
-            appropriately. (All rows in the left `Dataset` are always preserved in a
-            `merge_lookup`. If there's no matching key in `right`, an invalid value is
-            used as a fill value.)
+        right : :py:class:`~.rt_dataset.Dataset`
+            The :py:class:`~.rt_dataset.Dataset` to merge with the left
+            :py:class:`~.rt_dataset.Dataset` (`self`). If rows in ``right``
+            don't have matches in the left :py:class:`~.rt_dataset.Dataset` they are
+            discarded. If they match multiple rows in the left
+            :py:class:`~.rt_dataset.Dataset` they are duplicated appropriately. (All
+            rows in the left :py:class:`~.rt_dataset.Dataset` are always preserved in a
+            :py:meth:`~.rt_dataset.Dataset.merge_lookup`. If there's no matching key in
+            ``right``, an invalid value is used as a fill value.)
         on : str or (str, str) or list of str or list of (str, str), optional
-            Names of columns (keys) to join on. If `on` isn't specified, `left_on`
-            and `right_on` must be specified.
+            Names of columns (keys) to join on. If ``on`` isn't specified, ``left_on``
+            and ``right_on`` must be specified.
             Options for types:
 
             - Single string: Join on one column that has the same name in both
-              `Dataset` objects.
+              :py:class:`~.rt_dataset.Dataset` objects.
             - List: A list of strings is treated as a multi-key in which all
-              associated key column values in the left `Dataset` must have matches
-              in `right`. The column names must be the same in both `Dataset`
-              objects, unless they're in a tuple; see below.
+              associated key column values in the left :py:class:`~.rt_dataset.Dataset`
+              must have matches in ``right``. The column names must be the same in both
+              :py:class:`~.rt_dataset.Dataset` objects, unless they're in a tuple; see
+              below.
             - Tuple: Use a tuple to specify key columns that have different names.
               For example, ``("col_a", "col_b")`` joins on ``col_a`` in the left
-              `Dataset` and ``col_b`` in `right`. Both columns are in the
-              returned `Dataset` unless you specify otherwise using `columns_left`
-              or `columns_right`.
+              :py:class:`~.rt_dataset.Dataset` and ``col_b`` in ``right``. Both columns
+              are in the returned :py:class:`~.rt_dataset.Dataset` unless you specify
+              otherwise using ``columns_left`` or ``columns_right``.
         left_on : str or list of str, optional
-            Use instead of `on` to specify names of columns in the left `Dataset`
-            to join on. A list of strings is treated as a multi-key in which all
-            associated key column values in the left `Dataset` must have matches in
-            `right`. If both `on` and `left_on` are specified, an error is raised.
+            Use instead of ``on`` to specify names of columns in the left
+            :py:class:`~.rt_dataset.Dataset` to join on. A list of strings is treated as
+            a multi-key in which all associated key column values in the left
+            :py:class:`~.rt_dataset.Dataset` must have matches in ``right``. If both
+            ``on`` and ``left_on`` are specified, an error is raised.
         right_on : str or list of str, optional
-            Use instead of `on` to specify names of columns in the right `Dataset`
-            to join on. A list of strings is treated as a multi-key in which all
-            associated key column values in `right` must have matches in the left
-            `Dataset`. If both `on` and `right_on` are specified, an error is raised.
+            Use instead of ``on`` to specify names of columns in the right
+            :py:class:`~.rt_dataset.Dataset` to join on. A list of strings is treated as
+            a multi-key in which all associated key column values in ``right`` must have
+            matches in the left :py:class:`~.rt_dataset.Dataset`. If both ``on`` and
+            ``right_on`` are specified, an error is raised.
         require_match : bool, default `False`
-            When `True`, all keys in the left `Dataset` are required to have a matching
-            key in `right`, and an error is raised when this requirement is not met.
+            When `True`, all keys in the left :py:class:`~.rt_dataset.Dataset` are
+            required to have a matching key in ``right``, and an error is raised when
+            this requirement is not met.
         suffix : str, optional
-            Suffix to apply to overlapping non-key-column names in `right` that are
-            included in the returned `Dataset`. Cannot be used with `suffixes`. If there
-            are overlapping non-key-column names in the returned `Dataset` and `suffix`
-            or `suffixes` isn't specified, an error is raised.
+            Suffix to apply to overlapping non-key-column names in ``right`` that are
+            included in the returned :py:class:`~.rt_dataset.Dataset`. Cannot be used
+            with ``suffixes``. If there are overlapping non-key-column names in the
+            returned :py:class:`~.rt_dataset.Dataset` and ``suffix`` or ``suffixes``
+            isn't specified, an error is raised.
         copy : bool, default `True`
             Set to `False` to avoid copying data when possible. This can reduce memory
-            usage, but be aware that data can be shared among the left `Dataset`,
-            `right`, and the `Dataset` returned by this function.
+            usage, but be aware that data can be shared among the left
+            :py:class:`~.rt_dataset.Dataset`, ``right``, and the
+            :py:class:`~.rt_dataset.Dataset` returned by this function.
         columns_left : str or list of str, optional
-            Names of columns from the left `Dataset` to include in the merged `Dataset`.
-            By default, all columns are included. When ``inplace=True``, this can't be
-            used; remove columns in a separate operation instead.
+            Names of columns from the left :py:class:`~.rt_dataset.Dataset` to include
+            in the merged :py:class:`~.rt_dataset.Dataset`. By default, all columns are
+            included. When ``inplace=True``, this can't be used; remove columns in a
+            separate operation instead.
         columns_right : str or list of str, optional
-            Names of columns from `right` to include in the merged `Dataset`. By
-            default, all columns are included.
+            Names of columns from ``right`` to include in the merged
+            :py:class:`~.rt_dataset.Dataset`. By default, all columns are included.
         keep : {None, 'first', 'last'}, optional
-            When `right` has more than one match for a key in the left `Dataset`, only
-            one can be used; this parameter indicates whether it should be the first or
-            last match. By default (``keep=None``), an error is raised if there's more
-            than one matching key value in `right`.
+            When ``right`` has more than one match for a key in the left
+            :py:class:`~.rt_dataset.Dataset`, only one can be used; this parameter
+            indicates whether it should be the first or last match. By default
+            (``keep=None``), an error is raised if there's more than one matching key
+            value in ``right``.
         inplace : bool, default `False`
-            If `False` (the default), a new `Dataset` is returned. If `True`, the
-            operation is performed in place (the data in `self` is modified). When
-            ``inplace=True``:
+            If `False` (the default), a new :py:class:`~.rt_dataset.Dataset` is
+            returned. If `True`, the operation is performed in place (the data in `self`
+            is modified). When ``inplace=True``:
 
-            - `suffixes` can't be used; use `suffix` instead.
-            - `columns_left` can't be used; remove columns in a separate operation.
+            - ``suffixes`` can't be used; use ``suffix`` instead.
+            - ``columns_left`` can't be used; remove columns in a separate operation.
         high_card : bool or (bool, bool), optional
             Hint to the low-level grouping implementation that the key(s) of the left
-            or right `Dataset` contain a high number of unique values (cardinality);
-            the grouping logic *may* use this hint to select an algorithm that can
-            provide better performance for such cases.
+            or right :py:class:`~.rt_dataset.Dataset` contain a high number of unique
+            values (cardinality); the grouping logic *may* use this hint to select an
+            algorithm that can provide better performance for such cases.
         hint_size : int or (int, int), optional
             An estimate of the number of unique keys used for the join. Used as a
             performance hint to the low-level grouping implementation. This hint is
-            typically ignored when `high_card` is specified.
+            typically ignored when ``high_card`` is specified.
         suffixes : tuple of (str, str), optional
             Suffixes to apply to returned overlapping non-key-column names in the left
-            and right `Dataset` objects, respectively. Cannot be used with `suffix`
-            or with ``inplace=True``. By default, an error is raised for any
-            overlapping non-key columns that will be in the returned `Dataset`.
+            and right :py:class:`~.rt_dataset.Dataset` objects, respectively. Cannot be
+            used with ``suffix`` or with ``inplace=True``. By default, an error is
+            raised for any overlapping non-key columns that is in the returned
+            :py:class:`~.rt_dataset.Dataset`.
 
         Returns
         -------
-        Dataset
-            A merged `Dataset` that has the same number of rows as `self`. If
-            ``inplace=True``, `self` is modified and returned. Otherwise, a new
-            `Dataset` is returned.
+        :py:class:`~.rt_dataset.Dataset`
+            A merged :py:class:`~.rt_dataset.Dataset` that has the same number of rows
+            as `self`. If ``inplace=True``, `self` is modified and returned. Otherwise,
+            a new :py:class:`~.rt_dataset.Dataset` is returned.
 
         See Also
         --------
-        rt_merge.merge_lookup : Merge two `Dataset` objects.
-        rt_merge.merge_asof :
-            Merge two `Dataset` objects using the nearest key.
-        rt_merge.merge2 :
-            Merge two `Dataset` objects using various database-style joins.
-        rt_merge.merge_indices :
+        :py:func:`.rt_merge.merge_lookup` :
+            Merge two :py:class:`~.rt_dataset.Dataset` objects.
+        :py:func:`.rt_merge.merge_asof` :
+            Merge two :py:class:`~.rt_dataset.Dataset` objects using the nearest key.
+        :py:func:`.rt_merge.merge2` :
+            Merge two :py:class:`~.rt_dataset.Dataset` objects using various
+            database-style joins.
+        :py:func:`.rt_merge.merge_indices` :
             Return the left and right indices created by the join engine.
-        Dataset.merge2 :
-            Merge two `Dataset` objects using various database-style joins.
-        Dataset.merge_asof : Merge two `Dataset` objects using the nearest key.
+        :py:meth:`.rt_dataset.Dataset.merge2` :
+            Merge two :py:class:`~.rt_dataset.Dataset` objects using various
+            database-style joins.
+        :py:meth:`.rt_dataset.Dataset.merge_asof` :
+            Merge two :py:class:`~.rt_dataset.Dataset` objects using the nearest key.
 
         Examples
         --------
-        A basic merge on a single column. In a `merge_lookup`, all rows in the
-        left `Dataset` are in the resulting `Dataset`.
+        A basic merge on a single column. In a
+        :py:meth:`~.rt_dataset.Dataset.merge_lookup`, all rows in the left
+        :py:class:`~.rt_dataset.Dataset` are in the resulting
+        :py:class:`~.rt_dataset.Dataset`.
 
         >>> ds_l = rt.Dataset({"Symbol": rt.FA(["GME", "AMZN", "TSLA", "SPY", "TSLA",
         ...                                     "AMZN", "GME", "SPY", "GME", "TSLA"])})
         >>> ds_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "GME", "AMZN", "SPY"]),
         ...                    "Trader": rt.FA(["Nate", "Elon", "Josh", "Dan"])})
         >>> ds_l
-        #   Symbol
-        -   ------
-        0   GME
-        1   AMZN
-        2   TSLA
-        3   SPY
-        4   TSLA
-        5   AMZN
-        6   GME
-        7   SPY
-        8   GME
-        9   TSLA
+          #   Symbol
+        ---   ------
+          0   GME
+          1   AMZN
+          2   TSLA
+        ...   ...
+          7   SPY
+          8   GME
+          9   TSLA
         <BLANKLINE>
         [10 rows x 1 columns] total bytes: 40.0 B
         >>> ds_r
@@ -4606,67 +4973,58 @@ class Dataset(Struct):
         <BLANKLINE>
         [4 rows x 2 columns] total bytes: 32.0 B
         >>> ds_l.merge_lookup(ds_r, on="Symbol")
-        #   Symbol   Trader
-        -   ------   ------
-        0   GME      Elon
-        1   AMZN     Josh
-        2   TSLA     Nate
-        3   SPY      Dan
-        4   TSLA     Nate
-        5   AMZN     Josh
-        6   GME      Elon
-        7   SPY      Dan
-        8   GME      Elon
-        9   TSLA     Nate
+          #   Symbol   Trader
+        ---   ------   ------
+          0   GME      Elon
+          1   AMZN     Josh
+          2   TSLA     Nate
+        ...   ...      ...
+          7   SPY      Dan
+          8   GME      Elon
+          9   TSLA     Nate
         <BLANKLINE>
         [10 rows x 2 columns] total bytes: 80.0 B
 
-        If a key in the left `Dataset` has no match in the right `Dataset`,
-        an invalid value is used as a fill value.
+        If a key in the left :py:class:`~.rt_dataset.Dataset` has no match in the right
+        :py:class:`~.rt_dataset.Dataset`, an invalid value is used as a fill value.
 
         >>> ds2_l = rt.Dataset({"Symbol": rt.FA(["GME", "AMZN", "TSLA", "SPY", "TSLA",
         ...                                     "AMZN", "GME", "SPY", "GME", "TSLA"])})
         >>> ds2_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "GME", "AMZN"]),
         ...                    "Trader": rt.FA(["Nate", "Elon", "Josh"])})
         >>> ds2_l.merge_lookup(ds2_r, on="Symbol")
-        #   Symbol   Trader
-        -   ------   ------
-        0   GME      Elon
-        1   AMZN     Josh
-        2   TSLA     Nate
-        3   SPY
-        4   TSLA     Nate
-        5   AMZN     Josh
-        6   GME      Elon
-        7   SPY
-        8   GME      Elon
-        9   TSLA     Nate
+          #   Symbol   Trader
+        ---   ------   ------
+          0   GME      Elon
+          1   AMZN     Josh
+          2   TSLA     Nate
+        ...   ...      ...
+          7   SPY
+          8   GME      Elon
+          9   TSLA     Nate
         <BLANKLINE>
         [10 rows x 2 columns] total bytes: 80.0 B
 
-        When key columns have different names, use `left_on` and `right_on`
+        When key columns have different names, use ``left_on`` and ``right_on``
         to specify them:
 
         >>> ds_r.col_rename("Symbol", "Primary_Symbol")
         >>> ds_l.merge_lookup(ds_r, left_on="Symbol", right_on="Primary_Symbol",
         ...                   columns_right="Trader")
-        #   Symbol   Trader
-        -   ------   ------
-        0   GME      Elon
-        1   AMZN     Josh
-        2   TSLA     Nate
-        3   SPY      Dan
-        4   TSLA     Nate
-        5   AMZN     Josh
-        6   GME      Elon
-        7   SPY      Dan
-        8   GME      Elon
-        9   TSLA     Nate
+          #   Symbol   Trader
+        ---   ------   ------
+          0   GME      Elon
+          1   AMZN     Josh
+          2   TSLA     Nate
+        ...   ...      ...
+          7   SPY      Dan
+          8   GME      Elon
+          9   TSLA     Nate
         <BLANKLINE>
         [10 rows x 2 columns] total bytes: 80.0 B
 
         For non-key columns with the same name that will be returned, specify
-        `suffixes`:
+        ``suffixes``:
 
         >>> # Add duplicate non-key columns.
         >>> ds_l.Value = rt.FA([0.72, 0.85, 0.14, 0.55, 0.77, 0.65, 0.23, 0.15, 0.43, 0.25])
@@ -4674,27 +5032,25 @@ class Dataset(Struct):
         >>> # You can also use a tuple to specify left and right key columns.
         >>> ds_l.merge_lookup(ds_r, on=("Symbol", "Primary_Symbol"),
         ...                   suffixes=["_1", "_2"], columns_right=["Value", "Trader"])
-        #   Symbol   Value_1   Value_2   Trader
-        -   ------   -------   -------   ------
-        0   GME         0.72      0.56   Elon
-        1   AMZN        0.85      0.89   Josh
-        2   TSLA        0.14      0.28   Nate
-        3   SPY         0.55      0.74   Dan
-        4   TSLA        0.77      0.28   Nate
-        5   AMZN        0.65      0.89   Josh
-        6   GME         0.23      0.56   Elon
-        7   SPY         0.15      0.74   Dan
-        8   GME         0.43      0.56   Elon
-        9   TSLA        0.25      0.28   Nate
+          #   Symbol   Value_1   Value_2   Trader
+        ---   ------   -------   -------   ------
+          0   GME         0.72      0.56   Elon
+          1   AMZN        0.85      0.89   Josh
+          2   TSLA        0.14      0.28   Nate
+        ...   ...          ...       ...   ...
+          7   SPY         0.15      0.74   Dan
+          8   GME         0.43      0.56   Elon
+          9   TSLA        0.25      0.28   Nate
         <BLANKLINE>
         [10 rows x 4 columns] total bytes: 240.0 B
 
-        When `on` is a list, a multi-key join is performed. All keys must match
-        in the right `Dataset`.
+        When ``on`` is a list, a multi-key join is performed. All keys must match
+        in the right :py:class:`~.rt_dataset.Dataset`.
 
-        If a matching value for a key in the left `Dataset` isn't found in the
-        right `Dataset`, the returned `Dataset` includes a row with the columns
-        from the left `Dataset` but with NaN values in the columns from `right`.
+        If a matching value for a key in the left :py:class:`~.rt_dataset.Dataset` isn't
+        found in the right :py:class:`~.rt_dataset.Dataset`, the returned
+        :py:class:`~.rt_dataset.Dataset` includes a row with the columns from the left
+        :py:class:`~.rt_dataset.Dataset` but with NaN values in the columns from ``right``.
 
         >>> # Add associated Size values for multi-key join. Note that one
         >>> # symbol-size pair in the left Dataset doesn't have a match in
@@ -4704,41 +5060,35 @@ class Dataset(Struct):
         >>> # Pass a list of key columns that contains a tuple.
         >>> ds_l.merge_lookup(ds_r, on=[("Symbol", "Primary_Symbol"), "Size"],
         ...                   suffixes=["_1", "_2"])
-        #   Size   Symbol   Value_1   Trader   Value_2
-        -   ----   ------   -------   ------   -------
-        0    500   GME         0.72   Elon        0.56
-        1    150   AMZN        0.85   Josh        0.89
-        2    430   TSLA        0.14   Nate        0.28
-        3    225   SPY         0.55                nan
-        4    430   TSLA        0.77   Nate        0.28
-        5    320   AMZN        0.65                nan
-        6    175   GME         0.23                nan
-        7    620   SPY         0.15                nan
-        8    135   GME         0.43                nan
-        9    260   TSLA        0.25                nan
+          #   Size   Symbol   Value_1   Primary_Symbol   Trader   Value_2
+        ---   ----   ------   -------   --------------   ------   -------
+          0    500   GME         0.72   GME              Elon        0.56
+          1    150   AMZN        0.85   AMZN             Josh        0.89
+          2    430   TSLA        0.14   TSLA             Nate        0.28
+        ...    ...   ...          ...   ...              ...          ...
+          7    620   SPY         0.15                                 nan
+          8    135   GME         0.43                                 nan
+          9    260   TSLA        0.25                                 nan
         <BLANKLINE>
-        [10 rows x 5 columns] total bytes: 280.0 B
+        [10 rows x 6 columns] total bytes: 360.0 B
 
-        When the right `Dataset` has more than one matching key, use `keep` to
-        specify which one to use:
+        When the right :py:class:`~.rt_dataset.Dataset` has more than one matching key,
+        use ``keep`` to specify which one to use:
 
         >>> ds_l = rt.Dataset({"Symbol": rt.FA(["GME", "AMZN", "TSLA", "SPY", "TSLA",
         ...                                     "AMZN", "GME", "SPY", "GME", "TSLA"])})
         >>> ds_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "GME", "AMZN", "SPY", "SPY"]),
         ...                    "Trader": rt.FA(["Nate", "Elon", "Josh", "Dan", "Amy"])})
         >>> ds_l.merge_lookup(ds_r, on="Symbol", keep="last")
-        #   Symbol   Trader
-        -   ------   ------
-        0   GME      Elon
-        1   AMZN     Josh
-        2   TSLA     Nate
-        3   SPY      Amy
-        4   TSLA     Nate
-        5   AMZN     Josh
-        6   GME      Elon
-        7   SPY      Amy
-        8   GME      Elon
-        9   TSLA     Nate
+          #   Symbol   Trader
+        ---   ------   ------
+          0   GME      Elon
+          1   AMZN     Josh
+          2   TSLA     Nate
+        ...   ...      ...
+          7   SPY      Amy
+          8   GME      Elon
+          9   TSLA     Nate
         <BLANKLINE>
         [10 rows x 2 columns] total bytes: 80.0 B
 
@@ -4753,7 +5103,7 @@ class Dataset(Struct):
         1    nan   b           Inv
         2   2.00   c             2
         <BLANKLINE>
-        [3 rows x 3 columns] total bytes: 72.0 B
+        [3 rows x 3 columns] total bytes: 51.0 B
         """
         # Make sure the suffix/suffixes/inplace aren't incorrectly combined.
         if suffixes is not None:
@@ -5121,7 +5471,7 @@ class Dataset(Struct):
             if coldict is not None:
                 for k, d in footerdict.items():
                     v = coldict.get(k, None)
-                    if v:
+                    if v is not None:
                         d[colname] = v
         return footerdict
 
@@ -5309,13 +5659,82 @@ class Dataset(Struct):
     # -------------------------------------------------------
     def add_matrix(self, arr, names: Optional[List[str]] = None) -> None:
         """
-        Add a 2-dimensional matrix as columns in a dataset.
+        Add a two-dimensional `ndarray` as columns to the
+        :py:class:`~.rt_dataset.Dataset`.
+
+        Set the names of the added columns by passing a list of strings to ``names``.
+        :py:meth:`~.rt_dataset.Dataset.add_matrix` overwrites any existing columns with
+        the same names. If you don't pass column names, the default name is ``"col_N"``.
+
+        If the :py:class:`~.rt_dataset.Dataset` is empty, ``arr`` can be an `ndarray` of
+        any size.
+
+        An `ndarray` can hold only one data type. If you want to add columns with
+        different data types, create one `ndarray` for each data type and call
+        :py:class:`~.rt_dataset.Dataset.add_matrix` with a different set of column names
+        for each `ndarray`.
 
         Parameters
         ----------
-        arr : 2-d ndarray
+        arr : `ndarray`
+            A two-dimensional `ndarray` to add to the :py:class:`~.rt_dataset.Dataset`.
+            The length of ``arr`` must match the length of the existing columns in the
+            :py:class:`~.rt_dataset.Dataset`.
         names : list of str, optional
-            optionally provide column names
+            A list of names to apply to the added columns. If not provided, the columns
+            have a default name of ``"col_N"``.
+
+        Examples
+        --------
+        Construct an empty :py:class:`~.rt_dataset.Dataset` and add columns to it using
+        :py:meth:`~.rt_dataset.Dataset.add_matrix`. Pass a two-dimensional `ndarray` to
+        the method:
+
+        >>> ds = rt.Dataset()
+        >>> initial_cols = np.array([[0, 1],
+        ...                          [0, 1],
+        ...                          [0, 1]])
+        >>> ds.add_matrix(initial_cols)
+        >>> ds
+        #   col_0   col_1
+        -   -----   -----
+        0       0       1
+        1       0       1
+        2       0       1
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
+
+        Pass another two-dimensional `ndarray` to :py:meth:`~.rt_dataset.Dataset.add_matrix`
+        to add the data to the :py:class:`~.rt_dataset.Dataset` as columns. Pass a list
+        to ``names`` to avoid overwriting the existing columns with default names:
+
+        >>> new_cols = np.array([[1, 1, 1],
+        ...                      [2, 4, 8],
+        ...                      [3, 9, 27]])
+        >>> ds.add_matrix(new_cols, names=["Number", "Squared", "Cubed"])
+        >>> ds
+        #   col_0   col_1   Number   Squared   Cubed
+        -   -----   -----   ------   -------   -----
+        0       0       1        1         1       1
+        1       0       1        2         4       8
+        2       0       1        3         9      27
+        <BLANKLINE>
+        [3 rows x 5 columns] total bytes: 120.0 B
+
+        Add columns of strings:
+
+        >>> string_cols = np.array([["First", "A"],
+        ...                         ["Second", "B"],
+        ...                         ["Third", "C"]])
+        >>> ds.add_matrix(string_cols, names=["Order", "Letter"])
+        >>> ds
+        #   col_0   col_1   Number   Squared   Cubed   Order    Letter
+        -   -----   -----   ------   -------   -----   ------   ------
+        0       0       1        1         1       1   First    A
+        1       0       1        2         4       8   Second   B
+        2       0       1        3         9      27   Third    C
+        <BLANKLINE>
+        [3 rows x 7 columns] total bytes: 156.0 B
         """
 
         if names is not None:
@@ -5419,7 +5838,7 @@ class Dataset(Struct):
         seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None,
     ) -> "Dataset":
         """
-        Return a given number of randomly selected `Dataset` rows.
+        Return a given number of randomly selected :py:class:`~.rt_dataset.Dataset` rows.
 
         This function is useful for spot-checking your data, especially if the
         first or last rows aren't representative.
@@ -5427,62 +5846,67 @@ class Dataset(Struct):
         Parameters
         ----------
         N : int, default 10
-            Number of rows to select. The entire `Dataset` is returned if `N`
-            is greater than the number of `Dataset` rows.
+            Number of rows to select. The entire :py:class:`~.rt_dataset.Dataset` is
+            returned if ``N`` is greater than the number of
+            :py:class:`~.rt_dataset.Dataset` rows.
         filter : array (bool or int), optional
             A boolean mask or index array to filter values before selection. A boolean
-            mask must have the same length as the columns of the original `Dataset`.
+            mask must have the same length as the columns of the original
+            :py:class:`~.rt_dataset.Dataset`.
         seed : int or other types, optional
             A seed to initialize the random number generator. If one is not
             provided, the generator is initialized using random data from the OS.
-            For details and other accepted types, see the `seed` parameter for
-            `numpy.random.default_rng`.
+            For details and other accepted types, see the ``seed`` parameter for
+            :py:meth:`numpy.random.default_rng`.
 
         Returns
         -------
-        Dataset
-            A new `Dataset` containing the randomly selected rows.
+        :py:class:`~.rt_dataset.Dataset`
+            A new :py:class:`~.rt_dataset.Dataset` containing the randomly selected rows.
 
         See Also
         --------
-        Dataset.head : Return the first rows of a `Dataset`.
-        Dataset.tail : Return the last rows of a `Dataset`.
-        .FastArray.sample :
-            Return a given number of randomly selected values from a `.FastArray`.
+        :py:meth:`.rt_dataset.Dataset.head` :
+            Return the first rows of a :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_dataset.Dataset.tail` :
+            Return the last rows of a :py:class:`~.rt_dataset.Dataset`.
+        :py:meth:`.rt_fastarray.FastArray.sample` :
+            Return a given number of randomly selected values from a
+            :py:class:`~.rt_fastarray.FastArray`.
 
         Examples
         --------
         >>> ds = rt.Dataset({"A": rt.FA([0, 1, 2, 3, 4]),
         ...                  "B": rt.FA(["a", "b", "c", "d", "e"])})
-        >>> ds.sample(2)
-        #   A   B  # random
-        -   -   -
-        0   0   a
-        1   1   b
-        <BLANKLINE>
-        [2 rows x 2 columns] total bytes: 10.0 B
-
-        Filter with a boolean mask array:
-
-        >>> f = ds.A > 2
-        >>> ds.sample(2, filter=f)
-        #   A   B  # random
+        >>> ds.sample(2, seed=0)
+        #   A   B
         -   -   -
         0   3   d
         1   4   e
         <BLANKLINE>
-        [2 rows x 2 columns] total bytes: 10.0 B
+        [2 rows x 2 columns] total bytes: 18.0 B
+
+        Filter with a boolean mask array:
+
+        >>> f = ds.A > 2
+        >>> ds.sample(2, filter=f, seed=0)
+        #   A   B
+        -   -   -
+        0   3   d
+        1   4   e
+        <BLANKLINE>
+        [2 rows x 2 columns] total bytes: 18.0 B
 
         Filter with an index array:
 
         >>> f = rt.FA([0, 1, 2])
-        >>> ds.sample(2, filter=f)
-        #   A   B  # random
+        >>> ds.sample(2, filter=f, seed=0)
+        #   A   B
         -   -   -
-        0   0   a
+        0   1   b
         1   2   c
         <BLANKLINE>
-        [2 rows x 2 columns] total bytes: 10.0 B
+        [2 rows x 2 columns] total bytes: 18.0 B
         """
         return sample(self, N=N, filter=filter, seed=seed)
 
@@ -6136,36 +6560,42 @@ class Dataset(Struct):
     # --------------------------------------------------------------------------
     def describe(self, q: Optional[List[float]] = None, fill_value=None) -> "Dataset":
         """
-        Generate descriptive statistics for a Dataset's numerical columns.
+        Generate descriptive statistics for the numerical columns of a
+        :py:class:`~.rt_dataset.Dataset`.
 
         Descriptive statistics include those that summarize the central tendency,
-        dispersion, and shape of a Dataset's distribution, excluding `NaN` values.
+        dispersion, and shape of distribution of a :py:class:~.rt_dataset.Dataset`,
+        excluding `NaN` values.
 
         Columns remain stable, with a 'Stats' column added to provide labels for each
-        statistical measure. Non-numerical columns are ignored. If the Dataset has no
-        numerical columns, only the column of labels is returned.
+        statistical measure. Non-numerical columns are ignored. If the
+        :py:class:`~.rt_dataset.Dataset` has no numerical columns, only the column of
+        labels is returned.
 
         Parameters
         ----------
         q : list of float, default [0.10, 0.25, 0.50, 0.75, 0.90]
             The quantiles to calculate. All should fall between 0 and 1.
-        fill_value: int, float, or str, default None
+        fill_value : int, float, or str, default `None`
             Placeholder value for non-computable columns. Can be a single value, or a
-            list or FastArray of values that is the same length as the Dataset.
+            list or :py:class:`~.rt_fastarray.FastArray` of values that is the same
+            length as the :py:class:`~.rt_dataset.Dataset`.
 
         Returns
         -------
-        Dataset
-            A Dataset containing a label column and the calculated values for each
-            numerical column, or filled values (if provided) for non-numerical columns.
+        :py:class:`~.rt_dataset.Dataset`
+            A :py:class:`~.rt_dataset.Dataset` containing a label column and the
+            calculated values for each numerical column, or filled values (if provided)
+            for non-numerical columns.
 
         Warnings
         --------
-        This routine can be expensive if the Dataset is large.
+        This routine can be expensive if the :py:class:`~.rt_dataset.Dataset` is large.
 
         See Also
         --------
-        FastArray.describe : Generates descriptive statistics for a FastArray.
+        :py:meth:`.rt_fastarray.FastArray.describe` :
+            Generates descriptive statistics for a :py:class:`~.rt_fastarray.FastArray`.
 
         Notes
         -----
@@ -6292,28 +6722,29 @@ class Dataset(Struct):
     @classmethod
     def concat_rows(cls: type["Dataset"], ds_list: Iterable["Dataset"], destroy: bool = False) -> "Dataset":
         """
-        Stack columns from multiple `Dataset` objects vertically (row-wise).
+        Stack columns from multiple :py:class:`~.rt_dataset.Dataset` objects vertically
+        (row-wise).
 
-        Columns must have the same name to be concatenated. If a `Dataset` is missing a
-        column that appears in others, the gap is filled with the default invalid value
-        for the existing column's data type (for example, `NaN` for floats).
+        Columns must have the same name to be concatenated. If a
+        :py:class:`~.rt_dataset.Dataset` is missing a column that appears in others, the
+        gap is filled with the default invalid value for the existing column's data type
+        (for example, `NaN` for floats).
 
-        `Categorical` objects are merged and stacked.
+        :py:class:`~.rt_categorical.Categorical` objects are merged and stacked.
 
         Parameters
         ----------
-        cls : class
-            The class (`Dataset`).
-        ds_list : iterable of `Dataset` objects
-            The `Dataset` objects to be concatenated.
-        destroy : bool, default False
-            Set to True to destroy the input `Dataset` objects to save memory.
+        ds_list : iterable of :py:class:`~.rt_dataset.Dataset` objects
+            The :py:class:`~.rt_dataset.Dataset` objects to be concatenated.
+        destroy : bool, default `False`
+            Set to `True` to destroy the input :py:class:`~.rt_dataset.Dataset` objects
+            to save memory.
 
         Returns
         -------
-        `Dataset`
-            A new `Dataset` created from the concatenated rows of the input `Dataset`
-            objects.
+        :py:class:`~.rt_dataset.Dataset`
+            A new :py:class:`~.rt_dataset.Dataset` created from the concatenated rows of
+            the input :py:class:`~.rt_dataset.Dataset` objects.
 
         Warnings
         --------
@@ -6322,15 +6753,15 @@ class Dataset(Struct):
           run-time warning is issued; in future versions of Riptable, general dtype
           mismatches will not be allowed.
 
-        * `Dataset` columns with two dimensions are technically supported by Riptable,
-          but not recommended. Concatenating `Dataset` objects with two-dimensional
-          columns is possible, but not recommended because it may produce unexpected
-          results.
+        * :py:class:`~.rt_dataset.Dataset` columns with two dimensions are technically
+          supported by Riptable, but not recommended. Concatenating
+          :py:class:`~.rt_dataset.Dataset` objects with two-dimensional columns is
+          possible, but not recommended because it may produce unexpected results.
 
         See Also
         --------
-        Dataset.concat_columns : Horizontally stack columns from multiple `Dataset`
-                                 objects.
+        :py:meth:`.rt_dataset.Dataset.concat_columns` : Horizontally stack columns from
+            multiple :py:class:`~.rt_dataset.Dataset` objects.
 
         Examples
         --------
@@ -6342,12 +6773,16 @@ class Dataset(Struct):
         0   A0   B0
         1   A1   B1
         2   A2   B2
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 12.0 B
         >>> ds2
         #   A    B
         -   --   --
         0   A3   B3
         1   A4   B4
         2   A5   B5
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 12.0 B
 
         Basic concatenation:
 
@@ -6360,9 +6795,12 @@ class Dataset(Struct):
         3   A3   B3
         4   A4   B4
         5   A5   B5
+        <BLANKLINE>
+        [6 rows x 2 columns] total bytes: 24.0 B
 
-        When a column exists in one `Dataset` but is missing in another, the gap is
-        filled with the default invalid value for the existing column.
+        When a column exists in one :py:class:`~.rt_dataset.Dataset` but is missing in
+        another, the gap is filled with the default invalid value for the existing
+        column.
 
         >>> ds1 = rt.Dataset({'A': rt.arange(3)})
         >>> ds2 = rt.Dataset({'A': rt.arange(3, 6), 'B': rt.arange(3, 6)})
@@ -6375,8 +6813,11 @@ class Dataset(Struct):
         3   3     3
         4   4     4
         5   5     5
+        <BLANKLINE>
+        [6 rows x 2 columns] total bytes: 96.0 B
 
-        Concatenate two `Dataset` objects with `Categorical` columns:
+        Concatenate two :py:class:`~.rt_dataset.Dataset` objects with
+        :py:class:`~.rt_categorical.Categorical` columns:
 
         >>> ds1 = rt.Dataset({'cat_col': rt.Categorical(['a','a','b','c','a']),
         ...                   'num_col': rt.arange(5)})
@@ -6384,20 +6825,19 @@ class Dataset(Struct):
         ...                   'num_col': rt.arange(5)})
         >>> ds_concat = rt.Dataset.concat_rows([ds1, ds2])
         >>> ds_concat
-        #   cat_col   num_col
-        -   -------   -------
-        0   a               0
-        1   a               1
-        2   b               2
-        3   c               3
-        4   a               4
-        5   b               0
-        6   b               1
-        7   a               2
-        8   c               3
-        9   d               4
+          #   cat_col   num_col
+        ---   -------   -------
+          0   a               0
+          1   a               1
+          2   b               2
+        ...   ...           ...
+          7   a               2
+          8   c               3
+          9   d               4
+        <BLANKLINE>
+        [10 rows x 2 columns] total bytes: 94.0 B
 
-        The `Categorical` objects are merged:
+        The :py:class:`~.rt_cateorical.Categorical` objects are merged:
 
         >>> ds_concat.cat_col
         Categorical([a, a, b, c, a, b, b, a, c, d]) Length: 10
@@ -6412,23 +6852,22 @@ class Dataset(Struct):
         cls: type["Dataset"], dsets, do_copy: bool, on_duplicate: str = "raise", on_mismatch: str = "warn"
     ):
         r"""
-        Stack columns from multiple `Dataset` objects horizontally (column-wise).
+        Stack columns from multiple :py:class:`~.rt_dataset.Dataset` objects
+        horizontally (column-wise).
 
-        All `Dataset` columns must be the same length.
+        All :py:class:`~.rt_dataset.Dataset` columns must be the same length.
 
         Parameters
         ----------
-        cls : class
-            The class (`Dataset`).
-        dsets : iterable of `Dataset` objects
-            The `Dataset` objects to be concatenated.
+        dsets : iterable of :py:class:`~.rt_dataset.Dataset` objects
+            The :py:class:`~.rt_dataset.Dataset` objects to be concatenated.
         do_copy : bool
-            When True, makes deep copies of the arrays. When False, shallow copies are
+            When `True`, makes deep copies of the arrays. When `False`, shallow copies are
             made.
         on_duplicate : {'raise', 'first', 'last'}, default 'raise'
             Governs behavior in case of duplicate column names.
 
-            * 'raise' (default): Raises a KeyError. Overrides all `on_mismatch` values.
+            * 'raise' (default): Raises a KeyError. Overrides all ``on_mismatch`` values.
             * 'first': Keeps the column data from the first duplicate column. Overridden
               by ``on_mismatch = 'raise'``.
             * 'last': Keeps the column data from the last duplicate column. Overridden
@@ -6444,13 +6883,15 @@ class Dataset(Struct):
 
         Returns
         -------
-        `Dataset`
-            A new `Dataset` created from the concatenated columns of the input `Dataset`
-            objects.
+        :py:class:`~.rt_dataset.Dataset`
+            A new :py:class:`~.rt_dataset.Dataset` created from the concatenated columns
+            of the input :py:class:`~.rt_dataset.Dataset` objects.
 
         See Also
         --------
-        Dataset.concat_rows : Vertically stack columns from multiple `Dataset` objects.
+        :py:meth:`.rt_dataset.Dataset.concat_rows` :
+            Vertically stack columns from multiple :py:class:`~.rt_dataset.Dataset`
+            objects.
 
         Examples
         --------
@@ -6464,6 +6905,8 @@ class Dataset(Struct):
         0   A0   B0   C0   D0
         1   A1   B1   C1   D1
         2   A2   B2   C2   D2
+        <BLANKLINE>
+        [3 rows x 4 columns] total bytes: 24.0 B
 
         With a duplicated column 'B' and ``on_duplicate = 'last'``:
 
@@ -6477,6 +6920,8 @@ class Dataset(Struct):
         0   A0   B6   C0   D0
         1   A1   B7   C1   D1
         2   A2   B8   C2   D2
+        <BLANKLINE>
+        [3 rows x 4 columns] total bytes: 24.0 B
 
         With ``on_mismatch = 'raise'``:
 

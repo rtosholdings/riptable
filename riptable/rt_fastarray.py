@@ -464,7 +464,7 @@ class FastArray(np.ndarray):
     To view the NumPy array as a `FastArray` (which is slightly less expensive than
     using the constructor), use the `view` method.
 
-    >>> fa = np_arr.view(FA)
+    >>> fa = np_arr.view(rt.FA)
     >>> fa
     FastArray([1, 2, 3])
 
@@ -485,14 +485,14 @@ class FastArray(np.ndarray):
     >>> # Create a FastArray:
     >>> array = rt.arange(8)**2
     >>> array
-    FastArray([0, 1, 4, 9, 16, 25, 36, 49])
+    FastArray([ 0,  1,  4,  9, 16, 25, 36, 49])
     >>> # Use Python slicing to get elements 2, 3, and 4:
     >>> array[2:5]
-    FastArray([4, 9, 16])
+    FastArray([ 4,  9, 16])
 
     >>> # Use fancy indexing to get elements 2, 4, and 1 (in that order):
     >>> array[[2, 4, 1]]
-    FastArray([4, 16, 1])
+    FastArray([ 4, 16,  1])
 
     For more details, see the examples for 1-dimensional arrays in NumPy's docs:
     `Indexing on ndarrays <https://numpy.org/doc/stable/user/basics.indexing.html>`_.
@@ -506,16 +506,16 @@ class FastArray(np.ndarray):
     >>> # Create a Boolean mask:
     >>> evenMask = (array % 2 == 0)
     >>> evenMask
-    FastArray([True, False, True, False, True, False, True, False])
+    FastArray([ True, False,  True, False,  True, False,  True, False])
     >>> # Index using the Boolean mask:
     >>> array[evenMask]
-    FastArray([0, 4, 16, 36])
+    FastArray([ 0,  4, 16, 36])
 
     **How to Subclass FastArray**
 
     Include the required class definition:
 
-    >>> class TestSubclass(FastArray):
+    >>> class TestSubclass(rt.FastArray):
     ...     def __new__(cls, arr, **args):
     ...         # Before this call, arr needs to be a np.ndarray instance.
     ...         return arr.view(cls)
@@ -1002,6 +1002,7 @@ class FastArray(np.ndarray):
         (but not the displayed column name).
 
         >>> ds.Column_Name.set_name('New Name')
+        FastArray([1, 2, 3])
         >>> a.get_name()
         'New Name'
         >>> ds
@@ -1010,6 +1011,8 @@ class FastArray(np.ndarray):
         0             1
         1             2
         2             3
+        <BLANKLINE>
+        [3 rows x 1 columns] total bytes: 24.0 B
 
         When a named `FastArray` is added to a `Dataset` column, a new `FastArray`
         instance is created that inherits the column name. The original instance is
@@ -1017,6 +1020,7 @@ class FastArray(np.ndarray):
 
         >>> a = rt.FastArray([1, 2, 3])
         >>> a.set_name('FA Name')
+        FastArray([1, 2, 3])
         >>> ds = rt.Dataset()
         >>> ds.Column_Name = a
         >>> ds.Column_Name.get_name()
@@ -1083,7 +1087,7 @@ class FastArray(np.ndarray):
         To view a NumPy array as a `FastArray`, you can use `numpy.ndarray.view`:
 
         >>> npview.view(rt.FastArray)
-        FastArray([1, 2, 10, 4, 5])
+        FastArray([ 1,  2, 10,  4,  5])
         """
         return self.view(np.ndarray)
 
@@ -1953,43 +1957,46 @@ class FastArray(np.ndarray):
         name: Optional[str] = None,
     ) -> None:
         """
-        Save a `FastArray` to an .sds file.
+        Save a :py:class:`~.rt_fastarray.FastArray` to an .sds file.
 
         Parameters
         ----------
         filepath : str or os.PathLike
-            Path for the .sds file. If there's a trailing slash, `filepath` is treated
-            as a path to a directory and you also need to specify `name`. Alternatively,
+            Path for the .sds file. If there's a trailing slash, ``filepath`` is treated
+            as a path to a directory and you also need to specify ``name``. Alternatively,
             you can include a file name (with or without the .sds extension) at the end
-            of `filepath` (with no trailing slash), and an .sds file with that name is
+            of ``filepath`` (with no trailing slash), and an .sds file with that name is
             created. Directories that don't yet exist are created.
         share : str, optional
-            If specified, the `FastArray` is saved to shared memory (NOT to disk) and
-            path information from `filepath` is discarded. A `name` value must be
-            provided. When shared memory is used, data is not compressed. Note that
-            shared memory functions are not currently supported on Windows.
-        compress : bool, default True
+            If specified, the :py:class:`~.rt_fastarray.FastArray` is saved to shared
+            memory (NOT to disk) and path information from ``filepath`` is discarded. A
+            ``name`` value must be provided. When shared memory is used, data is not
+            compressed. Note that shared memory functions are not currently supported on
+            Windows.
+        compress : bool, default `True`
             When `True` (the default), compression is used when writing to the .sds
             file. Otherwise, no compression is used. (If shared memory is used, data is
             always saved uncompressed.)
-        overwrite : bool, default True
+        overwrite : bool, default `True`
             When `True` (the default), the user is not prompted to specify whether or
             not to overwrite an existing .sds file. When set to `False`, a prompt is
             displayed.
         name : str, optional
             Name for the .sds file. The .sds extension is not required. Note that if
-            `name` is provided, `filepath` is treated as a path to a directory, even if
-            `filepath` has no trailing slash.
+            `name` is provided, ``filepath`` is treated as a path to a directory, even
+            if ``filepath`` has no trailing slash.
 
         Returns
         -------
-        An .sds file containing the `FastArray`.
+        An .sds file containing the :py:class:`~.rt_fastarray.FastArray`.
 
         See Also
         --------
-        ~riptable.rt_sds.save_sds :
-            Save `Dataset` objects and arrays into a single .sds file.
-        ~riptable.rt_sds.load_sds : Load an .sds file.
+        :py:func:`.rt_sds.save_sds` :
+            Save :py:class:`~.rt_dataset.Dataset` objects and arrays into a single .sds
+            file.
+        :py:func:`.rt_sds.load_sds` :
+            Load an .sds file.
 
         Examples
         --------
@@ -2522,7 +2529,7 @@ class FastArray(np.ndarray):
         sorted : bool, default True
             When True (the default), unique values are returned in sorted order. Set to
             False to return them in order of first appearance.
-        filter: ndarray of bool, default None
+        filter : ndarray of bool, default None
             If provided, any False values will be ignored in the calculation.
 
         Returns
@@ -2544,6 +2551,8 @@ class FastArray(np.ndarray):
               1       1
               2       3
               3       2
+        <BLANKLINE>
+        [4 rows x 2 columns] total bytes: 48.0 B
 
         With ``sorted = False``:
 
@@ -2554,6 +2563,8 @@ class FastArray(np.ndarray):
               2       3
               1       1
               3       2
+        <BLANKLINE>
+        [4 rows x 2 columns] total bytes: 48.0 B
         """
         unique_counts = unique(self, sorted=sorted, return_counts=True, filter=filter)
         name = self.get_name()
@@ -2691,20 +2702,20 @@ class FastArray(np.ndarray):
     # ---------------------------------------------------------------------------
     def issorted(self) -> bool:
         """
-        Return True if the array is sorted, False otherwise.
+        Return `True` if the array is sorted, `False` otherwise.
 
         NaNs at the end of an array are considered sorted.
 
-        Calls :meth:`riptable.issorted`.
+        Calls :py:func:`~.rt_numpy.issorted`.
 
         Returns
         -------
         bool
-            True if the array is sorted, False otherwise.
+            `True` if the array is sorted, `False` otherwise.
 
         See Also
         --------
-        riptable.issorted
+        :py:func:`.rt_numpy.issorted`
 
         Examples
         --------
@@ -2760,20 +2771,30 @@ class FastArray(np.ndarray):
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans or indices.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans or indices.
 
         See Also
         --------
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, Categorical.isnan,
-        Categorical.isnotnan, Categorical.notna, Date.isnan, Date.isnotnan,
-        DateTimeNano.isnan, DateTimeNano.isnotnan
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that contains
-            at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_datetime.Date.isnan`
+        :py:meth:`.rt_datetime.Date.isnotnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains at least one NaN.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each all-NaN
+            :py:class:`~.rt_dataset.Dataset` row.
 
         Examples
         --------
@@ -2784,36 +2805,46 @@ class FastArray(np.ndarray):
         With ``fancy = True``:
 
         >>> a.isnan(fancy = True)
-        FastArray([0, 1])
+        FastArray([0, 1], dtype=int32)
         """
         return self._unary_op(MATH_OPERATION.ISNAN, fancy=fancy)
 
     def isnotnan(self, fancy=False):
         """
-        Return a boolean array that's True for each element that's not a NaN (Not a
-        Number), False otherwise.
+        Return a boolean array that's `True` for each element that's not a NaN (Not a
+        Number), `False` otherwise.
 
         Parameters
         ----------
-        fancy : bool, default False
-            Set to True to instead return the indices of the True (non-NaN) values.
+        fancy : bool, default `False`
+            Set to `True` to instead return the indices of the `True` (non-NaN) values.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans or indices.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans or indices.
 
         See Also
         --------
-        FastArray.isnan, FastArray.notna, FastArray.isnanorzero, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, Categorical.isnan,
-        Categorical.isnotnan, Categorical.notna, Date.isnan, Date.isnotnan,
-        DateTimeNano.isnan, DateTimeNano.isnotnan
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that contains
-            at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_datetime.Date.isnan`
+        :py:meth:`.rt_datetime.Date.isnotnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains at least one NaN.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each all-NaN
+            :py:class:`~.rt_dataset.Dataset` row.
 
         Examples
         --------
@@ -2824,35 +2855,45 @@ class FastArray(np.ndarray):
         With ``fancy = True``:
 
         >>> a.isnotnan(fancy = True)
-        FastArray([1, 2])
+        FastArray([1, 2], dtype=int32)
         """
         return self._unary_op(MATH_OPERATION.ISNOTNAN, fancy=fancy)
 
     def isnanorzero(self, fancy=False):
         """
-        Return a boolean array that's True for each element that's a NaN (Not a Number)
-        or zero, False otherwise.
+        Return a boolean array that's `True` for each element that's a NaN (Not a
+        Number) or zero, `False` otherwise.
 
         Parameters
         ----------
-        fancy : bool, default False
-            Set to True to instead return the indices of the True (NaN or zero) values.
+        fancy : bool, default `False`
+            Set to `True` to instead return the indices of the `True` (NaN or zero)
+            values.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans or indices.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans or indices.
 
         See Also
         --------
-        riptable.isnanorzero, riptable.isnan, riptable.isnotnan, FastArray.isnan,
-        FastArray.isnotnan, Categorical.isnan, Categorical.isnotnan, Date.isnan,
-        Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that contains
-            at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_datetime.Date.isnan`
+        :py:meth:`.rt_datetime.Date.isnotnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains at least one NaN.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each all-NaN
+            :py:class:`~.rt_dataset.Dataset` row.
 
         Examples
         --------
@@ -2863,44 +2904,50 @@ class FastArray(np.ndarray):
         With ``fancy = True``:
 
         >>> a.isnanorzero(fancy = True)
-        FastArray([0, 1])
+        FastArray([0, 1], dtype=int32)
         """
         return self._unary_op(MATH_OPERATION.ISNANORZERO, fancy=fancy)
 
     def isfinite(self, fancy=False):
         """
-        Return a boolean array that's True for each finite `FastArray` element, False
-        otherwise.
+        Return a boolean array that's `True` for each finite
+        :py:class:`~.rt_fastarray.FastArray` element, `False` otherwise.
 
         A value is considered to be finite if it's not positive or negative infinity
         or a NaN (Not a Number).
 
         Parameters
         ----------
-        fancy : bool, default False
-            Set to True to instead return the indices of the True (finite) values.
+        fancy : bool, default `False`
+            Set to `True` to instead return the indices of the `True` (finite) values.
 
         Returns
         -------
-        `FastArray`
+        :py:class:`~.rt_fastarray.FastArray`
             An array or booleans or indices.
 
         See Also
         --------
-        FastArray.isnotfinite, riptable.isfinite, riptable.isnotfinite, riptable.isinf,
-        riptable.isnotinf, FastArray.isinf, FastArray.isnotinf
-        Dataset.mask_or_isfinite :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one finite value.
-        Dataset.mask_and_isfinite :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            finite values.
-        Dataset.mask_or_isinf :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one value that's positive or negative infinity.
-        Dataset.mask_and_isinf :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            infinite values.
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:func:`.rt_numpy.isfinite`
+        :py:func:`.rt_numpy.isnotfinite`
+        :py:func:`.rt_numpy.isinf`
+        :py:func:`.rt_numpy.isnotinf`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one value that's
+            positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all infinite values.
 
         Examples
         --------
@@ -2911,44 +2958,51 @@ class FastArray(np.ndarray):
         With ``fancy = True``:
 
         >>> a.isfinite(fancy = True)
-        FastArray([3])
+        FastArray([3], dtype=int32)
         """
         return self._unary_op(MATH_OPERATION.ISFINITE, fancy=fancy)
 
     def isnotfinite(self, fancy=False):
         """
-        Return a boolean array that's True for each non-finite `FastArray` element,
-        False otherwise.
+        Return a boolean array that's `True` for each non-finite
+        :py:class:`~.rt_fastarray.FastArray` element, `False` otherwise.
 
         A value is considered to be finite if it's not positive or negative infinity
         or a NaN (Not a Number).
 
         Parameters
         ----------
-        fancy : bool, default False
-            Set to True to instead return the indices of the True (non-finite) values.
+        fancy : bool, default `False`
+            Set to `True` to instead return the indices of the `True` (non-finite)
+            values.
 
         Returns
         -------
-        `FastArray`
+        :py:class:`~.rt_fastarray.FastArray`
             An array or booleans or indices.
 
         See Also
         --------
-        FastArray.isfinite, riptable.isfinite, riptable.isnotfinite, riptable.isinf,
-        riptable.isnotinf, FastArray.isinf, FastArray.isnotinf
-        Dataset.mask_or_isfinite :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one finite value.
-        Dataset.mask_and_isfinite :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            finite values.
-        Dataset.mask_or_isinf :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one value that's positive or negative infinity.
-        Dataset.mask_and_isinf :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            infinite values.
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:func:`.rt_numpy.isfinite`
+        :py:func:`.rt_numpy.isnotfinite`
+        :py:func:`.rt_numpy.isinf`
+        :py:func:`.rt_numpy.isnotinf`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one value that's
+            positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all infinite values.
 
         Examples
         --------
@@ -2959,41 +3013,48 @@ class FastArray(np.ndarray):
         With ``fancy = True``:
 
         >>> a.isnotfinite(fancy = True)
-        FastArray([0, 1, 2])
+        FastArray([0, 1, 2], dtype=int32)
         """
         return self._unary_op(MATH_OPERATION.ISNOTFINITE, fancy=fancy)
 
     def isinf(self, fancy=False):
         """
-        Return a boolean array that's True for each `FastArray` element that's positive
-        or negative infinity, False otherwise.
+        Return a boolean array that's `True` for each
+        :py:class:`~.rt_fastarray.FastArray` element that's positive or negative
+        infinity, `False` otherwise.
 
         Parameters
         ----------
-        fancy : bool, default False
-            Set to True to instead return the indices of the True (infinite) values.
+        fancy : bool, default `False`
+            Set to `True` to instead return the indices of the `True` (infinite) values.
 
         Returns
         -------
-        `FastArray`
+        :py:class:`~.rt_fastarray.FastArray`
             An array or booleans or indices.
 
         See Also
         --------
-        FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite,
-        riptable.isinf, riptable.isnotinf, riptable.isfinite, riptable.isnotfinite
-        Dataset.mask_or_isfinite :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one finite value.
-        Dataset.mask_and_isfinite :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            finite values.
-        Dataset.mask_or_isinf :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one value that's positive or negative infinity.
-        Dataset.mask_and_isinf :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            infinite values.
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:func:`.rt_numpy.isinf`
+        :py:func:`.rt_numpy.isnotinf`
+        :py:func:`.rt_numpy.isfinite`
+        :py:func:`.rt_numpy.isnotfinite`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one value that's
+            positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all infinite values.
 
         Examples
         --------
@@ -3004,19 +3065,20 @@ class FastArray(np.ndarray):
         With ``fancy = True``:
 
         >>> a.isinf(fancy = True)
-        FastArray([0, 1])
+        FastArray([0, 1], dtype=int32)
         """
         return self._unary_op(MATH_OPERATION.ISINF, fancy=fancy)
 
     def isnotinf(self, fancy=False):
         """
-        Return a boolean array that's True for each `FastArray` element that's not positive
-        or negative infinity, False otherwise.
+        Return a boolean array that's `True` for each
+        :py:class:`~.rt_fastarray.FastArray` element that's not positive or negative
+        infinity, `False` otherwise.
 
         Parameters
         ----------
-        fancy : bool, default False
-            Set to True to instead return the indices of the True (non-infinite) values.
+        fancy : bool, default `False`
+            Set to `True` to instead return the indices of the `True` (non-infinite) values.
 
         Returns
         -------
@@ -3025,20 +3087,26 @@ class FastArray(np.ndarray):
 
         See Also
         --------
-        FastArray.isinf, riptable.isnotinf, riptable.isinf, riptable.isfinite,
-        riptable.isnotfinite, FastArray.isfinite, FastArray.isnotfinite
-        Dataset.mask_or_isfinite :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one finite value.
-        Dataset.mask_and_isfinite :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            finite values.
-        Dataset.mask_or_isinf :
-            Return a boolean array that's True for each `Dataset` row that has at least
-            one value that's positive or negative infinity.
-        Dataset.mask_and_isinf :
-            Return a boolean array that's True for each `Dataset` row that contains all
-            infinite values.
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:func:`.rt_numpy.isnotinf`
+        :py:func:`.rt_numpy.isinf`
+        :py:func:`.rt_numpy.isfinite`
+        :py:func:`.rt_numpy.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that has at least one value that's
+            positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains all infinite values.
 
         Examples
         --------
@@ -3049,7 +3117,7 @@ class FastArray(np.ndarray):
         With ``fancy = True``:
 
         >>> a.isnotinf(fancy = True)
-        FastArray([2, 3])
+        FastArray([2, 3], dtype=int32)
         """
         return self._unary_op(MATH_OPERATION.ISNOTINF, fancy=fancy)
 
@@ -4329,61 +4397,64 @@ class FastArray(np.ndarray):
         """
         Replace NaN and invalid values with a specified value or nearby data.
 
-        Optionally, you can modify the original `FastArray` if it's not locked.
+        Optionally, you can modify the original :py:class:`~.rt_fastarray.FastArray` if
+        it's not locked.
 
         Parameters
         ----------
-        value : scalar or array, default None
+        value : scalar or array, default `None`
             A value or an array of values to replace all NaN and invalid values.
-            A `value` is required if ``method = None``. An array can be used only when
+            A ``value`` is required if ``method = None``. An array can be used only when
             ``method = None``. If an array is used, the number of values in the array
             must equal the number of NaN and invalid values.
-        method : {None, 'backfill', 'bfill', 'pad', 'ffill'}, default None
+        method : {None, 'backfill', 'bfill', 'pad', 'ffill'}, default `None`
             Method to use to propagate valid values.
 
             * backfill/bfill: Propagates the next encountered valid value backward.
-              Calls :meth:`FastArray.fill_backward`.
+              Calls :py:meth:`~.rt_fastarray.FastArray.fill_backward`.
             * pad/ffill: Propagates the last encountered valid value forward. Calls
-              :meth:`FastArray.fill_forward`.
+              :py:meth:`~.rt_fastarray.FastArray.fill_forward`.
             * None: A replacement value is required if ``method = None``. Calls
-              :meth:`FastArray.replacena`.
+              :py:meth:`~.rt_fastarray.FastArray.replacena`.
             If there's not a valid value to propagate forward or backward, the NaN or
-            invalid value is not replaced unless you also specify a `value`.
-        inplace : bool, default False
-            If False, return a copy of the `FastArray`. If True, modify original data.
-            This will modify any other views on this object. This fails if the
-            `FastArray` is locked.
-        limit : int, default None
-            If `method` is specified, this is the maximium number of consecutive NaN or
-            invalid values to fill. If there is a gap with more than this number of
-            consecutive NaN or invalid values, the gap will be only partially filled.
+            invalid value is not replaced unless you also specify a ``value``.
+        inplace : bool, default `False`
+            If `False`, return a copy of the :py:class:`~.rt_fastarray.FastArray`. If
+            `True`, modify original data. This modifies any other views on this object.
+            This fails if the :py:class:`~.rt_fastarray.FastArray` is locked.
+        limit : int, default `None`
+            If ``method`` is specified, this is the maximium number of consecutive NaN
+            or invalid values to fill. If there is a gap with more than this number of
+            consecutive NaN or invalid values, the gap is only partially filled.
 
         Returns
         -------
-        `FastArray`
-            The `FastArray` will be the same size and dtype as the original array.
+        :py:class:`~.rt_fastarray.FastArray`
+            The :py:class:`~.rt_fastarray.FastArray` is the same size and dtype as the
+            original array.
 
         See Also
         --------
-        riptable.rt_fastarraynumba.fill_forward : Replace NaN and invalid values with
+        :py:func:`.rt_fastarraynumba.fill_forward` : Replace NaN and invalid values with
             the last valid value.
-        riptable.rt_fastarraynumba.fill_backward : Replace NaN and invalid values with
-            the next valid value.
-        riptable.fill_forward : Replace NaN and invalid values with the last valid
-            value.
-        riptable.fill_backward : Replace NaN and invalid values with the next valid
-            value.
-        Dataset.fillna : Replace NaN and invalid values with a specified value or
-            nearby data.
-        FastArray.replacena : Replace NaN and invalid values with a specified value.
-        Categorical.fill_forward : Replace NaN and invalid values with the last valid
-            group value.
-        Categorical.fill_backward : Replace NaN and invalid values with the next valid
-            group value.
-        GroupBy.fill_forward : Replace NaN and invalid values with the last valid
-            group value.
-        GroupBy.fill_backward : Replace NaN and invalid values with the next valid
-            group value.
+        :py:func:`.rt_fastarraynumba.fill_backward` : Replace NaN and invalid values
+            with the next valid value.
+        :py:func:`.rt_numpy.fill_forward` : Replace NaN and invalid values with the last
+            valid value.
+        :py:func:`.rt_numpy.fill_backward` : Replace NaN and invalid values with the
+            next valid value.
+        :py:meth:`.rt_dataset.Dataset.fillna` : Replace NaN and invalid values with a
+            specified value or nearby data.
+        :py:meth:`.rt_fastarray.FastArray.replacena` : Replace NaN and invalid values
+            with a specified value.
+        :py:meth:`.rt_categorical.Categorical.fill_forward` : Replace NaN and invalid
+            values with the last valid group value.
+        :py:meth:`.rt_categorical.Categorical.fill_backward` : Replace NaN and invalid
+            values with the next valid group value.
+        :py:meth:`.rt_groupby.GroupBy.fill_forward` : Replace NaN and invalid values
+            with the last valid group value.
+        :py:meth:`.rt_groupby.GroupBy.fill_backward` : Replace NaN and invalid values
+            with the next valid group value.
 
         Examples
         --------
@@ -5498,7 +5569,7 @@ class FastArray(np.ndarray):
 
         Examples
         --------
-        >>> s=FA(['this','that','test ']*100_000)
+        >>> s=rt.FA(['this','that','test ']*100_000)
         >>> s.str.upper
         FastArray([b'THIS', b'THAT', b'TEST ', ..., b'THIS', b'THAT', b'TEST '],
                   dtype='|S5')

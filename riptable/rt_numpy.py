@@ -3924,13 +3924,7 @@ def nanstd(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     return np.nanstd(*args, **kwargs)
 
 
-# keyword argument for interpolation method in np.(nan)quantile was changed in 1.22.0
-import pkg_resources
-
-if pkg_resources.parse_version(np.__version__) >= pkg_resources.parse_version("1.22.0"):
-    QUANTILE_METHOD_NP_KW = "method"
-else:
-    QUANTILE_METHOD_NP_KW = "interpolation"
+QUANTILE_METHOD_NP_KW = "method"
 
 
 def gb_np_quantile(a, q, is_nan_function):

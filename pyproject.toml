@@ -24,7 +24,7 @@ dependencies = [
     "numpy >=1.23",
     "pandas >=1.0,<3.0",
     "python-dateutil",
-    "riptide_cpp >=1.16.0,<2",
+    "riptide_cpp >=1.16.1a,<2",
 ]
 dynamic = ["version"]
 
@@ -85,10 +85,12 @@ add_ignore = "D1,D2,D300,D400,D401,D403,D404,D405,D418"
 [tool.validate_docstrings]
 #errors = "GL"
 # for now, ignore EX95: black format error
-not_errors = "ES01,EX01,EX95,EX96,GL01,GL02,GL03,GL05,GL08,GL09,GL10,GL96,GL97,GL99,PR05,PR06,PR08,PR09,PR10,RT01,RT04,RT05,SA01,SA02,SA03,SA04,SS01,SS02,SS03,SS04,SS05,SS06"
+not_errors = "ES01,EX01,EX95,EX96,GL01,GL02,GL03,GL05,GL08,GL09,GL10,GL96,GL97,PR05,PR06,PR08,PR09,PR10,RT01,RT04,RT05,SA01,SA02,SA03,SA04,SS01,SS02,SS03,SS04,SS05,SS06"
 flake8_errors = "E9,F63,F7,F82"
 flake8_not_errors = "E111,E122,E127,E128,E201,E203,E222,E225,E231,E251,E261,E302,E402,E501,E999,F811,F821"
 #format = "json"
+xfails = "dev_tools/docstring_xfails.txt"
+filters = "dev_tools/docstring_filters.txt"
 
 [tool.coverage.run]
 branch = true
