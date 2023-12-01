@@ -6,8 +6,6 @@ import sys
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
 
-import pkg_resources
-
 from ..rt_enum import TypeRegister
 
 if TYPE_CHECKING:
@@ -77,19 +75,10 @@ def _sort_dictionary(input: dict, reverse: bool = False) -> dict:
 def _get_package_version(package_name: str) -> Optional[str]:
     package_version: Optional[str] = None
 
-    # Attempt #1: Get the version from the installed package.
-    # Use pkg_resources (from setuptools) for py37 or below; TODO: use importlib.metadata once we only target py38+
-    # https://stackoverflow.com/questions/3524168/how-do-i-get-a-python-modules-version-number-through-code
-    try:
-        package_version = pkg_resources.get_distribution(package_name).version
-    except:
-        pass
-
-    # Attempt #2: get it from the module's __version__ attribute.
-    if package_version is None:
-        package_module = sys.modules.get(package_name, None)
-        if package_module is not None and hasattr(package_module, "__version__"):
-            package_version = package_module.__version__
+    # get it from the module's __version__ attribute.
+    package_module = sys.modules.get(package_name, None)
+    if package_module is not None and hasattr(package_module, "__version__"):
+        package_version = package_module.__version__
 
     return package_version
 
@@ -314,7 +303,7 @@ def main() -> ExitCode:
         # If there was no result for this benchmark (or comparison),
         # it's typically because there were no parameters for the benchmark and
         # therefore it didn't run. Log a warning about it and continue.
-        if benchmark_results is None:
+        if benchmark_result is None:
             _logger.warning(
                 f"No results for benchmark '{name}'. This may be due to a misconfiguration of the benchmark function."
             )
@@ -322,7 +311,8 @@ def main() -> ExitCode:
 
         # If saving the results to SDS, save the raw/complete data for analysis --
         # we want all the data, rather than the rolled-up data we'd display to the console.
-        benchmark_results[name] = benchmark_result
+        if benchmark_results is not None:
+            benchmark_results[name] = benchmark_result
 
         # If the benchmark is one of the new-style benchmarks, we can automatically
         # perform a quick analysis to summarize the results for display to the console.

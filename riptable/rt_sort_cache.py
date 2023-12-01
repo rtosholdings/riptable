@@ -27,53 +27,60 @@ class SortCache(object):
         cls._logging = False
 
     @classmethod
-    def store_sort(cls, uid, sortlist, sortidx):
+    def store_sort(cls, uid, sortlist, sortidx, ascending):
         """
         Restore a sort index from file.
         """
         crcvals = []
         for c in sortlist:
             crcvals.append(crc64(c))
-        cls._cache[uid] = (crcvals, sortidx, len(sortidx))
+        cls._cache[uid] = (crcvals, sortidx, len(sortidx), ascending)
 
     @classmethod
-    def get_sorted_row_index(cls, uid, nrows, sortdict):
+    def get_sorted_row_index(cls, uid, nrows, sortdict, ascending):
         if sortdict is not None and len(sortdict) > 0:
-            crcvals = []
             sortlist = list(sortdict.values())
 
-            for vals in sortlist:
-                # perform a crc on known sorted values and remember the crc
-                crcvals.append(crc64(vals))
+            # perform a crc on known sorted values and remember the crc
+            crcvals = [crc64(vals) for vals in sortlist]
 
-            updateCache = True
+            def _cached():
+                if not (uid in cls._cache):
+                    return None
 
-            sort_idx = None
+                checkvals, sort_idx, checkrows, checkasc = cls._cache[uid]
 
-            if uid in cls._cache:
-                checkvals, sort_idx, checkrows = cls._cache[uid]
+                # compare all multikey sort values to see if a match
+                # check if crc values match
+                if (
+                    type(checkasc) != type(ascending)
+                    or len(checkvals) != len(crcvals)
+                    or checkrows != nrows
+                    or any(oldcrc != newcrc for oldcrc, newcrc in zip(checkvals, crcvals))
+                ):
+                    return None
 
-                if len(checkvals) == len(crcvals) and checkrows == nrows:
-                    updateCache = False
+                if isinstance(checkasc, bool):
+                    return None if checkasc != ascending else sort_idx
 
-                    # compare all multikey sort values to see if a match
-                    for i in range(len(checkvals)):
-                        if checkvals[i] != crcvals[i]:
-                            updateCache = True
-                            break
+                if len(checkasc) != len(ascending) or any(old != new for old, new in zip(checkasc, ascending)):
+                    return None
 
-            if updateCache:
+                return sort_idx
+
+            sort_idx = _cached()
+
+            if sort_idx is None:
                 if cls._logging:
                     print("performing lexsort on columns:", list(sortdict.keys()))
                 sortlist.reverse()
-                sort_idx = lexsort(sortlist)
-                cls._cache[uid] = (crcvals, sort_idx, nrows)
+                sort_idx = lexsort(sortlist, ascending=ascending)
+                cls._cache[uid] = (crcvals, sort_idx, nrows, ascending)
             else:
                 if cls._logging:
                     print("NOT performing lexsort on columns:", list(sortdict.keys()))
 
             return sort_idx
-
         else:
             return None
             # NOTE: arange too costly, disabling this path for now
@@ -81,8 +88,6 @@ class SortCache(object):
             # if nrows is None: nrows = 0
             # sort_idx = np.arange(nrows,dtype=np.int64)
             # cls._cache[uid] = ([], sort_idx, nrows)
-
-        return sort_idx
 
     @classmethod
     def invalidate(cls, uid):

@@ -1,0 +1,12 @@
+# Extra name filters for docstring names to validate.
+# All names rooted at these filters will match.
+#
+# By default, all public names are included and all private names are excluded.
+# Each line has the form [+-]<name>, and specifies files to include (+) or exclude (-) from the default list.
+
++riptable.rt_categorical.Categorical._fa
++riptable.rt_fastarray.FastArray._np
+
+-riptable.rt_sort_cache
+-riptable.rt_fastarray.FastArray.abs
+-riptable.rt_fastarray.FastArray.save

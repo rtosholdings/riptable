@@ -1825,7 +1825,7 @@ def _validate_groupings(
     def _perform_validation(grouping: "Grouping", name: str):
         # N.B. It's important we use Grouping.ncountkey instead of .ncountgroup here;
         #      invalid/null values shouldn't be considered since they're always dropped.
-        max_key_multiplicity = grouping.ncountkey.max()
+        max_key_multiplicity = grouping.ncountkey.max(initial=0)
 
         if max_key_multiplicity > 1:
             # TODO: Can we provide a better error message here, e.g. to provide the user with some

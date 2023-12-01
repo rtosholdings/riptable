@@ -4,7 +4,7 @@ from typing import List, Set, Tuple
 
 import pytest
 
-pytest.importorskip("ipykernel")
+pytest.importorskip("ipykernel.tests.utils")  # may not be available, e.g. ipykernel>=6.26
 from ipykernel.tests.utils import TIMEOUT, execute, kernel, wait_for_idle
 
 from riptable import (  # not unused; needed for evaluated code below

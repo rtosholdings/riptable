@@ -73,11 +73,13 @@ runtime_reqs = [
 ]
 
 # Optional runtime requirements for riptable and riptide_cpp.
+# Must be available as Conda and PyPI packages
 runtime_opt_reqs = [
     "arrow",
     "ipykernel",
     "ipython<8.13" if is_python(3, 8) else "ipython",
     "matplotlib",
+    "pillow==10.1.0",  # latest conda-forge version that works with matplotlib
     "pyarrow",
 ]
 
