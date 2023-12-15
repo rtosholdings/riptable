@@ -2,11 +2,79 @@
 # All names rooted at these filters will match.
 #
 # By default, all public names are included and all private names are excluded.
-# Each line has the form [+-]<name>, and specifies files to include (+) or exclude (-) from the default list.
+# Each line has the form [+-]<name>, and specifies names to include (+) or exclude (-) from the default list.
+# Names match if they match by default or if they match includes, and then don't match excludes.
+
+
+# The following are private names that are commonly used, so they're part of the public API.
 
 +riptable.rt_categorical.Categorical._fa
 +riptable.rt_fastarray.FastArray._np
++riptable.rt_struct.Struct._T
++riptable.rt_struct.Struct._V
++riptable.rt_struct.Struct._H
++riptable.rt_struct.Struct._A
++riptable.rt_struct.Struct._G
+
+
+# The following are internal implementation details that aren't part of the public API.
+
+-riptable.rt_accum2.Accum2.display_convert_func
+-riptable.rt_accum2.Accum2.display_query_properties
+
+-riptable.rt_categorical.Categorical.display_convert_func
+-riptable.rt_categorical.Categorical.display_query_properties
+
+-riptable.rt_dataset.Dataset.get_row_sort_info
+
+-riptable.rt_datetime.Date.display_convert_func
+-riptable.rt_datetime.Date.format_date_num
+-riptable.rt_datetime.Date.get_classname
+-riptable.rt_datetime.DateBase.display_length
+-riptable.rt_datetime.DateBase.display_query_properties
+-riptable.rt_datetime.DateScalar.get_classname
+-riptable.rt_datetime.DateScalar.get_item_format
+-riptable.rt_datetime.DateSpan.get_classname
+-riptable.rt_datetime.DateSpanScalar.get_classname
+-riptable.rt_datetime.DateSpanScalar.get_item_format
+-riptable.rt_datetime.DateTimeBase.display_item
+-riptable.rt_datetime.DateTimeBase.display_length
+-riptable.rt_datetime.DateTimeBase.get_classname
+-riptable.rt_datetime.DateTimeNano.display_length
+-riptable.rt_datetime.DateTimeNano.display_query_properties
+-riptable.rt_datetime.DateTimeNanoScalar.get_classname
+-riptable.rt_datetime.DateTimeNanoScalar.get_item_format
+-riptable.rt_datetime.TimeSpan.get_classname
+-riptable.rt_datetime.TimeSpanBase.display_convert_func
+-riptable.rt_datetime.TimeSpanBase.display_item
+-riptable.rt_datetime.TimeSpanBase.display_query_properties
+-riptable.rt_datetime.TimeSpanScalar.get_classname
+-riptable.rt_datetime.TimeSpanScalar.get_item_format
+
+-riptable.rt_display.DisplayAttributes
+-riptable.rt_display.DisplayDetect
+-riptable.rt_display.DisplayString
+-riptable.rt_display.DisplayTable
+-riptable.rt_display.DisplayText
+
+-riptable.rt_enum # Nothing here is public, esp. TypeRegister
+
+-riptable.rt_fastarray.FastArray.display_query_properties
+
+-riptable.rt_groupbyops.GroupByOps.get_header_names
+
+-riptable.rt_grouping.Grouping.apply_helper
+-riptable.rt_grouping.Grouping.register_functions
+-riptable.rt_grouping.Grouping.set_dirty
 
 -riptable.rt_sort_cache
--riptable.rt_fastarray.FastArray.abs
--riptable.rt_fastarray.FastArray.save
+
+-riptable.rt_sds.compress_dataset_internal
+-riptable.rt_sds.decompress_dataset_internal
+-riptable.rt_sds.save_struct
+
+-riptable.rt_sharedmemory.SharedMemory # deprecated
+
+-riptable.rt_timezone.TimeZone.normalize_tz_to_tzdb_name
+-riptable.rt_timezone.TimeZone.tz_error_msg
+-riptable.rt_timezone.TimeZone.valid_timezones

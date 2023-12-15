@@ -369,12 +369,13 @@ def sds_flatten(rootpath: AnyPath) -> None:
 
     Parameters
     ----------
-    rootpath: str or bytes or os.PathLike
+    rootpath : str or bytes or os.PathLike
         The pathname to the SDS root directory.
 
-    Examples
-    --------
-    >>> sds_flatten(r'D:\junk\PYTHON_SDS')
+    Returns
+    -------
+    None
+        Returns nothing.
 
     Notes
     -----
@@ -383,6 +384,32 @@ def sds_flatten(rootpath: AnyPath) -> None:
     - If a there is a name conflict with items already in the base directory, the flatten will be skipped for the nested directory.
     - No files will be moved or renamed until all conflicts are checked.
     - If there were directories that couldn't be flattened, lists them at the end.
+
+    Examples
+    --------
+    Setup for examples:
+
+    >>> import os
+
+    Create a nested SDS directory:
+
+    >>> rt.save_sds(
+    ...     "tempdir/dir",
+    ...     rt.Struct(
+    ...         {
+    ...             "A": rt.Struct({"S1": rt.Dataset({f"col_{i}": rt.arange(3) for i in range(10)})}),
+    ...             "B": rt.Struct({"S2": rt.Dataset({f"col_{i}": rt.arange(10) for i in range(5)})}),
+    ...         }
+    ...     ),
+    ... )
+    >>> sorted([os.path.join(dp, f) for dp, _, fn in os.walk("tempdir") for f in fn])
+    ['tempdir/dir/A!S1.sds', 'tempdir/dir/B!S2.sds', 'tempdir/dir/_root.sds']
+
+    Flatten to root directory:
+
+    >>> rt.sds_flatten("tempdir")
+    >>> sorted([os.path.join(dp, f) for dp, _, fn in os.walk("tempdir") for f in fn])
+    ['tempdir/dir!A!S1.sds', 'tempdir/dir!B!S2.sds', 'tempdir/dir.sds']
     """
     # TODO: make this recursive
     # check file permissions for final move before starting
@@ -695,10 +722,11 @@ def save_sds(
 
     Parameters
     ----------
-    filepath: str or bytes or os.PathLike
+    filepath : str or bytes or os.PathLike
         Path to directory for Struct, path to ``.sds`` file for Dataset/array (extension will be added if necessary).
-    item : Struct, dataset, array, or array subclass
-    share
+    item : FastArray or Dataset or Struct
+        Struct, dataset, array, or array subclass
+    share : shared memory name, optional
         If the shared memory name is set, `item` will be saved to shared memory and NOT to disk. When shared memory
         is specified, a filename must be included in path. Only this will be used, the rest of the path will be discarded.
         For Windows make sure SE_CREATE_GLOBAL_NAME flag is set.
@@ -718,6 +746,11 @@ def save_sds(
     complevel : int, optional
         Compression level from 0 to 9. 2 (default) is average. 1 is faster, less compressed, 3 is slower, more compressed.
 
+    Returns
+    -------
+    None
+        Returns nothing.
+
     Raises
     ------
     TypeError
@@ -729,59 +762,59 @@ def save_sds(
 
     Examples
     --------
+    Setup for examples:
+
+    >>> import os
+
     Saving a Struct:
 
-    >>> st = Struct({ \
-        'a': Struct({ \
-            'arr' : arange(10), \
-            'a2'  : Dataset({ 'col1': arange(5) }) \
-        }), \
-        'b': Struct({ \
-            'ds1' : Dataset({ 'ds1col': arange(6) }), \
-            'ds2' : Dataset({ 'ds2col' : arange(7) }) \
-        }), \
-    })
+    >>> st = rt.Struct({
+    ...     'a': rt.Struct({
+    ...         'arr' : rt.arange(10),
+    ...         'a2'  : rt.Dataset({ 'col1': rt.arange(5) })
+    ...     }),
+    ...     'b': rt.Struct({
+    ...         'ds1' : rt.Dataset({ 'ds1col': rt.arange(6) }),
+    ...         'ds2' : rt.Dataset({ 'ds2col' : rt.arange(7) })
+    ...     }),
+    ... })
 
     >>> st.tree()
     Struct
         ├──── a (Struct)
-        │     ├──── arr int32 (10,) 4
+        │     ├──── arr int64 (10,) 8
         │     └──── a2 (Dataset)
-        │           └──── col1 int32 (5,) 4
+        │           └──── col1 int64 (5,) 8
         └──── b (Struct)
             ├──── ds1 (Dataset)
-            │     └──── ds1col int32 (6,) 4
+            │     └──── ds1col int64 (6,) 8
             └──── ds2 (Dataset)
-                    └──── ds2col int32 (7,) 4
+                    └──── ds2col int64 (7,) 8
 
-    >>> save_sds(r'D:\\junk\\nested', st)
-    >>> os.listdir(r'D:\\junk\\nested')
-    _root.sds
-    a!a2.sds
-    a.sds
-    b!ds1.sds
-    b!ds2.sds
+    >>> rt.save_sds('tempdir/ex1/nested', st)
+    >>> os.listdir('tempdir/ex1/nested')
+    ['_root.sds', 'a!a2.sds', 'a.sds', 'b!ds1.sds', 'b!ds2.sds']
 
     Saving a Dataset:
 
-    >>> ds = Dataset({'col_'+str(i):arange(5) for i in range(5)})
-    >>> save_sds(r'D:\\junk\\test', ds)
-    >>> os.listdir(r'D:\\junk')
-    test.sds
+    >>> ds = rt.Dataset({'col_'+str(i): rt.arange(5) for i in range(5)})
+    >>> rt.save_sds('tempdir/ex2/test', ds)
+    >>> os.listdir('tempdir/ex2')
+    ['test.sds']
 
     Saving an Array:
 
-    >>> a = arange(100)
-    >>> save_sds('D:\\junk\\test_arr', a)
-    >>> os.listdir('D:\\junk')
-    test_arr.sds
+    >>> a = rt.arange(100)
+    >>> rt.save_sds('tempdir/ex3/test_arr', a)
+    >>> os.listdir('tempdir/ex3')
+    ['test_arr.sds']
 
     Saving an Array Subclass:
 
-    >>> c = Categorical(np.random.choice(['a','b','c'],500))
-    >>> save_sds(r'D:\\junk\\cat', c)
-    >>> os.listdir(r'D:\\junk')
-    cat.sds
+    >>> c = rt.Categorical(np.random.choice(['a','b','c'],500))
+    >>> rt.save_sds('tempdir/ex4/cat', c)
+    >>> os.listdir('tempdir/ex4')
+    ['cat.sds']
     """
     # Convert path-like objects to str/bytes here.
     # This should be removed once we're sure all functions in this module
@@ -919,26 +952,62 @@ def sds_info(
 # -----------------------------------------------------------------------------------------
 def sds_tree(filepath: AnyPath, threads: Optional[int] = None):
     r"""
-    Explicitly display a tree of data for .sds file or directory.
+    Returns a informational tree of for .sds file or directory.
     Only loads info, not data.
 
     Parameters
     ----------
     filepath : str or bytes or os.PathLike
+        Path to the SDS file to display.
     threads : int, optional
+        How many threads to read, stack, and decompress with (defaults to None).
+
+    Returns
+    -------
+        dict
+            Information about the SDS file.
 
     Examples
     --------
-    >>> ds = Dataset({'col_'+str(i):arange(5) for i in range(5)})
-    >>> ds.save(r'D:\junk\treeds')
-    >>> sds_tree(r'D:\junk\treeds')
-    treeds
-     ├──── col_0 FA  (5,)  int32  i4
-     ├──── col_1 FA  (5,)  int32  i4
-     ├──── col_2 FA  (5,)  int32  i4
-     ├──── col_3 FA  (5,)  int32  i4
-     └──── col_4 FA  (5,)  int32  i4
+    Setup for examples:
 
+    >>> ds = rt.Dataset({f'col_{i}': rt.arange(4) for i in range(3)})
+    >>> ds.save('tempdir/treeds')
+
+    Display information about saved SDS:
+
+    >>> rt.sds_tree('tempdir/treeds')
+    {'Name_': 'anon_struct0', 'Type_': 'Dataset', 'FilePath_': ['tempdir/treeds.sds'], 'MetaData_': {'name': 'anon_struct0', 'typeid': 0, 'classname': 'Dataset', 'author': 'python', 'version': 1, 'item_meta': [], 'labels': [], '_col_sortlist': None, 'footers': [], 'load_from_tuples': 1}, 'Shape_': (4, 3), 'col_0':   #   Name        Type    Size   0                    1     2
+    ---   ---------   -----   ----   ------------------   ---   ---
+      0   Name_       str     0      col_0
+      1   Type_       str     0      FastArray
+      2   Shape_      int64   1      4
+    ...   ...         ...     ...    ...                  ...   ...
+      5   Itemsize_   int     0      8
+      6   FilePath_   list    1      tempdir/treeds.sds
+      7   SDSFlags_   int     0      3
+    <BLANKLINE>
+    [8 columns], 'col_1':   #   Name        Type    Size   0                    1     2
+    ---   ---------   -----   ----   ------------------   ---   ---
+      0   Name_       str     0      col_1
+      1   Type_       str     0      FastArray
+      2   Shape_      int64   1      4
+    ...   ...         ...     ...    ...                  ...   ...
+      5   Itemsize_   int     0      8
+      6   FilePath_   list    1      tempdir/treeds.sds
+      7   SDSFlags_   int     0      3
+    <BLANKLINE>
+    [8 columns], 'col_2':   #   Name        Type    Size   0                    1     2
+    ---   ---------   -----   ----   ------------------   ---   ---
+      0   Name_       str     0      col_2
+      1   Type_       str     0      FastArray
+      2   Shape_      int64   1      4
+    ...   ...         ...     ...    ...                  ...   ...
+      5   Itemsize_   int     0      8
+      6   FilePath_   list    1      tempdir/treeds.sds
+      7   SDSFlags_   int     0      3
+    <BLANKLINE>
+    [8 columns]}
     """
     return _load_sds_internal(filepath, info=True, threads=threads)
 
@@ -957,18 +1026,21 @@ def load_sds_mem(
     Parameters
     ----------
     filepath : str or bytes or os.PathLike
-        name of sds file or directory. if no .sds extension, _load_sds will look for _root.sds
+        Name of sds file or directory. if no .sds extension, _load_sds will look for _root.sds
         if no _root.sds is found, extension will be added and shared memory will be checked again.
     share : str
-        shared memory name.  For Windows make sure ``SE_CREATE_GLOBAL_NAME`` flag is set.
+        Shared memory name.  For Windows make sure ``SE_CREATE_GLOBAL_NAME`` flag is set.
     include : list of str, optional
-    threads: int, optional, defaults to None
-        how many threads to used
-    filter: int array or bool array, optional, defaults to None
+        List of columns to include.
+    threads : int, optional, defaults to None
+        How many threads to used
+    filter : int array or bool array, optional, defaults to None
+        Filter for which rows to load.
 
     Returns
     -------
-    Struct, Dataset or array loaded from shared memory.
+    Struct, Dataset or array
+        Loaded from shared memory.
 
     Notes
     -----
@@ -1771,7 +1843,13 @@ def load_sds(
 
     Returns
     -------
-    Struct
+    `Struct`
+        Struct loaded from SDS file.
+
+    See Also
+    --------
+    sds_tree
+    sds_info
 
     Notes
     -----
@@ -1783,44 +1861,68 @@ def load_sds(
 
     Examples
     --------
-    Stacking multiple files together while loading:
+    Setup for examples:
 
-    >>> files = [ r'D:\dir1\ds1.sds' r'D:\dir2\ds1.sds' ]
-    >>> load_sds(files, stack=True)
+    >>> rt.save_sds('tempdir/dirA/ds1.sds', rt.Dataset({'col_'+str(i): rt.arange(3) for i in range(5)}))
+    >>> rt.save_sds('tempdir/dirA/ds2.sds', rt.Dataset({'col_'+str(i): rt.arange(11,14) for i in range(5)}))
+    >>> rt.save_sds('tempdir/dirB/ds1.sds', rt.Dataset({'col_'+str(i): rt.arange(5,8) for i in range(5)}))
+    >>> rt.save_sds('tempdir/dirB/ds2.sds', rt.Dataset({'col_'+str(i): rt.arange(10,13) for i in range(5)}))
+
+    Loading single file:
+
+    >>> rt.load_sds('tempdir/dirA/ds1.sds')
     #   col_0   col_1   col_2   col_3   col_4
     -   -----   -----   -----   -----   -----
-    0    0.71    0.86    0.44    0.97    0.47
-    1    0.89    0.40    0.10    0.94    0.66
-    2    0.03    0.56    0.80    0.85    0.30
+    0       0       0       0       0       0
+    1       1       1       1       1       1
+    2       2       2       2       2       2
+    <BLANKLINE>
+    [3 rows x 5 columns] total bytes: 120.0 B
+
+    Stacking multiple files together while loading:
+
+    >>> files = [ 'tempdir/dirA/ds1.sds', 'tempdir/dirB/ds1.sds' ]
+    >>> rt.load_sds(files, stack=True)
+    partition + #   col_0   col_1   col_2   col_3   col_4
+    -------------   -----   -----   -----   -----   -----
+             p0 0       0       0       0       0       0
+             p0 1       1       1       1       1       1
+             p0 2       2       2       2       2       2
+             p1 3       5       5       5       5       5
+             p1 4       6       6       6       6       6
+             p1 5       7       7       7       7       7
+    <BLANKLINE>
+    [6 rows x 5 columns] total bytes: 240.0 B
 
     Stacking multiple files together while loading, explicitly specifying the
     list of columns to be loaded.
 
-    >>> files = [ r'D:\dir1\ds1.sds' r'D:\dir2\ds1.sds' ]
+    >>> files = [ 'tempdir/dirA/ds1.sds', 'tempdir/dirB/ds1.sds' ]
     >>> include = ['col_0', 'col_1', 'col_4']
-    >>> load_sds(files, include=include, stack=True)
-    #   col_0   col_1   col_4
-    -   -----   -----   -----
-    0    0.71    0.86    0.47
-    1    0.89    0.40    0.66
-    2    0.03    0.56    0.30
+    >>> rt.load_sds(files, include=include, stack=True)
+    partition + #   col_0   col_1   col_4
+    -------------   -----   -----   -----
+             p0 0       0       0       0
+             p0 1       1       1       1
+             p0 2       2       2       2
+             p1 3       5       5       5
+             p1 4       6       6       6
+             p1 5       7       7       7
+    <BLANKLINE>
+    [6 rows x 3 columns] total bytes: 144.0 B
 
     Stacking multiple directories together while loading, explicitly specifying
     the list of `Dataset` objects to load (from each directory, then stack together).
 
-    >>> files = [ r'D:\dir1', r'D:\dir2' ]
-    >>> include = [ 'ds1', 'ds2', 'ds3' ]
-    >>> load_sds(files, include=include, stack=True)
-    #   Name   Type      Size                0   1   2
-    -   ----   -------   -----------------   -   -   -
-    0   ds1    Dataset   20 rows x 10 cols
-    1   ds2    Dataset   20 rows x 10 cols
-    2   ds3    Dataset   20 rows x 10 cols
-
-    See Also
-    --------
-    sds_tree
-    sds_info
+    >>> files = [ 'tempdir/dirA', 'tempdir/dirB' ]
+    >>> include = [ 'ds1', 'ds2' ]
+    >>> rt.load_sds(files, include=include, stack=True)
+    #   Name   Type       Size              0   1   2
+    -   ----   --------   ---------------   -   -   -
+    0   ds1    PDataset   6 rows x 5 cols
+    1   ds2    PDataset   6 rows x 5 cols
+    <BLANKLINE>
+    [2 columns]
     """
     if verbose:
         SDSVerboseOn()
@@ -1887,13 +1989,14 @@ def _make_zero_length(sdsresult):
 
 
 # -----------------------------------------------------------------------------------------
-# TODO - PEP484 What type does sds_concat return?
 def sds_concat(
     filenames: Sequence[Union[str, os.PathLike]],
     output: Optional[Union[str, os.PathLike]] = None,
     include: List[str] = None,
-):
+) -> None:
     """
+    A new file created with the name in `output`.  This output file has all the filenames appended.
+
     Parameters
     ----------
     filenames : sequence of str or os.PathLike.
@@ -1906,7 +2009,8 @@ def sds_concat(
 
     Returns
     -------
-    A new file created with the name in `output`.  This output file has all the filenames appended.
+    None
+        Returns nothing.
 
     Raises
     ------
@@ -1919,10 +2023,24 @@ def sds_concat(
 
     Examples
     --------
-    >>> flist=['/nfs/file1.sds', '/nfs/file2.sds', '/nfs/file3.sds']
-    >>> sds_concat(flist, output='/nfs/mydata/concattest.sds')
-    >>> sds_load('/nfs/mydata/concattest.sds', stack=True)
+    Setup for examples:
 
+    >>> rt.save_sds('tempdir/file1.sds', rt.Dataset({'col_'+str(i): rt.arange(3) for i in range(5)}))
+    >>> rt.save_sds('tempdir/file2.sds', rt.Dataset({'col_'+str(i): rt.arange(4,7) for i in range(5)}))
+
+    >>> flist=['tempdir/file1.sds', 'tempdir/file2.sds']
+    >>> rt.sds_concat(flist, output='tempdir/concattest.sds')
+    >>> rt.load_sds('tempdir/concattest.sds', stack=True)
+    partition + #   col_0   col_1   col_2   col_3   col_4
+    -------------   -----   -----   -----   -----   -----
+            p0 0       0       0       0       0       0
+            p0 1       1       1       1       1       1
+            p0 2       2       2       2       2       2
+            p1 3       4       4       4       4       4
+            p1 4       5       5       5       5       5
+            p1 5       6       6       6       6       6
+    <BLANKLINE>
+    [6 rows x 5 columns] total bytes: 240.0 B
     """
     if output is None:
         raise ValueError(f"The output kwarg must be specified and be a valid filename to create.")

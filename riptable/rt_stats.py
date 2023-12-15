@@ -14,7 +14,12 @@ __all__ = [
 import numpy as np
 
 # extra classes
-import pandas as pd
+
+# pandas is an optional dependency.
+try:
+    import pandas as pd
+except ImportError:
+    pass
 
 import riptable as rt
 

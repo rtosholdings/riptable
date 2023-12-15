@@ -66,7 +66,7 @@ class AccumTable(Accum2):
         to the :py:class:`~.rt_accumtable.AccumTable`.
     showfilter : bool
         Controls whether the returned table contains row or column groups that result
-        entirely in `0` or `nan` when the filter is applied.
+        entirely in ``0`` or ``nan`` when the filter is applied.
 
     See Also
     --------
@@ -319,7 +319,7 @@ class AccumTable(Accum2):
             or a :py:class:`~.rt_dataset.Dataset` of the same shape that acts as a
             format reference for the generated table.
         remove_blanks : bool, default `True`
-            Controls whether rows and columns consisting entirely of `0` and `nan`
+            Controls whether rows and columns consisting entirely of ``0`` or ``nan``
             are removed from the generated table.
 
         Returns
@@ -463,6 +463,11 @@ class AccumTable(Accum2):
             A list of inner table names, in the order you want the margin columns to
             appear in a generated table.
 
+        Returns
+        -------
+        None
+            Returns nothing.
+
         See Also
         --------
         :py:class:`.rt_accumtable.AccumTable` :
@@ -599,6 +604,11 @@ class AccumTable(Accum2):
         rows : list
             A list of inner table names, in the order you want the footer rows to
             appear in a generated table.
+
+        Returns
+        -------
+        None
+            Returns nothing.
 
         See Also
         --------
@@ -793,8 +803,8 @@ def accum_ratio(
         for ``val2`` as a row and column in the returned table. Ignored if
         ``return_table`` is `True`.
     remove_blanks : bool, default `False`
-        If set to `True`, removes rows and columns that consist entirely of `0` or
-        `nan` from the returned table.
+        If set to `True`, removes rows and columns that consist entirely of ``0`` or
+        ``nan`` from the returned table.
 
     Returns
     -------
@@ -919,7 +929,7 @@ def accum_ratio(
     **Remove blank rows and columns**
 
     Pass `True` to ``remove_blanks`` to remove the rows and columns consisting entirely
-    of `0` and `nan`. This example removes the blank lines from the filtered
+    of ``0`` or ``nan``. This example removes the blank lines from the filtered
     :py:class:`~.rt_dataset.Dataset`:
 
     >>> c_filter = ds.Letters == "C"
@@ -1073,8 +1083,8 @@ def accum_ratiop(
         Adds a summary row and column of values calculated by ``func`` to the returned
         :py:class:`~.rt_dataset.Dataset`.
     remove_blanks : bool, default `True`
-        If `True`, removes rows and columns that consist entirely of `0` or
-        `nan` from the returned table.
+        If `True`, removes rows and columns that consist entirely of ``0`` or
+        ``nan`` from the returned table.
     filt : array of bool, optional
         Deprecated and replaced with ``filter``.
 
@@ -1214,7 +1224,7 @@ def accum_ratiop(
     **Remove blank rows and columns**
 
     Pass `True` to ``remove_blanks`` to remove the rows and columns consisting entirely
-    of `0` and `nan`. This example removes the blank lines from the filtered
+    of ``0`` or ``nan``. This example removes the blank lines from the filtered
     :py:class:`~.rt_dataset.Dataset`:
 
     >>> rt.accum_ratiop(cat1=ds.Groups,
@@ -1368,7 +1378,7 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
           :py:class:`~.rt_dataset.Dataset` contains only same number of columns as there
           are functions in ``func_list``.
     remove_blanks : bool, default `False`
-        If `True`, removes rows and columns that consist entirely of `0` or `nan` from
+        If `True`, removes rows and columns that consist entirely of ``0`` or ``nan`` from
         the returned :py:class:`~.rt_dataset.Dataset`.
 
     Returns
@@ -1574,7 +1584,7 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
     **Remove blank values**
 
     Pass `True` to ``remove_blanks`` to remove all rows and columns from the returned
-    :py:class:`~.rt_dataset.Dataset` that consist entirely of `0` or `nan`:
+    :py:class:`~.rt_dataset.Dataset` that consist entirely of ``0`` or ``nan``:
 
     >>> rt.accum_cols(cat=ds.Groups,
     ...               val_list=[ds.Zeros, ds.Ones, ds.Twos, ds.Nans, ds.Ints],

@@ -201,7 +201,6 @@ def _possibly_convert_rec_array(item, parallel=True):
     h5 often loads data into a numpy record array (void type). Flip these before converting to a dataset.
     """
     if item.dtype.char == "V":
-        warnings.warn(f"Converting numpy record array. Performance may suffer.")
         list_types = [*item.dtype.fields.values()]
         success = True
         for t in list_types:

@@ -468,6 +468,8 @@ class TestDataset(unittest.TestCase):
         self.assertEqual(ds.shape, (3, 1))
         with self.assertRaises(ValueError):
             ds.B = np.array([1, 2, 3, 4])
+        with self.assertRaises(ValueError):
+            ds.B = [1, 2, 3, 4]
 
         ds[["B", "C", "D"]] = 10
         self.assertEqual(ds.shape, (3, 4))
@@ -507,7 +509,7 @@ class TestDataset(unittest.TestCase):
 
         ds = Dataset({"me": [11]})
         ds2 = Dataset({"you": [2.7, 3.14]})
-        with self.assertRaises(TypeError):  # raised during column assignment...
+        with self.assertRaises(ValueError):  # raised during column assignment...
             ds["True"] = ds2
 
         ds = Dataset({"me": [11]})
@@ -516,6 +518,33 @@ class TestDataset(unittest.TestCase):
             ds[[0, 1], "True"] = ds2
 
         Struct.AllowAnyName = tempsave
+
+    def test_assign_2d_array_to_dataset(self):
+        ds = rt.Dataset({"a": [1, 2, 3]})
+        ds["b"] = np.arange(3)[:, None]
+        self.assertTrue(ds.b.ndim == 1)
+        self.assertTrue((ds.b == np.arange(3)).all())
+
+    def test_assign_pandas_series_to_dataset(self):
+        ds = rt.Dataset({"a": [1, 2, 3]})
+        ds["b"] = pd.Series(ds.a)
+        self.assertTrue((ds.a == ds.b).all())
+
+        ds = rt.Dataset({})
+        ds["a"] = pd.Series([3, 4])
+        self.assertTrue((ds.a == rt.FA([3, 4])).all())
+
+    def test_assign_subclasses(self):
+        ds = rt.Dataset({"a": [1, 2, 3]})
+        for subcls in [
+            rt.DateTimeNano,
+            rt.Cat,
+            rt.DateSpan,
+            rt.TimeSpan,
+        ]:
+            ds.b = subcls(ds.a)
+            self.assertEqual(type(ds.b), subcls)
+            self.assertTrue((ds.a == ds.b).all())
 
     def test_broadcast(self):
         ds = Dataset({"test": arange(10)})

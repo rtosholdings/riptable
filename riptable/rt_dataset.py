@@ -533,71 +533,44 @@ class Dataset(Struct):
     # ------------------------------------------------------------
     def _check_addtype(self, name, value):
         # TODO use _possibly_convert -- why are these two routines different?
+        if isinstance(value, Dataset):
+            # if they try to add a dataset to a single column
+            # then if the dataset has one column, use that
+            labels = value.label_get_names()
+            data_cols = set(value) - set(labels)
+
+            if len(data_cols) == 1:
+                value = value[data_cols.pop()]
+            else:
+                # perhaps see if we can find the same name?
+                raise TypeError(f"Cannot determine which column of Dataset to add to the Dataset column {name!r}.")
+            return self._check_addtype(name, value)
+
         if not isinstance(value, np.ndarray):
             if isinstance(value, set):
                 raise TypeError(f"Cannot create Dataset column {name!r} out of tuples or sets {value!r}.")
-            # following pandas
+
+            value = np.asanyarray(value)
             if self._nrows is None:
-                if isinstance(value, (list, tuple)):
+                if value.ndim > 0:
                     self._nrows = len(value)
                 else:
                     # how to get here:
                     # ds=Dataset()
                     # ds[['g','c']]=3
                     self._nrows = 1
+            if value.ndim == 0:
+                value = full(self._nrows, value)
 
-            if isinstance(value, (list, tuple)):
-                rowlen = len(value)
-                if self._nrows != rowlen and rowlen != 1:
-                    raise TypeError("Row mismatch in Dataset._check_addtype", self._nrows, len(value), value)
-                value = np.asanyarray(value)
-                if value.shape[0] == 1 and self._nrows != 1:
-                    # for when user types in a list of 1 item and wants it to repeat
-                    value = value.repeat(self._nrows)
-            else:
-                # if they try to add a dataset to a single column
-                # then if the dataset has one column, use that
-                if isinstance(value, Dataset):
-                    if self._nrows != value._nrows:
-                        raise TypeError(
-                            "Row mismatch in Dataset._check_addtype.  Tried to add Dataset of different lengths",
-                            self._nrows,
-                            value._nrows,
-                        )
+            rowlen = len(value)
+            if rowlen == 1 and self._nrows != 1:
+                # for when user types in a list of 1 item and wants it to repeat
+                value = value.repeat(self._nrows)
 
-                    if value._ncols == 1:
-                        return value[0]
-                    else:
-                        # skip over groupbykeys
-                        labels = value.label_get_names()
-                        count = 0
-                        first = None
-                        # loop over all columns, not including labels
-                        for c in value.keys():
-                            if c not in labels:
-                                first = c
-                                count += 1
-                        if count == 1:
-                            return value[first]
-                        else:
-                            # perhaps see if we can find the same name?
-                            raise TypeError(
-                                f"Cannot determine which column of Dataset to add to the Dataset column {name!r}."
-                            )
+            if self._nrows != len(value):
+                raise ValueError("Row mismatch in Dataset._check_addtype", self._nrows, len(value), value)
 
-                if callable(getattr(value, "repeat", None)):
-                    # for when user types in a list of 1 item and wants it to repeat to match dataset row length
-                    value = value.repeat(self._nrows)
-                else:
-                    try:
-                        # NOT an array, or a list, tuple, or Dataset at this point
-                        value = full(self._nrows, value)
-                    except Exception as ex:
-                        raise TypeError(
-                            f"Cannot create a single Dataset column {name!r} out of type {type(value)!r}.  Error {ex}"
-                        )
-
-            value = self._ensure_vector(value)
+        value = self._ensure_vector(value)
 
         # this code will add the name
         value = self._possibly_convert_array(value, name)
@@ -2810,18 +2783,72 @@ class Dataset(Struct):
         self, columns: Optional[List[str]] = None, exclude: Optional[Union[str, List[str]]] = None
     ) -> None:
         """
-        Replaces categorical columns with one-hot-encoded columns for their categories.
-        Original columns will be removed from the dataset.
+        Replace :py:class:`~.rt_categorical.Categorical` columns with one-hot-encoded
+        columns.
 
-        Default is to encode all categorical columns. Otherwise, certain columns can be specified.
-        Also an optional exclude list for convenience.
+        Each unique category gets its own column, automatically named. The original
+        :py:class:`~.rt_categorical.Categorical` columns are removed from the
+        :py:class:`~.rt_dataset.Dataset`.
+
+        By default, all :py:class:`~.rt_categorical.Categorical` columns are encoded.
+        Specify certain columns using ``columns`` or exclude columns using ``exclude``.
 
         Parameters
         ----------
         columns : list of str, optional
-            specify columns to encode (if set, exclude param will be ignored)
+            Columns to encode. If this parameter is set, the ``exclude`` parameter is ignored.
         exclude : str or list of str, optional
-            exclude certain columns from being encoded
+            Columns to exclude from encoding. This parameter is ignored if ``columns`` is
+            used.
+
+        Returns
+        -------
+        `None`
+            Returns nothing.
+
+        See Also
+        --------
+        :py:meth:`.rt_categorical.Categorical.one_hot_encode` :
+            Generate a one-hot-encoded array for each unique category.
+
+        Examples
+        --------
+        Create a :py:class:`~.rt_categorical.Categorical` and add it to a
+        :py:class:`~.rt_dataset.Dataset`, along with a column of integer values:
+
+        >>> c1 = rt.Cat(["group1", "group2", "group2", "group1", "group1", "group2"])
+        >>> ints = rt.FA([0, 1, 2, 3, 4, 5])
+        >>> ds = rt.Dataset()
+        >>> ds.c1 = c1
+        >>> ds.ints = ints
+        >>> ds
+        #   c1       ints
+        -   ------   ----
+        0   group1      0
+        1   group2      1
+        2   group2      2
+        3   group1      3
+        4   group1      4
+        5   group2      5
+        <BLANKLINE>
+        [6 rows x 2 columns] total bytes: 66.0 B
+
+        Encode the :py:class:`~.rt_categorical.Categorical`. Each unique value gets its
+        own column, automatically named, and the original :py:class:`~.rt_categorical.Categorical`
+        columns are removed. The column of integers is left as is.
+
+        >>> ds.one_hot_encode()  # This returns nothing.
+        >>> ds
+        #   ints   c1__group1   c1__group2
+        -   ----   ----------   ----------
+        0      0         1.00         0.00
+        1      1         0.00         1.00
+        2      2         0.00         1.00
+        3      3         1.00         0.00
+        4      4         1.00         0.00
+        5      5         0.00         1.00
+        <BLANKLINE>
+        [6 rows x 3 columns] total bytes: 96.0 B
         """
         # build column name list
         if columns is None:
@@ -3354,7 +3381,8 @@ class Dataset(Struct):
         [1 rows x 8 columns] total bytes: 8.0 B
 
         The returned :py:class:`~.rt_dataset.Dataset` shows that all columns, except for
-        the Zeros column, have at least one `True`, non-zero, or non-empty value.
+        the Zeros and Falses columns, have at least one `True`, non-zero, or non-empty
+        value.
 
         Pass `False` to ``as_dataset`` to return a :py:class:`~.rt_struct.Struct`
         instead of a :py:class:`~.rt_dataset.Dataset`:
@@ -3693,7 +3721,7 @@ class Dataset(Struct):
               pass the following strings to ``axis`` instead of `None`: "all" or "ALL".
         as_dataset : bool, default `True`
             Controls the return type when ``axis=0``. If `True`, the method returns a
-            :py:class:`~rt_dataset.Dataset`. If `False`, the method returns a
+            :py:class:`~.rt_dataset.Dataset`. If `False`, the method returns a
             :py:class:`~.rt_struct.Struct`.
 
         Returns
@@ -3710,7 +3738,6 @@ class Dataset(Struct):
         --------
         :py:meth:`.rt_dataset.Dataset.any`
         :py:func:`.rt_numpy.all`
-        :py:meth:`.rt_multiset.Multiset.all`
         :py:meth:`.rt_struct.Struct.all`
 
         Examples
@@ -3761,8 +3788,8 @@ class Dataset(Struct):
         <BLANKLINE>
         [1 rows x 8 columns] total bytes: 8.0 B
 
-        Pass `False` to ``as_dataset`` to return a :py:class:`~.rt_struct.Struct`
-        instead of a :py:class:`~.rt_dataset.Dataset`:
+        Pass `False` to ``as_dataset`` to return a :py:class:`~.rt_struct.Struct` instead
+        of a :py:class:`~.rt_dataset.Dataset`:
 
         >>> ds.all(as_dataset=False)
           #   Name     Type   Size   0       1     2
@@ -5684,6 +5711,11 @@ class Dataset(Struct):
             A list of names to apply to the added columns. If not provided, the columns
             have a default name of ``"col_N"``.
 
+        Returns
+        -------
+        None
+            Returns nothing.
+
         Examples
         --------
         Construct an empty :py:class:`~.rt_dataset.Dataset` and add columns to it using
@@ -5818,6 +5850,11 @@ class Dataset(Struct):
         ----------
         max_cols : int
             The maximum number of columns to display.
+
+        Returns
+        -------
+        None
+            Returns nothing.
 
         Notes
         -----
