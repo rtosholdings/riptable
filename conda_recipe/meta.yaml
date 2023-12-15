@@ -9,7 +9,7 @@ build:
   script: "{{ PYTHON }} -m pip install -v --no-deps --ignore-installed ."
 
 source:
-  - path: ../
+  path: ..
 
 requirements:
   host:

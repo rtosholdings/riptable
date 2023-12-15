@@ -80,6 +80,11 @@ def tic():
     """
     Call tic() followed by code followed by toc() to time a routine in nanoseconds.
 
+    Returns
+    -------
+    None
+        Returns nothing.
+
     See Also
     --------
     toc, ticx, ticp, ticf
@@ -97,6 +102,11 @@ def toc(logger: Optional[logging.Logger] = None) -> None:
     logger : logging.Logger, optional
         An optionally-specified logger where the collected timing information is recorded.
         If not specified (the default), the timing information is written to stdout.
+
+    Returns
+    -------
+    None
+        Returns nothing.
 
     See Also
     --------

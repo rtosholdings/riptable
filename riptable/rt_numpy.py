@@ -108,6 +108,7 @@ __all__ = [
     "percentile",
     "putmask",
     "reindex_fast",
+    "repeat",
     "reshape",
     "round",
     "searchsorted",
@@ -1412,7 +1413,7 @@ def assoc_copy(
 
 def unique32(list_keys: List[np.ndarray], hintSize: int = 0, filter: Optional[np.ndarray] = None) -> np.ndarray:
     """
-    Returns the index location of the first occurence of each key.
+    Return the index location of the first occurence of each key.
 
     Parameters
     ----------
@@ -2929,6 +2930,7 @@ def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
     if missing == 1:
         raise ValueError(f"where: must provide both 'x' and 'y' or neither. x={x}  y={y}")
 
+    # Invoke np.where, requiring that both alternates must be non-empty arrays.
     def delegate_to_numpy(condition, x, y):
         if not np.isscalar(x) and len(x) == 0:
             raise ValueError(f"where: x must not be empty")
@@ -2955,7 +2957,7 @@ def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
 
     if condition.ndim > 1:
         # punt to normal numpy since more than one dimension
-        return LedgerFunction(np.where, condition, x, y)
+        return delegate_to_numpy(condition, x, y)
 
     if condition.dtype != bool:
         # NOTE: believe numpy just flips it to boolean using astype, where object arrays handled differently with None and 0
@@ -3019,11 +3021,14 @@ def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
         x = _possibly_convert(x)
         y = _possibly_convert(y)
 
-        # call down into C++ version of where
-        return rc.Where(condition, (x, y), common_dtype.num, common_dtype.itemsize)
+        # call down into C++ version of where.
+        # result will be None if operation is not supported.
+        result = rc.Where(condition, (x, y), common_dtype.num, common_dtype.itemsize)
+        if result is not None:
+            return result
 
     # punt to normal numpy
-    return LedgerFunction(np.where, condition, x, y)
+    return delegate_to_numpy(condition, x, y)
 
 
 # -------------------------------------------------------

@@ -2310,95 +2310,271 @@ def merge2(
     **kwargs,
 ) -> "Dataset":
     """
-    Merge Dataset by performing a database-style join operation by columns.
+    Combine two :py:class:`~.rt_dataset.Dataset` objects by performing a database-style
+    join operation.
+
+    Rows are combined based on matching values in the key columns specified in the ``on``
+    or ``left_on`` and ``right_on`` parameters. Which keys are used depends on the type
+    of merge specified by the ``how`` parameter (left, right, inner, or outer). Note:
+    Invalid values are not treated as equal keys.
+
+    One-to-one, one-to-many, many-to-one, and many-to-many merges are allowed. If your
+    merge requires unique values in one or both :py:class:`~.rt_dataset.Dataset` objects,
+    use the ``validate`` parameter to check for uniqueness, and use the ``keep`` parameter
+    as needed to specify which non-unique match to use.
+
+    To get a cross join of two :py:class:`~.rt_dataset.Dataset` objects that returns a
+    :py:class:`~.rt_dataset.Dataset` with all combinations of rows, see
+    :doc:`Get the Cross Join of Two Datasets Using merge2() </tutorial/cross_join_using_merge2>`.
 
     Parameters
     ----------
-    left : Dataset
-        Left Dataset
-    right : Dataset
-        Right Dataset
-    on : str or (str, str) or list of str or list of (str, str), optional
-        Column names to join on. Must be found in both `left` and `right`.
-    left_on : str or list of str, optional
-        Column names from left Dataset to join on. When specified, overrides whatever is specified in `on`.
-    right_on : str or list of str, optional
-        Column names from right to join on. When specified, overrides whatever is specified in `on`.
-    how : {'left', 'right', 'inner', 'outer'}
-        The type of merge to be performed.
+    left : :py:class:`~.rt_dataset.Dataset`
+        The first :py:class:`~.rt_dataset.Dataset` to merge.
+    right : :py:class:`~.rt_dataset.Dataset`
+        The second :py:class:`~.rt_dataset.Dataset` to merge.
+    on : str or (str, str) or list of (str or (str, str)), optional
+        Names of key columns to merge on. If ``on`` isn't specified, ``left_on`` and
+        ``right_on`` must be specified. Options for types:
 
-        * left: use only keys from `left`, as in a SQL 'left join'. Preserves the ordering of keys.
-        * right: use only keys from `right`, as in a SQL 'right join'. Preserves the ordering of keys.
-        * inner: use intersection of keys from both Datasets, as in a SQL 'inner join'. Preserves the
-          ordering of keys from `left`.
-        * outer: use union of keys from both Datasets, as in a SQL 'full outer join'.
-    suffixes: tuple of (str, str), optional
-        Suffix to apply to overlapping column names in the left and right side, respectively.
-        The default (``None``) causes an exception to be raised for any overlapping columns.
-    copy: bool, default True
-        If False, avoid copying data when possible; this can reduce memory usage
-        but users must be aware that data can be shared between `left` and/or `right`
-        and the Dataset returned by this function.
-    indicator : bool or str, default False
-        If True, adds a column to output Dataset called "merge_indicator" with information on the
-        source of each row. If string, column with information on source of each row will be added
-        to output Dataset, and column will be named value of string. Information column is
-        Categorical-type and takes on a value of "left_only" for observations whose merge key only
-        appears in `left` Dataset, "right_only" for observations whose merge key only appears in
-        `right` Dataset, and "both" if the observation's merge key is found in both.
+        - Single string: Merge on one column that has the same name in both
+          :py:class:`~.rt_dataset.Dataset` objects.
+        - List: Merge on multiple columns in each :py:class:`~rt_dataset.Dataset`. All
+          associated key column values in ``left`` and ``right`` must match. Each list item
+          can be a single column name (if the column name is the same in both :py:class:`~.rt_dataset.Dataset`
+          objects) or a tuple of two names (if the column names differ).
+        - Tuple: Use a tuple to specify key columns that have different names. For example,
+          ``("col_a", "col_b")`` merges on ``col_a`` in ``left`` and ``col_b`` in ``right``.
+          A tuple can be part of a list, even if the other list items are single strings.
+          Both columns are in the returned :py:class:`~.rt_dataset.Dataset` unless you
+          specify otherwise using ``columns_left`` or ``columns_right``.
+    left_on : str or list of str, optional
+        You can use ``left_on`` and ``right_on`` instead of ``on`` to specify names of
+        key columns. Both ``left_on`` and ``right_on`` must be specified, even if the
+        column name is the same in ``left`` and ``right``. If a list of columns is provided,
+        all associated key column values in ``left`` and ``right`` must match.
+    right_on : str or list of str, optional
+        You can use ``left_on`` and ``right_on`` instead of ``on`` to specify names of
+        key columns. Both ``left_on`` and ``right_on`` must be specified, even if the
+        column name is the same in ``left`` and ``right``. If a list of columns is provided,
+        all associated key column values in ``left`` and ``right`` must match.
+    how : {"left", "right", "inner", "outer"}, default "left"
+        The type of merge to be performed:
+
+          - "left": Similar to a SQL left join. Uses all of the ``left`` keys to find matches.
+            If a key in ``left`` has no match in ``right``, NaN values are filled in. If
+            there are multiple matches in ``right``, all matches are included in the returned
+            :py:class:`~.rt_dataset.Dataset`. Any key in ``right`` with no match in ``left``
+            is discarded. In the returned :py:class:`~.rt_dataset.Dataset`, the ordering of
+            the keys in ``left`` is preserved.
+          - "right": Similar to a SQL right join. Uses all of the ``right`` keys to find matches.
+            If a key in ``right`` has no match in ``left``, NaN values are filled in. If
+            there are multiple matches in ``left``, all matches are included in the returned
+            :py:class:`~.rt_dataset.Dataset`. Any key in ``left`` with no match in ``right``
+            is discarded. In the returned :py:class:`~.rt_dataset.Dataset`, the ordering of
+            the keys in ``right`` is preserved.
+          - "inner": Similar to a SQL inner join. Uses the intersection of keys from both
+            :py:class:`~.rt_dataset.Dataset` objects to find matches, so only rows with
+            matching key values are in the returned :py:class:`~.rt_dataset.Dataset`. If
+            there are multiple matches for a given key, all matches are included. In the
+            returned :py:class:`~.rt_dataset.Dataset`, the ordering of keys from ``left`` is
+            preserved.
+          - "outer": Similar to a SQL full outer join. Uses the union of keys from both
+            :py:class:`~rt_dataset.Dataset` objects to find matches. For rows that don't
+            have matches, NaN values are filled in. If there are multiple matches for a
+            key, all matches are included in the returned :py:class:`~.rt_dataset.Dataset`.
+    suffixes : tuple of (str, str), optional
+        Suffixes to apply to returned overlapping non-key-column names in ``left`` and
+        ``right``, respectively. By default, an error is raised for any overlapping
+        non-key columns that would be in the returned :py:class:`~.rt_dataset.Dataset`.
+    copy : bool, default `True`
+        Set to `False` to avoid copying data when possible. This can reduce memory usage,
+        but be aware that data can be shared among ``left``, ``right``, and the
+        :py:class:`~.rt_dataset.Dataset` returned by this function.
+    indicator : bool or str, default `False`
+        Governs whether a column is added to the returned :py:class:`~.rt_dataset.Dataset` that shows
+        the source of each row. If `True`, the column is called "merge_indicator". If a
+        string, the string is the column name. Indicators:
+
+        - "left_only": The merge key appears only in ``left``.
+        - "right_only": The merge key appears only in ``right``.
+        - "both": The merge key appears in both ``left`` and ``right``.
     columns_left : str or list of str, optional
-        Column names to include in the merge from `left`, defaults to None which causes all columns to be included.
+        Names of columns from ``left`` to include in the merged :py:class:`~.rt_dataset.Dataset`.
+        By default, all columns are included. If an empty list (``[]``) is specified, no columns
+        are included except any key column that has the same name in both :py:class:`~.rt_dataset.Dataset`
+        objects.
     columns_right : str or list of str, optional
-        Column names to include in the merge from `right`, defaults to None which causes all columns to be included.
-    validate : {'one_to_one', '1:1', 'one_to_many', '1:m', 'many_to_one', 'm:1', 'many_to_many', 'm:m'}, optional
-        Validate the uniqueness of the values in the columns specified by the `on`, `left_on`, `right_on`
-        parameters. In other words, allows the _multiplicity_ of the keys to be checked so the user
-        can prevent the merge if they want to ensure the uniqueness of the keys in one or both of the Datasets
-        being merged.
-        Note: The `keep` parameter logically takes effect before `validate` when they're both specified.
-    keep : {'first', 'last'} or (str, str), optional
-        An optional string which specifies that only the first or last occurrence
-        of each unique key within `left` and `right` should be kept. In other words,
-        resolves multiple occurrences of keys (multiplicity > 1) to a single occurrence.
+        Names of columns from ``right`` to include in the merged :py:class:`~.rt_dataset.Dataset`.
+        By default, all columns are included. If an empty list (``[]``) is specified, no columns
+        are included except any key column that has the same name in both :py:class:`~.rt_dataset.Dataset`
+        objects.
+    validate : {"one_to_one", "1:1", "one_to_many", "1:m", "many_to_one", "m:1", "many_to_many", "m:m"}, optional
+        Check whether key column values are unique, and raise an error if duplicates are
+        found. Options:
+
+        - "one_to_one" or "1:1": Check whether keys are unique in both ``left`` and
+          ``right``.
+        - "one_to_many" or "1:m": Check whether keys are unique in ``left``.
+        - "many_to_one" or "m:1": Check whether keys are unique in ``right``.
+        - "many_to_many" or "m:m": No check is done.
+        Note: If ``keep`` is also specified, it takes effect before ``validate``.
+    keep : {"first", "last"}, optional
+        When there are multiple matches for a given key, keep only the first match or
+        the last match.
     high_card : bool or (bool, bool), optional
-        Hint to low-level grouping implementation that the key(s) of `left` and/or `right`
-        contain a high number of unique values (cardinality); the grouping logic *may* use
-        this hint to select an algorithm that can provide better performance for such cases.
+        Hint to the low-level grouping implementation that the key(s) of ``left`` or
+        ``right`` contain a high number of unique values (cardinality); the grouping
+        logic *may* use this hint to select an algorithm that can provide better performance
+        for such cases.
     hint_size : int or (int, int), optional
-        An estimate of the number of unique keys used for the join. Used as a performance hint
-        to the low-level grouping implementation.
-        This hint is typically ignored when `high_card` is specified.
+        An estimate of the number of unique keys used for the merge. Used as a performance
+        hint to the low-level grouping implementation. This hint is typically ignored
+        when ``high_card`` is specified.
+    **kwargs
+        Additional keyword arguments.
 
     Returns
     -------
-    merged : Dataset
-
-    Examples
-    --------
-    >>> rt.merge2(ds_simple_1, ds_simple_2, left_on = 'A', right_on = 'X', how = 'inner')
-    #   A      B   X       C
-    -   -   ----   -   -----
-    0   0   1.20   0    2.40
-    1   1   3.10   1    6.20
-    2   6   9.60   6   19.20
-    <BLANKLINE>
-    [3 rows x 4 columns] total bytes: 72.0 B
-
-    Demonstrating a 'left' merge.
-
-    >>> rt.merge2(ds_complex_1, ds_complex_2, on = ['A','B'], how = 'left')
-    #   B    A       C       E
-    -   -   --   -----   -----
-    0   Q    0    2.40    1.50
-    1   R    6    6.20   11.20
-    2   S    9   19.20     nan
-    3   T   11   25.90     nan
-    <BLANKLINE>
-    [4 rows x 4 columns] total bytes: 84.0 B
+    :py:class:`~.rt_dataset.Dataset`
+        A new :py:class:`~.rt_dataset.Dataset` of the two merged objects.
 
     See Also
     --------
-    merge_asof
+    :py:func:`.rt_merge.merge_asof` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using the nearest key.
+    :py:func:`.rt_merge.merge_indices` :
+        Return the left and right indices created by the join engine.
+    :py:func:`.rt_merge.merge_lookup` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using a left-join.
+    :py:meth:`.rt_dataset.Dataset.merge2` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using various database-style joins.
+    :py:meth:`.rt_dataset.Dataset.merge_asof` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using the nearest key.
+    :py:meth:`.rt_dataset.Dataset.merge_lookup` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using a left-join, with an in-place option.
+
+    Examples
+    --------
+    The following examples use these :py:class:`~.rt_dataset.Dataset` objects:
+
+    >>> ds_l = rt.Dataset({"Symbol": rt.FA(["AMZN", "TSLA", "SPY", "AAPL", "TSLA", "MSFT", "MSFT"]),
+    ...                    "Value": rt.FA([10, 20, 30, 40, 50, 60, 70])})
+    >>> ds_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "AMZN", "AMZN", "AAPL", "IBM", "MSFT", "MSFT"]),
+    ...                    "Trader": rt.FA(["Nate", "Sunil", "Elon", "Josh", "Anne", "Elaine", "Bob"])})
+
+    Because both key columns contain non-unique values, the merges are many-to-many merges.
+
+    A default "left" merge.
+
+    - The keys in ``left`` are used to find matches; all records from ``left`` and the
+      matching records from ``right`` are returned.
+    - The key in ``left`` with no match in ``right`` ("SPY") has a NaN value in the
+      column from ``right``.
+    - They key in ``right`` with no match in ``left`` ("IBM") is discarded.
+    - For the keys in ``left`` with multiple matches in ``right`` ("AMZN" and "MSFT"), all
+      matches are in the returned :py:class:`~.rt_dataset.Dataset`.
+    - The row in ``right`` whose key matches two keys in ``left`` ("TSLA") is duplicated
+      appropriately.
+    - The order of the keys in ``left`` is preserved.
+
+    >>> rt.merge2(ds_l, ds_r, on="Symbol", how="left")._A  # Show all rows of the returned Dataset.
+    #   Symbol   Value   Trader
+    -   ------   -----   ------
+    0   AMZN        10   Sunil
+    1   AMZN        10   Elon
+    2   TSLA        20   Nate
+    3   SPY         30
+    4   AAPL        40   Josh
+    5   TSLA        50   Nate
+    6   MSFT        60   Elaine
+    7   MSFT        60   Bob
+    8   MSFT        70   Elaine
+    9   MSFT        70   Bob
+
+    A "right" merge.
+
+    - The keys in ``right`` are used to find matches; all records from ``right`` and the
+      matching records from ``left`` are returned.
+    - The key in ``right`` with no match in ``left`` ("IBM") has a NaN value in the
+      column from ``left``.
+    - They key in ``left`` with no match in ``right`` ("SPY") is discarded.
+    - For the key in ``right`` with two matches in ``left`` ("TSLA"), both matches are in
+      the returned :py:class:`~.rt_dataset.Dataset`.
+    - The rows in ``left`` whose key matches multiple keys in ``right`` ("AMZN" and "MSFT")
+      are duplicated appropriately.
+    - The order of the keys in ``right`` is preserved.
+
+    >>> rt.merge2(ds_l, ds_r, on="Symbol", how="right")._A
+    #   Symbol   Value   Trader
+    -   ------   -----   ------
+    0   TSLA        20   Nate
+    1   TSLA        50   Nate
+    2   AMZN        10   Sunil
+    3   AMZN        10   Elon
+    4   AAPL        40   Josh
+    5   IBM        Inv   Anne
+    6   MSFT        60   Elaine
+    7   MSFT        70   Elaine
+    8   MSFT        60   Bob
+    9   MSFT        70   Bob
+
+    An "inner" merge.
+
+    - The intersection of keys from ``left`` and ``right`` are used to find matches; all
+      rows from ``left`` and ``right`` that have matching keys are returned.
+    - Because only keys with matches are used, there are no NaN values.
+    - Keys with multiple matches have all matches included.
+    - The order of the keys in ``left`` is preserved.
+
+    >>> rt.merge2(ds_l, ds_r, on="Symbol", how="inner")._A
+    #   Symbol   Value   Trader
+    -   ------   -----   ------
+    0   AMZN        10   Sunil
+    1   AMZN        10   Elon
+    2   TSLA        20   Nate
+    3   AAPL        40   Josh
+    4   TSLA        50   Nate
+    5   MSFT        60   Elaine
+    6   MSFT        60   Bob
+    7   MSFT        70   Elaine
+    8   MSFT        70   Bob
+
+    An "outer" merge.
+
+    - The union of the keys from ``left`` and ``right`` is used to find matches.
+    - For rows that don't have matches, NaN values are filled in.
+    - If there are multiple matches for a key, all matches are included in the returned
+      :py:class:`~.rt_dataset.Dataset`.
+
+    >>> rt.merge2(ds_l, ds_r, on="Symbol", how="outer")._A
+     #   Symbol   Value   Trader
+    --   ------   -----   ------
+     0   AMZN        10   Sunil
+     1   AMZN        10   Elon
+     2   TSLA        20   Nate
+     3   SPY         30
+     4   AAPL        40   Josh
+     5   TSLA        50   Nate
+     6   MSFT        60   Elaine
+     7   MSFT        60   Bob
+     8   MSFT        70   Elaine
+     9   MSFT        70   Bob
+    10   IBM        Inv   Anne
+
+    Invalid values are not treated as equal keys:
+
+    >>> ds_l = rt.Dataset({"Key": [1.0, rt.nan, 2.0,], "Value1": [1.0, 2.0, 3.0]})
+    >>> ds_r = rt.Dataset({"Key": [1.0, 2.0, rt.nan], "Value2": [1.0, 2.0, 3.0]})
+    >>> rt.merge2(ds_l, ds_r, on="Key", columns_right="Value2")._A
+    #    Key   Value1   Value2
+    -   ----   ------   ------
+    0   1.00     1.00     1.00
+    1    nan     2.00      nan
+    2   2.00     3.00     2.00
+
+    For more merge examples that use ``suffixes``, ``keep``, and various ``on`` values,
+    see :py:func:`.rt_merge.merge_lookup`.
     """
     # Process keyword arguments.
     require_match = bool(kwargs.pop("require_match")) if "require_match" in kwargs else False
@@ -3047,108 +3223,126 @@ def merge_lookup(
     hint_size: Optional[Union[int, Tuple[Optional[int], Optional[int]]]] = None,
 ) -> "Dataset":
     """
-    Combine two `.Dataset` objects by performing a database-style left-join
-    operation on columns.
+    Combine two :py:class:`~.rt_dataset.Dataset` objects by performing a database-style
+    left-join operation on columns.
 
-    This operation returns a new `.Dataset` object. To do an in-place merge, use
-    `.Dataset.merge_lookup` with ``inplace=True``.
+    Merge notes:
+
+    - A row from the ``left`` :py:class:`~.rt_dataset.Dataset` is combined with a row
+      from the ``right`` :py:class:`~.rt_dataset.Dataset` if the rows' corresponding
+      "key" column values ("keys") match. Specify the key columns using the ``on`` or
+      ``left_on`` and ``right_on`` parameters.
+    - All of the keys in ``left`` are used. If a key in ``left`` has no matching key in
+      ``right``, the row in the returned :py:class:`~.rt_dataset.Dataset` has the columns
+      from ``left`` and NaN values in the columns from ``right``. To require a match in
+      ``right``, set ``require_match`` to `True`.
+    - If a key in ``left`` has multiple matches in ``right``, only one match can be used.
+      Specify which match to use with the ``keep`` parameter.
+    - If a key in ``right`` matches multiple keys in ``left``, the row in ``right`` is
+      duplicated appropriately so that all matches are included in the returned
+      :py:class:`~.rt_dataset.Dataset`.
+    - If a key in ``right`` has no match in ``left``, that row is discarded from the result.
+    - Invalid values (NaN, etc.) are not treated as equal keys.
+
+    This operation returns a new :py:class:`~.rt_dataset.Dataset` object. To do an
+    in-place merge, use :py:meth:`.rt_dataset.Dataset.merge_lookup` with ``inplace=True``.
 
     Parameters
     ----------
-    left : `.Dataset`
-        The first `.Dataset` to merge. If a matching value for a key in `left`
-        isn't found in `right`, the returned `.Dataset` includes a row with the
-        columns from `left`, but with NaN values in each column from `right`.
-    right : `.Dataset`
-        The second `.Dataset` to merge. If rows in `right` don't have matches in
-        `left` they will be discarded. If they match multiple rows in `left` they will
-        be duplicated appropriately.
-    on : str or (str, str) or list of str or list of (str, str), optional
-        Names of columns (keys) to join on. If `on` isn't specified, `left_on`
-        and `right_on` must be specified.
+    left : :py:class:`~.rt_dataset.Dataset`
+        The first :py:class:`~.rt_dataset.Dataset` to merge. The keys in this
+        :py:class:`~.rt_dataset.Dataset` are used to find matches.
+    right : :py:class:`~.rt_dataset.Dataset`
+        The second :py:class:`~.rt_dataset.Dataset` to merge.
+    on : str or (str, str) or list of (str or (str, str)), optional
+        Names of key columns to merge on. If ``on`` isn't specified, ``left_on`` and
+        ``right_on`` must be specified.
         Options for types:
 
-        - Single string: Join on one column that has the same name in both
-          `.Dataset` objects.
-        - List: A list of strings is treated as a multi-key in which all
-          associated key column values in `left` must have matches in
-          `right`. The column names must be the same in both `.Dataset`
-          objects, unless they're in a tuple; see below.
-        - Tuple: Use a tuple to specify key columns that have different names.
-          For example, ``("col_a", "col_b")`` joins on ``col_a`` in
-          `left` and ``col_b`` in `right`. Both columns are in the
-          returned `.Dataset` unless you specify otherwise using
-          `columns_left` or `columns_right`.
+        - Single string: Merge on one column that has the same name in both
+          :py:class:`~.rt_dataset.Dataset` objects.
+        - List: Merge on multiple columns in each :py:class:`~.rt_dataset.Dataset`. All
+          associated key column values in ``left`` and ``right`` must match. Each list item
+          can be a single column name (if the column name is the same in both :py:class:`~.rt_dataset.Dataset`
+          objects) or a tuple of two names (if the column names differ).
+        - Tuple: Use a tuple to specify key columns that have different names. For example,
+          ``("col_a", "col_b")`` merges on ``col_a`` in ``left`` and ``col_b`` in ``right``.
+          A tuple can be part of a list, even if the other list items are single strings.
+          Both columns are in the returned :py:class:`~.rt_dataset.Dataset` unless you
+          specify otherwise using ``columns_left`` or ``columns_right``.
     left_on : str or list of str, optional
-        Use instead of `on` to specify names of columns in the left `.Dataset`
-        to join on. A list of strings is treated as a multi-key in which all
-        associated key column values in `left` must have matches in `right`. If
-        both `on` and `left_on` are specified, an error is raised.
+        The name(s) of the key column(s) in ``left`` to merge on. You can use ``left_on`` and
+        ``right_on`` instead of ``on`` to specify names of key columns. Both ``left_on``
+        and ``right_on`` must be specified, even if the column name is the same in ``left``
+        and ``right``. If a list of columns is provided, all associated key column values
+        in ``left`` and ``right`` must match.
     right_on : str or list of str, optional
-        Use instead of `on` to specify names of columns in the right `.Dataset`
-        to join on. A list of strings is treated as a multi-key in which all
-        associated key column values in `right` must have matches in `left`.
-        If both `on` and `right_on` are specified, an error is raised.
+        The name(s) of the key column(s) in ``right`` to merge on. You can use ``left_on`` and
+        ``right_on`` instead of ``on`` to specify names of key columns. Both ``left_on``
+        and ``right_on`` must be specified, even if the column name is the same in ``left``
+        and ``right``. If a list of columns is provided, all associated key column values
+        in ``left`` and ``right`` must match.
     require_match : bool, default `False`
-        When `True`, all keys in `left` are required to have a matching key in
-        `right`, and an error is raised when this requirement is not met.
+        When set to `True`, each key in ``left`` is required to have a matching key in ``right``,
+        and an error is raised when this requirement is not met.
     suffixes : tuple of (str, str), optional
-        Suffixes to apply to returned overlapping non-key-column names in
-        `left` and `right`, respectively. By default, an error is raised
-        for any overlapping non-key columns that will be in the returned
-        `.Dataset`.
+        Suffixes to apply to returned overlapping non-key-column names in ``left`` and ``right``,
+        respectively. By default, an error is raised for any overlapping non-key columns
+        that would be in the returned :py:class:`~.rt_dataset.Dataset`.
     copy : bool, default `True`
-        Set to `False` to avoid copying data when possible. This can reduce
-        memory usage, but be aware that data can be shared among `left`,
-        `right`, and the `.Dataset` returned by this function.
+        Set to `False` to avoid copying data when possible. This can reduce memory usage,
+        but be aware that data can be shared among ``left``, ``right``, and the
+        :py:class:`~.rt_dataset.Dataset` returned by this function.
     columns_left : str or list of str, optional
-        Names of columns from `left` to include in the merged `Dataset`.
-        By default, all columns are included.
+        Names of columns from ``left`` to include in the merged :py:class:`~.rt_dataset.Dataset`.
+        By default, all columns are included. If an empty list (``[]``) is specified, no columns
+        are included except any key column that has the same name in both :py:class:`~.rt_dataset.Dataset`
+        objects.
     columns_right : str or list of str, optional
-        Names of columns from `right` to include in the merged `.Dataset`.
-        By default, all columns are included.
-    keep : {None, 'first', 'last'}, optional
-        When `right` contains multiple rows with a given unique key from `left`,
-        keep only one such row; this parameter indicates whether it should be
-        the first or last row with the given key. By default (``keep=None``), an
-        error is raised if there are any non-unique keys in `right`.
+        Names of columns from ``right`` to include in the merged :py:class:`~.rt_dataset.Dataset`.
+        By default, all columns are included. If an empty list (``[]``) is specified, no columns
+        are included except any key column that has the same name in both :py:class:`~.rt_dataset.Dataset`
+        objects.
+    keep : {None, "first", "last"}, optional
+        When a key in ``left`` has multiple matches in ``right``, raise an error (the default)
+        or use only the first match or the last match.
     high_card : bool or (bool, bool), optional
-        Hint to the low-level grouping implementation that the key(s) of `left`
-        or `right` contain a high number of unique values (cardinality);
+        Hint to the low-level grouping implementation that the key(s) of ``left``
+        or ``right`` contain a high number of unique values (cardinality);
         the grouping logic *may* use this hint to select an algorithm that can
         provide better performance for such cases.
     hint_size : int or (int, int), optional
-        An estimate of the number of unique keys used for the join. Used as a
+        An estimate of the number of unique keys used for the merge. Used as a
         performance hint to the low-level grouping implementation. This hint is
-        typically ignored when `high_card` is specified.
+        typically ignored when ``high_card`` is specified.
 
     Returns
     -------
-    Dataset
-        A new `.Dataset` of the two merged objects.
+    :py:class:`~.rt_dataset.Dataset`
+        A new :py:class:`~.rt_dataset.Dataset` of the two merged objects.
 
     See Also
     --------
-    ~riptable.rt_merge.merge_asof :
-        Merge two `.Dataset` objects using the nearest key.
-    ~riptable.rt_merge.merge2 :
-        Merge two `.Dataset` objects using various database-style joins.
-    ~riptable.rt_merge.merge_indices :
+    :py:func:`.rt_merge.merge2` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using various database-style joins.
+    :py:func:`.rt_merge.merge_asof` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using the nearest key.
+    :py:func:`.rt_merge.merge_indices` :
         Return the left and right indices created by the join engine.
-    .Dataset.merge_lookup : Merge two `.Dataset` objects with an in-place option.
-    .Dataset.merge2 :
-        Merge two `.Dataset` objects using various database-style joins.
-    .Dataset.merge_asof : Merge two `.Dataset` objects using the nearest key.
+    :py:meth:`.rt_dataset.Dataset.merge2` :
+        Merge two :py:class:`~.rt_dataset.Dataset` objects using various database-style joins.
+    :py:meth:`.rt_dataset.Dataset.merge_asof` : Merge two :py:class:`~.rt_dataset.Dataset` objects using the nearest key.
+    :py:meth:`.rt_dataset.Dataset.merge_lookup` : Merge two :py:class:`~.rt_dataset.Dataset` objects with an in-place option.
 
     Examples
     --------
-    A basic merge on a single column:
+    The following examples use these two :py:class:`~.rt_dataset.Dataset` objects:
 
     >>> ds_l = rt.Dataset({"Symbol": rt.FA(["GME", "AMZN", "TSLA", "SPY", "TSLA",
     ...                                     "AMZN", "GME", "SPY", "GME", "TSLA"])})
     >>> ds_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "GME", "AMZN", "SPY"]),
     ...                    "Trader": rt.FA(["Nate", "Elon", "Josh", "Dan"])})
-    >>> ds_l
+    >>> ds_l._A  # Show all rows of the returned Dataset.
     #   Symbol
     -   ------
     0   GME
@@ -3161,18 +3355,19 @@ def merge_lookup(
     7   SPY
     8   GME
     9   TSLA
-    <BLANKLINE>
-    [10 rows x 1 columns] total bytes: 40.0 B
-    >>> ds_r
+    >>> ds_r._A
     #   Symbol   Trader
     -   ------   ------
     0   TSLA     Nate
     1   GME      Elon
     2   AMZN     Josh
     3   SPY      Dan
-    <BLANKLINE>
-    [4 rows x 2 columns] total bytes: 32.0 B
-    >>> rt.merge_lookup(ds_l, ds_r, on="Symbol")
+
+    A basic merge on a column that has the same name in both :py:class:`~.rt_dataset.Dataset`
+    objects. Notice that only one "Symbol" column appears in the returned :py:class:`~.rt_dataset.Dataset` --
+    this is the case when the key column has the same name in ``left`` and ``right``.
+
+    >>> rt.merge_lookup(ds_l, ds_r, on="Symbol")._A
     #   Symbol   Trader
     -   ------   ------
     0   GME      Elon
@@ -3185,92 +3380,126 @@ def merge_lookup(
     7   SPY      Dan
     8   GME      Elon
     9   TSLA     Nate
-    <BLANKLINE>
-    [10 rows x 2 columns] total bytes: 80.0 B
 
-    When key columns have different names, use `left_on` and `right_on`
-    to specify them:
+    When the key column has a different name in ``left`` and ``right``, you can use
+    ``left_on`` and ``right_on`` to specify the names.
 
+    Both key columns are in the returned :py:class:`~.rt_dataset.Dataset` unless you specify
+    otherwise using ``columns_left`` and ``columns_right``:
+
+    >>> # Rename the Symbol column in the right Dataset.
     >>> ds_r.col_rename("Symbol", "Primary_Symbol")
-    >>> rt.merge_lookup(ds_l, ds_r, left_on="Symbol", right_on="Primary_Symbol",
-    ...                 columns_right="Trader")
-    #   Symbol   Trader
-    -   ------   ------
-    0   GME      Elon
-    1   AMZN     Josh
-    2   TSLA     Nate
-    3   SPY      Dan
-    4   TSLA     Nate
-    5   AMZN     Josh
-    6   GME      Elon
-    7   SPY      Dan
-    8   GME      Elon
-    9   TSLA     Nate
-    <BLANKLINE>
-    [10 rows x 2 columns] total bytes: 80.0 B
+    >>> # Use left_on and right_on.
+    >>> rt.merge_lookup(ds_l, ds_r, left_on="Symbol", right_on="Primary_Symbol")._A
+    #   Symbol   Primary_Symbol   Trader
+    -   ------   --------------   ------
+    0   GME      GME              Elon
+    1   AMZN     AMZN             Josh
+    2   TSLA     TSLA             Nate
+    3   SPY      SPY              Dan
+    4   TSLA     TSLA             Nate
+    5   AMZN     AMZN             Josh
+    6   GME      GME              Elon
+    7   SPY      SPY              Dan
+    8   GME      GME              Elon
+    9   TSLA     TSLA             Nate
 
-    For non-key columns with the same name that will be returned, specify
-    `suffixes`:
+    For non-key columns with the same name that will be in the returned :py:class:`~.rt_dataset.Dataset`,
+    differentiate them by specifying ``suffixes`` to append to each column name.
 
-    >>> # Add duplicate non-key columns.
+    Here, a column named "Value" is added to both :py:class:`~.rt_dataset.Dataset`
+    objects. To differentiate the two column names in the returned :py:class:`~.rt_dataset.Dataset`,
+    ``suffixes`` "_1" and "_2" are specified in the function call.
+
+    >>> # Add non-key columns with overlapping names.
     >>> ds_l.Value = rt.FA([0.72, 0.85, 0.14, 0.55, 0.77, 0.65, 0.23, 0.15, 0.43, 0.25])
     >>> ds_r.Value = rt.FA([0.28, 0.56, 0.89, 0.74])
-    >>> # You can also use a tuple to specify left and right key columns.
+    >>> # Merge on "Symbol" and "Primary Symbol" columns. You can also use a tuple to specify
+    >>> # left and right key columns.
     >>> rt.merge_lookup(ds_l, ds_r, on=("Symbol", "Primary_Symbol"),
-    ...                 suffixes=["_1", "_2"], columns_right=["Value", "Trader"])
-    #   Symbol   Value_1   Value_2   Trader
-    -   ------   -------   -------   ------
-    0   GME         0.72      0.56   Elon
-    1   AMZN        0.85      0.89   Josh
-    2   TSLA        0.14      0.28   Nate
-    3   SPY         0.55      0.74   Dan
-    4   TSLA        0.77      0.28   Nate
-    5   AMZN        0.65      0.89   Josh
-    6   GME         0.23      0.56   Elon
-    7   SPY         0.15      0.74   Dan
-    8   GME         0.43      0.56   Elon
-    9   TSLA        0.25      0.28   Nate
-    <BLANKLINE>
-    [10 rows x 4 columns] total bytes: 240.0 B
+    ...                 suffixes=["_1", "_2"])._A
+    #   Symbol   Value_1   Primary_Symbol   Trader   Value_2
+    -   ------   -------   --------------   ------   -------
+    0   GME         0.72   GME              Elon        0.56
+    1   AMZN        0.85   AMZN             Josh        0.89
+    2   TSLA        0.14   TSLA             Nate        0.28
+    3   SPY         0.55   SPY              Dan         0.74
+    4   TSLA        0.77   TSLA             Nate        0.28
+    5   AMZN        0.65   AMZN             Josh        0.89
+    6   GME         0.23   GME              Elon        0.56
+    7   SPY         0.15   SPY              Dan         0.74
+    8   GME         0.43   GME              Elon        0.56
+    9   TSLA        0.25   TSLA             Nate        0.28
 
-    When `on` is a list, a multi-key join is performed. All keys must match
-    in the right `.Dataset`.
+    To merge on multiple key columns, pass a list to ``on``.
 
-    If a matching value for a key in the left `.Dataset` isn't found in the
-    right `.Dataset`, the returned `.Dataset` includes a row with the columns
-    from `left` but with NaN values in the columns from `right`.
+    Here, a "Size" column is added to both :py:class:`~.rt_dataset.Dataset` objects. The
+    "Size" column will be used as a second key column, along with "Symbol"/"Primary Symbol".
 
-    >>> # Add associated Size values for multi-key join. Note that one
-    >>> # symbol-size pair in the left Dataset doesn't have a match in
-    >>> # the right Dataset.
     >>> ds_l.Size = rt.FA([500, 150, 430, 225, 430, 320, 175, 620, 135, 260])
     >>> ds_r.Size = rt.FA([430, 500, 150, 2250])
-    >>> # Pass a list of key columns that contains a tuple.
-    >>> rt.merge_lookup(ds_l, ds_r, on=[("Symbol", "Primary_Symbol"), "Size"],
-    ...                 suffixes=["_1", "_2"])
-    #   Size   Symbol   Value_1   Trader   Value_2
-    -   ----   ------   -------   ------   -------
-    0    500   GME         0.72   Elon        0.56
-    1    150   AMZN        0.85   Josh        0.89
-    2    430   TSLA        0.14   Nate        0.28
-    3    225   SPY         0.55                nan
-    4    430   TSLA        0.77   Nate        0.28
-    5    320   AMZN        0.65                nan
-    6    175   GME         0.23                nan
-    7    620   SPY         0.15                nan
-    8    135   GME         0.43                nan
-    9    260   TSLA        0.25                nan
-    <BLANKLINE>
-    [10 rows x 5 columns] total bytes: 280.0 B
+    >>> ds_l._A
+    #   Symbol   Value   Size
+    -   ------   -----   ----
+    0   GME       0.72    500
+    1   AMZN      0.85    150
+    2   TSLA      0.14    430
+    3   SPY       0.55    225
+    4   TSLA      0.77    430
+    5   AMZN      0.65    320
+    6   GME       0.23    175
+    7   SPY       0.15    620
+    8   GME       0.43    135
+    9   TSLA      0.25    260
+    >>> ds_r._A
+    #   Primary_Symbol   Trader   Value    Size
+    -   --------------   ------   -----   -----
+    0   TSLA             Nate      0.28     430
+    1   GME              Elon      0.56     500
+    2   AMZN             Josh      0.89     150
+    3   SPY              Dan       0.74   2,250
 
-    When the right `.Dataset` has more than one matching key, use `keep` to
-    specify which one to use:
+    Now a multi-key merge is performed on two key columns: "Symbol"/"Primary Symbol" and
+    "Size".
+
+    For a row to be merged, the associated key column values in ``left`` must have a
+    match in ``right``. If there's no match, columns from ``right`` are filled with NaN
+    values.
+
+    For example, the pair of keys ``(225, "SPY")`` in ``left`` doesn't have a match
+    in ``right``. In the merged :py:class:`~.rt_dataset.Dataset`, the columns from ``right``
+    contain NaN values for that row.
+
+    (Also note that because the "Size" columns are key columns, they don't need ``suffixes`` --
+    only one "Size" column is in the returned :py:class:`~.rt_dataset.Dataset`.)
+
+    >>> # Pass a list of key columns. Note that a list item can be a tuple.
+    >>> rt.merge_lookup(ds_l, ds_r, on=[("Symbol", "Primary_Symbol"), "Size"],
+    ...                 suffixes=["_1", "_2"])._A
+    #   Size   Symbol   Value_1   Primary_Symbol   Trader   Value_2
+    -   ----   ------   -------   --------------   ------   -------
+    0    500   GME         0.72   GME              Elon        0.56
+    1    150   AMZN        0.85   AMZN             Josh        0.89
+    2    430   TSLA        0.14   TSLA             Nate        0.28
+    3    225   SPY         0.55                                 nan
+    4    430   TSLA        0.77   TSLA             Nate        0.28
+    5    320   AMZN        0.65                                 nan
+    6    175   GME         0.23                                 nan
+    7    620   SPY         0.15                                 nan
+    8    135   GME         0.43                                 nan
+    9    260   TSLA        0.25                                 nan
+
+    When a key in ``left`` has more than one match in ``right``, use ``keep`` to
+    specify which one to use.
+
+    Here, the "SPY" key in ``left`` has two matches in ``right``, and ``keep`` is
+    set to use the last match, associated with "Amy":
 
     >>> ds_l = rt.Dataset({"Symbol": rt.FA(["GME", "AMZN", "TSLA", "SPY", "TSLA",
     ...                                     "AMZN", "GME", "SPY", "GME", "TSLA"])})
     >>> ds_r = rt.Dataset({"Symbol": rt.FA(["TSLA", "GME", "AMZN", "SPY", "SPY"]),
     ...                    "Trader": rt.FA(["Nate", "Elon", "Josh", "Dan", "Amy"])})
-    >>> rt.merge_lookup(ds_l, ds_r, on="Symbol", keep="last")
+    >>> rt.merge_lookup(ds_l, ds_r, on="Symbol", keep="last")._A
     #   Symbol   Trader
     -   ------   ------
     0   GME      Elon
@@ -3283,21 +3512,17 @@ def merge_lookup(
     7   SPY      Amy
     8   GME      Elon
     9   TSLA     Nate
-    <BLANKLINE>
-    [10 rows x 2 columns] total bytes: 80.0 B
 
     Invalid values are not treated as equal keys:
 
     >>> ds_l = rt.Dataset({"Key": [1.0, rt.nan, 2.0,], "Value1": [1.0, 2.0, 3.0]})
     >>> ds_r = rt.Dataset({"Key": [1.0, 2.0, rt.nan], "Value2": [1.0, 2.0, 3.0]})
-    >>> rt.merge_lookup(ds_l, ds_r, on="Key", columns_right="Value2")
+    >>> rt.merge_lookup(ds_l, ds_r, on="Key", columns_right="Value2")._A
     #    Key   Value1   Value2
     -   ----   ------   ------
     0   1.00     1.00     1.00
     1    nan     2.00      nan
     2   2.00     3.00     2.00
-    <BLANKLINE>
-    [3 rows x 3 columns] total bytes: 72.0 B
     """
     # If keep is None, that means we want an exception to be raised if
     # there are any keys in 'right' occurring more than once. Do that via

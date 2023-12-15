@@ -983,24 +983,6 @@ class TimeZone:
     from_tz : str, defaults to None
     to_tz : str
 
-    Attributes
-    ----------
-    _from_tz : str
-        tz databse timezone name - the timezone that the time originates from
-    _dst_cutoffs : numpy.ndarray
-        lookup array for converting times from constructor to UTC nano in GMT time
-    _to_tz : str
-        tz database timezone name - the timezone that the time will be displayed in
-    _timezone_str
-        same as _to_str.
-        NOTE: This is actually a property, not a regular attribute.
-    _dst_reverse : numpy.ndarray
-        lookup array for DateTimeNano to display time in the correct timezone, accounting for daylight savings.
-    _offset
-        offset from GMT for display (non daylight savings)
-    _fix_offset
-        the offset from the timezone of origin
-
     Notes
     -----
     'UTC' is not a timezone, but accepted as an alias for GMT

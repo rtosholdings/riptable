@@ -89,14 +89,23 @@ class TestPyarrowConvertTimeSpan:
         ("rt_tsp_arr",),
         [
             pytest.param(rt.TimeSpan([]), id="empty"),
+            pytest.param(rt.TimeSpan(range(100), "s"), id="seconds"),
+            pytest.param(rt.TimeSpan(range(100), "ns"), id="nanoseconds"),
+            pytest.param(rt.TimeSpan([rt.nan]), id="contains_null")
             # TODO: Add test cases
         ],
     )
-    def test_roundtrip_rt_pa_rt(self, rt_tsp_arr: rt.Date) -> None:
+    @pytest.mark.parametrize("writable", [True, False])
+    def test_roundtrip_rt_pa_rt(self, rt_tsp_arr: rt.Date, writable: bool) -> None:
         """Test round-tripping from rt.Date to pyarrow.Array and back."""
         result_pa_arr = rt_tsp_arr.to_arrow()
-        result_tsp_arr = rt.TimeSpan.from_arrow(result_pa_arr, zero_copy_only=False)
+        result_tsp_arr = rt.TimeSpan.from_arrow(result_pa_arr, zero_copy_only=False, writable=writable)
         assert_array_equal(rt_tsp_arr, result_tsp_arr)
+
+    def test_from_arrow_bad(self):
+        inp = rt.TimeSpan([1, 2, 3]).to_arrow()
+        with pytest.raises(ValueError):
+            res = rt.TimeSpan.from_arrow(inp, zero_copy_only=True)
 
 
 class TestPyarrowConvertCategorical:

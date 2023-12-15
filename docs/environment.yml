@@ -2,6 +2,9 @@ channels:
   - rtosholdings
   - conda-forge
   - defaults
+
+  # *** IMPORTANT ***
+  # Any changes made here must be reflected in gen_requirements.py for build use!
 dependencies:
   - ansi2html>=1.5.2
   - arrow
@@ -16,6 +19,8 @@ dependencies:
   - pytest
   - python-dateutil
   - riptide_cpp
+  - sphinx>=7,<8
   - sphinx_rtd_theme>=0.5.1
-  - sphinx-autoapi
+  - sphinx-autoapi>=3,<4
   - sphinx-design
+  - tomli

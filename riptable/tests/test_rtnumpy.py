@@ -108,6 +108,13 @@ class TestRTNumpy:
         assert_array_equal(rt.where(c3, 1, 2), FastArray([2, 2, 2]))
         assert_array_equal(rt.where(c3, l1, l1), FastArray([1, 1, 1]))
 
+    def test_where_strided(self):
+        dtype = np.dtype(float32)
+        arr = np.array([1, 2, 3, 4, 5, 6], dtype=dtype)
+        a = np.ndarray(buffer=arr, shape=(3,), strides=(8,), dtype=dtype)
+        w = rt.where(a == 0, 0, a)
+        assert_array_equal(w, FastArray([1, 3, 5]))
+
     def test_min_scalar_type(self):
         i8 = np.iinfo(np.int8)
         u8 = np.iinfo(np.uint8)

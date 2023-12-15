@@ -30,6 +30,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,7 @@ import matplotlib.pyplot as plt
 import numpy
 from numpydoc.docscrape import get_doc_object
 from numpydoc.validate import (
+    error as npd_error,
     Validator,
     validate,
 )
@@ -106,7 +108,7 @@ def riptable_error(code, **kwargs):
     Copy of the numpydoc error function, since ERROR_MSGS can't be updated
     with our custom errors yet.
     """
-    return (code, ERROR_MSGS[code].format(**kwargs))
+    return (code, ERROR_MSGS[code].format(**kwargs)) if code in ERROR_MSGS else npd_error(code, **kwargs)
 
 
 def get_api_items(api_doc_fd):
@@ -208,21 +210,24 @@ class RiptableDocstring(Validator):
         )
         error_msgs = ""
         current_dir = set(os.listdir())
+        tempdir = pathlib.Path("tempdir")  # special reserved directory for temporary files; will be deleted per test
         for test in finder.find(self.raw_doc, self.name, globs=IMPORT_CONTEXT):
+            tempdir.mkdir()
             f = io.StringIO()
             failed_examples, total_examples = runner.run(test, out=f.write)
             if failed_examples:
                 error_msgs += f.getvalue()
+            shutil.rmtree(tempdir)
         leftovers = set(os.listdir()).difference(current_dir)
         if leftovers:
             for leftover in leftovers:
                 path = pathlib.Path(leftover).resolve()
                 if path.is_dir():
-                    path.rmdir()
+                    shutil.rmtree(path)
                 elif path.is_file():
                     path.unlink(missing_ok=True)
             error_msgs += (
-                f"The following files were leftover from the doctest: " f"{leftovers}. Please use # doctest: +SKIP"
+                f"The following files/dirs were leftover from the doctest: " f"{leftovers}. Please use # doctest: +SKIP"
             )
         return error_msgs
 
@@ -349,13 +354,19 @@ def riptable_validate(
         if doc_parse_error:
             result["errors"].insert(0, riptable_error("GL99", doc_parse_error=doc_parse_error))
 
-        # Remove improper failures for undocumented enum class parameters
+        # Remove incorrect failures for undocumented enum class parameters
         if inspect.isclass(func_obj) and issubclass(func_obj, enum.Enum):
             result["errors"] = [item for item in result["errors"] if item not in doc.parameter_mismatches]
 
         mentioned_errs = doc.mentioned_private_classes
         if mentioned_errs:
             result["errors"].append(riptable_error("GL98", mentioned_private_classes=", ".join(mentioned_errs)))
+
+        # If documented function/method docstring exists...
+        if doc.raw_doc and doc.is_function_or_method:
+            # If there exist any sections (it appears to be a public API docstring)...
+            if not doc.returns and "RT01" not in set(x[0] for x in result["errors"]):
+                result["errors"].append(riptable_error("RT01"))
 
         if doc.see_also:
             for rel_name in doc.see_also:
@@ -571,7 +582,7 @@ def validate_all(
 
     api_items = [item for item in api_items if is_included(item[0], includes=includes, excludes=excludes)]
 
-    api_items.sort(key=lambda v: v[0])
+    api_items.sort()
 
     match_re = re.compile(match) if match else None
     not_match_re = re.compile(not_match) if not_match else None
@@ -650,6 +661,7 @@ def print_validate_all_results(
     excludes: typing.Optional(list[str]) = None,
     xfails: typing.Optional(list[str]) = None,
     outfile: typing.IO = sys.stdout,
+    outfailsfile: typing.Optional(typing.IO) = None,
     verbose: int = 0,
 ):
     if out_format not in OUT_FORMAT_OPTS:
@@ -685,8 +697,12 @@ def print_validate_all_results(
     xerrors_count = 0
 
     for name, res in result.items():
-        errors_count += 1 if res["errors"] else 0
-        xerrors_count += 1 if res["xerrors"] else 0
+        error_count = 1 if res["errors"] else 0
+        xerror_count = 1 if res["xerrors"] else 0
+        if error_count or xerror_count:
+            print(name, file=outfailsfile)
+        errors_count += error_count
+        xerrors_count += xerror_count
 
     if verbose:
         print(f"{len(result)} validated: {errors_count} failed, {xerrors_count} expected failed")
@@ -769,7 +785,7 @@ def parse_commented_strings(iter: typing.Iterable[str]) -> list[str]:
     return [line for line in stripped if line]
 
 
-def parse_filters(filterpath):
+def parse_filters(filterpath: str) -> typing.Tuple[typing.Optional[list[str]], typing.Optional[list[str]]]:
     includes = []
     excludes = []
     filters = parse_commented_strings(open(filterpath))
@@ -887,6 +903,12 @@ def main():
         help="Output file path, else use stdout.",
     )
     argparser.add_argument(
+        "--out-fails",
+        default=None,
+        type=str,
+        help="Output path listing failures.",
+    )
+    argparser.add_argument(
         "--verbose",
         "-v",
         default=0,
@@ -909,6 +931,12 @@ def main():
     xfails = parse_commented_strings(open(args.xfails)) if args.xfails else None
 
     includes, excludes = parse_filters(args.filters) if args.filters else (None, None)
+
+    bad = [n for n in xfails if n in excludes]
+    if bad:
+        raise ValueError(f"Excluded names also found in xfails list, resolve duplicate: {bad}")
+
+    outfailsfile = open(args.out_fails, "w", encoding="utf-8", errors="backslashreplace") if args.out_fails else None
 
     with open(args.out, "w", encoding="utf-8", errors="backslashreplace") if args.out else open(
         sys.stdout.fileno(), "w", closefd=False
@@ -933,6 +961,7 @@ def main():
                 excludes=excludes,
                 xfails=xfails,
                 outfile=outfile,
+                outfailsfile=outfailsfile,
                 verbose=args.verbose,
             )
         else:

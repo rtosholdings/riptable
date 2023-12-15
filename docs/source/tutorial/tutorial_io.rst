@@ -82,9 +82,6 @@ Load the FastArray::
     >>> fa_load_sds
     FastArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=int32)
 
-Warning: Multi-key Categoricals can’t be saved in SDS files. When you
-try to load the SDS file, it fails with an error: “Categories dict was
-empty.”
 
 CSV Files
 ---------

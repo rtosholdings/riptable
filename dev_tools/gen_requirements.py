@@ -105,15 +105,19 @@ tests_reqs = [
 ] + runtime_opt_reqs
 
 # Sphinx requirements for docs generation.
-# Any changes should be reflected in docs/environment.yml as well for ReadTheDocs use.
+#
+# *** IMPORTANT ***
+# Any changes made here must be reflected in docs/environment.yml as well for ReadTheDocs use!
+#
 sphinx_reqs = (
     [
-        "sphinx_rtd_theme>=0.5.1",
-        "sphinx-autoapi<3",  # latest conda-forge version that works with astroid-2
-        "astroid<3",  # latest conda-forge version that works with sphinx-autoapi-2
         "nbsphinx",
-        "sphinx-design",
         "pytest",
+        "sphinx_rtd_theme>=0.5.1",
+        "sphinx-autoapi>=3,<4",
+        "sphinx-design",
+        "sphinx>=7,<8",
+        "tomli",
     ]
     + runtime_reqs
     + runtime_opt_reqs

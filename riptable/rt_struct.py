@@ -482,7 +482,7 @@ class Struct:
 
     # ------------------------------------------------------------
     def is_locked(self):
-        """Returns True if object is locked (unable to add/remove/rename elements).
+        """Return True if object is locked (unable to add/remove/rename elements).
 
         NB: Currently behaves as does tuple: the contained data will still be
         mutable when possible.
@@ -1774,7 +1774,7 @@ class Struct:
     # --------------------------------------------------------------------------
     def make_categoricals(self, columnlist=None, dtype=None) -> None:
         """
-        Converts specified string/bytes columns or all string/bytes columns to Categorical.
+        Convert specified string/bytes columns or all string/bytes columns to Categorical.
         Will also crawl through nested structs/datasets and convert their strings to categoricals.
 
         Parameters
@@ -1783,6 +1783,11 @@ class Struct:
             Single name, or list of names of items to convert to categoricals.
         dtype : `numpy.dtype`, optional
             Integer dtype for the categoricals' underlying arrays.
+
+        Returns
+        -------
+        None
+            Returns nothing.
 
         Raises
         ------
@@ -1885,6 +1890,10 @@ class Struct:
         auto : bool, optional, default True
             If True, look for 'MS' in the names of all columns, and flip them to TimeSpan objects.
 
+        Returns
+        -------
+        None
+            Returns nothing.
         """
         if dtcols is None:
             dtcols = list()
@@ -1916,6 +1925,11 @@ class Struct:
             Prefix for integer arrays in calling dataset - columns that will be looked for in the struct.
         keep_prefix : bool, default True
             If True, Drop the prefix after flipping the column to categorical in the dataset. If the a column exists with that name, the user will be warned.
+
+        Returns
+        -------
+        None
+            Returns nothing.
         """
         if not isinstance(xtra, dict):
             xtra = xtra.asdict()
@@ -2490,7 +2504,7 @@ class Struct:
     # ------------------------------------------------------------
     def values(self):
         """
-        Values are individual items from the struct (no attribute from item container).
+        Return individual items from the struct (no attribute from item container).
 
         Returns
         -------
@@ -2588,6 +2602,10 @@ class Struct:
         value : object
             For structs, nearly anything. For datasets, array.
 
+        Returns
+        -------
+        None
+            Returns nothing.
         """
         if not Struct.AllNames and not self.is_valid_colname(name):
             if self.__class__.WarnOnInvalidNames:
@@ -3097,6 +3115,11 @@ class Struct:
             Item names to move to front.
         blist : `list` of `str`
             Item names to move to back.
+
+        Returns
+        -------
+        None
+            Returns nothing.
 
         See Also
         --------

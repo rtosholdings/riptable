@@ -1988,7 +1988,8 @@ class FastArray(np.ndarray):
 
         Returns
         -------
-        An .sds file containing the :py:class:`~.rt_fastarray.FastArray`.
+        None
+            Returns nothing.
 
         See Also
         --------
@@ -2000,24 +2001,27 @@ class FastArray(np.ndarray):
 
         Examples
         --------
+        Setup for examples:
+
+        >>> import os
+
         Include a file name in the path:
 
         >>> a = rt.FA([0, 1, 2, 3, 4])
-        FastArray([0, 1, 2, 3, 4])
-        >>> a.save("C://junk//saved_file")
-        >>> os.listdir("C://junk")
+        >>> a.save("tempdir/ex1/saved_file")
+        >>> os.listdir("tempdir/ex1")
         ['saved_file.sds']
 
         When `name` is specified, `filepath` is treated as a path to a directory:
 
-        >>> a.save("C://junk//saved_file", name="fa")
-        >>> os.listdir("C://junk//saved_file")
+        >>> a.save("tempdir/ex2/saved_file", name="fa")
+        >>> os.listdir("tempdir/ex2/saved_file")
         ['fa.sds']
 
         Display a prompt before overwriting an existing file:
 
-        >>> a.save("C://junk//saved_file", overwrite=False)
-        C://junk//saved_file.sds already exists. Overwrite? (y/n) n
+        >>> a.save("tempdir/ex3/saved_file", overwrite=False)  # doctest: +SKIP
+        tempdir/saved_file.sds already exists. Overwrite? (y/n) n
         No file was saved.
         """
         save_sds(filepath, self, share=share, compress=compress, overwrite=overwrite, name=name)

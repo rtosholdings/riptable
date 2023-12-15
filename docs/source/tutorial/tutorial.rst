@@ -41,4 +41,5 @@ More In-Depth Topics
    :maxdepth: 1
 
    categoricals_user_guide
+   cross_join_using_merge2
    

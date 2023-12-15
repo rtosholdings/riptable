@@ -7227,7 +7227,9 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         ----------
         arr : pyarrow.Array or pyarrow.ChunkedArray
             Must be a "duration"-typed pyarrow array.
-        zero_copy_only : bool, optional, defaults to False
+        zero_copy_only : bool, optional, defaults to True
+
+            Note: True is not supported for this method as there is no way to avoid a copy when converting pyarrow duration array to riptable TimeSpan.
         writable : bool, optional, defaults to False
 
         Returns
@@ -7237,7 +7239,8 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
         import pyarrow as pa
         import pyarrow.types as pat
 
-        # import pyarrow.compute as pc
+        import pyarrow.compute as pc
+
         # Only support converting from duration-typed arrays.
         if not isinstance(arr, (pa.Array, pa.ChunkedArray)):
             raise TypeError("The array is not an instance of `pyarrow.Array` or `pyarrow.ChunkedArray`.")
@@ -7246,16 +7249,14 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
                 f"rt.TimeSpan arrays can only be created from pyarrow arrays of type 'duration', not '{arr.type}'."
             )
 
+        if zero_copy_only:
+            raise ValueError("Cannot perform a zero-copy conversion of a pyarrow duration array")
+
         # If the input array's type specifies a unit other than 'ns',
         # we need to convert it to nanoseconds, because rt.TimeSpan always uses nanoseconds as the unit.
         if arr.type.unit != "ns":
-            if zero_copy_only:
-                raise ValueError(
-                    "Cannot perform a zero-copy conversion of a pyarrow duration array with units other than 'ns'."
-                )
-            else:
-                pa_ns_duration_ty = pa.duration("ns")
-                arr = arr.cast(pa_ns_duration_ty)
+            pa_ns_duration_ty = pa.duration("ns")
+            arr = arr.cast(pa_ns_duration_ty)
 
         # ChunkedArrays need special handling.
         if isinstance(arr, pa.ChunkedArray):
@@ -7274,33 +7275,16 @@ class TimeSpan(TimeSpanBase, DateTimeBase):
                     ]
                 )
 
-        # Detect whether the values in the array are in the range [0, 2 ^ 53], in which case we *can* perform a zero-copy conversion
-        # of the data (assuming writable=False), since the integer and float representation will be the same.
-        # 2 ^ 53 nanoseconds is approx. 104 days + 6 hours.
-        # N.B. This doesn't work as expected -- seems like it's due to differences in integer vs. FP endianness in memory?
         arr_int64_view = arr.view(pa.int64())
-        # min_max_result: pa.StructScalar = pc.min_max(arr_int64_view)
-        # min_value = min_max_result['min']
-        # max_value = min_max_result['max']
-        # in_lossless_float64_int_range = min_value.as_py() >= 0 and max_value.as_py() <= (2 ** 53)
-        in_lossless_float64_int_range = False
+        # Convert from int64 ns representation to float64 representation, which in this case requires creating a new array.
+        f64_copy_pa = arr_int64_view.cast(pa.float64())
 
-        # Can we perform a lossless conversion to float64?
-        if in_lossless_float64_int_range:
-            f64_view_pa = arr_int64_view.view(pa.float64())
-            f64_view_np = f64_view_pa.to_numpy(zero_copy_only=not writable, writable=writable)
-            return f64_view_np.view(type=TimeSpan)
+        if f64_copy_pa.null_count != 0:
+            f64_inv = pa.scalar(INVALID_DICT[np.dtype(np.float64).num], type=pa.float64())
+            f64_copy_pa = f64_copy_pa.fill_null(f64_inv)
 
-        elif zero_copy_only:
-            raise ValueError(
-                "Cannot perform a zero-copy conversion of a pyarrow duration array containing negative values, or values larger than 2^53 nanoseconds."
-            )
-
-        else:
-            # Convert from int64 ns representation to float64 representation, which in this case requires creating a new array.
-            f64_copy_pa = arr_int64_view.cast(pa.float64())
-            f64_view_np = f64_copy_pa.to_numpy(zero_copy_only=not writable, writable=writable)
-            return f64_view_np.view(type=TimeSpan)
+        f64_view_np = f64_copy_pa.to_numpy(zero_copy_only=not writable, writable=writable)
+        return f64_view_np.view(type=TimeSpan)
 
     def to_arrow(
         self,
