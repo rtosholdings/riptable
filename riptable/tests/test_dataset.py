@@ -546,6 +546,15 @@ class TestDataset(unittest.TestCase):
             self.assertEqual(type(ds.b), subcls)
             self.assertTrue((ds.a == ds.b).all())
 
+    def test_assign_cat_null(self):
+        ds = rt.Dataset({"col_0": [4, 5]})
+        c = rt.Cat([1, 2, 1, 2, 1, 2])
+        cat_null = c.null()
+        label_keys = cat_null.keys()
+        ds[label_keys] = cat_null
+        self.assertEqual(ds.shape, (2, 2))
+        self.assertTrue((ds.key_0 == [1, 2]).all())
+
     def test_broadcast(self):
         ds = Dataset({"test": arange(10)})
         ds.x = [1]

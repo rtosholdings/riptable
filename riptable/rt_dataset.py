@@ -539,6 +539,9 @@ class Dataset(Struct):
             labels = value.label_get_names()
             data_cols = set(value) - set(labels)
 
+            if len(data_cols) == 0:  # replacing same columns
+                return value[0]
+
             if len(data_cols) == 1:
                 value = value[data_cols.pop()]
             else:
