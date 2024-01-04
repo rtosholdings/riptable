@@ -193,8 +193,7 @@ class Accum2_Test(unittest.TestCase):
             k2 = sorted_ints[i]
             full_colname = "('" + k1 + "', " + str(k2) + ")"
             arr = result[full_colname]
-            # TODO fix this regression that was masked due to duplicate test names
-            # self.assertAlmostEqual(arr[i + 1], sorted_data[i])
+            self.assertAlmostEqual(arr[i + 1], sorted_data[i])
 
     def test_multikey_cats_filter_accum_ordered(self):
         unsorted_str = FastArray(["c", "e", "b", "d", "a"])

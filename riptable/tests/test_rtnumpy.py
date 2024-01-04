@@ -424,6 +424,8 @@ class TestHStackAny:
     _ds1 = rt.Dataset({"a": 11})
     _ds2 = rt.Dataset({"b": 22})
     _ds3 = rt.Dataset({})
+    _ds4 = rt.Dataset({"a": [1, 2], "b": [3, 4]})
+    _ds5 = rt.Dataset({"a": [5, 6]})
     _pds1 = rt.PDataset(_ds1)
     _pds2 = rt.PDataset(_ds2)
 
@@ -443,14 +445,17 @@ class TestHStackAny:
             pytest.param([_pds1, _ds2], rt.Dataset, id="PDataset,Dataset"),
             pytest.param([_fa1, _ds2], None, id="FastArray,Dataset"),
             pytest.param([_ds1, _ds3], rt.Dataset, id="Dataset,Dataset"),
+            pytest.param([_ds4, _ds5], rt.Dataset, id="Dataset,Dataset invalid"),
+            pytest.param([_ds4, _ds3], rt.Dataset, id="Dataset,Dataset invalid_empty"),
         ],
     )
-    def test_hstack_any(self, inputs, expected):
+    @pytest.mark.parametrize("destroy", [pytest.param(True, id="destroy"), pytest.param(False, id="destroy_false")])
+    def test_hstack_any(self, inputs, expected, destroy):
         if expected is None:
             with pytest.raises(Exception):
-                rt.hstack_any(inputs)
+                rt.hstack_any(inputs, destroy=destroy)
         else:
-            result = rt.hstack_any(inputs)
+            result = rt.hstack_any(inputs, destroy=destroy)
             assert type(result) == expected
 
 

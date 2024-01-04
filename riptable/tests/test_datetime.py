@@ -685,6 +685,14 @@ class DateTime_Test(unittest.TestCase):
         self.assertEqual(dtn._timezone._timezone_str, "Asia/Tokyo")
         self.assertEqual(dtn._timezone._to_tz, "Asia/Tokyo")
 
+        dtn.set_timezone("Asia/Kolkata")
+        correct_kolkata = b"2019-01-07T21:06:00.000000000"
+        stamp_kolkata = dtn.to_iso()[0]
+        self.assertEqual(stamp_kolkata, correct_kolkata)
+
+        self.assertEqual(dtn._timezone._timezone_str, "Asia/Kolkata")
+        self.assertEqual(dtn._timezone._to_tz, "Asia/Kolkata")
+
         with self.assertRaises(ValueError):
             dtn.set_timezone("JUNK")
 
@@ -1801,6 +1809,16 @@ class DateTime_Test(unittest.TestCase):
         correct = FastArray([False, False])
         self.assertTrue(bool(np.all(result == correct)))
 
+    def test_is_dst_india(self):
+        dtn = DateTimeNano(
+            ["2023-03-12 10:11:12", "2023-07-11 11:12:13", "2023-11-12 12:13:14"],
+            from_tz="Asia/Kolkata",
+            to_tz="Asia/Kolkata",
+        )
+        self.assertEqual(dtn.dtype, np.dtype(int64))
+        result = dtn.is_dst
+        self.assertFalse(bool(np.any(result)))
+
     def test_is_dst_gmt(self):
         dtn = DateTimeNano(["2019-01-01"], from_tz="GMT", to_tz="GMT")
         start = dtn._fa[0]
@@ -1815,13 +1833,25 @@ class DateTime_Test(unittest.TestCase):
         correct = FastArray([-4, -5])
         self.assertTrue(bool(np.all(result == correct)))
 
-    def test_is_offset_dublin(self):
+    def test_tz_offset_dublin(self):
         dtn = DateTimeNano(["2019-03-30 12:34", "2019-03-31 12:34"], from_tz="DUBLIN", to_tz="DUBLIN")
         result = dtn.tz_offset
         correct = FastArray([0, 1])
         self.assertTrue(bool(np.all(result == correct)))
 
-    def test_is_offset_gmt(self):
+    def test_tz_offset_tokyo(self):
+        dtn = DateTimeNano(["2015-01-01", "2025-01-01"], from_tz="Asia/Tokyo", to_tz="Asia/Tokyo")
+        result = dtn.tz_offset
+        correct = FastArray([9, 9])
+        self.assertTrue(bool(np.all(result == correct)))
+
+    def test_tz_offset_india(self):
+        dtn = DateTimeNano(["2015-01-01", "2025-01-01"], from_tz="Asia/Kolkata", to_tz="Asia/Kolkata")
+        result = dtn.tz_offset
+        correct = FastArray([5.5, 5.5])
+        self.assertTrue(bool(np.all(result == correct)))
+
+    def test_tz_offset_gmt(self):
         dtn = DateTimeNano(["2019-01-01"], from_tz="GMT", to_tz="GMT")
         start = dtn._fa[0]
         daystamps = arange(start, start + NANOS_PER_YEAR, NANOS_PER_DAY)

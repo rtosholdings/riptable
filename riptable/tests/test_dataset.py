@@ -103,8 +103,12 @@ class TestDataset(unittest.TestCase):
 
     def test_col_ctor_01(self):
         list1 = [(_k, [_i]) for _i, _k in enumerate("bac")]
-        with self.assertRaises(TypeError):
+        with self.assertRaisesRegex(TypeError, "Cannot create.*out of a tuple"):
             _ = Dataset({"a": (1,)})
+        with self.assertRaisesRegex(TypeError, "Cannot create.*out of a Dataset"):
+            _ = Dataset({"a": Dataset()})
+        with self.assertRaisesRegex(TypeError, "Cannot create.*out of a Struct"):
+            _ = Dataset({"a": Struct()})
         with self.assertRaises(TypeError):
             _ = Dataset(list1)
         with self.assertRaises(ValueError):
@@ -1582,6 +1586,12 @@ class TestDataset(unittest.TestCase):
         self.assertIsInstance(ds.B, TypeRegister.Categorical)
         self.assertTrue((df.A == ds.A.astype(str)).all())
         self.assertTrue((df.B == ds.B.as_string_array.astype(str)).all())
+
+        dtype = pd.CategoricalDtype(["a", "b"], ordered=True)
+        pc = pd.Categorical.from_codes(codes=[0, 1, 0, 1], dtype=dtype)
+        ds = Dataset({"B": pc})
+        self.assertIsInstance(ds.B, TypeRegister.Categorical)
+        self.assertTrue((pc == ds.B.as_string_array.astype(str)).all())
 
     def _test_output(self):
         ds = self.get_basic_dataset()[:4, :3]

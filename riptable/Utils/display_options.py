@@ -12,119 +12,26 @@ __all__ = [
 
 
 class DisplayOptions(object):
-    # Todo alz 20191125 - fix disappearing attributes from numpy docs
-    # Following the numpy class docstring guide (https://numpy.org/devdocs/docs/howto_document.html#class-docstring),
-    # the following attributes and methods do not appear in the rendered HTML output.
-    # Investigate sphinx.ext.napoleon interaction with class variables.
-    # Property attributes are known to render correctly.
-    """Provides display options for:
-      1) console screen for customizing width, height, and character buffers
-      2) row, columns, and styles when displaying datasets and multisets
-      3) formatting headers, footers, and general string widths
-      4) formatting numeric types using scientific notation or specifying precision
-      5) other miscellaneous display options such as prefixing group by column names
+    """
+    Provides display options for Riptable outputs in HTML and other contexts.
 
-    Attributes
-    ----------
-    CONSOLE_X_BUFFER : int
-        Number of characters for buffer width on console display (default 30).
-    CONSOLE_X_HTML : int
-        Number of characters for buffer width on HTML display (default 340).
-    CONSOLE_X : int
-        Number of characters for console display width (default 150).
-    CONSOLE_Y : int
-        Number of characters for console display height (default 25).
-    HTML_DISPLAY : bool
-        Toggle HTML display mode (default True).
-    X_PADDING : int
-        Number of characters for column buffer in console display (default 4).
-    Y_PADDING : int
-        Number of characters for row buffer in console display (default 3).
-    ROW_ALL : bool
-        Toggle display of all rows for Dataset, Multiset, and Struct objects (default False).
-    COL_ALL : bool
-        Toggle display of all columns for Dataset, Multiset, and Struct objects (default False).
-    COL_MIN : int
-        Minimum columns to display for Dataset, Multiset, and Struct objects (default 1).
-    COL_MAX : int
-        Maximum columns to display for Dataset, Multiset, and Struct objects (default 50).
-    COL_T : int
-        Number of transposed rows to display, which appear as columns for Dataset, Multiset, and Struct objects (default 8).
-    HEAD_ROWS : int
-        Number of rows to display when calling head on a Dataset, Multiset, or Struct object (default 15).
-    TAIL_ROWS : int
-        Number of rows to display when calling tail on a Dataset, Multiset, or Struct object (default 15).
-    MAX_ROWS : int
-        Maximum number of rows to display for Dataset, Multiset, and Struct objects (default 30).
-    NO_STYLES : bool
-        Toggle for colors in IPython console (default False).
-        Note, may be difficult to see with light background.
-    COLOR_MODE : DisplayColorMode or None, optional
-        Color mode for display (default None).
-    CUSTOM_COMPLETION = bool
-        Toggle on for attribute completion results that show in alphanumeric key, attribute, then method ordering
-        for ``Dataset``, ``Multiset``, ``Struct`` (default False).
+      1) For console screens, customize width, height, and character buffers.
+      2) For Datasets and Multisets, customize row, column, and text display styles.
+      3) Format headers, footers, and general string widths.
+      4) Formatt numeric types using scientific notation or by specifying precision.
+      5) Other miscellaneous display options such as prefixing GroupBy column names.
 
-        This will override the default IPython ``Completer._complete`` to a custom variant that allows custom completer
-        dispatching using the ``IPython.utils.generics.complete_object`` hook while preserving the custom ordering.
-
-        Caution, below are the side effects when toggling this on:
-        - IPython ``use_jedi`` is set to False since this approach is currently incompatible with Jedi completion
-        because the code is actually evaluated on TAB.
-        - IPython ``Completer._complete`` is monkey patched to change use the custom completion that is backwards compatible
-        with ``Completer._complete``, but allows preserving the order.
-        - As of 20191218, if ``CUSTOM_COMPLETION`` is toggled on it results in a one-time registration of custom
-        attribute completion per IPython session as opposed to supporting deregistration.
-    MAX_HEADER_WIDTH : int
-        Maximum number of characters for header strings in a Dataset, Multiset, or Struct object (default 15).
-    MAX_FOOTER_WIDTH : int
-        Maximum number of characters for footer strings in Dataset, Multiset, or Struct object  (default 15).
-    MAX_STRING_WIDTH : int
-        Maximum number of characters for all strings (default 15).
-    PRECISION :
-        Number of digits to display to the right of the decimal (default 2).
-    E_PRECISION :
-        Number of digits to display to the right of the decimal in scientific notation (default 3).
-    E_THRESHOLD :
-        Power of 10 at which the float flips to scientific notation 10**+/- (default 6).
-    E_MIN : int or None, optional
-        lower limit before going to scientific notation (default None).
-    E_MAX : int or None, optional
-        Upper limit before going to scientific notation (default None).
-    P_THRESHOLD : int or None, optional
-        Precision threshold for area in between - so small values don't display as zero (default None).
-    NUMBER_SEPARATOR : bool
-        Flag for separating thousands in floats and ints (default False).
-    NUMBER_SEPARATOR_CHAR : DisplayNumberSeparator
-        Character for separating `,`, `.`, or `_` (default DisplayNumberSeparator.Comma).
-    GB_PREFIX : str
-         Prefix for column names to indicate that they are groupby keys (default "*").
-
-    Methods
-    -------
-    save_config
-    load_config
-    reset_config
-    e_min
-    e_max
-    p_threshold
-    no_colors
-
-    See also
+    See Also
     --------
-    DisplayTable : builds result tables with display options.
-
-    DisplayColorMode : enumerates supported color modes.
-
-    get_terminal_size : calculates console height and width.
+    :py:meth:`riptable.Utils.terminalsize.get_terminal_size` : Calculate console height and width.
 
     Examples
     --------
-    `CONSOLE_X_HTML` sets the number of characters for buffer width on the HTML display.
+    :py:data:`CONSOLE_X_HTML` sets the number of characters for buffer width on the HTML display.
     Truncated characters are replaced by ellipsis.
 
     >>> from riptable.Utils.display_options import DisplayOptions
-    >>> ds = rt.Dataset({'A':[0,6,9], 'B' : [1.2,3.1,9.6], 'C': [-1.6,2.7,4.6], 'D' : [2.4,6.2,19.2]})
+    >>> ds = rt.Dataset({"A": [0, 6, 9], "B": [1.2, 3.1, 9.6], "C": [-1.6, 2.7, 4.6], "D": [2.4, 6.2, 19.2]})
     >>> ds
     #   A      B       C       D
     -   -   ----   -----   -----
@@ -138,6 +45,7 @@ class DisplayOptions(object):
     1	6	3.10	...	6.20
     2	9	9.60	...	19.20
     """
+
     # class related options
     _CONFIG_LOADED = False  # default config file was found and loaded
     _AUTO_SAVE = False  # if true, config file will be saved to default path each time an option changes
@@ -147,50 +55,181 @@ class DisplayOptions(object):
     # screen/environment
     # Todo alz 20191125 - revisit the implementation, couldn't find usages and doesn't behave with console buffer
     CONSOLE_X_BUFFER = 30  # overall x buffer for console display
+    """
+    The number of characters for buffer width on console display (`int`, default 30).
+    """
+
     CONSOLE_X_HTML = 340  # default "console width" for html display
+    """
+    Number of characters for buffer width on HTML display (`int`, default 340).
+    """
+
     CONSOLE_X = 150  # default console width (also calculated by terminalsize.py) TODO: remove
+    """
+    Number of characters for console display width (`int`, default 150).
+    """
+
     CONSOLE_Y = 25  # default console height (also calculated by terminalsize.py) TODO: remove
+    """
+    Number of characters for console display height (`int`, default 25).
+    """
+
     HTML_DISPLAY = True  # force html display (TODO: remove)
+    """
+    Toggle HTML display mode (`bool`, default `True`).
+    """
+
     X_PADDING = 4  # character buffer for each column in console
+    """
+    Number of characters for column buffer in console display (`int`, default 4).
+    """
+
     Y_PADDING = 3  # character buffer for each row in console
+    """
+    Number of characters for row buffer in console display (`int`, default 3).
+    """
 
     # dataset/multiset
     ROW_ALL = False  # force all rows to display
+    """
+    Toggle display of all rows for Dataset, Multiset, and Struct objects (`bool`, default `False`).
+    """
+
     COL_ALL = False  # force all columns to display
+    """
+    Toggle display of all columns for Dataset, Multiset, and Struct objects (`bool`, default `False`).
+    """
+
     COL_MIN = 1  # min columns to display
+    """
+    Minimum columns to display for Dataset, Multiset, and Struct objects (`int`, default 1).
+    """
+
     COL_MAX = 50  # max columns to display
+    """
+    Maximum columns to display for Dataset, Multiset, and Struct objects (`int`, default 50).
+    """
+
     COL_T = 8  # number of transposed rows to display (which appear as columns)
+    """
+    Number of transposed rows to display, which appear as columns for Dataset, Multiset, and 
+    Struct objects (`int`, default 8).
+    """
+
     HEAD_ROWS = 15  # for dataset head
+    """
+    Number of rows to display when calling head on a Dataset, Multiset, or Struct object (`int`, default 15).
+    """
+
     TAIL_ROWS = 15  # for dataset tail
+    """
+    Number of rows to display when calling tail on a Dataset, Multiset, or Struct object (`int`, default 15).
+    """
+
     MAX_ROWS = 30  # max rows to display
+    """
+    Maximum number of rows to display for Dataset, Multiset, and Struct objects (`int`, default 30).
+    """
+
     NO_STYLES = False  # toggle for colors in the ipython console (sometimes hard to see with light background)
+    """
+    Toggle for colors in IPython console (`bool`, default `False`). Note, may be difficult 
+    to see with light background.
+    """
+
     COLOR_MODE = None  # set a color mode
+    """
+    Color mode for display (default `None`). Can also be set to ``DisplayColorMode``.
+    """
+
     # NROWS_TRANSPOSE = 0 #
     # NCOLS_TRANSPOSE = 0 # if > 0, a specific number of
     # BORDER     = True # add a border beneath header labels
     # toggle so completion results show in alphanumeric key, attribute, then method ordering for Dataset, Multiset,
     # and Struct at any nested level
     CUSTOM_COMPLETION: bool = False
+    """
+    Toggle on for attribute completion results that show in alphanumeric key, attribute, 
+    then method ordering for ``Dataset``, ``Multiset``, ``Struct`` (`bool`, default `False`).
+
+    This will override the default IPython ``Completer._complete`` to a custom variant that 
+    allows custom completer dispatching using the ``IPython.utils.generics.complete_object`` 
+    hook while preserving the custom ordering.
+
+    Caution, below are the side effects when toggling this on:
+
+    - IPython ``use_jedi`` is set to `False` since this approach is currently incompatible 
+      with Jedi completion because the code is actually evaluated on TAB.
+    - IPython ``Completer._complete`` is monkey patched to change use the custom completion 
+      that is backwards compatible with ``Completer._complete``, but allows preserving the order.
+    - As of 20191218, if ``CUSTOM_COMPLETION`` is toggled on it results in a one-time registration 
+      of custom attribute completion per IPython session as opposed to supporting deregistration.
+    """
 
     # formatting for datasets/mutilsets/etc
     MAX_HEADER_WIDTH = 15  # maximum for header strings in dataset/multiset
+    """
+    Maximum number of characters for header strings in a Dataset, Multiset, or Struct object 
+    (`int`, default 15).
+    """
+
     MAX_FOOTER_WIDTH = 15  # maximum for footer strings in dataset/multiset
+    """
+    Maximum number of characters for footer strings in Dataset, Multiset, or Struct object 
+    (`int`, default 15).
+    """
+
     MAX_STRING_WIDTH = 15  # maximum for ALL strings
+    """
+    Maximum number of characters for all strings (`int`, default 15).
+    """
 
     # formatting for floating point and integer
     PRECISION = 2  # number of digits to the right of the decimal
+    """
+    Number of digits to display to the right of the decimal (`int`, default 2).
+    """
+
     E_PRECISION = 3  # number of digits to display to the right of the decimal (sci notation)
+    """
+    Number of digits to display to the right of the decimal in scientific notation (`int`, default 3).
+    """
+
     E_THRESHOLD = 6  # power of 10 at which the float flips to scientific notation 10**+/-
+    """
+    Power of 10 at which the float flips to scientific notation 10**+/- (`int`, default 6).
+    """
 
     E_MIN = None  # lower limit before going to scientific notation
+    """
+    Lower limit before going to scientific notation (`int`, default `None`).
+    """
+
     E_MAX = None  # upper limit before going to scientific notation
+    """
+    Upper limit before going to scientific notation (`int`, default None).
+    """
+
     P_THRESHOLD = None  # precision threshold for area in between - so small values don't display as zero
+    """
+    Precision threshold for area in between - so small values don't display as zero (`int`, default `None`).
+    """
 
     NUMBER_SEPARATOR = False  # flag for separating thousands in floats and ints
+    """
+    Flag for separating thousands in floats and ints (`bool`, default `False`).
+    """
+
     NUMBER_SEPARATOR_CHAR = DisplayNumberSeparator.Comma  # character for separating , . or _
+    """
+    Character for separating `,`, `.`, or `_` (default DisplayNumberSeparator.Comma).
+    """
 
     # misc
     GB_PREFIX = "*"  # prefix for column names to indicate that they are groupby keys
+    """
+    Prefix for column names to indicate that they are groupby keys (`str`, default "*").
+    """
 
     # TODO: split the json config loader to separate files so that new display formatting
     # can be added more easily for future data types

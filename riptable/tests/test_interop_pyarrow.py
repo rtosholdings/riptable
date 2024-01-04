@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import riptable as rt
+from riptable import INVALID_DICT
 from riptable.testing.array_assert import assert_array_equal, assert_array_or_cat_equal
 
 # pyarrow is still an optional dependency;
@@ -35,6 +36,21 @@ class TestPyarrowConvertFastArray:
         assert_array_equal(rt_farr, result_farr)
 
     @pytest.mark.parametrize(
+        ("arr_type"), [pa.int8(), pa.int16(), pa.int32(), pa.int64(), pa.uint8(), pa.uint16(), pa.uint32(), pa.uint64()]
+    )
+    @pytest.mark.parametrize(("widen"), [True, False])
+    def test_rt_pa_widen(self, arr_type: pa.DataType, widen: bool) -> None:
+        arr_dtype = np.dtype(arr_type.to_pandas_dtype())
+        arr_rt_inv = INVALID_DICT[arr_dtype.num]
+        inp = pa.array([arr_rt_inv], type=arr_type)
+        if not widen or arr_dtype.itemsize == 8:
+            with pytest.raises(ValueError):
+                _ = rt.FastArray.from_arrow(inp, zero_copy_only=False, auto_widen=widen)
+        else:
+            result = rt.FastArray.from_arrow(inp, zero_copy_only=False, auto_widen=widen)
+            assert_array_equal(rt.FA([arr_rt_inv], dtype=rt.min_scalar_type(arr_rt_inv, True)), result)
+
+    @pytest.mark.parametrize(
         ("rt_farr",),
         [
             pytest.param(rt.FA([b"ABC", b"abcde"], dtype="S"), id="ascii"),
@@ -59,6 +75,8 @@ class TestPyarrowConvertDate:
         ("rt_date_arr",),
         [
             pytest.param(rt.Date([]), id="empty"),
+            pytest.param(rt.Date.range("20231218", days=20), id="normal"),
+            pytest.param(rt.Date([rt.int32.inv]), id="contains_null")
             # TODO: Add test cases
         ],
     )
@@ -74,10 +92,32 @@ class TestPyarrowConvertDateTimeNano:
         ("rt_dtn_arr",),
         [
             pytest.param(rt.DateTimeNano([]), id="empty"),
+            pytest.param(
+                rt.DateTimeNano(np.datetime64("now") + np.array(range(20), dtype="timedelta64[ns]")), id="nanoseconds"
+            ),
+            pytest.param(
+                rt.DateTimeNano(
+                    np.datetime64("now") + np.array(range(20), dtype="timedelta64[s]"), to_tz="America/New_York"
+                ),
+                id="NYC",
+            ),
+            pytest.param(
+                rt.DateTimeNano(
+                    np.datetime64("now") + np.array(range(20), dtype="timedelta64[s]"), to_tz="Europe/Dublin"
+                ),
+                id="Dublin",
+            ),
+            pytest.param(
+                rt.DateTimeNano(
+                    np.datetime64("now") + np.array(range(20), dtype="timedelta64[s]"), to_tz="Australia/Sydney"
+                ),
+                id="Sydney",
+            ),
+            pytest.param(rt.DateTimeNano([rt.int64.inv]), id="contains_null"),
             # TODO: Add test cases -- including various timezones
         ],
     )
-    def test_roundtrip_rt_pa_rt(self, rt_dtn_arr: rt.Date) -> None:
+    def test_roundtrip_rt_pa_rt(self, rt_dtn_arr: rt.DateTimeNano) -> None:
         """Test round-tripping from rt.Date to pyarrow.Array and back."""
         result_pa_arr = rt_dtn_arr.to_arrow()
         result_dtn_arr = rt.DateTimeNano.from_arrow(result_pa_arr, zero_copy_only=False)

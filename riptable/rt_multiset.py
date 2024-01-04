@@ -472,20 +472,21 @@ class Multiset(Struct):
         multiline_col, allArrays = self._build_col_headers(self, self.asdict())
         footers = self._build_footers()
 
-        table = DisplayTable()
+        table = DisplayTable(attribs=self.display_attributes())
+        from_str = False
 
         # _repr_html_
         if display_type == DS_DISPLAY_TYPES.HTML:
             DisplayDetect.Mode = DisplayDetectModes.HTML
             table._display_mode = DisplayDetectModes.HTML
-            from_str = False
 
         # __repr__
         elif display_type == DS_DISPLAY_TYPES.REPR:
             # this repr will be called before _repr_html_ in jupyter
             if DisplayDetect.Mode == DisplayDetectModes.HTML:
                 return ""
-            from_str = False
+            elif TypeRegister.DisplayDetect.Mode == DisplayDetectModes.Console:
+                from_str = True
 
         # __str__
         else:

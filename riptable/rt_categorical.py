@@ -1677,6 +1677,9 @@ class Categorical(GroupByOps, FastArray):
                     # TJD  want to force default sort in future
                     # ordered = True
 
+        # check for pandas without importing
+        pd_opt = sys.modules.get("pandas", None)
+
         # from categorical, deep copy - send to regular categorical.copy() to correctly preserve attributes
         # use original arguments rather than defaulted ones to avoid warnings in copy().
         if isinstance(values, Categorical):
@@ -1801,7 +1804,7 @@ class Categorical(GroupByOps, FastArray):
                 categories = Categories.from_grouping(grouping, invalid_category=invalid_category)
 
         # from pandas categorical, faster track
-        elif hasattr(values, "_codes"):
+        elif pd_opt and isinstance(values, pd_opt.Categorical) and hasattr(values, "_codes"):
             if base_index != 1:
                 raise ValueError(f"To preserve invalids, pandas categoricals must be 1-based.")
 
@@ -2130,7 +2133,7 @@ class Categorical(GroupByOps, FastArray):
         return func(idx)
 
     # ------------------------------------------------------------
-    def isnan(self, *args, **kwargs) -> FastArray:
+    def isnan(self) -> FastArray:
         """
         Find the invalid elements of a `Categorical`.
 
@@ -2195,7 +2198,7 @@ class Categorical(GroupByOps, FastArray):
         return self._nanfunc(self._fa.__eq__, False)
 
     # ------------------------------------------------------------
-    def isnotnan(self, *args, **kwargs) -> FastArray:
+    def isnotnan(self) -> FastArray:
         """
         Find the valid elements of a `Categorical.`
 
@@ -2260,14 +2263,14 @@ class Categorical(GroupByOps, FastArray):
         return self._nanfunc(self._fa.__ne__, True)
 
     # ------------------------------------------------------------
-    def isna(self, *args, **kwargs) -> FastArray:
+    def isna(self) -> FastArray:
         """
         See `Categorical.isnan`.
         """
         return self.isnan()
 
     # ------------------------------------------------------------
-    def notna(self, *args, **kwargs) -> FastArray:
+    def notna(self) -> FastArray:
         """
         See `Categorical.isnotnan`.
         """
