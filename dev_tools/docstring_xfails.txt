@@ -489,7 +489,6 @@ riptable.rt_groupbynumba.GroupbyNumba.nb_min
 riptable.rt_groupbynumba.GroupbyNumba.nb_sum
 riptable.rt_groupbynumba.GroupbyNumba.nb_sum_punt_test
 riptable.rt_groupbyops.GroupByOps
-riptable.rt_groupbyops.GroupByOps.agg
 riptable.rt_groupbyops.GroupByOps.aggregate
 riptable.rt_groupbyops.GroupByOps.apply
 riptable.rt_groupbyops.GroupByOps.apply_nonreduce

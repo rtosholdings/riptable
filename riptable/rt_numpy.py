@@ -2690,7 +2690,7 @@ def ones_like(a, dtype=None, order="K", subok=True, shape=None) -> "FastArray":
 
 
 # -------------------------------------------------------
-def zeros(*args, **kwargs) -> "FastArray":
+def zeros(shape, dtype=None, order="C", *, like=None) -> "FastArray":
     """
     Return a new array of the specified shape and data type, filled with zeros.
 
@@ -2704,7 +2704,7 @@ def zeros(*args, **kwargs) -> "FastArray":
     dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
         The desired data type for the array.
 
-    order: {'C', 'F'}, default 'C'
+    order : {'C', 'F'}, default 'C'
         Whether to store multi-dimensional data in row-major (C-style) or
         column-major (Fortran-style) order in memory.
 
@@ -2733,7 +2733,12 @@ def zeros(*args, **kwargs) -> "FastArray":
     >>> rt.zeros(5, dtype = 'int8')
     FastArray([0, 0, 0, 0, 0], dtype=int8)
     """
-    return LedgerFunction(np.zeros, *args, **kwargs)
+    kwargs = {}
+    # Avoid passing thru default 'like' (https://github.com/numpy/numpy/issues/22069, fixed in NumPy-1.24)
+    if like is not None:
+        kwargs["like"] = like
+
+    return LedgerFunction(np.zeros, shape, dtype=dtype, order=order, **kwargs)
 
 
 def zeros_like(a, dtype=None, order="k", subok=True, shape=None) -> "FastArray":

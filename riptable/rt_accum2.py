@@ -379,6 +379,10 @@ class Accum2(GroupByOps, FastArray):
         col_keys = self._cat_cols.gb_keychain
         row_keys = self._cat_rows.gb_keychain
 
+        sort_idx = row_keys.isortrows
+        if showfilter and row_keys.sort_gb_data:
+            sort_idx = np.append([0], sort_idx + 1)
+
         # x-axis headers need to be a single list
         if col_keys.singlekey:
             # xcategories = self._cat_cols._categories
@@ -407,6 +411,7 @@ class Accum2(GroupByOps, FastArray):
         if xmode in TypeRegister.Categories.dict_modes:
             xcategories = TypeRegister.Categorical(xcategories, _from_categorical=self._cat_cols._categories_wrap)
 
+        sort_idx_cols = col_keys.isortrows
         # cut main array into multiple columns
         for i in range(col_keys.unique_count):
             new_colname = xcategories[i]
@@ -421,13 +426,13 @@ class Accum2(GroupByOps, FastArray):
             else:
                 new_colname = str(new_colname)
 
-            start = showfilter_base + offset
-            stop = offset + offsety
-            offset += offsety
+            col_idx = 1 + (sort_idx_cols[i] if col_keys.sort_gb_data else i)
+            start = showfilter_base + (col_idx * offsety)
+            stop = start + offsety - showfilter_base
 
             # possibly skip over filter
             arridx = slice(start, stop)
-            newds[new_colname] = arr[arridx]
+            newds[new_colname] = arr[arridx][sort_idx] if row_keys.sort_gb_data else arr[arridx]
 
         return {"ds": newds, "col_keys": col_keys, "row_keys": row_keys, "gbkeys": gbkeys}
 
@@ -894,6 +899,17 @@ class Accum2(GroupByOps, FastArray):
             # calc totals with both rows and cols removed
             totalOfTotals = func(im)
 
+        if cat_rows.gb_keychain.sort_gb_data:
+            sort_idx = cat_rows.gb_keychain.isortrows
+            if showfilter:
+                sort_idx = np.append([0], sort_idx + 1)
+            totalsY = totalsY[sort_idx]
+
+        if cat_cols.gb_keychain.sort_gb_data:
+            sort_idx = cat_cols.gb_keychain.isortrows
+            if showfilter:
+                sort_idx = np.append([0], sort_idx + 1)
+            totalsX = totalsX[sort_idx]
         # push calculations to dataset (newds)
         cls._add_totals(cat_rows, newds, name, totalsX, totalsY, totalOfTotals)
 

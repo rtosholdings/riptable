@@ -7,6 +7,7 @@ __all__ = [
 
 import operator
 import os
+import sys
 import warnings
 from collections import Counter, abc, namedtuple
 from typing import (
@@ -341,6 +342,9 @@ class Dataset(Struct):
         or raise an error.
         """
 
+        # check for pandas without importing
+        pd_opt = sys.modules.get("pandas", None)
+
         if isinstance(columns, dict):
             pass
 
@@ -348,8 +352,7 @@ class Dataset(Struct):
         elif isinstance(columns, Struct):
             columns = columns._as_dictionary()
 
-        # check for pandas without importing
-        elif columns.__class__.__name__ == "DataFrame":
+        elif pd_opt and isinstance(columns, pd_opt.DataFrame):
             columns = self._init_from_pandas_df(columns, unicode=unicode)
 
         # record arrays have a void dtype
@@ -504,21 +507,28 @@ class Dataset(Struct):
         Returns: a numpy based array
         """
         if not isinstance(v, np.ndarray):
-            # pandas Series containing Categorical
-            if hasattr(v, "cat"):
-                v = TypeRegister.Categorical(v.values)
-            # pandas Categorical
-            elif hasattr(v, "_codes"):
-                v = TypeRegister.Categorical(v)
-            elif isinstance(v, (tuple, Struct)):
+            if isinstance(v, (tuple, Struct)):
                 raise TypeError(f"Cannot create a Dataset column out of a {type(v).__name__}.")
+
+            # check for pandas without importing
+            pd_opt = sys.modules.get("pandas", None)
+
+            # pandas Series containing Categorical
+            if pd_opt and isinstance(v, (pd_opt.Series, pd_opt.Categorical)):
+                from .Utils.pandas_utils import pandas_series_to_riptable
+
+                v = pandas_series_to_riptable(v)
+
             elif not isinstance(v, list):
                 # convert scalar to list then to array
                 v = np.asanyarray([v])
+
             else:
                 # convert list to an array
                 v = np.asanyarray(v)
+
             v = self._ensure_vector(v)
+
         v = self._possibly_convert_array(v, name, unicode=unicode)
         return v
 

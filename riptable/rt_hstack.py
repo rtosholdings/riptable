@@ -475,6 +475,7 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy: bool = False):
 
     # we have our own hstack to avoid multiple copies when using safe types
     newcols = {}
+    ds_nrows = [ds._nrows for ds in ds_list]
 
     if destroy:
         # temporarily stop recycling (1=off)
@@ -491,8 +492,8 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy: bool = False):
         else:
             inv_count = (0, shapes[name])
         # is_binned = t[0] in binned_types
-        for ds in ds_list:
-            nrows = ds._nrows
+        for i, ds in enumerate(ds_list):
+            nrows = ds_nrows[i]
 
             # skip if empty dataset
             if nrows is None:

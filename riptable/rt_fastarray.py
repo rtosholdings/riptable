@@ -5694,38 +5694,55 @@ class FastArray(np.ndarray):
         import pyarrow.compute as pc
         import pyarrow.types as pat
 
-        # Make sure the input array is one of the pyarrow array types.
-        if not isinstance(arr, (pa.Array, pa.ChunkedArray)):
+        # We defer any combination of chunks using this method because it is possible we have to fill_null which itself
+        # will make a copy, rendering this [potential] copy redundant if we do it up front.
+        def _maybe_combine_chunks(arr: Union["pa.Array", "pa.ChunkedArray"]) -> "pa.Array":
+            if isinstance(arr, pa.Array):
+                return arr
+            elif isinstance(arr, pa.ChunkedArray):
+                if arr.num_chunks == 1:
+                    return arr.chunk(0)
+                else:
+                    return arr.combine_chunks()
+
             raise TypeError("The array is not an instance of `pyarrow.Array` or `pyarrow.ChunkedArray`.")
 
-        # ChunkedArrays need special handling.
         if isinstance(arr, pa.ChunkedArray):
-            # A single-chunk ChunkedArray can be handled by just extracting that chunk
-            # and recursively processing it.
-            if arr.num_chunks == 1:
-                return FastArray._from_arrow(
-                    arr.chunk(0), zero_copy_only=zero_copy_only, writable=writable, auto_widen=auto_widen
-                )
-            else:
-                # TODO: Benchmark this vs. using ChunkedArray.combine_chunks() then converting.
-                # TODO: Look at `zero_copy_only` and `writable` -- the converted arrays could be destroyed while hstacking
-                #       since we know they'll have just been created; this could reduce peak memory utilization.
-                return hstack(
-                    [
-                        FastArray._from_arrow(
-                            arr_chunk, zero_copy_only=zero_copy_only, writable=writable, auto_widen=auto_widen
-                        )
-                        for arr_chunk in arr.iterchunks()
-                    ]
-                )
+            if arr.num_chunks > 1:
+                if zero_copy_only:
+                    raise ValueError(
+                        "Cannot perform a zero-copy conversion on a `pyarrow.ChunkedArray` with multiple chunks."
+                    )
+
+                if arr.null_count == 0 or pat.is_floating(arr.type):
+                    # This is an optimization because hstack on zero copied arrays will be faster
+                    # than a combine_chunks() and subsequent zero copy conversion.  There may be gil
+                    # considerations here re: hstack, but still this is likely the better thing to do.
+                    return hstack(
+                        [
+                            FastArray._from_arrow(
+                                arr_chunk, zero_copy_only=zero_copy_only, writable=writable, auto_widen=auto_widen
+                            )
+                            for arr_chunk in arr.iterchunks()
+                        ]
+                    )
+        elif isinstance(arr, pa.Array):
+            pass
+        else:
+            raise TypeError("The array is not an instance of `pyarrow.Array` or `pyarrow.ChunkedArray`.")
+
+        # Get this check out of the way so we can make some assumptions later
+        if arr.null_count > 0:
+            if zero_copy_only:
+                raise ValueError("Cannot perform a zero-copy conversion when the input array contains nulls.")
 
         # Handle based on the type of the input array.
         if pat.is_integer(arr.type):
             # For arrays of primitive types, pa.DataType.to_pandas_dtype() actually returns the equivalent numpy dtype.
-            arr_dtype = arr.type.to_pandas_dtype()
+            arr_dtype = np.dtype(arr.type.to_pandas_dtype())
 
             # Get the riptable invalid value for this array type.
-            arr_rt_inv = INVALID_DICT[np.dtype(arr_dtype).num]
+            arr_rt_inv = INVALID_DICT[arr_dtype.num]
 
             # Get min and max value of the input array, so we know if we need to promote
             # to the next-largest dtype to be able to correctly represent nulls.
@@ -5737,7 +5754,7 @@ class FastArray(np.ndarray):
             max_value = min_max_result["max"]
 
             arr_pa_dtype_widened: Optional[pa.DataType] = None
-            if min_value == arr_rt_inv or max_value == arr_rt_inv:
+            if min_value.as_py() == arr_rt_inv or max_value.as_py() == arr_rt_inv:
                 # If the input array holds 64-bit integers (signed or unsigned), we can't do a lossless conversion,
                 # since there is no wider integer available.
                 if zero_copy_only:
@@ -5754,7 +5771,7 @@ class FastArray(np.ndarray):
                     )
                 else:
                     # Widen the dtype of the output array.
-                    output_dtype = np.min_scalar_type(2 * arr_rt_inv)
+                    output_dtype = min_scalar_type(arr_rt_inv, promote_invalid=True)
                     arr_pa_dtype_widened = pa.from_numpy_dtype(output_dtype)
 
             # Create the output array, performing a widening conversion + filling in nulls with the riptable invalid if necessary.
@@ -5763,21 +5780,39 @@ class FastArray(np.ndarray):
             #       then use rt.copy_to() / rt.putmask() to overwrite the elements of the widened FastArray
             #       corresponding to the nulls from the mask with the riptable invalid value for the output array type.
             if arr_pa_dtype_widened is not None:
+                if zero_copy_only:
+                    raise ValueError("Cannot perform a zero-copy conversion that requires widening.")
                 arr: pa.Array = arr.cast(arr_pa_dtype_widened)
 
-            return arr.fill_null(arr_rt_inv).to_numpy(zero_copy_only=False, writable=writable).view(FastArray)
+            # fill_null will always copy, even if null_count is zero so we have to do the work ourselves to check
+            if arr.null_count > 0:
+                arr = arr.fill_null(arr_rt_inv)
+
+            return (
+                _maybe_combine_chunks(arr=arr)
+                .to_numpy(zero_copy_only=zero_copy_only, writable=writable)
+                .view(FastArray)
+            )
 
         elif pat.is_floating(arr.type):
             # Floating-point arrays can be converted directly to numpy, since pyarrow will automatically
             # fill null values with NaN.
-            return arr.to_numpy(zero_copy_only=zero_copy_only, writable=writable).view(FastArray)
+            return (
+                _maybe_combine_chunks(arr=arr)
+                .to_numpy(zero_copy_only=zero_copy_only, writable=writable)
+                .view(FastArray)
+            )
 
         elif pat.is_boolean(arr.type):
             # Boolean arrays can only be converted when they do not contain nulls.
             # riptable does not support an 'invalid'/NA value for boolean, so pyarrow arrays
             # with nulls can't be represented in riptable.
             if arr.null_count == 0:
-                return arr.to_numpy(zero_copy_only=zero_copy_only, writable=writable).view(FastArray)
+                return (
+                    _maybe_combine_chunks(arr=arr)
+                    .to_numpy(zero_copy_only=zero_copy_only, writable=writable)
+                    .view(FastArray)
+                )
             else:
                 raise ValueError(
                     "riptable boolean arrays do not support an invalid value, so they cannot be created from pyarrow arrays containing nulls."
@@ -5804,30 +5839,27 @@ class FastArray(np.ndarray):
             #       much more efficient, even though some space will be wasted due to numpy not supporting variable-length strings.
             # TODO: Consider converting the pyarrow array to a dictionary-encoded array -- if there are only a few uniques,
             #       it'll be more efficient (even though doing more work) by avoiding repetitive creation of the Python string objects.
-            if arr.null_count == 0:
-                tmp = arr.to_numpy(zero_copy_only=False, writable=writable)
-
-            else:
+            if arr.null_count > 0:
                 # Need to fill nulls with an empty string before converting to numpy.
                 # (INVALID_DICT[np.dtype('U').num] == '').
-                tmp = arr.fill_null("").to_numpy(zero_copy_only=False, writable=writable)
+                arr = arr.fill_null("")
 
-            result = FastArray(tmp, dtype=str, unicode=has_unicode)
+            result = FastArray(
+                _maybe_combine_chunks(arr=arr).to_numpy(zero_copy_only=zero_copy_only, writable=writable),
+                dtype=str,
+                unicode=has_unicode,
+            )
             if not writable:
                 result.flags.writeable = False
             return result
 
         elif pat.is_fixed_size_binary(arr.type):
-            null_count = arr.null_count
-            if null_count != 0:
-                if zero_copy_only:
-                    raise ValueError(
-                        "Can't perform a zero-copy conversion of a fixed-size binary array to riptable when the input array contains nulls."
-                    )
-
+            if arr.null_count > 0:
                 arr = arr.fill_null(
                     b"\x00" * arr.type.byte_width
                 )  # can't fill with b"", since b"" is not valid for fixed width type
+
+            arr = _maybe_combine_chunks(arr=arr)
 
             # Calling pa.Array.to_numpy with zero_copy=True raises an error with fixed sized binary type.
             # Calling pa.Array.to_numpy with zero_copy=False returns a numpy array where types are python bytes objects.
@@ -5837,12 +5869,11 @@ class FastArray(np.ndarray):
                 dtype="S" + str(arr.type.byte_width),
             )
 
-            if writable and null_count == 0:  # already made a copy if null_count != 0
+            if writable and arr.null_count == 0:  # already made a copy if null_count != 0
                 result = FastArray(np.copy(buf))
-                result.flags.writeable = writable
-                return result
+            else:
+                result = FastArray(buf)
 
-            result = FastArray(buf)
             result.flags.writeable = writable
             return result
 

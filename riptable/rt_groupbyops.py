@@ -887,48 +887,71 @@ class GroupByOps(ABC):
     # ---------------------------------------------------------------
     def agg(self, func=None, *args, dataset=None, **kwargs):
         """
+        Aggregate using one or more operations.
+
         Parameters
         ----------
-        func : callable, string, dictionary, or list of string/callables
-            Function to use for aggregating the data. If a function, must either
-            work when passed a DataFrame or when passed to DataFrame.apply. For
-            a DataFrame, can pass a dict, if the keys are DataFrame column names.
+        func : str, dict, or list of str
+            Function to use for aggregating the data. For
+            a :py:class:`~.rt_struct.Struct`/:py:class:`~.rt_dataset.Dataset`, a dict
+            can be passed if the keys are column names.
 
-            Accepted Combinations are:
+            Accepted combinations:
 
             - string function name
-            - function
-            - list of functions
+            - list of string function names
             - dict of column names -> functions (or list of functions)
+        *args :
+            Arguments passed to the operations.
+        dataset : Dataset, optional
+            :py:class:`~.rt_dataset.Dataset` to use for the operations, if different from
+            the data source.
+        **kwargs :
+            Keyword arguments passed to the operations.
 
         Returns
         -------
-        aggregated : Multiset
+        Multiset
+            The result of the aggregated operation.
 
         Notes
         -----
-        Numpy functions mean/median/prod/sum/std/var are special cased so the
-        default behavior is applying the function along axis=0
+        Numpy functions mean/median/prod/sum/std/var are special cased, so the
+        default behavior is applying the function along axis=0.
 
         Examples
         --------
-        Aggregate these functions across all columns
+        Aggregate these functions across all columns:
 
-        >>> gb.agg(['sum', 'min'])
-                    A         B         C
-        sum -0.182253 -0.614014 -2.909534
-        min -1.916563 -1.460076 -1.568297
+        >>> ds = rt.Dataset(
+        ...     {
+        ...         "A": [1, 1, 2, 2],
+        ...         "B": [1, 2, 3, 4],
+        ...         "C": [0.362838, 0.227877, 1.267767, -0.562860],
+        ...     }
+        ... )
 
-        Different aggregations per column
+        >>> gb = ds.gb("A")
 
-        >>> gb.agg({'A' : ['sum', 'min'], 'B' : ['min', 'max']})
-                    A         B
-        max       NaN  1.514318
-        min -1.916563 -1.460076
-        sum -0.182253       NaN
+        >>> gb.agg(["sum", "min"])
+                 B            C
+        *A   Sum   Min   Sum     Min
+        --   ---   ---   ----   -----
+         1     3     1   0.59    0.23
+         2     7     3   0.70   -0.56
+        <BLANKLINE>
+        [2 rows x 2 columns]
 
-        >>> gb.agg({'C': np.sum, 'D': lambda x: np.std(x,ddof=1)})
+        Different aggregations per column:
 
+        >>> gb.agg({"B" : ["sum", "min"], "C" : ["min", "max"]})
+                 B            C
+        *A   Sum   Min    Min    Max
+        --   ---   ---   -----   ----
+         1     3     1    0.23   0.36
+         2     7     3   -0.56   1.27
+        <BLANKLINE>
+        [2 rows x 3 columns]
         """
         if dataset is None:
             try:

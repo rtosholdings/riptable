@@ -3,10 +3,10 @@ __all__ = ["TimeZone"]
 import numpy as np
 import riptide_cpp as rc
 
-from .rt_datetime import NANOS_PER_HOUR
+from .rt_datetime import NANOS_PER_HOUR, NANOS_PER_MINUTE
 from .rt_enum import TypeRegister
 from .rt_fastarray import FastArray
-from .rt_numpy import putmask, searchsorted, where, zeros
+from .rt_numpy import full, putmask, searchsorted, where, zeros
 
 DST_CUTOFFS_NYC = FastArray(
     [
@@ -305,6 +305,9 @@ DST_REVERSE_NYC = FastArray(
 NYC_OFFSET_DST = 4
 NYC_OFFSET = 5
 
+NYC_OFFSET_DST_NS = 4 * NANOS_PER_HOUR
+NYC_OFFSET_NS = 5 * NANOS_PER_HOUR
+
 
 DST_CUTOFFS_DUBLIN = FastArray(
     [
@@ -594,6 +597,9 @@ DST_REVERSE_DUBLIN = FastArray(
 
 DUBLIN_OFFSET_DST = -1
 DUBLIN_OFFSET = 0
+
+DUBLIN_OFFSET_DST_NS = -1 * NANOS_PER_HOUR
+DUBLIN_OFFSET_NS = 0 * NANOS_PER_HOUR
 
 DST_CUTOFFS_Australia__Sydney = FastArray(
     [
@@ -899,6 +905,9 @@ DST_REVERSE_Australia__Sydney = FastArray(
 Australia__Sydney_OFFSET_DST = -11
 Australia__Sydney_OFFSET = -10
 
+Australia__Sydney_OFFSET_DST_NS = -11 * NANOS_PER_HOUR
+Australia__Sydney_OFFSET_NS = -10 * NANOS_PER_HOUR
+
 
 # Hong Kong had intermittent DST until 1979.
 # The following was sourced from https://www.hko.gov.hk/en/gts/time/Summertime.htm
@@ -948,7 +957,12 @@ DST_REVERSE_Asia__Hong_Kong = FastArray(
 Asia__Hong_Kong_OFFSET_DST = -9
 Asia__Hong_Kong_OFFSET = -8
 
+Asia__Hong_Kong_OFFSET_DST_NS = -9 * NANOS_PER_HOUR
+Asia__Hong_Kong_OFFSET_NS = -8 * NANOS_PER_HOUR
+
 Asia__Tokyo_OFFSET = -9
+
+Asia__Tokyo_OFFSET_NS = -9 * NANOS_PER_HOUR
 
 DST_CUTOFFS_Asia__Seoul = FastArray(
     [
@@ -970,6 +984,19 @@ DST_REVERSE_Asia__Seoul = FastArray(
 
 Asia__Seoul_OFFSET_DST = -10
 Asia__Seoul_OFFSET = -9
+
+Asia__Seoul_OFFSET_DST_NS = -10 * NANOS_PER_HOUR
+Asia__Seoul_OFFSET_NS = -9 * NANOS_PER_HOUR
+
+DST_CUTOFFS_Asia__Kolkata = None
+
+DST_REVERSE_Asia__Kolkata = None
+
+Asia__Kolkata_OFFSET_DST = -5.5
+Asia__Kolkata_OFFSET = -5.5
+
+Asia__Kolkata_OFFSET_DST_NS = -(5 * NANOS_PER_HOUR + 30 * NANOS_PER_MINUTE)
+Asia__Kolkata_OFFSET_NS = -(5 * NANOS_PER_HOUR + 30 * NANOS_PER_MINUTE)
 
 
 class TimeZone:
@@ -1010,6 +1037,7 @@ class TimeZone:
         "Asia/Hong_Kong",
         "Asia/Tokyo",
         "Asia/Seoul",
+        "Asia/Kolkata",
     ]
 
     # These are all the supported tz names.
@@ -1052,22 +1080,25 @@ class TimeZone:
         # TODO: as we add more timezone support, put into a dictionary
         if from_tz == "America/New_York":
             _dst_cutoffs = DST_CUTOFFS_NYC
-            _fix_offset = NYC_OFFSET
+            _fix_offset = NYC_OFFSET_NS
         elif from_tz == "Europe/Dublin":
             _dst_cutoffs = DST_CUTOFFS_DUBLIN
-            _fix_offset = DUBLIN_OFFSET
+            _fix_offset = DUBLIN_OFFSET_NS
         elif from_tz == "Australia/Sydney":
             _dst_cutoffs = DST_CUTOFFS_Australia__Sydney
-            _fix_offset = Australia__Sydney_OFFSET
+            _fix_offset = Australia__Sydney_OFFSET_NS
         elif from_tz == "Asia/Hong_Kong":
             _dst_cutoffs = DST_CUTOFFS_Asia__Hong_Kong
-            _fix_offset = Asia__Hong_Kong_OFFSET
+            _fix_offset = Asia__Hong_Kong_OFFSET_NS
         elif from_tz == "Asia/Tokyo":
             _dst_cutoffs = None
-            _fix_offset = Asia__Tokyo_OFFSET
+            _fix_offset = Asia__Tokyo_OFFSET_NS
         elif from_tz == "Asia/Seoul":
             _dst_cutoffs = DST_CUTOFFS_Asia__Seoul
-            _fix_offset = Asia__Seoul_OFFSET
+            _fix_offset = Asia__Seoul_OFFSET_NS
+        elif from_tz == "Asia/Kolkata":
+            _dst_cutoffs = DST_CUTOFFS_Asia__Kolkata
+            _fix_offset = Asia__Kolkata_OFFSET_NS
         elif from_tz in ("GMT", "UTC"):
             _dst_cutoffs = None
             _fix_offset = 0
@@ -1091,27 +1122,31 @@ class TimeZone:
         # probably dont need _timezone_str
         if to_tz == "America/New_York":
             _dst_reverse = DST_REVERSE_NYC
-            _timezone_offset = NYC_OFFSET
+            _timezone_offset = NYC_OFFSET_NS
 
         elif to_tz == "Europe/Dublin":
             _dst_reverse = DST_REVERSE_DUBLIN
-            _timezone_offset = DUBLIN_OFFSET
+            _timezone_offset = DUBLIN_OFFSET_NS
 
         elif to_tz == "Australia/Sydney":
             _dst_reverse = DST_REVERSE_Australia__Sydney
-            _timezone_offset = Australia__Sydney_OFFSET
+            _timezone_offset = Australia__Sydney_OFFSET_NS
 
         elif to_tz == "Asia/Hong_Kong":
             _dst_reverse = DST_REVERSE_Asia__Hong_Kong
-            _timezone_offset = Asia__Hong_Kong_OFFSET
+            _timezone_offset = Asia__Hong_Kong_OFFSET_NS
 
         elif to_tz == "Asia/Tokyo":
             _dst_reverse = None
-            _timezone_offset = Asia__Tokyo_OFFSET
+            _timezone_offset = Asia__Tokyo_OFFSET_NS
 
         elif to_tz == "Asia/Seoul":
             _dst_reverse = DST_REVERSE_Asia__Seoul
-            _timezone_offset = Asia__Seoul_OFFSET
+            _timezone_offset = Asia__Seoul_OFFSET_NS
+
+        elif to_tz == "Asia/Kolkata":
+            _dst_reverse = DST_REVERSE_Asia__Kolkata
+            _timezone_offset = Asia__Kolkata_OFFSET_NS
 
         elif to_tz in ("GMT", "UTC"):
             _dst_reverse = None
@@ -1162,13 +1197,14 @@ class TimeZone:
     # ------------------------------------------------------------
     def _tz_offset(self, arr):
         if self._dst_reverse is None:
-            result = zeros(len(arr), dtype=np.int32)
+            reg_offset = -1 * self._offset / NANOS_PER_HOUR
+            result = full(len(arr), reg_offset)
 
         else:
             is_dst = self._mask_dst(arr, self._dst_reverse)
             reg_offset = -1 * self._offset
-            dst_offset = reg_offset + 1
-            result = where(is_dst, dst_offset, reg_offset)
+            dst_offset = reg_offset + NANOS_PER_HOUR
+            result = where(is_dst, dst_offset / NANOS_PER_HOUR, reg_offset / NANOS_PER_HOUR)
 
         return result
 
@@ -1235,11 +1271,11 @@ class TimeZone:
 
         if cutoffs is None:
             # If the timezone has never had DST we still need to adjust (e.g. Asia/Tokyo).
-            return arr - (NANOS_PER_HOUR * self._offset)
+            return arr - self._offset
 
         # get whether or not daylight savings
         is_dst = self._mask_dst(arr, cutoffs=cutoffs)
-        arr = arr - (NANOS_PER_HOUR * self._offset)
+        arr = arr - self._offset
 
         # scalar check
         if isinstance(is_dst, np.bool_):
@@ -1268,7 +1304,7 @@ class TimeZone:
             is_dst = self._mask_dst(dtn, cutoffs=self._dst_cutoffs)
 
             # future optimization: offet might be zero - don't bother with the first addition
-            dtn = dtn + (NANOS_PER_HOUR * self._fix_offset)
+            dtn = dtn + self._fix_offset
             dtn[is_dst] -= NANOS_PER_HOUR
 
             # restore invalid times
