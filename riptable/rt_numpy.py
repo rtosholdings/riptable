@@ -121,6 +121,7 @@ __all__ = [
     "tile",
     "transpose",
     "trunc",
+    "unique",
     "unique32",
     "var",
     "vstack",
@@ -508,13 +509,18 @@ def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = "C") ->
     """
     Return a new array of specified shape and type, without initializing entries.
 
+    Unlike :py:func:`~.rt_numpy.zeros`, :py:func:`~.rt_numpy.empty` doesn't set the
+    array values to zero, so it may be marginally faster. On the other hand, it requires
+    the user to manually set all the values in the array, so it should be used with
+    caution.
+
     Parameters
     ----------
     shape : int or tuple of int
         Shape of the empty array, e.g., ``(2, 3)`` or ``2``. Note that although
         multi-dimensional arrays are technically supported by Riptable,
         you may get unexpected results when working with them.
-    dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
         The desired data type for the array.
     order : {'C', 'F'}, default 'C'
         Whether to store multi-dimensional data in row-major (C-style) or
@@ -522,27 +528,35 @@ def empty(shape, dtype: Union[str, np.dtype, type] = float, order: str = "C") ->
 
     Returns
     -------
-    `FastArray`
-        A new `FastArray` of uninitialized (arbitrary) data of the specified
-        shape and type.
+    :py:class:`~.rt_fastarray.FastArray`
+        A new :py:class:`~.rt_fastarray.FastArray` of uninitialized (arbitrary) data of
+        the specified shape and type.
 
     See Also
     --------
-    riptable.empty_like, riptable.ones, riptable.ones_like, riptable.zeros,
-    riptable.zeros_like, riptable.empty, riptable.full, Categorical.full
-
-    Notes
-    -----
-    Unlike `zeros`, `empty` doesn't set the array values to zero, so it may
-    be marginally faster. On the other hand, it requires the user to manually
-    set all the values in the array, so it should be used with caution.
+    :py:func:`.rt_numpy.empty_like`
+    :py:func:`.rt_numpy.ones`
+    :py:func:`.rt_numpy.ones_like`
+    :py:func:`.rt_numpy.zeros`
+    :py:func:`.rt_numpy.zeros_like`
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.full`
+    :py:meth:`.rt_categorical.Categorical.full`
 
     Examples
     --------
-    >>> rt.empty(5)
+    >>> rt.empty(5)  # doctest: +SKIP
     FastArray([0.  , 0.25, 0.5 , 0.75, 1.  ])  # uninitialized
 
-    >>> rt.empty(5, dtype = int)
+    Note that the results from :py:func:`~.rt_numpy.empty` vary, given that the
+    entries in the resulting :py:class:`~.rt_fastarray.FastArray` objects are uninitialized.
+    For example:
+
+    >>> rt.empty(5) # doctest: +SKIP
+    FastArray([3.21142670e-322, 0.00000000e+000, 1.42173718e-312,
+           2.48273508e-312, 2.46151512e-312])  # uninitialized
+
+    >>> rt.empty(5, dtype=int)  # doctest: +SKIP
     FastArray([80288976,        0,        0,        0,        1])  # uninitialized
     """
     # return LedgerFunction(np.empty, shape, dtype=dtype, order=order)
@@ -577,46 +591,54 @@ def empty_like(
     Parameters
     ----------
     array : array
-        The shape and data type of `array` define the same attributes of the
+        The shape and data type of ``array`` define the same attributes of the
         returned array. Note that although multi-dimensional arrays are
         technically supported by Riptable, you may get unexpected results when
         working with them.
-    dtype : str or NumPy dtype or Riptable dtype, optional
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, optional
         Overrides the data type of the result.
     order : {'K', C', 'F', or 'A'}, default 'K'
         Overrides the memory layout of the result. 'K' (the default) means
-        match the layout of `array` as closely as possible. 'C' means
+        match the layout of ``array`` as closely as possible. 'C' means
         row-major (C-style); 'F' means column-major (Fortran-style); 'A'
-        means 'F' if `array` is Fortran-contiguous, 'C' otherwise.
-    subok : bool, default True
-        If True (the default), then the newly created array will use the
-        sub-class type of `array`, otherwise it will be a base-class array.
+        means 'F' if ``array`` is Fortran-contiguous, 'C' otherwise.
+    subok : bool, default `True`
+        If `True` (the default), then the newly created array uses the
+        sub-class type of ``array``, otherwise it is a base-class array.
     shape : int or sequence of ints, optional
-        Overrides the shape of the result. If order='K' and the number of
-        dimensions is unchanged, it will try to keep the same order; otherwise,
-        order='C' is implied. Note that although multi-dimensional arrays are
+        Overrides the shape of the result. If ``order='K'`` and the number of
+        dimensions is unchanged, it tries to keep the same order; otherwise,
+        ``order='C'`` is implied. Note that although multi-dimensional arrays are
         technically supported by Riptable, you may get unexpected results when
         working with them.
 
     Returns
     -------
-    `FastArray`
-        A new `FastArray` of uninitialized (arbitrary) data with the same shape
-        and type as `array`.
+    :py:class:`~.rt_fastarray.FastArray`
+        A new :py:class:`~.rt_fastarray.FastArray` of uninitialized (arbitrary) data
+        with the same shape and type as ``array``.
 
     See Also
     --------
-    riptable.empty, riptable.ones, riptable.ones_like, riptable.zeros,
-    riptable.zeros_like, riptable.full, Categorical.full
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.ones`
+    :py:func:`.rt_numpy.ones_like`
+    :py:func:`.rt_numpy.zeros`
+    :py:func:`.rt_numpy.zeros_like`
+    :py:func:`.rt_numpy.full`
+    :py:meth:`.rt_categorical.Categorical.full`
 
     Examples
     --------
     >>> a = rt.FastArray([1, 2, 3, 4])
-    >>> rt.empty_like(a)
-    FastArray([ 1814376192,  1668069856, -1994737310,   746250422])  # uninitialized
+    >>> rt.empty_like(a) # doctest: +SKIP
+    FastArray([1, 2, 4, 7])  # uninitialized
 
-    >>> rt.empty_like(a, dtype = float)
-    FastArray([0.25, 0.5 , 0.75, 1.  ])  # uninitialized
+    Note that the results from :py:func:`~.rt_numpy.empty_like` vary, given that the
+    entries from the resulting :py:class:`~.rt_fastarray.FastArray` objects are uninitialized.
+
+    >>> rt.empty_like(a, dtype=float) # doctest: +SKIP
+    FastArray([0. , 0. , 6.4, 4.8])  # uninitialized
     """
     # TODO: call recycler
 
@@ -659,9 +681,9 @@ def searchsorted(a, v, side="left", sorter=None) -> int:
 # -------------------------------------------------------
 def issorted(*args) -> bool:
     """
-    Return True if the array is sorted, False otherwise.
+    Return `True` if the array is sorted, `False` otherwise.
 
-    NaNs at the end of an array are considered sorted.
+    ``NaN`` values at the end of an array are considered sorted.
 
     Parameters
     ----------
@@ -671,11 +693,11 @@ def issorted(*args) -> bool:
     Returns
     -------
     bool
-        True if the array is sorted, False otherwise.
+        `True` if the array is sorted, `False` otherwise.
 
     See Also
     --------
-    FastArray.issorted
+    :py:meth:`.rt_fastarray.FastArray.issorted`
 
     Examples
     --------
@@ -723,35 +745,35 @@ def unique(
         Input array, or a list of arrays that are the same shape. If a list of arrays is
         provided, it's treated as a multikey in which the arrays' values at
         corresponding indices are associated.
-    return_index : bool, default False
-        If True, also return the indices of the first occurrences of the unique values
+    return_index : bool, default `False`
+        If `True`, also return the indices of the first occurrences of the unique values
         (for one input array) or unique combinations (for multiple input arrays) in
-        `arr`.
-    return_inverse : bool, default False
-        If True, also return the indices of the unique array (for one input array) or
-        combinations (for multiple input arrays) that can be used to reconstruct `arr`.
-    return_counts : bool, default False
-        If True, also return the number of times each unique item (for one input array)
-        or combination (for multiple input arrays) appears in `arr`.
-    sorted : bool, default True
-        Indicates whether the results are returned in sorted order. Defaults to True,
-        which replicates the behavior of the NumPy version of this function. When False
-        (which is often faster), the display order is first appearance.
-        If `lex` is set to True, the value of this parameter is ignored and the results
-        are always returned in sorted order.
-    lex : bool, default False
+        ``arr``.
+    return_inverse : bool, default `False`
+        If `True`, also return the indices of the unique array (for one input array) or
+        combinations (for multiple input arrays) that can be used to reconstruct ``arr``.
+    return_counts : bool, default `False`
+        If `True`, also return the number of times each unique item (for one input array)
+        or combination (for multiple input arrays) appears in ``arr``.
+    sorted : bool, default `True`
+        Indicates whether the results are returned in sorted order. Defaults to `True`,
+        which replicates the behavior of the NumPy version of this function. When `False`
+        (which is often faster), the display order is first appearance. If ``lex`` is set
+        to `True`, the value of this parameter is ignored and the results are always
+        returned in sorted order.
+    lex : bool, default `False`
         Controls whether the function uses hashing- or sorting-based logic to find the
-        unique values in `arr`. Defaults to False (hashing). Set to True to use a
-        lexicographical sort instead; this can be faster when `arr` is a large array
+        unique values in ``arr``. Defaults to `False` (hashing). Set to `True` to use a
+        lexicographical sort instead; this can be faster when ``arr`` is a large array
         with a relatively high proportion of unique values.
-    dtype : {None, 'b', 'B', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q', 'p', 'P'} default None
-        If an index is returned via `return_index` or `return_inverse`, you can use a
-        NumPy data type character code to specify the data type of the returned index.
+    dtype : {None, 'b', 'B', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q', 'p', 'P'}, default `None`
+        If an index is returned via ``return_index`` or ``return_inverse``, you can use
+        a NumPy data type character code to specify the data type of the returned index.
         For definitions of the character codes for integer types, see
         :ref:`arrays.scalars.character-codes`.
-    filter: ndarray of bool, default None
-        If provided, any False values will be ignored in the calculation. If provided
-        and `return_inverse` is True, a filtered-out location will be -1.
+    filter : ndarray of bool, default `None`
+        If provided, any `False` values are ignored in the calculation. If provided
+        and ``return_inverse`` is `True`, a filtered-out location is -1.
 
     Returns
     -------
@@ -759,31 +781,31 @@ def unique(
         For one input array, one array is returned that contains the unique values. For
         multiple input arrays, a list of arrays is returned that collectively contains
         every unique combination of values found in the arrays' corresponding indices.
-    unique_indices : `FastArray`, optional
+    unique_indices : :py:class:`~.rt_fastarray.FastArray`, optional
         The indices of the first occurrences of the unique values in the original array.
-        Only provided if `return_index` is True.
-    unique_inverse : `FastArray`, optional
+        Only provided if ``return_index`` is `True`.
+    unique_inverse : :py:class:`~.rt_fastarray.FastArray`, optional
         The indices of the unique array (for one input array) or unique combinations
-        (for multiple input arrays) that can be used to reconstruct `arr`. Only provided
-        if `return_inverse` is True.
-    unique_counts : `FastArray`, optional
+        (for multiple input arrays) that can be used to reconstruct ``arr``. Only
+        provided if ``return_inverse`` is `True`.
+    unique_counts : :py:class:`~.rt_fastarray.FastArray`, optional
         The number of times each of the unique values comes up in the original array.
-        Only provided if `return_counts` is True.
+        Only provided if ``return_counts`` is `True`.
 
     Notes
     -----
-    ``rt.unique`` often performs faster than ``np.unique`` for strings and numeric
-    types.
+    :py:func:`~.rt_numpy.unique` often performs faster than :py:func:`numpy.unique` for
+    strings and numeric types.
 
-    `Categorical` objects passed in as `arr` will ignore the `sorted` flag and return
-    their current order.
+    :py:class:`~.rt_categorical.Categorical` objects passed in as ``arr`` ignore the ``sorted``
+    flag and return their current order.
 
     Examples
     --------
     >>> rt.unique(['b','b','a','d','d'])
     FastArray(['a', 'b', 'd'], dtype='<U1')
 
-    With ``sorted = False``, the returned array displays the unique values in the order
+    With ``sorted=False``, the returned array displays the unique values in the order
     of their first appearance in the original array.
 
     >>> rt.unique(['b','b','a','d','d'], sorted = False)
@@ -806,7 +828,7 @@ def unique(
     >>> u
     FastArray([b'a', b'b', b'c'], dtype='|S1')
     >>> indices
-    FastArray([0, 1, 3], dtype=int64)
+    FastArray([0, 1, 3])
     >>> a[indices]
     FastArray([b'a', b'b', b'c'], dtype='|S1')
 
@@ -833,7 +855,7 @@ def unique(
     >>> values
     FastArray([1, 2, 3, 4, 6])
     >>> counts
-    FastArray([1, 3, 1, 1, 1])
+    FastArray([1, 3, 1, 1, 1], dtype=int32)
     >>> rt.repeat(values, counts)
     FastArray([1, 2, 2, 2, 3, 4, 6])
     """
@@ -2316,17 +2338,24 @@ def any(*args, **kwargs) -> bool:
 
 
 # -------------------------------------------------------
-def arange(*args, **kwargs) -> "FastArray":
+def arange(
+    start: Union[int, float] = None,
+    stop: Optional[Union[int, float]] = None,
+    step: Union[int, float] = 1,
+    *,
+    dtype: Optional[npt.Dtype] = None,
+    like: npt.ArrayLike = None,
+) -> "FastArray":
     """
     Return an array of evenly spaced values within a specified interval.
 
-    The half-open interval includes `start` but excludes `stop`: ``[start, stop)``.
+    The half-open interval includes ``start`` but excludes ``stop``: ``[start, stop)``.
 
     For integer arguments the function is roughly equivalent to the Python
-    built-in :py:obj:`range`, but returns a `FastArray` rather than a
-    :py:obj:`range` instance.
+    built-in :py:obj:`range`, but returns a :py:class:`~.rt_fastarray.FastArray` rather
+    than a :py:obj:`range` instance.
 
-    When using a non-integer step, such as 0.1, it's often better to use
+    When using a non-integer ``step``, such as 0.1, it's often better to use
     :py:func:`numpy.linspace`.
 
     For additional warnings, see :py:func:`numpy.arange`.
@@ -2337,36 +2366,42 @@ def arange(*args, **kwargs) -> "FastArray":
         Start of interval. The interval includes this value.
     stop : int or float
         End of interval. The interval does not include this value, except in
-        some cases where `step` is not an integer and floating point round-off
+        some cases where ``step`` is not an integer and floating point round-off
         affects the length of the output.
     step : int or float, default 1
-        Spacing between values. For any output `out`, this is the distance
-        between two adjacent values: ``out[i+1] - out[i]``. If `step`
-        is specified as a positional argument, `start` must also be given.
-    dtype : str or NumPy dtype or Riptable dtype, optional
-        The type of the output array. If `dtype` is not given, the data type
+        Spacing between values. For any output ``out``, this is the distance
+        between two adjacent values: ``out[i+1] - out[i]``. If ``step``
+        is specified as a positional argument, ``start`` must also be given.
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, optional
+        The type of the output array. If ``dtype`` is not given, the data type
         is inferred from the other input arguments.
     like : array_like, optional
         Reference object to allow the creation of arrays that are not NumPy
-        arrays. If an array-like passed in as `like` supports the
-        ``__array_function__`` protocol, the result will be defined by it.
+        arrays. If an array-like passed in as ``like`` supports the
+        ``__array_function__`` protocol, the result is defined by it.
         In this case, it ensures the creation of an array object compatible
         with that passed in via this argument.
 
     Returns
     -------
-    `FastArray`
-        A `FastArray` of evenly spaced numbers within the specified interval.
-        For floating point arguments, the length of the result is
-        ``ceil((stop - start)/step)``. Because of floating point overflow,
-        this rule may result in the last element of the output being greater
-        than `stop`.
+    :py:class:`~.rt_fastarray.FastArray`
+        A :py:class:`~.rt_fastarray.FastArray` of evenly spaced numbers within the
+        specified interval. For floating point arguments, the length of the result is
+        ``ceil((stop - start)/step)``. Because of floating point overflow, this rule may
+        result in the last element of the output being greater than ``stop``.
 
     See Also
     --------
-    numpy.arange, riptable.ones, riptable.ones_like, riptable.zeros,
-    riptable.zeros_like, riptable.empty, riptable.empty_like, riptable.full,
-    riptable.arange, Categorical.full
+    :py:func:`numpy.arange`
+    :py:func:`.rt_numpy.ones`
+    :py:func:`.rt_numpy.ones_like`
+    :py:func:`.rt_numpy.zeros`
+    :py:func:`.rt_numpy.zeros_like`
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.empty_like`
+    :py:func:`.rt_numpy.full`
+    :py:func:`.rt_numpy.arange`
+    :py:meth:`.rt_categorical.Categorical.full`
 
     Examples
     --------
@@ -2374,7 +2409,7 @@ def arange(*args, **kwargs) -> "FastArray":
     FastArray([0, 1, 2])
 
     >>> rt.arange(3.0)
-    FastArray([ 0.,  1.,  2.])
+    FastArray([0., 1., 2.])
 
     >>> rt.arange(3, 7)
     FastArray([3, 4, 5, 6])
@@ -2382,7 +2417,17 @@ def arange(*args, **kwargs) -> "FastArray":
     >>> rt.arange(3, 7, 2)
     FastArray([3, 5])
     """
-    return LedgerFunction(np.arange, *args, **kwargs)
+    kwargs = {}
+    # Avoid passing thru default 'like' (https://github.com/numpy/numpy/issues/22069, fixed in NumPy-1.24)
+    if like is not None:
+        kwargs["like"] = like
+
+    if start is None:
+        if stop is None:
+            return np.arange(step=step, dtype=dtype, **kwargs)  # always an error
+        return LedgerFunction(np.arange, stop, step=step, dtype=dtype, **kwargs)
+
+    return LedgerFunction(np.arange, start, stop=stop, step=step, dtype=dtype, **kwargs)
 
 
 # -------------------------------------------------------
@@ -2475,24 +2520,29 @@ def full(shape, fill_value, dtype=None, order="C") -> FastArray:
         you may get unexpected results when working with them.
     fill_value : scalar or array
         Fill value. For 1-dimensional arrays, only scalar values are accepted.
-    dtype : str or NumPy dtype or Riptable dtype, optional
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, optional
         The desired data type for the array. The default is the data type that
-        would result from creating a `FastArray` with the specified `fill_value`:
-        ``rt.FastArray(fill_value).dtype``.
+        would result from creating a :py:class:`~.rt_fastarray.FastArray` with the
+        specified ``fill_value``: ``rt.FastArray(fill_value).dtype``.
     order : {'C', 'F'}, default 'C'
         Whether to store multi-dimensional data in row-major (C-style) or
         column-major (Fortran-style) order in memory.
 
     Returns
     -------
-    `FastArray`
-       A new `FastArray` of the specified shape and type, filled with the
-       specified value.
+    :py:class:`~.rt_fastarray.FastArray`
+       A new :py:class:`~.rt_fastarray.FastArray` of the specified shape and type,
+       filled with the specified value.
 
     See Also
     --------
-    Categorical.full, riptable.ones, riptable.ones_like, riptable.zeros,
-    riptable.zeros_like, riptable.empty, riptable.empty_like
+    :py:meth:`.rt_categorical.Categorical.full`
+    :py:func:`.rt_numpy.ones`
+    :py:func:`.rt_numpy.ones_like`
+    :py:func:`.rt_numpy.zeros`
+    :py:func:`.rt_numpy.zeros_like`
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.empty_like`
 
     Examples
     --------
@@ -2528,7 +2578,7 @@ def full_like(
         working with them.
     fill_value : scalar or array_like
         Fill value.
-    dtype : str or NumPy dtype or Riptable dtype, optional
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, optional
         Overrides the data type of the result.
     order : {'C', 'F', 'A', or 'K'}, default 'K'
         Overrides the memory layout of the result. 'C' means row-major (C-style),
@@ -2605,27 +2655,32 @@ def ones(shape, dtype=None, order="C", *, like=None) -> "FastArray":
         Shape of the new array, e.g., ``(2, 3)`` or ``2``. Note that although
         multi-dimensional arrays are technically supported by Riptable,
         you may get unexpected results when working with them.
-    dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
+    dtype : str or :py:class:`numpy.dtype` or Riptable dytpe, default :py:obj:`numpy.float64`
         The desired data type for the array.
-    order: {'C', 'F'}, default 'C'
+    order : {'C', 'F'}, default 'C'
         Whether to store multi-dimensional data in row-major (C-style) or
         column-major (Fortran-style) order in memory.
-    like : array_like, default None
+    like : array_like, default `None`
         Reference object to allow the creation of arrays that are not NumPy
-        arrays. If an array-like passed in as `like` supports the
-        ``__array_function__`` protocol, the result will be defined by it.
+        arrays. If an array-like passed in as ``like`` supports the
+        ``__array_function__`` protocol, the result is defined by it.
         In this case, it ensures the creation of an array object compatible
         with that passed in via this argument.
 
     Returns
     -------
-    `FastArray`
-        A new `FastArray` of the specified shape and type, filled with ones.
+    :py:class:`~.rt_fastarray.FastArray`
+        A new :py:class:`~.rt_fastarray.FastArray` of the specified shape and type,
+        filled with ones.
 
     See Also
     --------
-    riptable.ones_like, riptable.zeros, riptable.zeros_like,
-    riptable.empty, riptable.empty_like, riptable.full
+    :py:func:`.rt_numpy.ones_like`
+    :py:func:`.rt_numpy.zeros`
+    :py:func:`.rt_numpy.zeros_like`
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.empty_like`
+    :py:func:`.rt_numpy.full`
 
     Examples
     --------
@@ -2645,37 +2700,41 @@ def ones_like(a, dtype=None, order="K", subok=True, shape=None) -> "FastArray":
     Parameters
     ----------
     a : array
-        The shape and data type of `a` define the same attributes of the
+        The shape and data type of ``a`` define the same attributes of the
         returned array. Note that although multi-dimensional arrays are
         technically supported by Riptable, you may get unexpected results when
         working with them.
-    dtype : str or NumPy dtype or Riptable dtype, optional
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, optional
         Overrides the data type of the result.
     order : {'C', 'F', 'A', or 'K'}, default 'K'
         Overrides the memory layout of the result. 'C' means row-major (C-style),
-        'F' means column-major (Fortran-style), 'A' means 'F' if `a` is
-        Fortran-contiguous, 'C' otherwise. 'K' means match the layout of `a` as
+        'F' means column-major (Fortran-style), 'A' means 'F' if ``a`` is
+        Fortran-contiguous, 'C' otherwise. 'K' means match the layout of ``a`` as
         closely as possible.
-    subok : bool, default True
-        If True (the default), then the newly created array will use the sub-class
-        type of `a`, otherwise it will be a base-class array.
+    subok : bool, default `True`
+        If `True` (the default), then the newly created array uses the sub-class
+        type of ``a``, otherwise it is a base-class array.
     shape : int or sequence of int, optional
-        Overrides the shape of the result. If order='K' and the number of
-        dimensions is unchanged, it will try to keep the same order; otherwise,
-        order='C' is implied. Note that although multi-dimensional arrays are
+        Overrides the shape of the result. If ``order='K'`` and the number of
+        dimensions is unchanged, it tries to keep the same order; otherwise,
+        ``order='C'`` is implied. Note that although multi-dimensional arrays are
         technically supported by Riptable, you may get unexpected results when
         working with them.
 
     Returns
     -------
-    `FastArray`
-        A `FastArray` with the same shape and data type as the specified array,
-        filled with ones.
+    :py:class:`~.rt_fastarray.FastArray`
+        A :py:class:`~.rt_fastarray.FastArray` with the same shape and data type as the
+        specified array, filled with ones.
 
     See Also
     --------
-    riptable.ones, riptable.zeros, riptable.zeros_like, riptable.empty,
-    riptable.empty_like, riptable.full
+    :py:func:`.rt_numpy.ones`
+    :py:func:`.rt_numpy.zeros`
+    :py:func:`.rt_numpy.zeros_like`
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.empty_like`
+    :py:func:`.rt_numpy.full`
 
     Examples
     --------
@@ -2700,30 +2759,32 @@ def zeros(shape, dtype=None, order="C", *, like=None) -> "FastArray":
         Shape of the new array, e.g., ``(2, 3)`` or ``2``. Note that although
         multi-dimensional arrays are technically supported by Riptable,
         you may get unexpected results when working with them.
-
-    dtype : str or NumPy dtype or Riptable dtype, default `numpy.float64`
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
         The desired data type for the array.
-
     order : {'C', 'F'}, default 'C'
         Whether to store multi-dimensional data in row-major (C-style) or
         column-major (Fortran-style) order in memory.
-
-    like : array_like, default None
+    like : array_like, default `None`
         Reference object to allow the creation of arrays that are not NumPy
-        arrays. If an array-like passed in as `like` supports the
-        ``__array_function__`` protocol, the result will be defined by it.
+        arrays. If an array-like passed in as ``like`` supports the
+        ``__array_function__`` protocol, the result is defined by it.
         In this case, it ensures the creation of an array object compatible
         with that passed in via this argument.
 
     Returns
     -------
-    `FastArray`
-        A new `FastArray` of the specified shape and type, filled with zeros.
+    :py:class:`~.rt_fastarray.FastArray`
+        A new :py:class:`~.rt_fastarray.FastArray` of the specified shape and type,
+        filled with zeros.
 
     See Also
     --------
-    riptable.zeros_like, riptable.ones, riptable.ones_like, riptable.empty,
-    riptable.empty_like, riptable.full
+    :py:func:`.rt_numpy.zeros_like`
+    :py:func:`.rt_numpy.ones`
+    :py:func:`.rt_numpy.ones_like`
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.empty_like`
+    :py:func:`.rt_numpy.full`
 
     Examples
     --------
@@ -2748,37 +2809,41 @@ def zeros_like(a, dtype=None, order="k", subok=True, shape=None) -> "FastArray":
     Parameters
     ----------
     a : array
-        The shape and data type of `a` define the same attributes of the
+        The shape and data type of ``a`` define the same attributes of the
         returned array. Note that although multi-dimensional arrays are
         technically supported by Riptable, you may get unexpected results when
         working with them.
-    dtype : str or NumPy dtype or Riptable dtype, optional
+    dtype : str or :py:class:`numpy.dtype` or Riptable dtype, optional
         Overrides the data type of the result.
     order : {'C', 'F', 'A', or 'K'}, default 'K'
         Overrides the memory layout of the result. 'C' means row-major (C-style),
-        'F' means column-major (Fortran-style), 'A' means 'F' if `a` is
-        Fortran-contiguous, 'C' otherwise. 'K' means match the layout of `a` as
+        'F' means column-major (Fortran-style), 'A' means 'F' if ``a`` is
+        Fortran-contiguous, 'C' otherwise. 'K' means match the layout of ``a`` as
         closely as possible.
-    subok : bool, default True
-        If True (the default), then the newly created array will use the sub-class
-        type of `a`, otherwise it will be a base-class array.
+    subok : bool, default `True`
+        If `True` (the default), then the newly created array uses the sub-class
+        type of ``a``, otherwise it is a base-class array.
     shape : int or sequence of int, optional
-        Overrides the shape of the result. If order='K' and the number of
-        dimensions is unchanged, it will try to keep the same order; otherwise,
-        order='C' is implied. Note that although multi-dimensional arrays are
+        Overrides the shape of the result. If ``order='K'`` and the number of
+        dimensions is unchanged, it tries to keep the same order; otherwise,
+        ``order='C'`` is implied. Note that although multi-dimensional arrays are
         technically supported by Riptable, you may get unexpected results when
         working with them.
 
     Returns
     -------
-    `FastArray`
-        A `FastArray` with the same shape and data type as the specified array,
-        filled with zeros.
+    :py:class:`~.rt_fastarray.FastArray`
+        A :py:class:`~.rt_fastarray.FastArray` with the same shape and data type as the
+        specified array, filled with zeros.
 
     See Also
     --------
-    riptable.zeros, riptable.ones, riptable.ones_like, riptable.empty,
-    riptable.empty_like, riptable.full
+    :py:func:`.rt_numpy.zeros`
+    :py:func:`.rt_numpy.ones`
+    :py:func:`.rt_numpy.ones_like`
+    :py:func:`.rt_numpy.empty`
+    :py:func:`.rt_numpy.empty_like`
+    :py:func:`.rt_numpy.full`
 
     Examples
     --------
@@ -2786,8 +2851,8 @@ def zeros_like(a, dtype=None, order="k", subok=True, shape=None) -> "FastArray":
     >>> rt.zeros_like(a)
     FastArray([0, 0, 0, 0])
 
-    >>> rt.zeros_like(a, dtype = float)
-    FastArray([1., 1., 1., 1.])
+    >>> rt.zeros_like(a, dtype=float)
+    FastArray([0., 0., 0., 0.])
     """
     return LedgerFunction(np.zeros_like, a, dtype=dtype, order=order, subok=subok, shape=shape)
 
@@ -2822,65 +2887,70 @@ def transpose(*args, **kwargs):
 # -------------------------------------------------------
 def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
     """
-    Return a new `FastArray` or `Categorical` with elements from `x` or `y`
-    depending on whether `condition` is True.
+    Return a new :py:class:`~.rt_fastarray.FastArray` or
+    :py:class:`~.rt_categorical.Categorical` with elements from ``x`` or ``y``
+    depending on whether ``condition`` is `True`.
 
     For 1-dimensional arrays, this function is equivalent to::
 
         [xv if c else yv
          for c, xv, yv in zip(condition, x, y)]
 
-    If only `condition` is provided, this function returns a tuple containing
-    an integer `FastArray` with the indices where the condition is True. Note
-    that this usage of `where` is not supported for `FastArray` objects of more
-    than one dimension.
+    If only ``condition`` is provided, this function returns a tuple containing
+    an integer :py:class:`~.rt_fastarray.FastArray` with the indices where ``condition``
+    is `True`. Note that this usage of :py:func:`~.rt_numpy.where` is not supported for
+    :py:class:`~.rt_fastarray.FastArray` objects of more than one dimension.
 
-    Note also that this case of `where` uses `.riptable.bool_to_fancy()`. Using
-    `bool_to_fancy` directly is preferred, as it behaves correctly for
-    subclasses.
+    Note also that this case of :py:func:`~.rt_numpy.where` uses
+    :py:func:`~.rt_numpy.bool_to_fancy`. Using :py:func:`~.rt_numpy.bool_to_fancy`
+    directly is preferred, as it behaves correctly for subclasses.
 
     Parameters
     ----------
     condition : bool or array of bool
-        Where True, yield `x`, otherwise yield `y`.
+        Where `True`, yield ``x``, otherwise yield ``y``.
     x : scalar, array, or callable, optional
-        The value to use where `condition` is True. If `x` is provided, `y`
-        must also be provided, and `x` and `y` should be the same type. If `x`
-        is an array, a callable that returns an array, or a `Categorical`, it
-        must be the same length as `condition`. The value of `x` that corresponds
-        to the True value is used.
+        The value to use where ``condition`` is `True`. If ``x`` is provided, ``y``
+        must also be provided, and ``x`` and ``y`` should be the same type. If ``x``
+        is an array, a callable that returns an array, or a
+        :py:class:`~.rt_categorical.Categorical`, it must be the same length as
+        ``condition``. The value of ``x`` that corresponds to the `True` value is used.
     y : scalar, array, or callable, optional
-        The value to use where `condition` is False. If `y` is provided, `x`
-        must also be provided, and `x` and `y` should be the same type. If `y`
-        is an array, a callable that returns an array, or a `Categorical`, it
-        must be the same length as `condition`. The value of `y` that corresponds
-        to the False value is used.
+        The value to use where ``condition`` is `False`. If ``y`` is provided, ``x``
+        must also be provided, and ``x`` and ``y`` should be the same type. If ``y``
+        is an array, a callable that returns an array, or a
+        :py:class:`~.rt_categorical.Categorical`, it must be the same length as
+        ``condition``. The value of ``y`` that corresponds to the `False` value is used.
 
     Returns
     -------
-    FastArray or Categorical or tuple
-        If `x` and `y` are `Categorical` objects, a `Categorical` is returned.
-        Otherwise, if `x` and `y` are provided a `FastArray` is returned. When
-        only `condition` is provided, a tuple is returned containing an integer
-        `FastArray` with the indices where the condition is True.
+    :py:class:`~.rt_fastarray.FastArray` or :py:class:`~.rt_categorical.Categorical` or tuple
+        If ``x`` and ``y`` are :py:class:`~.rt_categorical.Categorical` objects, a
+        :py:class:`~.rt_categorical.Categorical` is returned. Otherwise, if ``x`` and
+        ``y`` are provided a :py:class:`~.rt_fastarray.FastArray` is returned. When
+        only ``condition`` is provided, a tuple is returned containing an integer
+        :py:class:`~.rt_fastarray.FastArray` with the indices where the condition is
+        `True`.
 
     See Also
     --------
-    .FastArray.where : Replace values where a given condition is False.
-    riptable.bool_to_fancy : The function called when `x` and `y` are omitted.
+    :py:meth:`.rt_fastarray.FastArray.where` :
+        Replace values where a given condition is `False`.
+    :py:func:`.rt_numpy.bool_to_fancy` :
+        The function called when ``x`` and ``y`` are omitted.
 
     Examples
     --------
-    `condition` is a comparison that creates an array of booleans, and `x`
-    and `y` are scalars:
+    ``condition`` is a comparison that creates an array of booleans, and ``x``
+    and ``y`` are scalars:
 
     >>> a = rt.FastArray(rt.arange(5))
     >>> a
     FastArray([0, 1, 2, 3, 4])
     >>> rt.where(a < 2, 100, 200)
-    FastArray([100, 100, 200, 200, 200])
+    FastArray([100, 100, 200, 200, 200], dtype=uint8)
 
-    `condition` and `x` are same-length arrays, and `y` is a
+    ``condition`` and ``x`` are same-length arrays, and ``y`` is a
     scalar:
 
     >>> condition = rt.FastArray([False, False, True, True, True])
@@ -2889,7 +2959,8 @@ def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
     >>> rt.where(condition, x, y)
     FastArray([200, 200, 102, 103, 104])
 
-    When `x` and `y` are `Categorical` objects, a `Categorical` is returned:
+    When ``x`` and ``y`` are :py:class:`~.rt_categorical.Categorical` objects, a
+    :py:class:`~.rt_categorical.Categorical` is returned:
 
     >>> primary_traders = rt.Cat(['John', 'Mary', 'John', 'Mary', 'John', 'Mary'])
     >>> secondary_traders = rt.Cat(['Chris', 'Duncan', 'Chris', 'Duncan', 'Duncan', 'Chris'])
@@ -2899,23 +2970,27 @@ def where(condition, x=None, y=None) -> FastArray | tuple[FastArray, ...]:
       FastArray([3, 4, 1, 4, 2, 4], dtype=int8) Base Index: 1
       FastArray([b'Chris', b'Duncan', b'John', b'Mary'], dtype='|S6') Unique count: 4
 
-    When `x` and `y` are `Date` objects, a `FastArray` of integers is returned
-    that can be converted to a `Date` (other datetime objects are similar):
+    When ``x`` and ``y`` are :py:class:`~.rt_datetime.Date` objects, a
+    :py:class:`~.rt_fastarray.FastArray` of integers is returned that can be converted
+    to a :py:class:`~.rt_datetime.Date` (other :py:obj:`.rt_datetime` objects are similar):
 
     >>> x = rt.Date(['20230101', '20220101', '20210101'])
     >>> y = rt.Date(['20190101', '20180101', '20170101'])
     >>> condition = x > rt.Date(['20211231'])
     >>> rt.where(condition, x, y)
-    >>> FastArray([19358, 18993, 17167])
+    FastArray([19358, 18993, 17167], dtype=int32)
+    >>> rt.FastArray([19358, 18993, 17167])
+    FastArray([19358, 18993, 17167])
     >>> rt.Date(_)
     Date(['2023-01-01', '2022-01-01', '2017-01-01'])
 
-    When only a condition is provided, a tuple is returned containing a `FastArray`
-    with the indices where the condition is True:
+    When only a ``condition`` is provided, a tuple is returned containing a
+    :py:class:`~.rt_fastarray.FastArray` with the indices where the ``condition`` is
+    `True`:
 
     >>> a = rt.FastArray([10, 20, 30, 40, 50])
     >>> rt.where(a < 40)
-    (FastArray([0, 1, 2]),)
+    (FastArray([0, 1, 2], dtype=int32),)
     """
     if isinstance(x, TypeRegister.Categorical) and isinstance(y, TypeRegister.Categorical):
         z = TypeRegister.Categorical.hstack([x, y])
@@ -3184,45 +3259,64 @@ def sum(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
 
     When possible, ``rt.sum(x, *args)`` calls ``x.sum(*args)``; look there for
     documentation. In particular, note whether the called function accepts the
-    keyword arguments listed below. For example, `Dataset.sum()` does not accept
-    the `filter` or `dtype` keyword arguments.
+    keyword arguments listed below. For example, :py:meth:`.rt_dataset.Dataset.sum`
+    does not accept the ``filter`` or ``dtype`` keyword arguments.
 
-    For ``FastArray.sum``, see `numpy.sum` for documentation but note the following:
+    When a :py:class:`~.rt_fastarray.FastArray` is passed to :py:func:`.rt_numpy.sum`,
+    :py:func:`numpy.sum` is called. See the documentation for :py:func:`numpy.sum`, but
+    note the following:
 
-    * Until a reported bug is fixed, the `dtype` keyword argument may not work
+    * Until a reported bug is fixed, the ``dtype`` keyword argument may not work
       as expected:
 
-        * Riptable data types (for example, `rt.float64`) are ignored.
-        * NumPy integer data types (for example, `numpy.int32`) are also ignored.
-        * NumPy floating point data types are applied as `numpy.float64`.
+        * Riptable data types (for example, :py:obj:`.rt_numpy.float64`) are ignored.
+        * NumPy integer data types (for example, :py:obj:`numpy.int32`) are also ignored.
+        * NumPy floating point data types are applied as :py:obj:`numpy.float64`.
 
-    * If you include another NumPy parameter (for example, ``axis=0``), the NumPy
-      implementation of ``sum`` will be used and the ``dtype`` will be used to
-      compute the sum.
+    * If you include another NumPy parameter (for example, ``axis=0``), :py:func:`numpy.sum`
+      is used and the ``dtype`` is used to compute the sum.
 
     Parameters
     ----------
-    filter : array of bool, default None
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the sum.
+    filter : array of bool, default `None`
         Specifies which elements to include in the sum calculation.
-    dtype : rt.dtype or numpy.dtype, optional
-        The data type of the result. By default, for integer input the result `dtype` is
-        ``int64`` and for floating point input the result `dtype` is ``float64``. See
-        the notes above about using this keyword argument with `FastArray` objects
-        as input.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, optional
+        The data type of the result. If not specified, the default ``dtype`` depends on
+        the input values. For example:
+
+            - For a :py:class:`~.rt_fastarray.FastArray` with `int` values, the resulting
+              ``dtype`` is :py:obj:`numpy.int64`.
+            - For a :py:class:`~.rt_fastarray.FastArray` with `float` values, the
+              resulting ``dtype`` is :py:obj:`numpy.float64`.
+            - For a list with `int` values, the resulting ``dtype`` is `int`.
+            - For a list with `float` values, the resulting ``dtype`` is `float`.
+
+        See the notes above about using this keyword argument with
+        :py:class:`~.rt_fastarray.FastArray` objects as input.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.sum` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's sum.
 
     See Also
     --------
-    numpy.sum
-    nansum : Sums the values, ignoring NaNs.
-    FastArray.sum : Sums the values of a `FastArray`.
-    Dataset.sum : Sums the values of numerical `Dataset` columns.
-    GroupByOps.sum : Sums the values of each group. Used by `Categorical` objects.
+    :py:func:`numpy.sum` :
+        Sum of array elements over a given axis.
+    :py:func:`.rt_numpy.nansum` :
+        Sums the values, ignoring ``NaN`` values.
+    :py:meth:`.rt_dataset.Dataset.sum` :
+        Sums the values of numerical :py:class:`~.rt_dataset.Dataset` columns.
+    :py:meth:`.rt_groupbyops.GroupByOps.sum` :
+        Sums the values of each group. Used by :py:class:`~.rt_categorical.Categorical`
+        objects.
 
     Examples
     --------
@@ -3244,45 +3338,59 @@ def sum(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
 # -------------------------------------------------------
 def nansum(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     """
-    Compute the sum of the values in the first argument, ignoring NaNs.
+    Compute the sum of the values in the first argument, ignoring ``NaN`` values.
 
-    If all values in the first argument are NaNs, ``0.0`` is returned.
+    If all values in the first argument are ``NaN`` values, ``0.0`` is returned.
 
     When possible, ``rt.nansum(x, *args)`` calls ``x.nansum(*args)``; look there for
     documentation. In particular, note whether the called function accepts the keyword
     arguments listed below.
 
-    For example, `FastArray.nansum` accepts the `filter` and `dtype` keyword arguments,
-    but `Dataset.nansum` does not.
+    For example, :py:meth:`.rt_fastarray.FastArray.nansum` accepts the ``filter`` and
+    ``dtype`` keyword arguments, but :py:meth:`.rt_dataset.Dataset.nansum` does not.
 
     Parameters
     ----------
-    filter : array of bool, default None
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the sum.
+    filter : array of bool, default `None`
         Specifies which elements to include in the sum calculation. If the filter is
-        uniformly ``False``, `rt.nansum` returns ``0.0``.
-    dtype : rt.dtype or numpy.dtype, default float64
-        The data type of the result. For a `FastArray` ``x``,
+        uniformly `False`, the method returns ``0.0``.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
+        The data type of the result. For a :py:class:`~.rt_fastarray.FastArray` ``x``,
         ``x.nansum(dtype = my_type)`` is equivalent to ``my_type(x.nansum())``.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.nansum` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's sum.
 
     See Also
     --------
-    sum : Sums the values of the input.
-    FastArray.nansum : Sums the values of a `FastArray`, ignoring NaNs.
-    Dataset.nansum : Sums the values of numerical `Dataset` columns, ignoring NaNs.
-    GroupByOps.nansum : Sums the values of each group, ignoring NaNs. Used by
-                        `Categorical` objects.
+    :py:func:`numpy.nansum` :
+        Return the sum of array elements over a given axis treating Not a Numbers
+        (``NaN``) as zero.
+    :py:func:`.rt_numpy.sum` :
+        Sums the values of the input.
+    :py:meth:`.rt_fastarray.FastArray.nansum` :
+        Sums the values of a :py:class:`~.rt_fastarray.FastArray`, ignoring ``NaN`` values.
+    :py:meth:`.rt_dataset.Dataset.nansum` :
+        Sums the values of numerical :py:class:`~.rt_dataset.Dataset` columns, ignoring
+        ``NaN`` values.
+    :py:meth:`.rt_groupbyops.GroupByOps.nansum` :
+        Sums the values of each group, ignoring ``NaN`` values. Used by
+        :py:class:`~.rt_categorical.Categorical` objects.
 
     Notes
     -----
-    The `dtype` keyword for `rt.nansum` specifies the data type of the result. This
-    differs from `numpy.nansum`, where it specifies the data type used to compute
-    the sum.
+    The ``dtype`` parameter specifies the data type of the result. This
+    differs from :py:func:`numpy.nansum`, where it specifies the data type used to
+    compute the sum.
 
     Examples
     --------
@@ -3290,13 +3398,13 @@ def nansum(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     >>> rt.nansum(a)
     16.0
 
-    With a `dtype` specified:
+    With a ``dtype`` specified:
 
     >>> a = rt.FastArray([1.0, 3.0, 5.0, 7.0, rt.nan])
     >>> rt.nansum(a, dtype = rt.int32)
     16
 
-    With a filter:
+    With a ``filter``:
 
     >>> a = rt.FastArray([1, 3, 5, 7, rt.nan])
     >>> b = rt.FastArray([False, True, False, True, True])
@@ -3496,36 +3604,48 @@ def mean(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     documentation. In particular, note whether the called function accepts the keyword
     arguments listed below.
 
-    For example, `FastArray.mean` accepts the `filter` and `dtype` keyword arguments,
-    but `Dataset.mean` does not.
+    For example, :py:meth:`.rt_fastarray.FastArray.mean` accepts the ``filter`` and
+    ``dtype`` keyword arguments, but :py:meth:`.rt_dataset.Dataset.mean` does not.
 
     Parameters
     ----------
-    filter : array of bool, default None
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the mean.
+    filter : array of bool, default `None`
         Specifies which elements to include in the mean calculation. If the filter is
-        uniformly ``False``, `rt.mean` returns a `ZeroDivisionError`.
-    dtype : rt.dtype or numpy.dtype, default float64
-        The data type of the result. For a `FastArray` ``x``,
+        uniformly `False`, :py:func:`~.rt_numpy.mean` returns a :py:class:`ZeroDivisionError`.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
+        The data type of the result. For a :py:class:`~.rt_fastarray.FastArray` ``x``,
         ``x.mean(dtype = my_type)`` is equivalent to ``my_type(x.mean())``.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.mean` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's mean.
 
     See Also
     --------
-    nanmean : Computes the mean, ignoring NaNs.
-    Dataset.mean : Computes the mean of numerical `Dataset` columns.
-    FastArray.mean : Computes the mean of `FastArray` values.
-    GroupByOps.mean : Computes the mean of each group. Used by `Categorical` objects.
+    :py:func:`numpy.mean` :
+        Computes the arithmetic mean along the specified axis.
+    :py:func:`.rt_numpy.nanmean` :
+        Computes the mean, ignoring ``NaN`` values.
+    :py:meth:`.rt_dataset.Dataset.mean` :
+        Computes the mean of numerical :py:class:`~.rt_dataset.Dataset` columns.
+    :py:meth:`.rt_fastarray.FastArray.mean` :
+        Computes the mean of :py:class:`~.rt_fastarray.FastArray` values.
+    :py:meth:`.rt_groupbyops.GroupByOps.mean` :
+        Computes the mean of each group. Used by :py:class:`~.rt_categorical.Categorical`
+        objects.
 
     Notes
     -----
-    The `dtype` keyword for `rt.mean` specifies the data type of the result. This
-    differs from `numpy.mean`, where it specifies the data type used to compute
-    the mean.
+    The ``dtype`` parameter specifies the data type of the result. This differs from
+    :py:func:`numpy.mean`, where it specifies the data type used to compute the mean.
 
     Examples
     --------
@@ -3533,13 +3653,13 @@ def mean(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     >>> rt.mean(a)
     4.0
 
-    With a `dtype` specified:
+    With a ``dtype`` specified:
 
     >>> a = rt.FastArray([1, 3, 5, 7])
     >>> rt.mean(a, dtype = rt.int32)
     4
 
-    With a filter:
+    With a ``filter``:
 
     >>> a = rt.FastArray([1, 3, 5, 7])
     >>> b = rt.FastArray([False, True, False, True])
@@ -3556,45 +3676,58 @@ def mean(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
 # -------------------------------------------------------
 def nanmean(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     """
-    Compute the arithmetic mean of the values in the first argument, ignoring NaNs.
+    Compute the arithmetic mean of the values in the first argument, ignoring ``NaN``
+    values.
 
-    If all values in the first argument are NaNs, ``0.0`` is returned.
+    If all values in the first argument are ``NaN`` values, ``0.0`` is returned.
 
     When possible, ``rt.nanmean(x, *args)`` calls ``x.nanmean(*args)``; look there for
     documentation. In particular, note whether the called function accepts the keyword
     arguments listed below.
 
-    For example, `FastArray.nanmean` accepts the `filter` and `dtype` keyword arguments,
-    but `Dataset.nanmean` does not.
+    For example, :py:meth:`.rt_fastarray.FastArray.nanmean` accepts the ``filter`` and
+    ``dtype`` keyword arguments, but :py:meth:`.rt_dataset.Dataset.nanmean` does not.
 
     Parameters
     ----------
-    filter : array of bool, default None
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the mean.
+    filter : array of bool, default `None`
         Specifies which elements to include in the mean calculation. If the filter is
-        uniformly ``False``, `rt.nanmean` returns a `ZeroDivisionError`.
-    dtype : rt.dtype or numpy.dtype, default float64
-        The data type of the result. For a `FastArray` ``x``,
+        uniformly `False`, the method returns a :py:class:`ZeroDivisionError`.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
+        The data type of the result. For a :py:class:`~.rt_fastarray.FastArray` ``x``,
         ``x.nanmean(dtype = my_type)`` is equivalent to ``my_type(x.nanmean())``.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.nanmean` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's mean.
 
     See Also
     --------
-    mean : Computes the mean.
-    Dataset.nanmean : Computes the mean of numerical `Dataset` columns, ignoring NaNs.
-    FastArray.nanmean : Computes the mean of `FastArray` values, ignoring NaNs.
-    GroupByOps.nanmean : Computes the mean of each group, ignoring NaNs. Used by
-                         `Categorical` objects.
+    :py:func:`numpy.nanmean` :
+        Compute the arithmetic mean along the specified axis, ignoring ``NaN`` values.
+    :py:func:`.rt_numpy.mean` :
+        Computes the mean.
+    :py:meth:`.rt_dataset.Dataset.nanmean` :
+        Computes the mean of numerical :py:class:`~.rt_dataset.Dataset` columns,
+        ignoring ``NaN`` values.
+    :py:meth:`.rt_fastarray.FastArray.nanmean` :
+        Computes the mean of :py:class:`~.rt_fastarray.FastArray` values, ignoring ``NaN`` values.
+    :py:meth:`.rt_groupbyops.GroupByOps.nanmean` :
+        Computes the mean of each group, ignoring ``NaN`` values. Used by
+        :py:class:`~.rt_categorical.Categorical` objects.
 
     Notes
     -----
-    The `dtype` keyword for `rt.nanmean` specifies the data type of the result. This
-    differs from `numpy.nanmean`, where it specifies the data type used to compute
-    the mean.
+    The ``dtype`` parameter specifies the data type of the result. This differs from
+    :py:func:`numpy.nanmean`, where it specifies the data type used to compute the mean.
 
     Examples
     --------
@@ -3602,13 +3735,13 @@ def nanmean(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     >>> rt.nanmean(a)
     3.0
 
-    With a `dtype` specified:
+    With a ``dtype`` specified:
 
     >>> a = rt.FastArray([1, 3, 5, rt.nan])
     >>> rt.nanmean(a, dtype = rt.int32)
     3
 
-    With a filter:
+    With a ``filter``:
 
     >>> a = rt.FastArray([1, 3, 5, rt.nan])
     >>> b = rt.FastArray([False, True, True, True])
@@ -3652,36 +3785,49 @@ def var(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     documentation. In particular, note whether the called function accepts the keyword
     arguments listed below.
 
-    For example, `FastArray.var` accepts the `filter` and `dtype` keyword arguments,
-    but `Dataset.var` does not.
+    For example, :py:meth:`.rt_fastarray.FastArray.var` accepts the ``filter`` and
+    ``dtype`` keyword arguments, but :py:meth:`.rt_dataset.Dataset.var` does not.
 
     Parameters
     ----------
-    filter : array of bool, default None
-        Specifies which elements to include in the variance calculation. If the filter
-        is uniformly ``False``, `rt.var` returns a `ZeroDivisionError`.
-
-    dtype : rt.dtype or numpy.dtype, default float64
-        The data type of the result. For a `FastArray` ``x``,
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the variance.
+    filter : array of bool, default `None`
+        Specifies which elements to include in the variance calculation. If the ``filter``
+        is uniformly `False`, the method returns a :py:class:`ZeroDivisionError`.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
+        The data type of the result. For a :py:class:`~.rt_fastarray.FastArray` ``x``,
         ``x.var(dtype = my_type)`` is equivalent to ``my_type(x.var())``.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.var` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's variance.
 
     See Also
     --------
-    nanvar : Computes the variance, ignoring NaNs.
-    FastArray.var : Computes the variance of `FastArray` values.
-    Dataset.var : Computes the variance of numerical `Dataset` columns.
-    GroupByOps.var : Computes the variance of each group. Used by `Categorical` objects.
+    :py:func:`numpy.var` :
+        Compute the variance along the specified axis.
+    :py:func:`.rt_numpy.nanvar` :
+        Computes the variance, ignoring ``NaN`` values.
+    :py:meth:`.rt_fastarray.FastArray.var` :
+        Computes the variance of :py:class:`~.rt_fastarray.FastArray` values.
+    :py:meth:`.rt_dataset.Dataset.var` :
+        Computes the variance of numerical :py:class:`~.rt_dataset.Dataset` columns.
+    :py:meth:`.rt_groupbyops.GroupByOps.var` :
+        Computes the variance of each group. Used by
+        :py:class:`~.rt_categorical.Categorical` objects.
 
     Notes
     -----
-    The `dtype` keyword for `rt.var` specifies the data type of the result. This differs
-    from `numpy.var`, where it specifies the data type used to compute the variance.
+    The ``dtype`` parameter specifies the data type of the result. This differs
+    from :py:func:`numpy.var`, where it specifies the data type used to compute the
+    variance.
 
     Examples
     --------
@@ -3689,13 +3835,13 @@ def var(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     >>> rt.var(a)
     1.0
 
-    With a `dtype` specified:
+    With a ``dtype`` specified:
 
     >>> a = rt.FastArray([1, 2, 3])
     >>> rt.var(a, dtype = rt.int32)
     1
 
-    With a filter:
+    With a ``filter``:
 
     >>> a = rt.FastArray([1, 2, 3])
     >>> b = rt.FastArray([False, True, True])
@@ -3712,9 +3858,9 @@ def var(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
 # -------------------------------------------------------
 def nanvar(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     """
-    Compute the variance of the values in the first argument, ignoring NaNs.
+    Compute the variance of the values in the first argument, ignoring ``NaN`` values.
 
-    If all values in the first argument are NaNs, ``NaN`` is returned.
+    If all values in the first argument are ``NaN`` values, ``NaN`` is returned.
 
     Riptable uses the convention that ``ddof = 1``, meaning the variance of
     ``[x_1, ..., x_n]`` is defined by ``var = 1/(n - 1) * sum(x_i - mean )**2`` (note
@@ -3725,38 +3871,51 @@ def nanvar(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     documentation. In particular, note whether the called function accepts the keyword
     arguments listed below.
 
-    For example, `FastArray.nanvar` accepts the `filter` and `dtype` keyword arguments,
-    but `Dataset.nanvar` does not.
+    For example, :py:meth:`.rt_fastarray.FastArray.nanvar` accepts the ``filter`` and
+    ``dtype`` keyword arguments, but :py:meth:`.rt_dataset.Dataset.nanvar` does not.
 
     Parameters
     ----------
-    filter : array of bool, default None
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the variance.
+    filter : array of bool, default `None`
         Specifies which elements to include in the variance calculation. If the filter
-        is uniformly ``False``, `rt.nanvar` returns a `ZeroDivisionError`.
-
-    dtype : rt.dtype or numpy.dtype, default float64
-        The data type of the result. For a `FastArray` ``x``,
+        is uniformly `False`, the method returns a :py:class:`ZeroDivisionError`.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
+        The data type of the result. For a :py:class:`~.rt_fastarray.FastArray` ``x``,
         ``x.nanvar(dtype = my_type)`` is equivalent to ``my_type(x.nanvar())``.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.nanvar` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's variance.
 
     See Also
     --------
-    var : Computes the variance.
-    FastArray.nanvar : Computes the variance of `FastArray` values, ignoring NaNs.
-    Dataset.nanvar : Computes the variance of numerical `Dataset` columns, ignoring NaNs.
-    GroupByOps.nanvar : Computes the variance of each group, ignoring NaNs. Used by
-                        `Categorical` objects.
+    :py:func:`numpy.nanvar` :
+        Compute the variance along the specified axis, while ignoring ``NaN`` values.
+    :py:func:`.rt_numpy.var` :
+        Computes the variance.
+    :py:meth:`.rt_fastarray.FastArray.nanvar` :
+        Computes the variance of :py:class:`~.rt_fastarray.FastArray` values, ignoring
+        ``NaN`` values.
+    :py:meth:`.rt_dataset.Dataset.nanvar` :
+        Computes the variance of numerical :py:class:`~.rt_dataset.Dataset` columns,
+        ignoring ``NaN`` values.
+    :py:meth:`.rt_groupbyops.GroupByOps.nanvar` :
+        Computes the variance of each group, ignoring ``NaN`` values. Used by
+        :py:class:`~.rt_categorical.Categorical` objects.
 
     Notes
     -----
-    The `dtype` keyword for `rt.nanvar` specifies the data type of the
-    result. This differs from `numpy.nanvar`, where it specifies the data type used to
-    compute the variance.
+    The ``dtype`` parameter specifies the data type of the result. This differs from
+    :py:func:`numpy.nanvar`, where it specifies the data type used to compute the
+    variance.
 
     Examples
     --------
@@ -3764,13 +3923,13 @@ def nanvar(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     >>> rt.nanvar(a)
     1.0
 
-    With a `dtype` specified:
+    With a ``dtype`` specified:
 
     >>> a = rt.FastArray([1, 2, 3, rt.nan])
     >>> rt.nanvar(a, dtype = rt.int32)
     1
 
-    With a filter:
+    With a ``filter``:
 
     >>> a = rt.FastArray([1, 2, 3, rt.nan])
     >>> b = rt.FastArray([False, True, True, True])
@@ -3798,38 +3957,50 @@ def std(*args, filter=None, dtype=None, **kwargs):
     documentation. In particular, note whether the called function accepts the keyword
     arguments listed below.
 
-    For example, `FastArray.std` accepts the `filter` and `dtype` keyword arguments,
-    but `Dataset.std` does not.
+    For example, :py:meth:`.rt_fastarray.FastArray.std` accepts the ``filter`` and
+    ``dtype`` keyword arguments, but :py:meth:`.rt_dataset.Dataset.std` does not.
 
     Parameters
     ----------
-    filter : array of bool, default None
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the standard deviation.
+    filter : array of bool, default `None`
         Specifies which elements to include in the standard deviation calculation. If
-        the filter is uniformly ``False``, `rt.std` returns a `ZeroDivisionError`.
-
-    dtype : rt.dtype or numpy.dtype, default float64
-        The data type of the result. For a `FastArray` ``x``,
+        the filter is uniformly `False`, the method returns a :py:class:`ZeroDivisionError`.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
+        The data type of the result. For a :py:class:`~.rt_fastarray.FastArray` ``x``,
         ``x.std(dtype = my_type)`` is equivalent to ``my_type(x.std())``.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.std` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's standard deviation.
 
     See Also
     --------
-    nanstd : Computes the standard deviation, ignoring NaNs.
-    FastArray.std : Computes the standard deviation of `FastArray` values.
-    Dataset.std : Computes the standard deviation of numerical `Dataset` columns.
-    GroupByOps.std : Computes the standard deviation of each group. Used by
-                     `Categorical` objects.
+    :py:func:`numpy.std` :
+        Compute the standard deviation along the specified axis.
+    :py:func:`.rt_numpy.nanstd` :
+        Computes the standard deviation, ignoring ``NaN`` values.
+    :py:meth:`.rt_fastarray.FastArray.std` :
+        Computes the standard deviation of :py:class:`~.rt_fastarray.FastArray` values.
+    :py:meth:`.rt_dataset.Dataset.std` :
+        Computes the standard deviation of numerical :py:class:`~.rt_dataset.Dataset`
+        columns.
+    :py:meth:`.rt_groupbyops.GroupByOps.std` :
+        Computes the standard deviation of each group. Used by
+        :py:class:`~.rt_categorical.Categorical` objects.
 
     Notes
     -----
-    The `dtype` keyword for `rt.std` specifies the data type of the result. This differs
-    from `numpy.std`, where it specifies the data type used to compute the standard
-    deviation.
+    The ``dtype`` parameter specifies the data type of the result. This differs
+    from :py:func:`numpy.std`, where it specifies the data type used to compute the
+    standard deviation.
 
     Examples
     --------
@@ -3837,13 +4008,13 @@ def std(*args, filter=None, dtype=None, **kwargs):
     >>> rt.std(a)
     1.0
 
-    With a `dtype` specified:
+    With a ``dtype`` specified:
 
     >>> a = rt.FastArray([1, 2, 3])
     >>> rt.std(a, dtype = rt.int32)
     1
 
-    With a filter:
+    With a ``filter``:
 
     >>> a = rt.FastArray([1, 2, 3])
     >>> b = rt.FA([False, True, True])
@@ -3860,9 +4031,10 @@ def std(*args, filter=None, dtype=None, **kwargs):
 # -------------------------------------------------------
 def nanstd(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     """
-    Compute the standard deviation of the values in the first argument, ignoring NaNs.
+    Compute the standard deviation of the values in the first argument, ignoring ``NaN``
+    values.
 
-    If all values in the first argument are NaNs, ``NaN`` is returned.
+    If all values in the first argument are ``NaN`` values, ``NaN`` is returned.
 
     Riptable uses the convention that ``ddof = 1``, meaning the standard deviation of
     ``[x_1, ..., x_n]`` is defined by ``std = 1/(n - 1) * sum(x_i - mean )**2`` (note
@@ -3873,39 +4045,51 @@ def nanstd(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     documentation. In particular, note whether the called function accepts the keyword
     arguments listed below.
 
-    For example, `FastArray.nanstd` accepts the `filter` and `dtype` keyword arguments,
-    but `Dataset.nanstd` does not.
+    For example, :py:meth:`.rt_fastarray.FastArray.nanstd` accepts the ``filter`` and
+    ``dtype`` keyword arguments, but :py:meth:`.rt_dataset.Dataset.nanstd` does not.
 
     Parameters
     ----------
-    filter : array of bool, default None
+    *args : array or iterable or scalar value
+        Contains the values that are used to calculate the standard deviation.
+    filter : array of bool, default `None`
         Specifies which elements to include in the standard deviation calculation. If
-        the filter is uniformly ``False``, `rt.nanstd` returns a `ZeroDivisionError`.
-
-    dtype : rt.dtype or numpy.dtype, default float64
-        The data type of the result. For a `FastArray` ``x``,
+        the filter is uniformly `False`, the method returns a :py:class:`ZeroDivisionError`.
+    dtype : :py:class:`numpy.dtype` or Riptable dtype, default :py:obj:`numpy.float64`
+        The data type of the result. For a :py:class:`~.rt_fastarray.FastArray` ``x``,
         ``x.nanstd(dtype = my_type)`` is equivalent to ``my_type(x.nanstd())``.
+    **kwargs :
+        Additional keyword arguments to be passed to the function. See
+        :py:func:`numpy.nanstd` for additional keyword arguments.
 
     Returns
     -------
-    scalar or `Dataset`
-        Scalar for `FastArray` input. For `Dataset` input, returns a `Dataset`
+    scalar or :py:class:`~.rt_dataset.Dataset`
+        Scalar for :py:class:`~.rt_fastarray.FastArray` input. For
+        :py:class:`~.rt_dataset.Dataset` input, returns a :py:class:`~.rt_dataset.Dataset`
         consisting of a row with each numerical column's standard deviation.
 
     See Also
     --------
-    std : Computes the standard deviation.
-    FastArray.nanstd : Computes the standard deviation of `FastArray` values, ignoring
-                       NaNs.
-    Dataset.nanstd : Computes the standard deviation of numerical `Dataset` columns,
-                     ignoring NaNs.
-    GroupByOps.nanstd : Computes the standard deviation of each group, ignoring NaNs.
-                        Used by `Categorical` objects.
+    :py:func:`numpy.nanstd` :
+        Compute the standard deviation along the specified axis, while ignoring ``NaN``
+        values.
+    :py:func:`.rt_numpy.std` :
+        Computes the standard deviation.
+    :py:meth:`.rt_fastarray.FastArray.nanstd` :
+        Computes the standard deviation of :py:class:`~.rt_fastarray.FastArray` values,
+        ignoring ``NaN`` values.
+    :py:meth:`.rt_dataset.Dataset.nanstd` :
+        Computes the standard deviation of numerical :py:class:`~.rt_dataset.Dataset`
+        columns, ignoring ``NaN`` values.
+    :py:meth:`.rt_groupbyops.GroupByOps.nanstd` :
+        Computes the standard deviation of each group, ignoring ``NaN`` values. Used by
+        :py:class:`~.rt_categorical.Categorical` objects.
 
     Notes
     -----
-    The `dtype` keyword for `rt.nanstd` specifies the data type of the result. This
-    differs from `numpy.nanstd`, where it specifies the data type used to compute
+    The ``dtype`` parameter specifies the data type of the result. This differs from
+    :py:func:`numpy.nanstd`, where it specifies the data type used to compute
     the standard deviation.
 
     Examples
@@ -3914,13 +4098,13 @@ def nanstd(*args, filter=None, dtype=None, **kwargs) -> np.number | Dataset:
     >>> rt.nanstd(a)
     1.0
 
-    With a `dtype` specified:
+    With a ``dtype`` specified:
 
     >>> a = rt.FastArray([1, 2, 3, rt.nan])
     >>> rt.nanstd(a, dtype = rt.int32)
     1
 
-    With filter:
+    With ``filter``:
 
     >>> a = rt.FastArray([1, 2, 3, rt.nan])
     >>> b = rt.FastArray([False, True, True, True])
@@ -4068,32 +4252,43 @@ def bincount(*args, **kwargs) -> int:
 # -------------------------------------------------------
 def isnan(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each element that's a NaN (Not a Number), False otherwise.
+    Return `True` for each element that's a ``NaN`` (Not a Number), `False` otherwise.
 
     Parameters
     ----------
     *args :
-        See :py:data:`numpy.isnan`.
+        See :py:obj:`numpy.isnan`.
     **kwargs :
-        See :py:data:`numpy.isnan`.
+        See :py:obj:`numpy.isnan`.
 
     Returns
     -------
-    `FastArray` or bool
-        For array input, a `FastArray` of booleans is returned that's True for each
-        element that's a NaN, False otherwise. For scalar input, a boolean is returned.
+    :py:class:`~.rt_fastarray.FastArray` or bool
+        For array input, a :py:class:`~.rt_fastarray.FastArray` of booleans is returned
+        that's `True` for each element that's a ``NaN``, `False` otherwise. For scalar
+        input, a boolean is returned.
 
     See Also
     --------
-    riptable.isnotnan, riptable.isnanorzero, FastArray.isnan, FastArray.isnotnan,
-    FastArray.notna, FastArray.isnanorzero, Categorical.isnan, Categorical.isnotnan,
-    Categorical.notna, Date.isnan, Date.isnotnan, DateTimeNano.isnan,
-    DateTimeNano.isnotnan
-    Dataset.mask_or_isnan :
-        Return a boolean array that's True for each `Dataset` row that contains
-        at least one NaN.
-    Dataset.mask_and_isnan :
-        Return a boolean array that's True for each all-NaN `Dataset` row.
+    :py:func:`.rt_numpy.isnotnan`
+    :py:func:`.rt_numpy.isnanorzero`
+    :py:meth:`.rt_fastarray.FastArray.isnan`
+    :py:meth:`.rt_fastarray.FastArray.isnotnan`
+    :py:meth:`.rt_fastarray.FastArray.notna`
+    :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+    :py:meth:`.rt_categorical.Categorical.isnan`
+    :py:meth:`.rt_categorical.Categorical.isnotnan`
+    :py:meth:`.rt_categorical.Categorical.notna`
+    :py:meth:`.rt_datetime.Date.isnan`
+    :py:meth:`.rt_datetime.Date.isnotnan`
+    :py:meth:`.rt_datetime.DateTimeNano.isnan`
+    :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+    :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains at least one ``NaN``.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+        Return a boolean array that's `True` for each row that contains only ``NaN``
+        values.
 
     Examples
     --------
@@ -4113,33 +4308,43 @@ def isnan(*args, **kwargs) -> FastArray | bool:
 # -------------------------------------------------------
 def isnotnan(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each element that's not a NaN (Not a Number), False otherwise.
+    Return `True` for each element that's not a ``NaN`` (Not a Number), `False` otherwise.
 
     Parameters
     ----------
     *args :
-        See :py:data:`numpy.isnan`.
+        See :py:obj:`numpy.isnan`.
     **kwargs :
-        See :py:data:`numpy.isnan`.
+        See :py:obj:`numpy.isnan`.
 
     Returns
     -------
-    `FastArray` or bool
-        For array input, a `FastArray` of booleans is returned that's True for each
-        element that's not a NaN, False otherwise. For scalar input, a boolean is
-        returned.
+    :py:class:`~.rt_fastarray.FastArray` or bool
+        For array input, a :py:class:`~.rt_fastarray.FastArray` of booleans is returned
+        that's `True` for each element that's not a ``NaN``, `False` otherwise. For scalar
+        input, a boolean is returned.
 
     See Also
     --------
-    riptable.isnan, riptable.isnanorzero, FastArray.isnan, FastArray.isnotnan,
-    FastArray.notna, FastArray.isnanorzero, Categorical.isnan, Categorical.isnotnan,
-    Categorical.notna, Date.isnan, Date.isnotnan, DateTimeNano.isnan,
-    DateTimeNano.isnotnan
-    Dataset.mask_or_isnan :
-        Return a boolean array that's True for each `Dataset` row that contains
-        at least one NaN.
-    Dataset.mask_and_isnan :
-        Return a boolean array that's True for each all-NaN `Dataset` row.
+    :py:func:`.rt_numpy.isnan`
+    :py:func:`.rt_numpy.isnanorzero`
+    :py:meth:`.rt_fastarray.FastArray.isnan`
+    :py:meth:`.rt_fastarray.FastArray.isnotnan`
+    :py:meth:`.rt_fastarray.FastArray.notna`
+    :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+    :py:meth:`.rt_categorical.Categorical.isnan`
+    :py:meth:`.rt_categorical.Categorical.isnotnan`
+    :py:meth:`.rt_categorical.Categorical.notna`
+    :py:meth:`.rt_datetime.Date.isnan`
+    :py:meth:`.rt_datetime.Date.isnotnan`
+    :py:meth:`.rt_datetime.DateTimeNano.isnan`
+    :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+    :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains at least one ``NaN``.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+        Return a boolean array that's `True` for each row that contains only ``NaN``
+        values.
 
     Examples
     --------
@@ -4159,32 +4364,42 @@ def isnotnan(*args, **kwargs) -> FastArray | bool:
 # -------------------------------------------------------
 def isnanorzero(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each element that's a NaN (Not a Number) or zero, False otherwise.
+    Return `True` for each element that's a ``NaN`` (Not a Number) or zero, `False`
+    otherwise.
 
     Parameters
     ----------
     *args :
-        See :py:data:`numpy.isnan`.
+        See :py:obj:`numpy.isnan`.
     **kwargs :
-        See :py:data:`numpy.isnan`.
+        See :py:obj:`numpy.isnan`.
 
     Returns
     -------
-    `FastArray` or bool
-        For array input, a `FastArray` of booleans is returned that's True for each
-        element that's a NaN or zero, False otherwise. For scalar input, a boolean is
-        returned.
+    :py:class:`~.rt_fastarray.FastArray` or bool
+        For array input, a :py:class:`~.rt_fastarray.FastArray` of booleans is returned
+        that's `True` for each element that's a ``NaN`` or zero, `False` otherwise. For
+        scalar input, a boolean is returned.
 
     See Also
     --------
-    FastArray.isnanorzero, riptable.isnan, riptable.isnotnan, FastArray.isnan,
-    FastArray.isnotnan, Categorical.isnan, Categorical.isnotnan, Date.isnan,
-    Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan
-    Dataset.mask_or_isnan :
-        Return a boolean array that's True for each `Dataset` row that contains at least
-        one NaN.
-    Dataset.mask_and_isnan :
-        Return a boolean array that's True for each all-NaN `Dataset` row.
+    :py:func:`.rt_numpy.isnan`
+    :py:func:`.rt_numpy.isnotnan`
+    :py:meth:`.rt_fastarray.FastArray.isnan`
+    :py:meth:`.rt_fastarray.FastArray.isnotnan`
+    :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+    :py:meth:`.rt_categorical.Categorical.isnan`
+    :py:meth:`.rt_categorical.Categorical.isnotnan`
+    :py:meth:`.rt_datetime.Date.isnan`
+    :py:meth:`.rt_datetime.Date.isnotnan`
+    :py:meth:`.rt_datetime.DateTimeNano.isnan`
+    :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+    :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains at least one ``NaN``.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+        Return a boolean array that's `True` for each row that contains only ``NaN``
+        values.
 
     Examples
     --------
@@ -4207,46 +4422,52 @@ def isnanorzero(*args, **kwargs) -> FastArray | bool:
 # -------------------------------------------------------
 def isfinite(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each finite element, False otherwise.
+    Return `True` for each finite element, `False` otherwise.
 
     A value is considered to be finite if it's not positive or negative infinity
-    or a NaN (Not a Number).
+    or a ``NaN`` (Not a Number).
 
     Parameters
     ----------
     *args :
-        See :py:data:`numpy.isfinite`.
+        See :py:obj:`numpy.isfinite`.
     **kwargs :
-        See :py:data:`numpy.isfinite`.
+        See :py:obj:`numpy.isfinite`.
 
     Returns
     -------
-    `FastArray` or bool
-        For array input, a `FastArray` of booleans is returned that's True for each
-        element that's finite, False otherwise. For scalar input, a boolean is returned.
+    :py:class:`~.rt_fastarray.FastArray` or bool
+        For array input, a :py:class:`~.rt_fastarray.FastArray` of booleans is returned
+        that's `True` for each element that's finite, `False` otherwise. For scalar
+        input, a boolean is returned.
 
     See Also
     --------
-    riptable.isnotfinite, riptable.isinf, riptable.isnotinf, FastArray.isfinite,
-    FastArray.isnotfinite, FastArray.isinf, FastArray.isnotinf
-    Dataset.mask_or_isfinite :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one finite value.
-    Dataset.mask_and_isfinite :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        finite values.
-    Dataset.mask_or_isinf :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one value that's positive or negative infinity.
-    Dataset.mask_and_isinf :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        infinite values.
+    :py:func:`.rt_numpy.isnotfinite`
+    :py:func:`.rt_numpy.isinf`
+    :py:func:`.rt_numpy.isnotinf`
+    :py:meth:`.rt_fastarray.FastArray.isfinite`
+    :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+    :py:meth:`.rt_fastarray.FastArray.isinf`
+    :py:meth:`.rt_fastarray.FastArray.isnotinf`
+    :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one finite value.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all finite values.
+    :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one value that's positive or negative infinity.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all infinite values.
 
     Examples
     --------
     >>> a = rt.FastArray([rt.inf, -rt.inf, rt.nan, 0])
     >>> rt.isfinite(a)
-    FastArray([False, False, False,  True])
+    FastArray([False, False, False, True])
 
     >>> rt.isfinite(1)
     True
@@ -4260,40 +4481,46 @@ def isfinite(*args, **kwargs) -> FastArray | bool:
 # -------------------------------------------------------
 def isnotfinite(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each non-finite element, False otherwise.
+    Return `True` for each non-finite element, `False` otherwise.
 
     A value is considered to be finite if it's not positive or negative infinity
-    or a NaN (Not a Number).
+    or a ``NaN`` (Not a Number).
 
     Parameters
     ----------
     *args :
-        See :py:data:`numpy.isfinite`.
+        See :py:obj:`numpy.isfinite`.
     **kwargs :
-        See :py:data:`numpy.isfinite`.
+        See :py:obj:`numpy.isfinite`.
 
     Returns
     -------
-    `FastArray` or bool
-        For array input, a `FastArray` of booleans is returned that's True for each
-        non-finite element, False otherwise. For scalar input, a boolean is returned.
+    :py:class:`~.rt_fastarray.FastArray` or bool
+        For array input, a :py:class:`~.rt_fastarray.FastArray` of booleans is returned
+        that's `True` for each non-finite element, `False` otherwise. For scalar input,
+        a boolean is returned.
 
     See Also
     --------
-    riptable.isfinite, riptable.isinf, riptable.isnotinf, FastArray.isfinite,
-    FastArray.isnotfinite, FastArray.isinf, FastArray.isnotinf
-    Dataset.mask_or_isfinite :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one finite value.
-    Dataset.mask_and_isfinite :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        finite values.
-    Dataset.mask_or_isinf :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one value that's positive or negative infinity.
-    Dataset.mask_and_isinf :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        infinite values.
+    :py:func:`.rt_numpy.isfinite`
+    :py:func:`.rt_numpy.isinf`
+    :py:func:`.rt_numpy.isnotinf`
+    :py:meth:`.rt_fastarray.FastArray.isfinite`
+    :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+    :py:meth:`.rt_fastarray.FastArray.isinf`
+    :py:meth:`.rt_fastarray.FastArray.isnotinf`
+    :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one finite value.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all finite values.
+    :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one value that's positive or negative infinity.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all infinite values.
 
     Examples
     --------
@@ -4313,38 +4540,44 @@ def isnotfinite(*args, **kwargs) -> FastArray | bool:
 # -------------------------------------------------------
 def isinf(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each element that's positive or negative infinity, False otherwise.
+    Return `True` for each element that's positive or negative infinity, `False`
+    otherwise.
 
     Parameters
     ----------
     *args :
-        See :py:data:`numpy.isinf`.
+        See :py:obj:`numpy.isinf`.
     **kwargs :
-        See :py:data:`numpy.isinf`.
+        See :py:obj:`numpy.isinf`.
 
     Returns
     -------
-    `FastArray` or bool
-        For array input, a `FastArray` of booleans is returned that's True for each
-        element that's positive or negative infinity, False otherwise. For scalar
-        input, a boolean is returned.
+    :py:class:`~.rt_fastarray.FastArray` or bool
+        For array input, a :py:class:`~.rt_fastarray.FastArray` of booleans is returned
+        that's `True` for each element that's positive or negative infinity, `False`
+        otherwise. For scalar input, a boolean is returned.
 
     See Also
     --------
-    riptable.isnotinf, riptable.isfinite, riptable.isnotfinite, FastArray.isinf,
-    FastArray.isnotinf, FastArray.isfinite, FastArray.isnotfinite
-    Dataset.mask_or_isfinite :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one finite value.
-    Dataset.mask_and_isfinite :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        finite values.
-    Dataset.mask_or_isinf :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one value that's positive or negative infinity.
-    Dataset.mask_and_isinf :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        infinite values.
+    :py:func:`.rt_numpy.isnotinf`
+    :py:func:`.rt_numpy.isfinite`
+    :py:func:`.rt_numpy.isnotfinite`
+    :py:meth:`.rt_fastarray.FastArray.isinf`
+    :py:meth:`.rt_fastarray.FastArray.isnotinf`
+    :py:meth:`.rt_fastarray.FastArray.isfinite`
+    :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+    :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one finite value.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all finite values.
+    :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one value that's positive or negative infinity.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all infinite values.
 
     Examples
     --------
@@ -4364,39 +4597,44 @@ def isinf(*args, **kwargs) -> FastArray | bool:
 # -------------------------------------------------------
 def isnotinf(*args, **kwargs) -> FastArray | bool:
     """
-    Return True for each element that's not positive or negative infinity,
-    False otherwise.
+    Return `True` for each element that's not positive or negative infinity,
+    `False` otherwise.
 
     Parameters
     ----------
     *args :
-        See :py:data:`numpy.isinf`.
+        See :py:obj:`numpy.isinf`.
     **kwargs :
-        See :py:data:`numpy.isinf`.
+        See :py:obj:`numpy.isinf`.
 
     Returns
     -------
-    `FastArray` or bool
-        For array input, a `FastArray` of booleans is returned that's True for each
-        element that's not positive or negative infinity, False otherwise. For scalar
-        input, a boolean is returned.
+    :py:class:`~.rt_fastarray.FastArray` or bool
+        For array input, a :py:class:`~.rt_fastarray.FastArray` of booleans is returned
+        that's `True` for each element that's not positive or negative infinity, `False`
+        otherwise. For scalar input, a boolean is returned.
 
     See Also
     --------
-    riptable.isinf, FastArray.isnotinf, FastArray.isinf, riptable.isfinite,
-    riptable.isnotfinite, FastArray.isfinite, FastArray.isnotfinite
-    Dataset.mask_or_isfinite :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one finite value.
-    Dataset.mask_and_isfinite :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        finite values.
-    Dataset.mask_or_isinf :
-        Return a boolean array that's True for each `Dataset` row that has at least
-        one value that's positive or negative infinity.
-    Dataset.mask_and_isinf :
-        Return a boolean array that's True for each `Dataset` row that contains all
-        infinite values.
+    :py:func:`.rt_numpy.isinf`
+    :py:func:`.rt_numpy.isfinite`
+    :py:func:`.rt_numpy.isnotfinite`
+    :py:meth:`.rt_fastarray.FastArray.isnotinf`
+    :py:meth:`.rt_fastarray.FastArray.isinf`
+    :py:meth:`.rt_fastarray.FastArray.isfinite`
+    :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+    :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one finite value.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all finite values.
+    :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that has at least one value that's positive or negative infinity.
+    :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+        Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+        row that contains all infinite values.
 
     Examples
     --------
@@ -4530,12 +4768,12 @@ def repeat(a, repeats, axis=None):
     Parameters
     ----------
     a : array or scalar
-        The input array or scalar. Each element will be repeated consecutively
-        `repeats` times. If no `axis` is specified, multi-dimensional arrays are
+        The input array or scalar. Each element is repeated consecutively
+        ``repeats`` times. If no ``axis`` is specified, multi-dimensional arrays are
         flattened and a flattened array is returned.
     repeats : int or array of int
-        The number of consecutive repetitions for each element of `a`. If an
-        `axis` is specified, the elements are repeated along that axis.
+        The number of consecutive repetitions for each element of ``a``. If an
+        ``axis`` is specified, the elements are repeated along that axis.
     axis : int, optional
         The axis along which to repeat the values. If no axis is specified, the
         input array is flattened and a flattened array is returned. For examples
@@ -4545,13 +4783,13 @@ def repeat(a, repeats, axis=None):
 
     Returns
     -------
-    `FastArray`
-        A new `FastArray` that has the same shape as `a`, except along the given
-        axis.
+    :py:class:`~.rt_fastarray.FastArray`
+        A new :py:class:`~.rt_fastarray.FastArray` that has the same shape as ``a``,
+        except along the given axis.
 
     See Also
     --------
-    riptable.tile : Construct an array by repeating a specified array.
+    :py:func:`.rt_numpy.tile` : Construct an array by repeating a specified array.
 
     Examples
     --------
@@ -4566,7 +4804,7 @@ def repeat(a, repeats, axis=None):
     >>> rt.repeat(x, 2)
     FastArray([1, 1, 2, 2, 3, 3, 4, 4])
 
-    Use an array for `repeats`:
+    Use an array for ``repeats``:
 
     >>> rt.repeat(x, [1, 2, 3, 4])
     FastArray([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
@@ -4581,27 +4819,27 @@ def repeat(a, repeats, axis=None):
 # ------------------------------------------------------------
 def tile(arr, reps):
     """
-    Construct an array by repeating a specified array a specified number of
-    times.
+    Construct an array by repeating an input array a specified number of times.
 
     Parameters
     ----------
-    a : array or scalar
+    arr : array or scalar
         The input array or scalar.
-    reps: int or array of int
-        The number of repetitions of `a` along each axis. For examples of `tile`
-        used with multi-dimensional arrays, see :py:func:`numpy.tile`. Note that
-        although multi-dimensional arrays are technically supported by Riptable,
-        you may get unexpected results when working with them.
+    reps : int or array of int
+        The number of repetitions of ``arr`` along each axis. For examples of
+        :py:func:`~.rt_numpy.tile` used with multi-dimensional arrays, see
+        :py:func:`numpy.tile`. Note that although multi-dimensional arrays are
+        technically supported by Riptable, you may get unexpected results when working
+        with them.
 
     Returns
     -------
-    `FastArray`
-        A new `FastArray` of the repeated input arrays.
+    :py:class:`~.rt_fastarray.FastArray`
+        A new :py:class:`~.rt_fastarray.FastArray` of the repeated input arrays.
 
     See Also
     --------
-    riptable.repeat :
+    :py:func:`.rt_numpy.repeat` :
         Construct an array by repeating each element of a specified array.
 
     Examples

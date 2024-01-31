@@ -19,6 +19,7 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    Sized,
     Tuple,
     Union,
     Literal,
@@ -543,6 +544,8 @@ class Dataset(Struct):
     # ------------------------------------------------------------
     def _check_addtype(self, name, value):
         # TODO use _possibly_convert -- why are these two routines different?
+
+        # handle special case of Dataset value.
         if isinstance(value, Dataset):
             # if they try to add a dataset to a single column
             # then if the dataset has one column, use that
@@ -559,19 +562,37 @@ class Dataset(Struct):
                 raise TypeError(f"Cannot determine which column of Dataset to add to the Dataset column {name!r}.")
             return self._check_addtype(name, value)
 
+        # if not an ndarray, convert value into one.
         if not isinstance(value, np.ndarray):
             if isinstance(value, set):
                 raise TypeError(f"Cannot create Dataset column {name!r} out of tuples or sets {value!r}.")
 
-            value = np.asanyarray(value)
+            # extract the length of the value, if it's an array-like
+            rowlen: Optional[int] = len(value) if isinstance(value, Sized) else None
+
+            # if empty dataset, set compatible length from value
             if self._nrows is None:
-                if value.ndim > 0:
+                if rowlen is not None:
                     self._nrows = len(value)
                 else:
                     # how to get here:
                     # ds=Dataset()
                     # ds[['g','c']]=3
                     self._nrows = 1
+
+            # if scalar, but with repeat method, broadcast into new array.
+            if rowlen is None and hasattr(value, "repeat"):
+                value = value.repeat(self._nrows)
+
+            # else if single-element, then treat same as scalar broadcast case
+            elif rowlen == 1 and hasattr(value[0], "repeat"):
+                value = value[0].repeat(self._nrows)
+
+            # otherwise convert to ndarray (downcasts any riptable types)
+            else:
+                value = np.asanyarray(value)
+
+            # scalars get turned into 0-dim ndarrays, so broadcast into new array
             if value.ndim == 0:
                 value = full(self._nrows, value)
 

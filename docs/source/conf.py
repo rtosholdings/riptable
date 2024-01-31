@@ -87,8 +87,16 @@ extensions = [
     "sphinx_design",
 ]
 
+# Put the list of valid time zones into docstrings using rst_prolog.
+from riptable import TimeZone
+
+tz_list = 'Supported timezones: "' + '", "'.join(TimeZone.valid_timezones) + '"'
+current_tzs_note = f"{tz_list}. To see supported timezones, use ``rt.TimeZone.valid_timezones``."
+
+
 rst_prolog = f"""
 .. |rtosholdings_docs| replace:: {os.getenv("RTOSHOLDINGS_DOCS", "rtosholdings-docs@sig.com")}
+.. |To see supported timezones, use ``rt.TimeZone.valid_timezones``.| replace:: {current_tzs_note}
 """
 
 

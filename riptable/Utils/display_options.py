@@ -1,7 +1,7 @@
 """Display options for formatting and displaying numeric values, datasets, and multisets."""
 import os
 from json import dump, load
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 from ..rt_enum import DisplayNumberSeparator, TypeRegister
 from .appdirs import user_config_dir
@@ -229,6 +229,23 @@ class DisplayOptions(object):
     GB_PREFIX = "*"  # prefix for column names to indicate that they are groupby keys
     """
     Prefix for column names to indicate that they are groupby keys (`str`, default "*").
+    """
+
+    HTML_CUSTOM_TABLE_CSS: Optional[Union[str, Sequence[str]]] = None
+    """
+    Custom CSS styles to apply to table elements (`str` or `list` of `str`, default `None`).
+
+    Examples
+    --------
+    This example demonstrates how to style the table body headers and cells with a solid border.
+    
+    The optional ``!important`` forcibly overrides any Jupyter styling.
+
+    >>> from riptable.Utils.display_options import DisplayOptions
+    >>> DisplayOptions.HTML_CUSTOM_TABLE_CSS = [
+            "tbody thead, td {border-style: solid !important}",
+        ]
+    >>> rt.Dataset({"A": [0, 6, 9], "B": [1.2, 3.1, 9.6], "C": [-1.6, 2.7, 4.6], "D": [2.4, 6.2, 19.2]}) # doctest: +SKIP
     """
 
     # TODO: split the json config loader to separate files so that new display formatting

@@ -149,19 +149,13 @@ strings. Strings are common when the data is from, say, a CSV file.
 
 Unlike ``Date`` objects, ``DateTimeNano``\ s are time-zone-aware. When
 you create a ``DateTimeNano``, you need to specify the time zone of
-origin with the ``from_tz`` argument. Since Riptable is mainly used for
-financial market data, its time zone options are limited to NYC, DUBLIN,
-and (as of Riptable 1.3.6) Australia/Sydney, plus GMT and UTC (which is
-an alias for GMT).
+origin with the ``from_tz`` argument. Riptable supports time zones in 
+certain areas of interest, such as New York, Dublin, Sydney, Tokyo, and 
+Hong Kong (more are added as needed). It also supports GMT and UTC.
 
-(If you’re wondering why ‘Australia/Sydney’ isn’t abbreviated, it’s
-because Riptable uses the standard time zone name from the `tz
-database <https://en.wikipedia.org/wiki/Tz_database>`__. In the future,
-Riptable will support only the `standard
-names <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`__
-in the tz database.)
+To see the list of valid time zones, use ``rt.TimeZone.valid_timezones``.
 
-::
+Here, we create a ``DateTimeNano`` with 'GMT' as the time zone of origin::
 
     >>> rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'], from_tz='GMT')
     DateTimeNano(['20210101 04:31:15.000000000', '20210519 01:21:17.000000000'], to_tz='NYC')

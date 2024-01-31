@@ -51,7 +51,7 @@ from numpydoc.validate import (
     Validator,
     validate,
 )
-import pandas
+
 import riptable
 from riptable.Utils.common import cached_weakref_property
 
@@ -98,7 +98,6 @@ PRIVATE_CLASSES = [
 
 IMPORT_CONTEXT = {
     "np": numpy,
-    "pd": pandas,
     "rt": riptable,
 }
 

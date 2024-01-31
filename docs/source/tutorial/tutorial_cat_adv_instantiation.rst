@@ -1,9 +1,9 @@
 
-A Useful Way to Instantiate a Categorical
-*****************************************
+Build a Categorical Iteratively
+*******************************
 
 It can sometimes be useful to instantiate a Categorical with only one
-category, then fill it in as needed.
+category, then fill it in iteratively as needed.
 
 For example, let’s say we have a Dataset with a column that has a lot of
 categories, and we want to create a new Categorical column that keeps

@@ -6,7 +6,7 @@ Matplotlib, to create visualizations of your data. You can also take
 advantage of the plotting and HTML styling tools offered by Pandas.
 
 In this section we’ll look at a couple of simple examples using
-Matplotlib, Pandas, and Playa.
+Matplotlib and Pandas.
 
 ::
 
@@ -202,59 +202,9 @@ your Dataset for the rendering::
         </tr>
       </tbody>
     </table>
-    
-Groupscatter Plots with Playa
------------------------------
 
-Playa’s ``GroupScatter()`` method groups data into buckets based on
-x-values and returns a Matplotlib plot summarizing the data.
-
-::
-
-    from playa.plot import GroupScatter
-
-Make a noisier price signal
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    >>> ds.NoisyPrice = ds.Price + rng.normal(0, 10, ds.shape[0])
-
-A regular Matplotlib scatter plot, for comparison
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    >>> num_rows = int(rt.ceil(len(symbols)/2))
-    >>> fig, axes = plt.subplots(num_rows, 2, figsize=(20, 5 * num_rows))
-    >>> for (ax, symbol) in zip(axes.flatten(), symbols):
-    ...     f = ds.Symbol==symbol
-    ...     ax.scatter(ds.Time[f], ds.NoisyPrice[f])
-    ...     ax.grid()
-    ...     ax.set_xlabel('Time')
-    ...     ax.set_ylabel('Price')
-    ...     ax.set_title(f'{symbol} Noisy Stock Price by Time')
-    >>> plt.show()
-
-.. image:: output_25_0.png
-
-
-Now a GroupScatter for each one, you can see how it clarifies the point cloud and reveals the shape.
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    >>> fig, axes = plt.subplots(num_rows, 2, figsize=(20, 5 * num_rows))
-    >>> for (ax, symbol) in zip(axes.flatten(), symbols):
-    ...     f = ds.Symbol==symbol
-    ...     gs = GroupScatter(ds.Time[f].hour, ds.NoisyPrice[f])
-    ...     gs.plot(title=f'{symbol} Noisy Stock Price Over Time', x_label='Hour of the Day', y_label='Price', ax=ax)
-    >>> plt.show()
-
-.. image:: output_27_0.png
-
-This was just a brief introduction – check out the Matpotlib, Pandas,
-and Playa documentation for more details and possibilities.
+This was a brief introduction – check out the Matpotlib and Pandas documentation for 
+more details and possibilities.
 
 Next we cover useful tools for working with ``NaN``\ s and other missing
 values: `Working with Missing Data <tutorial_missing_data.rst>`__.

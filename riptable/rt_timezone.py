@@ -1002,8 +1002,11 @@ Asia__Kolkata_OFFSET_NS = -(5 * NANOS_PER_HOUR + 30 * NANOS_PER_MINUTE)
 class TimeZone:
     """
     Stores daylight savings cutoff information so UTC times can be translated to zone-specific times.
+
     Every `DateTimeNano` object holds a `TimeZone` object.
     All timezone-related conversions / fixups will be handled by the `TimeZone` class.
+
+    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
 
     Parameters
     ----------
@@ -1070,8 +1073,9 @@ class TimeZone:
         if tz_long_name is not None:
             return tz_long_name
 
+        valid_tzs = '"' + '", "'.join(TimeZone.valid_timezones) + '"'
         raise ValueError(
-            f"The timezone name '{tz_name}' is not recognized as either a tz database timezone name or an alias timezone name."
+            f"The timezone name '{tz_name}' is not recognized as either a tz database timezone name or an alias timezone name. Valid timezones are: {valid_tzs}"
         )
 
     # ------------------------------------------------------------

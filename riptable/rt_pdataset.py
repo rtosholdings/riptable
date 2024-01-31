@@ -552,7 +552,8 @@ class PDataset(Dataset):
 
             # column header
             header = "partition + #"
-            rownumbers = plabels + " " + rownumbers
+            if len(plabels) > 0:
+                rownumbers = plabels + " " + rownumbers
 
             # set the style width to override the string trim
             style.width = rownumbers.itemsize

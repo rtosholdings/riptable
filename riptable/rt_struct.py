@@ -5137,16 +5137,41 @@ class Struct:
 
         return (total_physical_size, total_logical_size)
 
-    def key_search(self, regex, case_sensitive=False, recursive=True, path=""):
+    def key_search(self, regex: str, case_sensitive: bool = False, recursive: bool = True, path: str = "") -> list[str]:
+        """
+        Search through the keys of the :py:class:`~.rt_struct.Struct` using
+        :py:func:`re.search`, and return the resulting list of keys.
+
+        Parameters
+        ----------
+        regex : str
+            Regular expression (:py:obj:`re`) used to search.
+        case_sensitive : bool, optional
+            If `True`, ignore letter case of keys.
+        recursive : bool, optional
+            If `True`, applies :py:meth:`~.rt_struct.Struct.key_search` to elements of
+            the :py:class:`~.rt_struct.Struct` that are also
+            :py:class:`~.rt_struct.Struct` objects.
+        path : str, optional
+            String to prepend to all returned keys. This is useful when ``recursive``
+            equals `True`.
+
+        Returns
+        -------
+        list of str
+            List of keys that match ``regex``.
+        """
         if case_sensitive:
             pattern = re.compile(regex)
         else:
             pattern = re.compile(regex, re.IGNORECASE)
         output = [path + s for s in self.keys() if pattern.search(s)]
-        if recursive:
+        # don't bother recusing into Datasets, as they aren't recursive containers.
+        if recursive and not isinstance(self, TypeRegister.Dataset):
             for s in self.keys():
-                if isinstance(self[s], Struct):
-                    output = output + self[s].key_search(
+                ds = self[s]
+                if isinstance(ds, Struct):
+                    output = output + ds.key_search(
                         regex, case_sensitive=case_sensitive, recursive=recursive, path=path + s + "."
                     )
         return output
