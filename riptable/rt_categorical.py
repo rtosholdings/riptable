@@ -1281,10 +1281,10 @@ class Categories:
 # ------------------------------------------------------------
 class Categorical(GroupByOps, FastArray):
     """
-    A `Categorical` efficiently stores an array of repeated strings and is used for
-    groupby operations.
+    A :py:class:`~.rt_categorical.Categorical` efficiently stores an array of repeated
+    strings and is used for groupby operations.
 
-    Riptable `Categorical` objects have two related uses:
+    Riptable :py:class:`~.rt_categorical.Categorical` objects have two related uses:
 
     - They efficiently store string (or other large dtype) arrays that have repeated
       values. The repeated values are partitioned into groups (a.k.a. categories),
@@ -1292,9 +1292,9 @@ class Categorical(GroupByOps, FastArray):
       stored and operated on more efficiently.
 
     - They're Riptable's class for doing groupby operations. A method applied to a
-      `Categorical` is applied to each group separately.
+      :py:class:`~.rt_categorical.Categorical` is applied to each group separately.
 
-    A `Categorical` is typically created from a list of strings:
+    A :py:class:`~.rt_categorical.Categorical` is typically created from a list of strings:
 
     >>> c = rt.Categorical(["b", "a", "b", "a", "c", "c", "b"])
     >>> c
@@ -1304,17 +1304,18 @@ class Categorical(GroupByOps, FastArray):
 
     The output shows:
 
-    - The `Categorical` values. These are grouped into unique categories (here, "a",
-      "b", and "c"), which are also stored in the `Categorical` (see below).
+    - The :py:class:`~.rt_categorical.Categorical` values. These are grouped into unique
+      categories (here, "a", "b", and "c"), which are also stored in the
+      :py:class:`~.rt_categorical.Categorical` (see below).
     - The integer mapping codes (also called bins). Each integer is mapped to a unique
       category (here, 1 is mapped to "a", 2 is mapped to "b", and 3 is mapped to "c").
-      Because these codes can also be used to index into the `Categorical`,
-      they're also referred to as indices. By default, the index is 1-based, with 0
-      reserved for Filtered values.
+      Because these codes can also be used to index into the
+      :py:class:`~.rt_categorical.Categorical`, they're also referred to as indices. By
+      default, the index is 1-based, with ``0`` reserved for filtered values.
     - The unique categories. Each category represents a group for groupby operations.
 
-    Use `Categorical` objects to perform aggregations over arbitrary arrays of the same
-    dimension as the `Categorical`:
+    Use :py:class:`~.rt_categorical.Categorical` objects to perform aggregations over
+    arbitrary arrays of the same dimension as the :py:class:`~.rt_categorical.Categorical`:
 
     >>> c = rt.Categorical(["b", "a", "b", "a", "c", "c", "b"])
     >>> ints = rt.FA([3, 10, 2, 5, 4, 1, 1])
@@ -1330,11 +1331,13 @@ class Categorical(GroupByOps, FastArray):
 
     **Multi-Key Categoricals**
 
-    The `Categorical` above is a single-key `Categorical` -- it groups one array of
-    values into keys (the categories) for groupby operations.
+    The :py:class:`~.rt_categorical.Categorical` above is a single-key
+    :py:class:`~.rt_categorical.Categorical` -- it groups one array of values into keys
+    (the categories) for groupby operations.
 
-    Multi-key `Categorical` objects let you create and operate on groupings based on
-    multiple associated categories. The associated keys form a group:
+    Multi-key :py:class:`~.rt_categorical.Categorical` objects let you create and
+    operate on groupings based on multiple associated categories. The associated keys
+    form a group:
 
     >>> strs = rt.FastArray(["a", "b", "b", "a", "b", "a"])
     >>> ints = rt.FastArray([2, 1, 1, 2, 1, 1])
@@ -1350,22 +1353,24 @@ class Categorical(GroupByOps, FastArray):
     b             1       3
     a             1       1
     <BLANKLINE>
-    [3 rows x 3 columns] total bytes: 27.0 B
+    [3 rows x 3 columns] total bytes: 39.0 B
 
     **Filtered Values and Categories**
 
-    Filter values and categories to exclude them from operations on the `Categorical`.
+    Filter values and categories to exclude them from operations on the
+    :py:class:`~.rt_categorical.Categorical`.
 
-    `Categorical` objects can be filtered when they're created or anytime afterwards.
-    Because filtered items are mapped to 0 in the integer mapping array, filters can be
-    used only in base-1 `Categorical` objects.
+    :py:class:`~.rt_categorical.Categorical` objects can be filtered when they're
+    created or anytime afterwards. Because filtered items are mapped to ``0`` in the
+    integer mapping array, filters can be used only in base-1
+    :py:class:`~.rt_categorical.Categorical` objects.
 
     Filters can also be applied on a one-off basis at the time of an operation. See the
     Filtering topic under More About Categoricals for examples.
 
     **More About Categorials**
 
-    For more about using `Categorical` objects, see the
+    For more about using :py:class:`~.rt_categorical.Categorical` objects, see the
     :doc:`Categoricals </tutorial/tutorial_categoricals>` section of the
     :doc:`/tutorial/tutorial` or these more in-depth topics:
 
@@ -1382,23 +1387,25 @@ class Categorical(GroupByOps, FastArray):
 
     Parameters
     ----------
-    values : array of str, int, or float, list of arrays, dict, or ~riptable.rt_categorical.Categorical or pandas.Categorical
+    values : array of str, int, or float, list of arrays, dict, or :py:class:`~.rt_categorical.Categorical` or :py:class:`pandas.Categorical`
         - Strings: Unicode strings and byte strings are supported.
         - Integers without provided categories: The integer mapping codes start at 1.
         - Integers with provided categories: If you have an array of integers that
           indexes into an array of provided unique categories, the integers are used
-          for the integer mapping array. Any 0 values are mapped to the Filtered category.
+          for the integer mapping array. Any ``0`` values are mapped to the ``Filtered`` category.
         - Floats are supported with no user-provided categories. If you have a Matlab
-          Categorical with categories, set ``from_matlab`` to `True`. `Categorical` objects
-          created from Matlab Categoricals must have a base-1 index; any 0.0 values
-          become Filtered.
+          Categorical with categories, set ``from_matlab`` to `True`.
+          :py:class:`~.rt_categorical.Categorical` objects created from Matlab Categoricals
+          must have a base-1 index; any ``0.0`` values become ``Filtered``.
         - A list of arrays or a dictionary with multiple key-value pairs creates a
-          multi-key `Categorical`.
-        - For a `Categorical` created from a `Categorical`, a deep copy of categories
+          multi-key :py:class:`~.rt_categorical.Categorical`.
+        - For a :py:class:`~.rt_categorical.Categorical` created from a
+          :py:class:`~.rt_categorical.Categorical`, a deep copy of categories
           is performed.
-        - For a `Categorical` created from a Pandas Categorical, a deep copy is
-          performed and indices start at 1 to preserve invalid values.
-          `Categorical` objects created from Pandas Catagoricals must have a base-1 index.
+        - For a :py:class:`~.rt_categorical.Categorical` created from a Pandas
+          Categorical, a deep copy is performed and indices start at 1 to preserve
+          invalid values. :py:class:`~.rt_categorical.Categorical` objects created from
+          Pandas Catagoricals must have a base-1 index.
     categories : array of str, int, or float, dict of {str : int} or {int : str}, or IntEnum, optional
         The unique categories. Can be:
 
@@ -1410,8 +1417,9 @@ class Categorical(GroupByOps, FastArray):
         Note:
 
           - User-provided categories are always held in the order provided.
-          - Multi-key `Categorical` objects don't support user-provided categories.
-    ordered : bool, default None/True
+          - Multi-key :py:class:`~.rt_categorical.Categorical` objects don't support
+            user-provided categories.
+    ordered : bool, default `None`/`True`
         Controls whether categories are sorted lexicographically before they are mapped
         to integers:
           - If categories are not provided, by default they are sorted. If
@@ -1419,108 +1427,120 @@ class Categorical(GroupByOps, FastArray):
             sort categories for groupby operations, use ``sort_gb=True`` (see below).
           - If categories are provided, they are always held in the order they're
             provided in; they can't be sorted with ``ordered`` or ``lex``.
-    sort_gb : bool, default None/False
+    sort_gb : bool, default `None`/`False`
         Controls whether groupby operation results are displayed in sorted order. Note
         that results may already appear sorted based on ``ordered`` or ``lex`` settings.
     sort_display : bool, optional
         See ``sort_gb``.
-    lex : bool, default None/False
+    lex : bool, default `None`/`False`
         Controls whether hashing- or sorting-based logic is used to find unique values
         in the input array. By default hashing is used. If more than 50% of the values
         are unique, set ``lex=True`` for a possibly faster lexicographical sort (not
         supported if categories are provided).
-    base_index : {None, 0, 1}, default None/1
+    base_index : {None, 0, 1}, default `None`/1
         By default, base-1 indexing is used. Base-0 can be used if:
 
-          - A mapping dictionary isn't used. A `Categorical` created from a mapping
-            dictionary does not have a base index.
+          - A mapping dictionary isn't used. A :py:class:`~.rt_categorical.Categorical`
+            created from a mapping dictionary does not have a base index.
           - A ``filter`` isn't used at creation.
-          - A Matlab or Pandas Categorical isn't being converted. These both reserve 0
+          - A Matlab or Pandas Categorical isn't being converted. These both reserve ``0``
             for invalid values.
-        If base-0 indexing is used, 0 becomes a valid category.
+        If base-0 indexing is used, ``0`` becomes a valid category.
     filter : array of bool, optional
-        Must be the same length as ``values``. Values that are `False` become Filtered
-        and mapped to 0 in the integer mapping array, and they are ignored in groupby
-        operations. A filter can't be used with a base-0 `Categorical` or one created
-        with a mapping dictionary or :py:class:`~enum.IntEnum`.
+        Must be the same length as ``values``. Values that are `False` become ``Filtered``
+        and mapped to ``0`` in the integer mapping array, and they are ignored in groupby
+        operations. A filter can't be used with a base-0
+        :py:class:`~.rt_categorical.Categorical` or one created with a mapping
+        dictionary or :py:class:`~enum.IntEnum`.
     dtype : riptable.dtype, numpy.dtype, or str, optional
         Force the dtype of the underlying integer mapping array. Must be a signed integer
         dtype. By default, the constructor uses the smallest dtype based on the number of
         unique categories or the maximum value provided in a mapping.
-    unicode : bool, default False
+    unicode : bool, default `False`
         By default, the array of unique categories is stored as byte strings. Set to `True`
         to store as unicode strings.
     invalid : str, optional
         Specify a value in ``values`` to be treated as an invalid category. Note: Invalid
-        categories are not excluded from aggregations; use `filter` instead. Warning: If the
+        categories are not excluded from aggregations; use ``filter`` instead. Warning: If the
         invalid category isn't included in ``categories`` and a ``filter`` is used, the
-        invalid category becomes Filtered.
-    auto_add : bool, default False
+        invalid category becomes ``Filtered``.
+    auto_add : bool, default `False`
         Warning: Until a known issue is fixed, adding categories can have unexpected results.
         Intended behavior: When set to `True`, categories that do not exist in the unique
-        categories can be added using `~Categorical.category_add`.
-    from_matlab : bool, default False
+        categories can be added using :py:meth:`~.rt_categorical.Categorical.category_add`.
+    from_matlab : bool, default `False`
         Set to `True` to convert a Matlab Categorical. The float indices are converted
         to an integer type. To preserve invalid values, only base-1 indexing is supported.
+    _from_categorical : bool, default `None`
+        Internal parameter.
 
     See Also
     --------
-    ~riptable.Accum2 : Class for multi-key aggregations with summary data displayed.
-    Categorical._fa :
+    :py:class:`.rt_accum2.Accum2` :
+        Class for multi-key aggregations with summary data displayed.
+    :py:meth:`.rt_categorical.Categorical._fa` :
         Return the array of integer category mapping codes that corresponds to the
-        array of `Categorical` values.
-    Categorical.category_array : Return the array of unique categories of a `Categorical`.
-    Categorical.category_dict : Return a dictionary of the unique categories.
-    Categorical.category_mapping :
-        Return a dictionary of the integer category mapping codes for a `Categorical`
-        created with an :py:class:`~enum.IntEnum` or a mapping dictionary.
-    Categorical.base_index : See the base index of a `Categorical`.
-    Categorical.isnan : See which `Categorical` category is invalid.
+        array of :py:class:`~.rt_categorical.Categorical` values.
+    :py:meth:`.rt_categorical.Categorical.category_array` :
+        Return the array of unique categories of a :py:class:`~.rt_categorical.Categorical`.
+    :py:meth:`.rt_categorical.Categorical.category_dict` :
+        Return a dictionary of the unique categories.
+    :py:meth:`.rt_categorical.Categorical.category_mapping` :
+        Return a dictionary of the integer category mapping codes for a
+        :py:class:`~.rt_categorical.Categorical` created with an :py:class:`~enum.IntEnum`
+        or a mapping dictionary.
+    :py:meth:`.rt_categorical.Categorical.base_index` :
+        See the base index of a :py:class:`~.rt_categorical.Categorical`.
+    :py:meth:`.rt_categorical.Categorical.isnan` :
+        See which :py:class:`~.rt_categorical.Categorical` category is invalid.
 
     Examples
     --------
-    A single-key `Categorical` created from a list of strings:
+    A single-key :py:class:`~.rt_categorical.Categorical` created from a list of strings:
 
     >>> c = rt.Categorical(["b", "a", "b", "a", "c", "c", "b"])
+    >>> c
     Categorical([b, a, b, a, c, c, b]) Length: 7
       FastArray([2, 1, 2, 1, 3, 3, 2], dtype=int8) Base Index: 1
       FastArray([b'a', b'b', b'c'], dtype='|S1') Unique count: 3
 
-    A `Categorical` created from list of non-unique string values and a list of unique
-    category strings. All values must appear in the provided categories, otherwise an
-    error is raised:
+    A :py:class:`~.rt_categorical.Categorical` created from list of non-unique string
+    values and a list of unique category strings. All values must appear in the provided
+    categories, otherwise an error is raised:
 
     >>> rt.Categorical(["b", "a", "b", "c", "a", "c", "c", "c"], categories=["b", "a", "c"])
     Categorical([b, a, b, c, a, c, c, c]) Length: 8
       FastArray([1, 2, 1, 3, 2, 3, 3, 3], dtype=int8) Base Index: 1
       FastArray([b'b', b'a', b'c'], dtype='|S1') Unique count: 3
 
-    A `Categorical` created from a list of integers that index into a list of unique
-    strings. The integers are used for the mapping array. Note that 0 becomes Filtered:
+    A :py:class:`~.rt_categorical.Categorical` created from a list of integers that
+    index into a list of unique strings. The integers are used for the mapping array.
+    Note that ``0`` becomes ``Filtered``:
 
     >>> rt.Categorical([0, 1, 1, 0, 2, 1, 2], categories=["c", "a", "b"])
     Categorical([Filtered, c, c, Filtered, a, c, a]) Length: 7
       FastArray([0, 1, 1, 0, 2, 1, 2]) Base Index: 1
       FastArray([b'c', b'a', b'b'], dtype='|S1') Unique count: 3
 
-    If integers are provided with no categories and 0 is included, the integer mapping
-    codes are incremented by 1 so that 0 is not Filtered:
+    If integers are provided with no categories and ``0`` is included, the integer mapping
+    codes are incremented by 1 so that ``0`` is not filtered:
 
     >>> rt.Categorical([0, 1, 1, 0, 2, 1, 2])
     Categorical([0, 1, 1, 0, 2, 1, 2]) Length: 7
       FastArray([1, 2, 2, 1, 3, 2, 3], dtype=int8) Base Index: 1
       FastArray([0, 1, 2]) Unique count: 3
 
-    Use ``from_matlab=True`` to create a `Categorical` from Matlab data. The float
-    indices are converted to an integer type. To preserve invalid values, only base-1
-    indexing is supported:
+    Use ``from_matlab=True`` to create a :py:class:`~.rt_categorical.Categorical` from
+    Matlab data. The float indices are converted to an integer type. To preserve invalid
+    values, only base-1 indexing is supported:
 
     >>> rt.Categorical([0.0, 1.0, 2.0, 3.0, 1.0, 1.0], categories=["b", "c", "a"], from_matlab=True)
     Categorical([Filtered, b, c, a, b, b]) Length: 6
       FastArray([0, 1, 2, 3, 1, 1], dtype=int8) Base Index: 1
       FastArray([b'b', b'c', b'a'], dtype='|S1') Unique count: 3
 
-    A `Categorical` created from a Pandas Categorical with an invalid value:
+    A :py:class:`~.rt_categorical.Categorical` created from a Pandas Categorical with an
+    invalid value:
 
     >>> import pandas as pd
     >>> pdc = pd.Categorical(["a", "a", "z", "b", "c"], ["c", "b", "a"])
@@ -1532,9 +1552,9 @@ class Categorical(GroupByOps, FastArray):
       FastArray([3, 3, 0, 2, 1], dtype=int8) Base Index: 1
       FastArray([b'c', b'b', b'a'], dtype='|S1') Unique count: 3
 
-    A `Categorical` created from a Python dictionary of strings to integers. The dictionary
-    is provided as the ``categories`` argument, with a list of the mapping codes provided
-    as the first argument:
+    A :py:class:`~.rt_categorical.Categorical` created from a Python dictionary of
+    strings to integers. The dictionary is provided as the ``categories`` argument, with
+    a list of the mapping codes provided as the first argument:
 
     >>> d = {"StronglyAgree": 44, "Agree": 133, "Disagree": 75, "StronglyDisagree": 1, "NeitherAgreeNorDisagree": 144 }
     >>> codes = [1, 44, 44, 133, 75]
@@ -1543,7 +1563,8 @@ class Categorical(GroupByOps, FastArray):
       FastArray([  1,  44,  44, 133,  75]) Base Index: None
       {44:'StronglyAgree', 133:'Agree', 75:'Disagree', 1:'StronglyDisagree', 144:'NeitherAgreeNorDisagree'} Unique count: 4
 
-    A `Categorical` created using the categories of another `Categorical`:
+    A :py:class:`~.rt_categorical.Categorical` created using the categories of another
+    :py:class:`~.rt_categorical.Categorical`:
 
     >>> c = rt.Categorical(["a", "a", "b", "a", "c", "c", "b"], categories=["c", "b", "a"])
     >>> c.category_array
@@ -1554,8 +1575,8 @@ class Categorical(GroupByOps, FastArray):
       FastArray([2, 1, 1, 2], dtype=int8) Base Index: 1
       FastArray([b'c', b'b', b'a'], dtype='|S1') Unique count: 3
 
-    Multi-key Categoricals let you create and operate on groupings based on multiple
-    associated categories:
+    Multi-key :py:class:`~.rt_categorical.Categorical` objects let you create and
+    operate on groupings based on multiple associated categories:
 
     >>> strs = rt.FastArray(["a", "b", "b", "a", "b", "a"])
     >>> ints = rt.FastArray([2, 1, 1, 2, 1, 3])
@@ -1571,7 +1592,7 @@ class Categorical(GroupByOps, FastArray):
     b             1       3
     a             3       1
     <BLANKLINE>
-    [3 rows x 3 columns] total bytes: 27.0 B
+    [3 rows x 3 columns] total bytes: 39.0 B
     """
 
     # current metadata version and default values necessary for final reconstruction
@@ -2135,23 +2156,26 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     def isnan(self) -> FastArray:
         """
-        Find the invalid elements of a `Categorical`.
+        Find the invalid elements of a :py:class:`~.rt_categorical.Categorical`.
 
-        An invalid category is specified when the `Categorical` is created or set
-        afterward using `Categorical.invalid_set`. An invalid category is different
-        from a Filtered category or a NaN value.
+        An invalid category is specified when the :py:class:`~.rt_categorical.Categorical`
+        is created or set afterward using :py:meth:`~.rt_categorical.Categorical.invalid_set`.
+        An invalid category is different from a filtered category or a NaN value.
 
         Returns
         -------
-        FastArray
+        :py:class:`~.rt_fastarray.FastArray`
             A boolean array the length of the values array where `True` indicates
-            an invalid `Categorical` category.
+            an invalid :py:class:`~.rt_categorical.Categorical` category.
 
         See Also
         --------
-        Categorical.isnotnan : Find the valid elements of a `Categorical.`
-        Categorical.invalid_category : The `Categorical` object's invalid category.
-        Categorical.invalid_set : Set a `Categorical` category to be invalid.
+        :py:meth:`.rt_categorical.Categorical.isnotnan` :
+            Find the valid elements of a :py:class:`~.rt_categorical.Categorical`.
+        :py:meth:`.rt_categorical.Categorical.invalid_category` : The
+            :py:class:`~.rt_categorical.Categorical` object's invalid category.
+        :py:meth:`.rt_categorical.Categorical.invalid_set` :
+            Set a :py:class:`~.rt_categorical.Categorical` category to be invalid.
 
         Examples
         --------
@@ -2163,7 +2187,7 @@ class Categorical(GroupByOps, FastArray):
         >>> c.isnan()
         FastArray([ True, False, False,  True, False])
 
-        Invalid categories are different from Filtered categories:
+        Invalid categories are different from filtered categories:
 
         >>> f = rt.FA([True, False, True, True, True])
         >>> c2 = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="b", filter=f)
@@ -2174,21 +2198,23 @@ class Categorical(GroupByOps, FastArray):
         >>> c2.isnan()  # Only the invalid category returns True for Cat.isnan.
         FastArray([ True, False, False,  True, False])
         >>> c2.isfiltered()  # Only the Filtered value returns True for Cat.isfiltered.
-        FastArray([False,  True, False, False, False])
+        FastArray([False, True, False, False, False])
 
-        Invalid categories in a `Categorical` are different from regular integer NaN
-        values. An integer NaN is a valid category and is `False` for ``Cat.isnan()``:
+        Invalid categories in a :py:class:`~.rt_categorical.Categorical` are different
+        from regular integer NaN values. An integer NaN is a valid category and is
+        `False` for :py:meth:`~.rt_categorical.Categorical.isnan`:
 
         >>> a = rt.FA([1, 2, 3, 4])
         >>> a[3] = a.inv  # Set the last value to an integer NaN.
         >>> a
-        FastArray([          1,           2,           3, -2147483648])
+        FastArray([                   1,                    2,
+                                      3, -9223372036854775808])
         >>> c3 = rt.Categorical(values=a, invalid=2)  # Make 2 an invalid category.
         >>> c3
-        Categorical([1, 2, 3, -2147483648]) Length: 4
+        Categorical([1, 2, 3, -9223372036854775808]) Length: 4
           FastArray([2, 3, 4, 1], dtype=int8) Base Index: 1
-          FastArray([-2147483648,           1,           2,           3]) Unique count: 4
-        >>> c3.invalid_category()
+          FastArray([-9223372036854775808,                    1,                    2,                    3]) Unique count: 4
+        >>> c3.invalid_category
         2
         >>> c3.isnan()  # Only the invalid category returns True for Cat.isnan.
         FastArray([False,  True, False, False])
@@ -2200,11 +2226,11 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     def isnotnan(self) -> FastArray:
         """
-        Find the valid elements of a `Categorical.`
+        Find the valid elements of a :py:class:`~.rt_categorical.Categorical.`
 
-        An invalid category is specified when the `Categorical` is created or set
-        afterward using `Categorical.invalid_set`. An invalid category is different
-        from a Filtered category or a NaN value.
+        An invalid category is specified when the :py:class:`~.rt_categorical.Categorical`
+        is created or set afterward using :py:meth:`~.rt_categorical.Categorical.invalid_set`.
+        An invalid category is different from a filtered category or a NaN value.
 
         Returns
         -------
@@ -2228,7 +2254,7 @@ class Categorical(GroupByOps, FastArray):
         >>> c.isnotnan()
         FastArray([False,  True,  True, False,  True])
 
-        Invalid categories are different from Filtered categories:
+        Invalid categories are different from filtered categories:
 
         >>> f = rt.FA([True, False, True, True, True])
         >>> c2 = rt.Categorical(values=["b", "a", "c", "b", "c"], invalid="b", filter=f)
@@ -2291,35 +2317,33 @@ class Categorical(GroupByOps, FastArray):
         limit : int, default 0 (disabled)
             The maximium number of consecutive NaN or invalid values to fill. If there
             is a gap with more than this number of consecutive NaN or invalid values,
-            the gap will be only partially filled. If no `limit` is specified, all
-            consecutive NaN and invalid values are replaced.
-        fill_val : scalar, default None
+            the gap is only partially filled. If no ``limit`` is specified or a value
+            of ``0`` is specified, all consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default `None`
             The value to use where there is no valid group value to propagate forward.
-            If `fill_val` is not specified, NaN and invalid values aren't replaced where
+            If ``fill_val`` is not specified, NaN and invalid values aren't replaced where
             there is no valid group value to propagate forward.
-        inplace: bool, default False
-            If False, return a copy of the array. If True, modify original data. This
-            will modify any other views on this object. This fails if the array is
+        inplace : bool, default `False`
+            If `False`, return a copy of the array. If `True`, modify original data. This
+            modifies any other views on this object. This fails if the array is
             locked.
 
         Returns
         -------
-        `Categorical`
-            The `Categorical` will be the same size and have the same dtypes as the
-            original input.
+        :py:class:`~.rt_categorical.Categorical`
+            The :py:class:`~.rt_categorical.Categorical` is the same size and has the
+            same dtypes as the original input.
 
         See Also
         --------
-        Categorical.fill_backward :
+        :py:meth:`.rt_categorical.Categorical.fill_backward` :
             Replace NaN and invalid array values with the next valid group value.
-        GroupBy.fill_forward :
-            Replace NaN and invalid array values with the last valid group value.
-        riptable.fill_forward : Replace NaN and invalid values with the last valid
-            value.
-        Dataset.fillna : Replace NaN and invalid values with a specified value or
-            nearby data.
-        FastArray.fillna : Replace NaN and invalid values with a specified value or
-            nearby data.
+        :py:func:`.rt_fastarraynumba.fill_forward` :
+            Replace NaN and invalid values with the last valid value.
+        :py:meth:`.rt_dataset.Dataset.fillna` :
+            Replace NaN and invalid values with a specified value or nearby data.
+        :py:meth:`.rt_fastarray.FastArray.fillna` :
+            Replace NaN and invalid values with a specified value or nearby data.
 
         Examples
         --------
@@ -2334,8 +2358,10 @@ class Categorical(GroupByOps, FastArray):
         B            3.00
         A            2.00
         B            3.00
+        <BLANKLINE>
+        [6 rows x 2 columns] total bytes: 56.0 B
 
-        Use a `fill_val` to replace values where there's no valid group value to
+        Use a ``fill_val`` to replace values where there's no valid group value to
         propagate forward:
 
         >>> x = rt.FastArray([rt.nan, rt.nan, 2, 3, 4, 5])
@@ -2368,35 +2394,33 @@ class Categorical(GroupByOps, FastArray):
         limit : int, default 0 (disabled)
             The maximium number of consecutive NaN or invalid values to fill. If there
             is a gap with more than this number of consecutive NaN or invalid values,
-            the gap will be only partially filled. If no `limit` is specified, all
-            consecutive NaN and invalid values are replaced.
-        fill_val : scalar, default None
+            the gap is only partially filled. If no ``limit`` is specified or a value of
+            ``0`` is specified, all consecutive NaN and invalid values are replaced.
+        fill_val : scalar, default `None`
             The value to use where there is no valid group value to propagate backward.
-            If `fill_val` is not specified, NaN and invalid values aren't replaced where
+            If ``fill_val`` is not specified, NaN and invalid values aren't replaced where
             there is no valid group value to propagate backward.
-        inplace: bool, default False
-            If False, return a copy of the array. If True, modify original data. This
-            will modify any other views on this object. This fails if the array is
+        inplace : bool, default `False`
+            If `False`, return a copy of the array. If `True`, modify original data. This
+            modifies any other views on this object. This fails if the array is
             locked.
 
         Returns
         -------
-        `Categorical`
-            The `Categorical` will be the same size and have the same dtypes as the
-            original input.
+        :py:class:`~.rt_categorical.Categorical`
+            The :py:class:`~.rt_categorical.Categorical` is the same size and has the
+            same dtypes as the original input.
 
         See Also
         --------
-        Categorical.fill_forward :
+        :py:meth:`.rt_categorical.Categorical.fill_forward` :
             Replace NaN and invalid array values with the last valid group value.
-        GroupBy.fill_backward :
-            Replace NaN and invalid array values with the next valid group value.
-        riptable.fill_backward : Replace NaN and invalid values with the next valid
-            value.
-        Dataset.fillna : Replace NaN and invalid values with a specified value or
-            nearby data.
-        FastArray.fillna : Replace NaN and invalid values with a specified value or
-            nearby data.
+        :py:func:`.rt_fastarraynumba.fill_backward` : Replace NaN and invalid values
+            with the next valid value.
+        :py:meth:`.rt_dataset.Dataset.fillna` : Replace NaN and invalid values with a
+            specified value or nearby data.
+        :py:meth:`.rt_fastarray.FastArray.fillna` : Replace NaN and invalid values with
+            a specified value or nearby data.
 
         Examples
         --------
@@ -2411,8 +2435,10 @@ class Categorical(GroupByOps, FastArray):
         B            3.00
         A            4.00
         B            5.00
+        <BLANKLINE>
+        [6 rows x 2 columns] total bytes: 56.0 B
 
-        Use a `fill_val` to replace values where there's no valid group value to
+        Use a ``fill_val`` to replace values where there's no valid group value to
         propagate backward:
 
         >>> x = rt.FastArray([0, 1, 2, 3, rt.nan, rt.nan])
@@ -2467,25 +2493,34 @@ class Categorical(GroupByOps, FastArray):
     @property
     def _fa(self) -> FastArray:
         """
-        Return the array of integer category mapping codes that corresponds to the array of `Categorical` values.
+        Return the array of integer category mapping codes that corresponds to the array
+        of :py:class:`~.rt_categorical.Categorical` values.
 
         Returns
         -------
-        FastArray
-            A `.FastArray` of the integer category mapping codes of the `Categorical`.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of the integer category mapping codes
+            of the :py:class:`~.rt_categorical.Categorical`.
 
         See Also
         --------
-        Categorical.category_array : Return the array of unique categories of a `Categorical`.
-        Categorical.categories :
-            Return the unique categories of a single-key or multi-key `Categorical`, prepended with the 'Filtered' category.
-        Categorical.category_dict : Return a dictionary of the unique categories.
-        Categorical.category_mapping :
-            Return a dictionary of the integer category mapping codes for a `Categorical` created with an :py:class:`~enum.IntEnum` or a mapping dictionary.
+        :py:meth:`.rt_categorical.Categorical.category_array` :
+            Return the array of unique categories of a
+            :py:class:`~.rt_categorical.Categorical`.
+        :py:meth:`.rt_categorical.Categorical.categories` :
+            Return the unique categories of a single-key or multi-key
+            :py:class:`~.rt_categorical.Categorical`, prepended with the 'Filtered'
+            category.
+        :py:meth:`.rt_categorical.Categorical.category_dict` :
+            Return a dictionary of the unique categories.
+        :py:meth:`.rt_categorical.Categorical.category_mapping` :
+            Return a dictionary of the integer category mapping codes for a
+            :py:class:`~.rt_categorical.Categorical` created with an
+            :py:class:`~enum.IntEnum` or a mapping dictionary.
 
         Examples
         --------
-        Single-key string `Categorical`:
+        Single-key string :py:class:`~.rt_categorical.Categorical`:
 
         >>> c = rt.Categorical(['a','a','b','c','a'])
         >>> c
@@ -2495,7 +2530,7 @@ class Categorical(GroupByOps, FastArray):
         >>> c._fa
         FastArray([1, 1, 2, 3, 1], dtype=int8)
 
-        Multi-key `Categorical`:
+        Multi-key :py:class:`~.rt_categorical.Categorical`:
 
         >>> c2 = rt.Categorical([rt.FA([1, 2, 3, 3, 3, 1]), rt.FA(['a','b','c','c','c','a'])])
         >>> c2
@@ -2505,7 +2540,9 @@ class Categorical(GroupByOps, FastArray):
         >>> c2._fa
         FastArray([1, 2, 3, 3, 3, 1], dtype=int8)
 
-        A `Categorical` constructed with an :py:class:`~enum.IntEnum` or a mapping dictionary returns the provided integer category mapping codes:
+        A :py:class:`~.rt_categorical.Categorical` constructed with an
+        :py:class:`~enum.IntEnum` or a mapping dictionary returns the provided integer
+        category mapping codes:
 
         >>> log_levels = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}
         >>> c3 = rt.Categorical([10, 10, 40, 0, 50, 10, 30], log_levels)
@@ -2637,30 +2674,41 @@ class Categorical(GroupByOps, FastArray):
     @property
     def category_array(self) -> FastArray:
         """
-        Return the array of unique categories of a `Categorical`.
+        Return the array of unique categories of a
+        :py:class:`~.rt_categorical.Categorical`.
 
-        Unlike `Categorical.categories`, this method does not prepend the 'Filtered' category to the returned array.
+        Unlike :py:meth:`~.rt_categorical.Categorical.categories`, this method does not
+        prepend the 'Filtered' category to the returned array.
 
-        Raises an error for multi-key `Categorical` objects. To get the categories of a multi-key `Categorical`, use `Categorical.categories`.
+        Raises an error for multi-key :py:class:`~.rt_categorical.Categorical` objects.
+        To get the categories of a multi-key :py:class:`~.rt_categorical.Categorical`,
+        use :py:meth:`~.rt_categorical.Categorical.categories`.
 
         Returns
         -------
-        FastArray
-            A `.FastArray` of the unique categories of the `Categorical`.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of the unique categories of the
+            :py:class:`~.rt_categorical.Categorical`.
 
         See Also
         --------
-        Categorical._fa :
-            Return the array of integer category mapping codes that corresponds to the array of `Categorical` values.
-        Categorical.categories :
-            Return the unique categories of a single-key or multi-key `Categorical`, prepended with the 'Filtered' category.
-        Categorical.category_dict : Return a dictionary of the unique categories.
-        Categorical.category_mapping :
-            Return a dictionary of the integer category mapping codes for a `Categorical` created with an :py:class:`~enum.IntEnum` or a mapping dictionary.
+        :py:meth:`.rt_categorical.Categorical._fa` :
+            Return the array of integer category mapping codes that corresponds to the
+            array of :py:class:`~.rt_categorical.Categorical` values.
+        :py:meth:`.rt_categorical.Categorical.categories` :
+            Return the unique categories of a single-key or multi-key
+            :py:class:`~.rt_categorical.Categorical`, prepended with the 'Filtered'
+            category.
+        :py:meth:`.rt_categorical.Categorical.category_dict` :
+            Return a dictionary of the unique categories.
+        :py:meth:`.rt_categorical.Categorical.category_mapping` :
+            Return a dictionary of the integer category mapping codes for a
+            :py:class:`~.rt_categorical.Categorical` created with an
+            :py:class:`~enum.IntEnum` or a mapping dictionary.
 
         Examples
         --------
-        Single-key string `Categorical`:
+        Single-key string :py:class:`~.rt_categorical.Categorical`:
 
         >>> c = rt.Categorical(['a','a','b','c','a'])
         >>> c
@@ -2670,7 +2718,7 @@ class Categorical(GroupByOps, FastArray):
         >>> c.category_array
         FastArray([b'a', b'b', b'c'], dtype='|S1')
 
-        Single-key integer `Categorical`:
+        Single-key integer :py:class:`~.rt_categorical.Categorical`:
 
         >>> c2 = rt.Categorical([4, 5, 4, 4, 6, 5, 6])
         >>> c2
@@ -2680,7 +2728,8 @@ class Categorical(GroupByOps, FastArray):
         >>> c2.category_array
         FastArray([4, 5, 6])
 
-        Single-key integer `Categorical` with categories provided:
+        Single-key integer :py:class:`~.rt_categorical.Categorical` with categories
+        provided:
 
         >>> c3 = rt.Categorical([2, 3, 4, 2, 3, 4], categories=['a', 'b', 'c', 'd', 'e'])
         >>> c3
@@ -2700,7 +2749,9 @@ class Categorical(GroupByOps, FastArray):
         >>> c4.category_array
         FastArray([b'a', b'b', b'c'], dtype='|S1')
 
-        A `Categorical` constructed with an :py:class:`~enum.IntEnum` or a mapping dictionary returns the provided string categories:
+        A :py:class:`~.rt_categorical.Categorical` constructed with an
+        :py:class:`~enum.IntEnum` or a mapping dictionary returns the provided string
+        categories:
 
         >>> log_levels = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}
         >>> c5 = rt.Categorical([10, 10, 40, 0, 50, 10, 30], log_levels)
@@ -3310,93 +3361,97 @@ class Categorical(GroupByOps, FastArray):
             The number of periods to shift. Can be a negative number to shift
             values backward.
         periods : int, optional, default 1
-            Can use `periods` instead of `window` for Pandas parameter
+            Can use ``periods`` instead of ``window`` for Pandas parameter
             support.
-        filter : FastArray of bool, optional
-            Set of rows to include. Filtered out rows are skipped by the shift and become NaN in the output.
+        filter : :py:class:`~.rt_fastarray.FastArray` of bool, optional
+            Set of rows to include. Filtered out rows are skipped by the shift and
+            become NaN in the output.
 
         Returns
         -------
-        Dataset
-            A `.Dataset` containing a column of shifted values.
+        :py:class:`~.rt_dataset.Dataset`
+            A :py:class:`~.rt_dataset.Dataset` containing a column of shifted values.
 
         See Also
         --------
-        Categorical.shift_cat : Shift the values of a `Categorical`.
-        .FastArray.shift : Shift the values of a `.FastArray`.
-        .DateTimeNano.shift : Shift the values of a `.DateTimeNano` array.
+        :py:meth:`.rt_categorical.Categorical.shift_cat` :
+            Shift the values of a :py:class:`~.rt_categorical.Categorical`.
+        :py:meth:`.rt_fastarray.FastArray.shift` : Shift the values of a
+            :py:class:`~.rt_fastarray.FastArray`.
+        :py:meth:`.rt_datetime.DateTimeNano.shift` :
+            Shift the values of a :py:class:`~.rt_datetime.DateTimeNano` array.
 
         Examples
         --------
-        With the default `window=1`:
+        With the default ``window=1``:
 
         >>> c = rt.Cat(['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c', 'c'])
         >>> fa = rt.arange(9)
         >>> shift_val = c.shift(fa)
         >>> shift_val
-        #   col_0
-        -   -----
-        0     Inv
-        1       0
-        2       1
-        3     Inv
-        4       3
-        5       4
-        6     Inv
-        7       6
-        8       7
+          #   col_0
+        ---   -----
+          0     Inv
+          1       0
+          2       1
+        ...     ...
+          6     Inv
+          7       6
+          8       7
+        <BLANKLINE>
+        [9 rows x 1 columns] total bytes: 72.0 B
 
         With ``window=2``:
 
         >>> shift_val_2 = c.shift(fa, window=2)
         >>> shift_val_2
-        #   col_0
-        -   -----
-        0     Inv
-        1     Inv
-        2       0
-        3     Inv
-        4     Inv
-        5       3
-        6     Inv
-        7     Inv
-        8       6
+          #   col_0
+        ---   -----
+          0     Inv
+          1     Inv
+          2       0
+        ...     ...
+          6     Inv
+          7     Inv
+          8       6
+        <BLANKLINE>
+        [9 rows x 1 columns] total bytes: 72.0 B
 
         With ``window=-1``:
 
         >>> shift_neg = c.shift(fa, window=-1)
         >>> shift_neg
-        #   col_0
-        -   -----
-        0       1
-        1       2
-        2     Inv
-        3       4
-        4       5
-        5     Inv
-        6       7
-        7       8
-        8     Inv
+          #   col_0
+        ---   -----
+          0       1
+          1       2
+          2     Inv
+        ...     ...
+          6       7
+          7       8
+          8     Inv
+        <BLANKLINE>
+        [9 rows x 1 columns] total bytes: 72.0 B
 
-        With `filter`:
+        With ``filter``:
 
         >>> filt = rt.FA([True, True, True, True, False, True, False, True, True])
         >>> shift_filt = c.shift(fa, filter=filt)
         >>> shift_filt
-        #   col_0
-        -   -----
-        0     Inv
-        1       0
-        2       1
-        3     Inv
-        4     Inv
-        5       3
-        6     Inv
-        7     Inv
-        8       7
+          #   col_0
+        ---   -----
+          0     Inv
+          1       0
+          2       1
+        ...     ...
+          6     Inv
+          7     Inv
+          8       7
+        <BLANKLINE>
+        [9 rows x 1 columns] total bytes: 72.0 B
 
-        Results put in a `.Dataset` to show the shifts in relation to the
-        categories:
+        Results put in a :py:class:`~.rt_dataset.Dataset` to show the shifts in relation
+        to the categories:
 
         >>> ds = rt.Dataset()
         >>> ds.c = c
@@ -3404,34 +3459,34 @@ class Categorical(GroupByOps, FastArray):
         >>> ds.shift_val_2 = shift_val_2
         >>> ds.shift_neg = shift_neg
         >>> ds
-        #   c   shift_val   shift_val_2   shift_neg
-        -   -   ---------   -----------   ---------
-        0   a         Inv           Inv           1
-        1   a           0           Inv           2
-        2   a           1             0         Inv
-        3   b         Inv           Inv           4
-        4   b           3           Inv           5
-        5   b           4             3         Inv
-        6   c         Inv           Inv           7
-        7   c           6           Inv           8
-        8   c           7             6         Inv
+          #   c     shift_val   shift_val_2   shift_neg
+        ---   ---   ---------   -----------   ---------
+          0   a           Inv           Inv           1
+          1   a             0           Inv           2
+          2   a             1             0         Inv
+        ...   ...         ...           ...         ...
+          6   c           Inv           Inv           7
+          7   c             6           Inv           8
+          8   c             7             6         Inv
+        <BLANKLINE>
+        [9 rows x 4 columns] total bytes: 228.0 B
 
         Shift two arrays:
 
         >>> fa2 = rt.arange(10, 19)
         >>> shift_val_3 = c.shift([fa, fa2])
         >>> shift_val_3
-        #   col_0   col_1
-        -   -----   -----
-        0     Inv     Inv
-        1       0      10
-        2       1      11
-        3     Inv     Inv
-        4       3      13
-        5       4      14
-        6     Inv     Inv
-        7       6      16
-        8       7      17
+          #   col_0   col_1
+        ---   -----   -----
+          0     Inv     Inv
+          1       0      10
+          2       1      11
+        ...     ...     ...
+          6     Inv     Inv
+          7       6      16
+          8       7      17
+        <BLANKLINE>
+        [9 rows x 2 columns] total bytes: 144.0 B
         """
         # support for pandas periods keyword
         # only one of window and period may be specified
@@ -5095,14 +5150,14 @@ class Categorical(GroupByOps, FastArray):
             :py:class:`~.rt_categorical.Categorical` values that correspond to `False` filter
             values are excluded from the count. The filter array must be the same length as
             the :py:class:`~.rt_categorical.Categorical`.
-        transform : bool, default False
+        transform : bool, default `False`
             Set to `True` to return a :py:class:`~.rt_dataset.Dataset` that's the length of the
             :py:class:`~.rt_categorical.Categorical`, with counts aligned to the ungrouped
             :py:class:`~.rt_categorical.Categorical` values. Only the counts are included.
 
         Returns
         -------
-        :py:class:`.rt_dataset.Dataset`
+        :py:class:`~.rt_dataset.Dataset`
             A :py:class:`~.rt_dataset.Dataset` containing each unique category and its count.
             If ``transform`` is `True`, the :py:class:`~.rt_dataset.Dataset` is the same length
             as the original :py:class:`~.rt_categorical.Categorical` and contains only the counts.
@@ -5275,9 +5330,9 @@ class Categorical(GroupByOps, FastArray):
         a string array.
 
         For multi-key :py:class:`~.rt_categorical.Categorical` objects, the corresponding
-        keys are concatenated with a "_" separator.
+        keys are concatenated with a ``_`` separator.
 
-        Filtered values become the string "Filtered". Values from invalid
+        Filtered values become the string ``Filtered``. Values from invalid
         categories are treated the same way as values from valid categories.
 
         NOTE: This routine is costly because it re-expands the full list of
@@ -5285,7 +5340,7 @@ class Categorical(GroupByOps, FastArray):
 
         Returns
         -------
-        :py:class:`rt_fastarray.FastArray`
+        :py:class:`~.rt_fastarray.FastArray`
             A :py:class:`~.rt_fastarray.FastArray` of the string values of the
             :py:class:`~.rt_categorical.Categorical`.
 
@@ -5943,51 +5998,55 @@ class Categorical(GroupByOps, FastArray):
     @_use_autocomplete_placeholder(placeholder=lambda self: self._fa)
     def expand_array(self) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
         """
-        Return the full list of values of a `Categorical`.
+        Return the full list of values of a :py:class:`~.rt_categorical.Categorical`.
 
-        If the `Categorical` is constructed with an :py:class:`~enum.IntEnum` or a mapping
-        dictionary, the integer mapping codes are returned.
+        If the :py:class:`~.rt_categorical.Categorical` is constructed with an
+        :py:class:`~enum.IntEnum` or a mapping dictionary, the integer mapping codes are
+        returned.
 
-        Filtered `Categorical` values are returned as "Filtered" for string
-        arrays or numeric sentinel values for numeric arrays.
+        Filtered :py:class:`~.rt_categorical.Categorical` values are returned as
+        ``Filtered`` for string arrays or numeric sentinel values for numeric arrays.
 
         Note that because the expansion constructs the complete list of values from the
         list of unique categories, it is an expensive operation.
 
         Returns
         -------
-        FastArray or tuple of FastArray
-            For single-key `Categorical` objects, a `FastArray` is returned. For
-            multi-key `Categorical` objects, a tuple of `FastArray` objects is
-            returned.
+        :py:class:`~.rt_fastarray.FastArray` or tuple of :py:class:`~.rt_fastarray.FastArray`
+            For single-key :py:class:`~.rt_categorical.Categorical` objects, a
+            :py:class:`~.rt_fastarray.FastArray` is returned. For multi-key
+            :py:class:`~.rt_categorical.Categorical` objects, a tuple of
+            :py:class:`~.rt_fastarray.FastArray` objects is returned.
 
         Warns
         -----
         Performance warning
-            Will warn the user if a large `Categorical` (more than 100,000 items)
-            is being re-expanded.
+            Warns the user if a large :py:class:`~.rt_categorical.Categorical` (more
+            than 100,000 items) is being re-expanded.
 
         See Also
         --------
-        Categorical.as_string_array :
-            Return the full list of values of a `Categorical` as a string array.
+        :py:meth:`.rt_categorical.Categorical.as_string_array` :
+            Return the full list of values of a :py:class:`~.rt_categorical.Categorical`
+            as a string array.
 
         Examples
         --------
-        Single-key `Categorical`:
+        Single-key :py:class:`~.rt_categorical.Categorical`:
 
         >>> c = rt.Categorical(["a", "a", "b", "c", "a"])
         >>> c.expand_array
-        FastArray([b'a', b'a', b'b', b'c', b'a'], dtype='|S3')
+        FastArray([b'a', b'a', b'b', b'c', b'a'], dtype='|S8')
 
-        Multi-key `Categorical`:
+        Multi-key :py:class:`~.rt_categorical.Categorical`:
 
         >>> c = rt.Categorical([rt.FastArray(["a", "b", "c", "a"]), rt.FastArray([1, 2, 3, 1])])
         >>> c.expand_array
         (FastArray([b'a', b'b', b'c', b'a'], dtype='|S8'), FastArray([1, 2, 3, 1]))
 
-        For a `Categorical` constructed with an :py:class:`~enum.IntEnum` or a mapping dictionary,
-        the array of integer mapping codes (``c._fa``) is returned:
+        For a :py:class:`~.rt_categorical.Categorical` constructed with an
+        :py:class:`~enum.IntEnum` or a mapping dictionary, the array of integer
+        mapping codes (``c._fa``) is returned:
 
         >>> c = rt.Categorical([2, 2, 2, 1, 3], {"a": 1, "b": 2, "c": 3})
         >>> c
@@ -5999,7 +6058,8 @@ class Categorical(GroupByOps, FastArray):
         >>> c._fa
         FastArray([2, 2, 2, 1, 3])
 
-        Filtered string `Categorical` values are returned as the string "Filtered":
+        Filtered string :py:class:`~.rt_categorical.Categorical` values are returned as
+        the string ``Filtered``:
 
         >>> a = rt.FastArray(["a", "c", "b", "b", "c", "a"])
         >>> f = rt.FastArray([False, False, True, True, True, True])
@@ -6011,8 +6071,8 @@ class Categorical(GroupByOps, FastArray):
         >>> c.expand_array
         FastArray([b'Filtered', b'Filtered', b'b', b'b', b'c', b'a'], dtype='|S8')
 
-        Filtered integer `Categorical` values are returned as the integer
-        sentinel value:
+        Filtered integer :py:class:`~.rt_categorical.Categorical` values are returned as
+        the integer sentinel value:
 
         >>> a = rt.FastArray([1, 3, 2, 2, 3, 1])
         >>> f = rt.FastArray([False, False, True, True, True, True])
@@ -6022,8 +6082,9 @@ class Categorical(GroupByOps, FastArray):
           FastArray([0, 0, 2, 2, 3, 1], dtype=int8) Base Index: 1
           FastArray([1, 2, 3]) Unique count: 3
         >>> c.expand_array
-        FastArray([-2147483648, -2147483648,           2,           2,
-                     3,           1])
+        FastArray([-9223372036854775808, -9223372036854775808,
+                                      2,                    2,
+                                      3,                    1])
         """
         if len(self) > 100_000:
             warnings.warn(f"Performance warning: re-expanding categorical of {len(self)} items.")

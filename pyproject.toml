@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=65", "setuptools_scm[toml]>=7.1"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "riptable"
 description = "Python Package for riptable studies framework"
@@ -9,6 +5,15 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "RTOS Holdings", email = "rtosholdings-bot@sig.com" }]
 requires-python = ">=3.9"
+dynamic = ["version"]
+dependencies = [
+    "ansi2html >=1.5.2",
+    "numba >=0.56.2",
+    "numpy >=1.23",
+    "pandas >=1.0,<3.0",
+    "python-dateutil",
+    "riptide_cpp >=1.16.3,<2",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
@@ -18,31 +23,29 @@ classifiers = [
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "ansi2html >=1.5.2",
-    "numba >=0.56.2",
-    "numpy >=1.23",
-    "pandas >=1.0,<3.0",
-    "python-dateutil",
-    "riptide_cpp >=1.16.1,<2",
-]
-dynamic = ["version"]
 
 [project.urls]
 Repository = "https://github.com/rtosholdings/riptable"
 Documentation = "https://riptable.readthedocs.io/en/stable/"
+
+[build-system]
+requires = [ #
+    "setuptools >=65",
+    "setuptools_scm[toml] >=7.1",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "node-and-timestamp"
+write_to = "riptable/_version.py"
+write_to_template = "__version__ = '{version}'"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["riptable*"]
-
-[tool.setuptools_scm]
-"version_scheme" = "post-release"
-"local_scheme" = "node-and-timestamp"
-"write_to" = "riptable/_version.py"
-"write_to_template" = "__version__ = '{version}'"
 
 # NOTE: you have to use single-quoted strings in TOML for regular expressions.
 # It's the equivalent of r-strings in Python.  Multiline strings are treated as
@@ -51,7 +54,9 @@ include = ["riptable*"]
 
 [tool.black]
 line-length = 120
-target-version = ["py38", "py39", "py310"]
+skip-string-normalization = true
+target-version = ["py39", "py310", "py311"]
+include = '\.pyi?$'
 exclude = '''
 /(
   \.cache
@@ -117,6 +122,7 @@ exclude_lines = [
 
 # ruff is a Python linter implemented in Rust: https://github.com/charliermarsh/ruff
 [tool.ruff]
+target-version = "py310"
 line-length = 120
 
 # Rule categories (or individual rules) to enable.
@@ -147,9 +153,10 @@ ignore = [
     # Temporarily-disabled rules.
     # Fix these issues and un-ignore these rules as soon as feasible.
     #####
-    "D101", # missing docstring in public class
-    "D102", # missing docstring in public method
-    # (add others here if/as needed)
+    "D101",   # missing docstring in public class
+    "D102",   # missing docstring in public method
+    "D202",   # No blank lines allowed after function docstring
+    "D205",   # 1 blank line required between summary line and description
 
     #####
     # Rules we really want to disable (now and maybe forever).
@@ -159,11 +166,14 @@ ignore = [
     # instead of `np.logical_not()`, the pattern is detected by this rule
     # and converted to an "is"-based check that won't work with numpy/riptable arrays.
     "E712", # Comparison to `False` should be `cond is False`
+    # Q000 uses `flake8-quotes.inline-quotes` and seems to prefer double quote. But in our black
+    # configuration above we preserve single quotes (skip-string-normalization = true).
+    "Q000",   # Single quotes found but double quotes preferred
 ]
 
 # Group output by file. This format is typically most useful for development;
 # override the format via the command-line when running `ruff` from within a CI job.
-format = "grouped"
+output-format = "grouped"
 
 [tool.ruff.flake8-quotes]
 docstring-quotes = "double"

@@ -982,8 +982,32 @@ class Struct_Test(unittest.TestCase):
         mystruct.substruct = substruct
         st.Alex = mystruct
         self.assertEqual(
-            st.key_search("a.*e"), ["Apple", "Alex", "opp.ale", "Alex.allen", "Alex.substruct.myds2.Valence"]
+            st.key_search("a.*e", recursive=False),
+            ["Apple", "Alex"],
         )
+        self.assertEqual(
+            st.key_search("a.*e", recursive=True),
+            ["Apple", "Alex", "opp.ale", "Alex.allen", "Alex.substruct.myds2.Valence"],
+        )
+
+    def test_key_search_dataset(self):
+        # Check that key_search does not get any keys from the dataset when recursing
+        class MockDataset(rt.Dataset):
+            # This class counts the number of __getitem__ calls.
+            _n_getitem_calls = 0
+
+            def __getitem__(self, key):
+                self._n_getitem_calls += 1
+                return super().__getitem__(key)
+
+        ds = MockDataset({"a": [1]})
+        self.assertEqual(ds.key_search("a", recursive=True), ["a"])
+        assert ds._n_getitem_calls == 0
+
+        ds = MockDataset({"a": [9.8]})
+        st = rt.Struct({"a": [9], "b": ds})
+        self.assertEqual(st.key_search("a", recursive=True), ["a", "b.a"])
+        assert ds._n_getitem_calls == 0
 
 
 @pytest.mark.parametrize(

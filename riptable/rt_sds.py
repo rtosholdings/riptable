@@ -533,9 +533,12 @@ def _sds_path_multi(path, share=None, overwrite=True):
             if SDSVerbose:
                 VerbosePrint(f"calling makedirs")
             if SDSMakeDirs:
-                os.makedirs(path)
+                os.makedirs(path, exist_ok=True)  # ignore multi-proc create race errors
             else:
-                os.mkdir(path)
+                try:
+                    os.mkdir(path)
+                except FileExistsError:  # ignore multi-proc create race errors
+                    pass
                 # raise ValueError(f'Directory {path!r} does not exist.  SDSMakeDirs global variable must be set to auto create sub directories.')
 
     return True
@@ -613,9 +616,12 @@ def _sds_path_single(path, share=None, overwrite=True, name=None, append=None):
                 if len(path[:-dir_end]) > 0:
                     newpath = path[:-dir_end]
                     if SDSMakeDirs:
-                        os.makedirs(newpath)
+                        os.makedirs(newpath, exist_ok=True)  # ignore multi-proc create race errors
                     else:
-                        os.mkdir(newpath)
+                        try:
+                            os.mkdir(newpath)
+                        except FileExistsError:  # ignore multi-proc create race errors
+                            pass
                         # raise ValueError(f'Directory {newpath!r} does not exist.  SDSMakeDirs global variable must be set to auto create sub directories.')
 
     return path, name, True

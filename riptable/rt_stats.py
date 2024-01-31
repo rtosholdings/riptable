@@ -1,6 +1,5 @@
 __all__ = [
     "class_error",
-    "groupScatter",
     "linear_spline",
     "lm",
     "mae",
@@ -186,7 +185,7 @@ def linear_spline(X0, Y0, knots, display=True):
     return knots, coeff
 
 
-# TODO: Make formatting aware of environment, e.g., Spyder, jupyter, etc. in groupScatter and plotPrediction
+# TODO: Make formatting aware of environment, e.g., Spyder, jupyter, etc. in plotPrediction
 # NOTE: Can we use regPlot from seaborn
 # won't display in jupyter lab
 # better auto-detect bounds
@@ -257,10 +256,3 @@ def polyFit(x, y, d=1, filter=None):
     Ay = np.matmul(A.transpose(), y)
     c = np.linalg.solve(AtA, Ay)
     return c
-
-
-def groupScatter(*arg, **kwarg):
-    """
-    This function has been moved to playa.stats.
-    """
-    raise NotImplementedError("This function has been moved to playa.plot")

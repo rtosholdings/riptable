@@ -46,6 +46,8 @@ def load_h5(
     filepath: Union[str, os.PathLike],
     name: str = "/",
     columns: Union[Sequence[str], "re.Pattern", Callable[..., Sequence[str]]] = "",
+    condition: Union[None, slice, Sequence[int], Sequence[bool]] = None,
+    nthreads: Optional[int] = 16,
     format=None,
     fixblocks: bool = False,
     drop_short: bool = False,
@@ -69,14 +71,25 @@ def load_h5(
         If a function is passed, it will be called with column names, dtypes and shapes,
         and should return a subset of column names.
         Passing an empty string (the default) loads all columns.
+    condition : slice or sequence of int or sequence of boolean or None
+        The condition for choosing the rows to load. This is essentially the "row filter" you would use on a numpy
+        array, so you can use a slice, a list/array of indices, or a boolean mask list/array aligned with the data.
+        This parameter support more advanced values (tuple and callable) but they are not implemented in the
+        multi-threaded hdf5_loader so using them will automatically use the reference HDF5 library and `nthreads` will
+        have no effect. You can see the usage in `hdf5.load` docstring.
+        Default: None, no filtering.
+    nthreads : int or None
+        The number of threads to use. Set to None if want to use the single-thread reference HDF5 library. Default: 16.
     format : hdf5.Format
-        TODO, defaults to hdf5.Format.NDARRAY
+        The `format` parameter for `hdf5.load`. You should not need to set it. Default: hdf5.Format.NDARRAY.
     fixblocks : bool
         True will transpose the rows when the H5 file are as ???, defaults to False.
     drop_short : bool
         Set to True to drop short rows and never return a Struct, defaults to False.
     verbose
         TODO
+    **kwargs : dict
+        Extra arguments passed to `hdf5.load`, see `hdf5.load` docstring for more details.
 
     Returns
     -------
@@ -101,7 +114,16 @@ def load_h5(
         print(f"starting h5 load {filepath}")
     # TEMP: Until hdf5.load() implements support for path-like objects, force conversion to str.
     filepath = os.fspath(filepath)
-    ws = hdf5.load(filepath, name=name, columns=columns, format=format, **kwargs)
+    ws = hdf5.load(
+        filepath,
+        name=name,
+        columns=columns,
+        condition=condition,
+        format=format,
+        nthreads=nthreads,
+        to_columnar=True,
+        **kwargs,
+    )
     if verbose > 0:
         print(f"finished h5 load {filepath}")
 

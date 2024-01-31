@@ -988,13 +988,13 @@ def accum_ratio(
         val1 = cat2
         cat2 = None
     if filt1 is None:
-        filt1 = full(val1.shape[0], True, dtype=bool)  # This was playa.utils.truecol
+        filt1 = full(val1.shape[0], True, dtype=bool)
     if filt2 is None:
         filt2 = filt1
     if func2 is None:
         func2 = func1
     if cat2 is None:
-        cat2 = Categorical(full(val1.shape[0], 1, dtype=np.int8), ["NotGrouped"])  # This was playa.utils.onescol
+        cat2 = Categorical(full(val1.shape[0], 1, dtype=np.int8), ["NotGrouped"])
 
     # Handle name collisions
     for key in ["Numer", "Denom", "Ratio"]:
@@ -1265,7 +1265,7 @@ def accum_ratiop(
     """
     # Handle missing inputs
     if val is None:
-        val = full(cat1.shape[0], 1, dtype=np.float64)  # This was playa.utils.onescol
+        val = full(cat1.shape[0], 1, dtype=np.float64)
     if filter is None:
         if filt is not None:  # Temporary until deprecated
             warnings.warn(
@@ -1274,9 +1274,9 @@ def accum_ratiop(
             )
             filter = filt
         else:
-            filter = full(val.shape[0], True, dtype=bool)  # This was playa.utils.truecol
+            filter = full(val.shape[0], True, dtype=bool)
     if cat2 is None:
-        cat2 = Categorical(full(val.shape[0], 1, dtype=np.int8), ["NotGrouped"])  # This was playa.utils.onescol
+        cat2 = Categorical(full(val.shape[0], 1, dtype=np.int8), ["NotGrouped"])
 
     # Compute accum
     accum = AccumTable(cat1, cat2)
@@ -1613,14 +1613,14 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
     if filt_list is None:
         val_fst = val_list[0]
         shape = val_fst.shape[0] if isinstance(val_fst, np.ndarray) else val_fst[0].shape[0]
-        filt_list = full(shape, True, dtype=bool)  # This was playa.utils.truecol
+        filt_list = full(shape, True, dtype=bool)
     if not isinstance(func_list, list):
         func_list = [func_list for _ in val_list]
     if not isinstance(filt_list, list):
         filt_list = [filt_list for _ in val_list]
 
     # Compute accum
-    temp_cat = Categorical(full(cat.shape[0], 1, dtype=np.int8), ["NotGrouped"])  # This was playa.utils.onescol
+    temp_cat = Categorical(full(cat.shape[0], 1, dtype=np.int8), ["NotGrouped"])
     accum = Accum2(cat, temp_cat)
 
     for val, name, filt, func in zip(val_list, name_list, filt_list, func_list):

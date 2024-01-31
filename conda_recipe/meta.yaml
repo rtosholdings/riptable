@@ -5,8 +5,7 @@ package:
 build:
   number: 0
   noarch: python
-  # Use Python installed in host environment.
-  script: "{{ PYTHON }} -m pip install -v --no-deps --ignore-installed ."
+  script: "pip install -v --no-deps --no-build-isolation ."
 
 source:
   path: ..
@@ -16,13 +15,13 @@ requirements:
     - python {{ python}}
     - setuptools_scm
   run:
-    - python
     - ansi2html >=1.5.2
     - numpy >=1.23
     - numba >=0.56.2
     - pandas >=1.0,<3.0
+    - python
     - python-dateutil
-    - riptide_cpp >=1.16.1,<2 # run with any (compatible) version in this range
+    - riptide_cpp >=1.16.3,<2 # run with any (compatible) version in this range
 
 about:
   home: https://github.com/rtosholdings/riptable

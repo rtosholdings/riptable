@@ -2885,49 +2885,66 @@ def merge(
     hint_size: int = 0,
 ):
     """
-    Merge Dataset by performing a database-style join operation by columns.
+    Merge :py:class:`~.rt_dataset.Dataset` objects by performing a database-style join
+    operation by columns.
 
     Parameters
     ----------
-    left : Dataset
-        Left Dataset
-    right : Dataset
-        Right Dataset
+    left : :py:class:`~.rt_dataset.Dataset`
+        Left :py:class:`~.rt_dataset.Dataset`.
+    right : :py:class:`~.rt_dataset.Dataset`
+        Right :py:class:`~.rt_dataset.Dataset`.
     on : str or list of str, optional
-        Column names to join on. Must be found in both `left` and `right`.
+        Column names to join on. Must be found in both ``left`` and ``right``.
     left_on : str or list of str, optional
-        Column names from left Dataset to join on. When specified, overrides whatever is specified in `on`.
+        Column names from ``left`` to join on. When specified, overrides whatever is specified in ``on``.
     right_on : str or list of str, optional
-        Column names from right to join on. When specified, overrides whatever is specified in `on`.
-    how : {'left','right', 'inner', 'outer'}
-        - left: use only keys from the left. **The output rows will be in one-to-one correspondence with the left rows!** If multiple matches on the right occur, the last is taken.
-        - right: use only keys from the right. **The output rows will be in one-to-one correspondence
-          with the left rows!** If multiple matches on the left occur, the last is taken.
-        - inner: use intersection of keys from both Datasets, similar to SQL inner join
-        - outer: use union of keys from both Datasets, similar to SQL outer join
+        Column names from ``right`` to join on. When specified, overrides whatever is specified in ``on``.
+    how : {"left", "right", "inner", "outer"}, default "left"
+        - "left": Uses all of the ``left`` keys to find matches. If ``left`` has no
+          match in ``right``, invalid or empty values are filled in. If there are
+          multiple matches in ``right``, the first match is included in the returned
+          :py:class:`~.rt_dataset.Dataset`.
+        - "right": Uses all of the ``right`` keys to find matches. If ``right`` has no
+          match in ``left``, invalid or empty values are filled in. If there are
+          multiple matches in ``left``, the first match is included in the returned
+          :py:class:`~.rt_dataset.Dataset`.
+        - "inner": Similar to a SQL inner join. Uses the intersection of keys from both
+          :py:class:`~.rt_dataset.Dataset` objects to find matches, so only rows with
+          matching key values are in the returned :py:class:`~.rt_dataset.Dataset`.
+          If there are multiple matches, the first match is included in the returned
+          :py:class:`~.rt_dataset.Dataset`.
+        - "outer": Similar to a SQL outer join. Uses the union of keys from both
+          :py:class:`~.rt_dataset.Dataset` objects to find matches. For rows that don't
+          have matches, invalid and empty values are filled in. If there are multiple
+          matches, the first match is included in the returned
+          :py:class:`~.rt_dataset.Dataset`.
     suffixes: tuple of (str, str), default ('_x', '_y')
-        Suffix to apply to overlapping column names in the left and right side, respectively.
-        To raise an exception on overlapping columns use (False, False).
-    indicator : bool or str, default False
-        If True, adds a column to output Dataset called "merge_indicator" with information on the
-        source of each row. If string, column with information on source of each row will be added
-        to output Dataset, and column will be named value of string. Information column is
-        Categorical-type and takes on a value of "left_only" for observations whose merge key only
-        appears in `left` Dataset, "right_only" for observations whose merge key only appears in
-        `right` Dataset, and "both" if the observation's merge key is found in both.
+        Suffix to apply to overlapping column names in ``left`` and ``right``, respectively.
+        To raise an exception on overlapping columns use ``(False, False)``.
+    indicator : bool or str, default `False`
+        If `True`, adds a column to the returned :py:class:`~.rt_dataset.Dataset` called
+        "merge_indicator" with information on the source of each row. If string, column
+        with information on source of each row is added to the returned
+        :py:class:`~.rt_dataset.Dataset`, and column is named value of string.
+        Information column is Categorical-type and takes on a value of ``"left_only"``
+        for observations whose merge key only appears in ``left``, ``"right_only"`` for
+        observations whose merge key only appears in ``right``, and ``"both"`` if the
+        observation's merge key is found in both.
     columns_left : str or list of str, optional
-        Column names to include in the merge from `left`, defaults to None which causes all columns to be included.
+        Column names to include in the merge from ``left``, defaults to `None` which causes all columns to be included.
     columns_right : str or list of str, optional
-        Column names to include in the merge from `right`, defaults to None which causes all columns to be included.
-    verbose : boolean
-        For the stdout debris, defaults to False
+        Column names to include in the merge from ``right``, defaults to `None` which causes all columns to be included.
+    verbose : boolean, default `False`
+        For the stdout debris
     hint_size : int
         An estimate of the number of unique keys used for the join, to optimize performance by
         pre-allocating memory for the key hash table.
 
     Returns
     -------
-    merged : Dataset
+    merged : :py:class:`~.rt_dataset.Dataset`
+        The merged :py:class:`~.rt_dataset.Dataset`.
 
     Examples
     --------
@@ -2940,7 +2957,7 @@ def merge(
     <BLANKLINE>
     [3 rows x 4 columns] total bytes: 72.0 B
 
-    Demonstrating a 'left' merge.
+    Demonstrating a ``"left"`` merge.
 
     >>> rt.merge(ds_complex_1, ds_complex_2, on = ['A','B'], how = 'left')
     #   B    A       C       E
@@ -2954,7 +2971,8 @@ def merge(
 
     See Also
     --------
-    merge_asof
+    :py:func:`.rt_merge.merge_asof` : Combine two :py:class:`~.rt_dataset.Dataset`
+        objects by performing a database-style left-join based on the nearest numeric key.
     """
     # Collect timing stats on how long various stages of the merge operation take.
     start = GetNanoTime()

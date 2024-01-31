@@ -1172,7 +1172,11 @@ resulting Dataset is expanded.
 
 Note that until a reported bug is fixed, column names might not persist through grouping operations.
 
-For more in-depth information about Categoricals, see the `Categoricals User Guide <categoricals_user_guide>`.
+For more in-depth information about Categoricals, see:
+
+- Appendix: :doc:`Build a Categorical Iteratively <tutorial_cat_adv_instantiation>` 
+- :doc:`Categoricals User Guide <categoricals_user_guide>`
+- API Reference: :py:class:`~.rt_categorical.Categorical` class
 
 In the next section, `Accums <tutorial_accums.rst>`__, we look at
 another way to do multi-key groupings with fancier output.

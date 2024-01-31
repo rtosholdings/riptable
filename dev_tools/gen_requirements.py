@@ -52,7 +52,8 @@ conda_reqs = [
 ] + toolchain_reqs
 
 # PyPI setup build requirements.
-# Most everything else will be specified in setup.py.
+# Most everything *should* be in pyproject.toml, but some packages
+# need to be set up manually here.
 pypi_reqs = [
     "build",  # PEP-517 py build frontend
     _BENCHMARK_REQ,  # PyPI package doesn't exist

@@ -550,6 +550,20 @@ class TestDataset(unittest.TestCase):
             self.assertEqual(type(ds.b), subcls)
             self.assertTrue((ds.a == ds.b).all())
 
+    def test_assign_time_scalars(self):
+        ds = rt.Dataset({"a": [1, 2, 3]})
+        for cls in [
+            rt.DateTimeNano,
+            rt.TimeSpan,
+            rt.DateSpan,
+            rt.Date,
+        ]:
+            arr = cls(ds.a)
+            for use_scalar in (True, False):
+                ds.b = arr[0] if use_scalar else [arr[0]]
+                self.assertEqual(type(ds.b), type(arr))
+                self.assertTrue((ds.b == arr[0].repeat(len(ds))).all())
+
     def test_assign_cat_null(self):
         ds = rt.Dataset({"col_0": [4, 5]})
         c = rt.Cat([1, 2, 1, 2, 1, 2])

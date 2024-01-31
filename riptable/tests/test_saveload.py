@@ -1,3 +1,4 @@
+import contextlib
 import os
 import pathlib
 import shutil
@@ -16,6 +17,7 @@ from riptable.rt_sds import SDSMakeDirsOn
 from riptable.testing.array_assert import assert_array_or_cat_equal
 from riptable.testing.randgen import create_test_dataset
 from riptable.tests.test_utils import get_all_categorical_data
+from riptable.tests.utils import get_rc_version, parse_version
 from riptable.Utils.rt_metadata import MetaData
 from riptable.Utils.rt_testdata import load_test_data
 from riptable.Utils.rt_testing import (
@@ -1327,6 +1329,29 @@ class SaveLoad_Test(unittest.TestCase):
     #        os.remove(p)
 
 
+@pytest.mark.parametrize("makedirs", [True, False], ids=["makesubdirs", "makedir"])
+@pytest.mark.parametrize("single", [True, False], ids=["single", "multi"])
+@pytest.mark.parametrize("subdir", ["", "old", "new", "new1/new2"])
+def test_save_subdirs(makedirs, single, subdir):
+    orig_makedirs = rt_sds.SDSMakeDirs
+    rt_sds.SDSMakeDirs = makedirs
+    try:
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            obj = rt.Dataset() if single else rt.Struct()
+
+            os.mkdir(os.path.join(tmpdirname, "old"))
+            path = os.path.join(tmpdirname, subdir, "test.sds")
+
+            shouldnt_mkdirs = (not makedirs) and "/" in subdir
+
+            expected_ex = FileNotFoundError if shouldnt_mkdirs else None
+
+            with pytest.raises(expected_ex) if expected_ex else contextlib.nullcontext():
+                rt_sds.save_sds(path, obj)
+    finally:
+        rt_sds.SDSMakeDirs = orig_makedirs
+
+
 # TODO fold test_sds_stack_with_categorical into the more general test_sds_stack
 # We will still want to test across various container types, but rt_test_data module should be responsible for that detail
 @pytest.mark.parametrize("container_type", [Dataset, Struct])
@@ -1431,6 +1456,107 @@ def test_sds_stack(data, stack, stack_count, tmpdir):
                 assert act.equals(exp), err_msg
             else:
                 pytest.fail(f"{fn}: assertions not implemented for data type {type(exp)}\n" + err_msg)
+
+
+@pytest.mark.parametrize(
+    "datas, expected",
+    [
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.FA([10, 11], dtype="i"))),
+                rt.Dataset(dict(A=rt.FA([20, 21], dtype="i"))),
+            ],
+            rt.PDataset,
+            id="1D:reg-reg",
+        ),
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.FA([], dtype="i"))),
+                rt.Dataset(dict(A=rt.FA([], dtype="i"))),
+            ],
+            rt.PDataset,
+            id="1D:empty-empty",
+        ),
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.FA([], dtype="i"))),
+                rt.Dataset(dict(A=rt.FA([20, 21], dtype="i"))),
+            ],
+            rt.PDataset,
+            id="1D:empty-reg",
+            marks=pytest.mark.xfail(
+                get_rc_version() < parse_version("1.16.2a"), reason="RIPTABLE-213 - stack(empty,...)"
+            ),
+        ),
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.FA([10, 11], dtype="i"))),
+                rt.Dataset(dict(A=rt.FA([], dtype="i"))),
+            ],
+            rt.PDataset,
+            id="1D:reg-empty",
+        ),
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.FA([[10, 11, 12], [110, 111, 121]], dtype="i"))),
+                rt.Dataset(dict(A=rt.FA([[20, 21, 22], [120, 121, 122]], dtype="i"))),
+            ],
+            rt.PDataset,
+            id="2D:reg-reg",
+        ),
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.empty(shape=(0, 3), dtype="i"))),
+                rt.Dataset(dict(A=rt.empty(shape=(0, 3), dtype="i"))),
+            ],
+            rt.PDataset,
+            id="2D:empty-empty",
+        ),
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.empty(shape=(0, 3), dtype="i"))),
+                rt.Dataset(dict(A=rt.FA([[20, 21, 22], [120, 121, 122]], dtype="i"))),
+            ],
+            rt.PDataset,
+            id="2D:empty-reg",
+            marks=pytest.mark.xfail(
+                get_rc_version() < parse_version("1.16.2a"), reason="RIPTABLE-213 - stack(empty,...)"
+            ),
+        ),
+        pytest.param(
+            [
+                rt.Dataset(dict(A=rt.FA([[20, 21, 22], [120, 121, 122]], dtype="i"))),
+                rt.Dataset(dict(A=rt.empty(shape=(0, 3), dtype="i"))),
+            ],
+            rt.PDataset,
+            id="2D:reg-empty",
+            marks=pytest.mark.xfail(
+                get_rc_version() < parse_version("1.16.2a"), reason="RIPTABLE-213 - stack(empty,...)"
+            ),
+        ),
+    ],
+)
+def test_sds_stack_empty(datas, expected, tmpdir):
+    if expected is rt.PDataset:
+        expected = rt.PDataset(datas)
+
+    def zip_strict(a, b):
+        return zip(a, b, strict=True) if sys.version_info[:2] >= (3, 10) else zip(a, b)
+
+    fnames = [os.path.join(tmpdir, f"sds_{i}.sds") for i in range(len(datas))]
+
+    for data, fname in zip_strict(datas, fnames):
+        rt.save_sds(fname, data)
+
+    actual = rt.load_sds(fnames, stack=True)
+
+    assert type(actual) == type(expected)
+    assert actual.pcount == expected.pcount
+
+    for i, ((ne, ve), (na, va)) in enumerate(zip_strict(expected.piter, actual.piter)):
+        assert len(ve) == len(va)
+        for re, ra in zip_strict(ve.values(), va.values()):
+            assert np.all(re == ra)
 
 
 @pytest.mark.parametrize(

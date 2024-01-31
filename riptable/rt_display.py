@@ -1705,8 +1705,36 @@ class DisplayHtmlTable:
 
         # html_string_list.append("</style></head>")
 
+        custom_table_css = ""
+        if DisplayOptions.HTML_CUSTOM_TABLE_CSS is not None:
+            css_list = (
+                DisplayOptions.HTML_CUSTOM_TABLE_CSS
+                if isinstance(DisplayOptions.HTML_CUSTOM_TABLE_CSS, list)
+                else [DisplayOptions.HTML_CUSTOM_TABLE_CSS]
+            )
+            custom_table_css = "\n".join(f"    {css_prefix} {css}" for css in css_list)
+
         html_string_list.append(
-            f"<html><head><style>{css_prefix} tbody td{{white-space: nowrap;}}{css_prefix} .lc{{font-weight:bold;background-color: var( --jp-rendermime-table-row-hover-background);}}{css_prefix} .lg{{background-color: #66da9940;}}{css_prefix} .lp{{font-weight:bold;background-color: #ac66da40;}}{css_prefix} .msc{{font-weight:normal;background-color:#00000011;}}{css_prefix} .al{{text-align:left;}}{css_prefix} .ar{{text-align:right;}}{css_prefix} .ac{{text-align:center;}}{css_prefix} .bld{{font-weight:bold;}}{css_prefix} .it{{font-style:italic;}}{css_prefix} .ul{{text-decoration:underline;}}{css_prefix} .st{{text-decoration:line-through;}}</style></head>"
+            f"""
+<html>
+<head>
+<style>
+    {css_prefix} tbody td{{white-space: nowrap;}}
+    {css_prefix} .lc{{font-weight:bold;background-color: var( --jp-rendermime-table-row-hover-background);}}
+    {css_prefix} .lg{{background-color: #66da9940;}}
+    {css_prefix} .lp{{font-weight:bold;background-color: #ac66da40;}}
+    {css_prefix} .msc{{font-weight:normal;background-color:#00000011;}}
+    {css_prefix} .al{{text-align:left;}}
+    {css_prefix} .ar{{text-align:right;}}
+    {css_prefix} .ac{{text-align:center;}}
+    {css_prefix} .bld{{font-weight:bold;}}
+    {css_prefix} .it{{font-style:italic;}}
+    {css_prefix} .ul{{text-decoration:underline;}}
+    {css_prefix} .st{{text-decoration:line-through;}}
+{custom_table_css}
+</style>
+</head>
+            """
         )
 
         html_string_list.append(f"<body><table class='tbl-{display_id}'>")

@@ -194,7 +194,7 @@ jobs:
       - name: Test riptable
         run: |
           set -ex
-          python -m riptable.tests.run
+          python -m pytest --pyargs riptable.tests
           # disable tooling integration tests until they work
           # ipython -m pytest riptable/test_tooling_integration
           # disable hypothesis tests until they run faster, are more consistent, and are easier to investigate
@@ -261,7 +261,7 @@ jobs:
           conda list
       - name: Test with pytest
         run: |
-          python -m riptable.tests.run
+          python -m pytest --pyargs riptable.tests
       - name: Tooling integration tests
         run: |
           echo "DISABLED until tooling tests can be updated"

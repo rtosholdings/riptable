@@ -275,6 +275,8 @@ def strptime_to_nano(dtstrings, format, from_tz=None, to_tz="NYC"):
     """
     Converts datetime string to DateTimeNano object with user-specified format.
 
+    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+
     Parameters
     ----------
     dtstrings : array of timestrings
@@ -300,7 +302,7 @@ def strptime_to_nano(dtstrings, format, from_tz=None, to_tz="NYC"):
                 * ``%S`` Second as a decimal number (with or without zero-padding).
 
     from_tz   : str
-        The timezone of origin: 'NYC', 'GMT', 'DUBLIN', etc.
+        The timezone of origin.
     to_tz     : str
         The timezone that the time will be displayed in.
 
@@ -378,12 +380,15 @@ def _possibly_convert_cat(arr):
 def datetimestring_to_nano(dtstring, from_tz=None, to_tz="NYC"):
     """
     Converts datetime string to DateTimeNano object.
+
     By default, the timestrings are assumed to be in Eastern Time. If they are already in UTC time, set gmt=True.
+
+    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
 
     Parameters
     ----------
     dtstring : array of timestrings in format YYYY-MM-DD HH:MM:SS, YYYYMMDD HH:MM:SS.ffffff, etc. (bytestrings/unicode supported)
-    from_tz    : a string for the timezone of origin: 'NYC', 'GMT', 'DUBLIN', etc.
+    from_tz    : a string for the timezone of origin.
     to_tz      : a string for the timezone that the time will be displayed in
 
     returns DateTimeNano
@@ -405,13 +410,16 @@ def datetimestring_to_nano(dtstring, from_tz=None, to_tz="NYC"):
 def datestring_to_nano(datestring, time=None, from_tz=None, to_tz="NYC"):
     """
     Converts date string to DateTimeNano object (default midnight).
+
     By default, the timestrings are assumed to be in Eastern Time. If they are already in UTC time, set gmt=True.
+
+    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
 
     Parameters
     ----------
     datestring : array of datestrings in format YYYY-MM-DD or YYYYMMDD (bytestrings/unicode supported)
     time       : a single string or array of strings in the format HH:MM:SS.ffffff (bytestrings/unicode supported)
-    from_tz    : a string for the timezone of origin: 'NYC', 'GMT', 'DUBLIN', etc.
+    from_tz    : a string for the timezone of origin.
     to_tz      : a string for the timezone that the time will be displayed in
 
     returns DateTimenano
@@ -452,15 +460,18 @@ def datestring_to_nano(datestring, time=None, from_tz=None, to_tz="NYC"):
 def timestring_to_nano(timestring, date=None, from_tz=None, to_tz="NYC"):
     """
     Converts timestring to TimeSpan or DateTimeNano object.
+
     By default, the timestrings are assumed to be in Eastern Time. If they are already in UTC time, set gmt=True.
     If a date is specified, a DateTimeNano object will be returned.
     If a date is not specified, a TimeSpan will be returned.
+
+    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
 
     Parameters
     ----------
     timestring : array of timestrings in format HH:MM:SS, H:MM:SS, HH:MM:SS.ffffff (bytestrings/unicode supported)
     date       : a single string or array of date strings in format YYYY-MM-DD (bytestrings/unicode supported)
-    from_tz    : a string for the timezone of origin: 'NYC', 'GMT', 'DUBLIN', etc.
+    from_tz    : a string for the timezone of origin.
     to_tz      : a string for the timezone that the time will be displayed in
 
     returns TimeSpan or DateTimeNano
@@ -507,12 +518,14 @@ def timestring_to_nano(timestring, date=None, from_tz=None, to_tz="NYC"):
 def parse_epoch(etime, to_tz="NYC"):
     """Days since epoch and milliseconds since midnight from nanosecond timestamps.
 
+    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+
     Parameters
     ----------
     etime : array-like
         UTC nanoseconds.
     to_tz : str, default 'NYC'
-        TimeZone short string - see riptable.rt_timezone.
+        TimeZone short string.
         This routine didn't used to take a timezone, so it defaults to the previous setting.
 
     Used in the phonyx data loader.
@@ -4110,6 +4123,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     accounting for Daylight Saving Time. The exception is when `arr` is an array of
     `Date` objects, in which case the default display timezone is UTC.
 
+    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+
     Parameters
     ----------
     arr : array of `int`, `str`, `Date`, `TimeSpan`, :py:class:`~datetime.datetime`, `numpy.datetime64`
@@ -4144,16 +4159,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         created from strings, and recommended in other cases to ensure expected results.
         The default `from_tz` is "UTC" for all `arr` types except strings, for which a
         `from_tz` must be specified.
-
-        Timezones supported (Daylight Saving Time is accounted for):
-
-              - "America/New_York"
-              - "Australia/Sydney"
-              - "Europe/Dublin"
-              - "DUBLIN": alias for "Europe/Dublin"
-              - "GMT": Greenwich Mean Time
-              - "NYC": US/Eastern
-              - "UTC": (not a timezone, but accepted as an alias for GMT)
     to_tz : str
         The timezone the data is displayed in. If `arr` is `Date` objects, the default
         `to_tz` is "UTC". For other `arr` types, the default `to_tz` is "NYC".
@@ -4351,230 +4356,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
     # ------------------------------------------------------------
     def __new__(cls, arr, from_tz=None, to_tz=None, from_matlab=False, format=None, start_date=None, gmt=None):
-        """
-        Date and timezone-aware time information, stored to nanosecond precision.
-
-        `DateTimeNano` arrays have an underlying `~riptable.int64` array representing the
-        number of nanoseconds since the Unix epoch (00:00:00 UTC on 01-01-1970). Dates
-        before the Unix epoch are invalid.
-
-        In most cases, `DateTimeNano` objects default to display in Eastern/NYC time,
-        accounting for Daylight Saving Time. The exception is when `arr` is an array of
-        `Date` objects, in which case the default display timezone is UTC.
-
-        Parameters
-        ----------
-        arr : array of `int`, `str`, `Date`, `TimeSpan`, :py:class:`~datetime.datetime`, `numpy.datetime64`
-            Datetimes to store in the `DateTimeNano` array.
-
-            - Integers represent nanoseconds since the Unix epoch (00:00:00 UTC on
-            01-01-1970).
-            - Datetime strings can generally be in YYYYMMDD HH:MM:SS.fffffffff format
-            without ``format`` codes needing to be specified. Bytestrings, unicode
-            strings, and strings in `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
-            format are supported. If your strings are in another format (for example,
-            MMDDYY), specify it with ``format``. Other notes for string input:
-
-            - `from_tz` is required.
-
-            - If `start_date` is provided, strings are parsed as `TimeSpan`
-                objects before `start_date` is applied. See how this affects output in the
-                Examples section below.
-
-            - For NumPy vs. Riptable string parsing differences, see the Notes section
-                below.
-
-            - For `Date` objects, both `from_tz` and `to_tz` are "UTC" by
-            default.
-            - For `TimeSpan` objects, `start_date` needs to be specified.
-            - Using the `DateTimeNano` constructor is recommended for
-            `Date` + `TimeSpan` operations.
-            - `numpy.datetime64` values are converted to nanoseconds.
-
-        from_tz : str
-            The timezone the data in `arr` is stored in. Required if the `DateTimeNano` is
-            created from strings, and recommended in other cases to ensure expected results.
-            The default `from_tz` is "UTC" for all `arr` types except strings, for which a
-            `from_tz` must be specified.
-
-            Timezones supported (Daylight Saving Time is accounted for):
-
-                - "America/New_York"
-                - "Australia/Sydney"
-                - "Europe/Dublin"
-                - "DUBLIN": alias for "Europe/Dublin"
-                - "GMT": Greenwich Mean Time
-                - "NYC": US/Eastern
-                - "UTC": (not a timezone, but accepted as an alias for GMT)
-        to_tz : str
-            The timezone the data is displayed in. If `arr` is `Date` objects, the default
-            `to_tz` is "UTC". For other `arr` types, the default `to_tz` is "NYC".
-        from_matlab : bool, default False
-            When set to `True`, indicates that `arr` contains Matlab datenums (the number
-            of days since 0-Jan-0000). Because Matlab datenums may also include a fraction
-            of a day, be sure to specify `from_tz` for accurate time data.
-        format : str
-            Specify a format for string `arr` input. For format codes, see the `Python
-            strptime cheatsheet <https://strftime.org/>`_. This parameter is ignored for
-            non-string `arr` input.
-        start_date : `str` or array of `Date`
-            - Required if constructing a `DateTimeNano` from a `TimeSpan`.
-            - If `arr` is strings, the values in `arr` are parsed as `TimeSpan` objects
-            before `start_date` is applied. See how this affects output in the Examples
-            section below. Otherwise, `start_date` is added (as nanos) to dates in `arr`.
-            - If `start_date` is a string, use YYYYMMDD format.
-            - If `start_date` is a `Date` array, it is broadcast to `arr` if possible;
-            otherwise an error is raised.
-            - A `start_date` before the Unix epoch is converted to the Unix epoch.
-
-        Notes
-        -----
-        - The constructor does not attempt to preserve NaN times from Python
-        :py:class:`~datetime.datetime` objects.
-        - If the integer data in a `DateTimeNano` object is extracted, it is in the
-        `from_tz` timezone. To initialize another `DateTimeNano` with the same underlying
-        array, use the same `from_tz`.
-        - `DateTimeNano` objects have no knowledge of timezones. All timezone operations
-        are handled by the `TimeZone` class.
-
-
-        Math Operations
-
-        The following math operations can be performed:
-
-        +----------------------------------------+
-        | Date + TimeSpan = DateTimeNano         |
-        +----------------------------------------+
-        | Date - DateTimeNano = TimeSpan         |
-        +----------------------------------------+
-        | Date - TimeSpan = DateTimeNano         |
-        +----------------------------------------+
-        | DateTimeNano - DateTimeNano = TimeSpan |
-        +----------------------------------------+
-        | DateTimeNano - Date = TimeSpan         |
-        +----------------------------------------+
-        | DateTimeNano - TimeSpan = DateTimeNano |
-        +----------------------------------------+
-        | DateTimeNano + TimeSpan = DateTimeNano |
-        +----------------------------------------+
-
-        String Parsing Differences Between NumPy and Riptable
-
-        - Riptable `DateTimeNano` string parsing is generally more forgiving than NumPy's
-        `numpy.datetime64` array parsing.
-        - In some cases where NumPy raises an error, Riptable returns an object.
-        - The lower limit for `DateTimeNano` string parsing is Unix epoch time.
-        - You can always guarantee that Riptable and NumPy get the same results by using
-        the full `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ datetime format
-        (YYYY-MM-DDTHH:MM:SS.fffffffff).
-
-        Riptable parses strings without leading zeros:
-
-        >>> import numpy as np
-        >>> rt.DateTimeNano(["2018-1-1"], from_tz="NYC")
-        DateTimeNano(['20180101 00:00:00.000000000'], to_tz='NYC')
-        >>> np.array(["2018-1-1"], dtype="datetime64[ns]")
-        ValueError: Error parsing datetime string "2018-1-1" at position 5
-
-        Riptable handles extra trailing spaces; NumPy incorrectly treats them as a
-        timezone whose parsing will be deprecated soon:
-
-        >>> rt.DateTimeNano(["2018-10-11 10:11:00.123           "], from_tz="NYC")
-        DateTimeNano(['20181011 10:11:00.123000000'], to_tz='NYC')
-        >>> np.array(["2018-10-11 10:11:00.123           "], dtype="datetime64[ns]")
-        DeprecationWarning: parsing timezone aware datetimes is deprecated; this will
-        raise an error in the future
-        array(['2018-10-11T10:11:00.123000000'], dtype='datetime64[ns]')
-
-        Riptable correctly parses dates without delimiters:
-
-        >>> rt.DateTimeNano(["20181231"], from_tz="NYC")
-        DateTimeNano(['20181231 00:00:00.000000000'], to_tz='NYC')
-        >>> np.array(["20181231"], dtype="datetime64[ns]")
-        array(['1840-08-31T19:51:12.568664064'], dtype='datetime64[ns]')
-
-        To ensure that Riptable and NumPy get the same results, use the full
-        `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ datetime format:
-
-        >>> rt.DateTimeNano(["2018-12-31T12:34:56.789123456"], from_tz="NYC")
-        DateTimeNano(['20181231 12:34:56.789123456'], to_tz='NYC')
-        >>> np.array(["2018-12-31T12:34:56.789123456"], dtype="datetime64[ns]")
-        array(['2018-12-31T12:34:56.789123456'], dtype='datetime64[ns]')
-
-        See Also
-        --------
-        DateTimeNano.info : See timezone info for a `DateTimeNano` object.
-        Date : Riptable's `Date` class.
-        DateSpan : Riptable's `DateSpan` class.
-        TimeSpan : Riptable's `TimeSpan` class.
-        .TimeZone : Riptable's `.TimeZone` class.
-
-        Examples
-        --------
-        Create a `DateTimeNano` from an integer representing the nanoseconds since 00:00:00
-        UTC on 01-01-1970:
-
-        >>> rt.DateTimeNano([1514828730123456000], from_tz="UTC")
-        DateTimeNano(['20180101 12:45:30.123456000'], to_tz='NYC')
-
-        From a datetime string in NYC time:
-
-        >>> rt.DateTimeNano(["2018-01-01 12:45:30.123456000"], from_tz="NYC")
-        DateTimeNano(['20180101 12:45:30.123456000'], to_tz='NYC')
-
-        From `numpy.datetime64` array (note that NumPy has less precision):
-
-        >>> dt = np.array(["2018-11-02 09:30:00.002201", "2018-11-02 09:30:00.004212"], dtype="datetime64[ns]")
-        >>> rt.DateTimeNano(dt, from_tz="NYC")
-        DateTimeNano(['20181102 09:30:00.002201000', '20181102 09:30:00.004212000'], to_tz='NYC')
-
-        If your datetime strings are nonstandard, specify the format using ``format`` with
-        `Python strptime codes <https://strftime.org/>`_.
-
-        >>> rt.DateTimeNano(["12/31/19 08:05:01", "6/30/19 14:20:35"], format="%m/%d/%y %H:%M:%S", from_tz="NYC")
-        DateTimeNano(['20191231 08:05:01.000000000', '20190630 14:20:35.000000000'], to_tz='NYC')
-
-        Convert Matlab datenums:
-
-        >>> rt.DateTimeNano([737426, 738251.75], from_matlab=True, from_tz="NYC")
-        DateTimeNano(['20190101 00:00:00.000000000', '20210405 18:00:00.000000000'], to_tz='NYC')
-
-        Note that if you create a `DateTimeNano` by adding a `Date` and a `TimeSpan` without
-        using the `DateTimeNano` constructor, `from_tz` and `to_tz` will be "GMT":
-
-        >>> d = rt.Date("20230305")
-        >>> ts = rt.TimeSpan("05:00")
-        >>> dtn = d + ts
-        >>> dtn.info()
-        DateTimeNano(['20230305 05:00:00.000000000'], to_tz='GMT')
-        Displaying in timezone: GMT
-        Origin: GMT
-        Offset: 0 hours
-
-        Create a `DateTimeNano` from a list of Python :py:class:`~datetime.datetime`
-        objects:
-
-        >>> from datetime import datetime as dt
-        >>> pdt = [dt(2018, 7, 2, 14, 30), dt(2019, 6, 8, 8, 30)]
-        >>> rt.DateTimeNano(pdt)
-        UserWarning: FastArray contains an unsupported type 'object'.  Problems may occur.
-        Consider categoricals.
-        warnings.warn(warning_string)
-        DateTimeNano(['20180702 10:30:00.000000000', '20190608 04:30:00.000000000', to_tz='NYC')
-
-        If you specify a `start_date` with an `arr` of strings, the strings are parsed as
-        `TimeSpan` objects before `start_date` is applied. Note the first two examples in
-        ``arr`` result in NaN TimeSpans, which are silently treated as zeros:
-
-        >>> arr = ["20180205", "20180205 14:30", "14:30"]
-        >>> rt.DateTimeNano(arr, from_tz="UTC", to_tz="UTC", start_date="20230601")
-        DateTimeNano(['20230601 00:00:00.000000000', '20230601 00:00:00.000000000', '20230601 14:30:00.000000000'], to_tz='UTC')
-
-        `.GetNanoTime` gets the current Unix epoch time:
-
-        >>> rt.DateTimeNano([rt.GetNanoTime()], from_tz="UTC")
-        DateTimeNano(['20230615 18:36:58.378020700'], to_tz='NYC')
-        """
         # changing defaults / requirments based on constructor
         # non-string constructors don't require from_tz keyword to be set
         # need to store original keyword values to check in the funnel (saving all in case we add more)
@@ -4800,10 +4581,12 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         Different lookup array will be used for daylight savings fixups.
         Does not modify the underlying array.
 
+        |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+
         Parameters
         ----------
         tz : str
-            Abbreviated name of desired timezone. See rt.TimeZone.valid_timezones
+            Abbreviated name of desired timezone.
 
         Examples
         --------
@@ -4829,12 +4612,15 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     def astimezone(self, tz):
         """
         Returns a new DateTimeNano object in a different displayed timezone.
+
         The new object holds a reference to the same underlying array.
+
+        |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
 
         Parameters
         ----------
         tz : str
-            Abbreviated name of desired timezone. See rt.TimeZone.valid_timezones
+            Abbreviated name of desired timezone.
 
         Returns
         -------
@@ -5985,16 +5771,16 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         If `start` and `end` are not provided, years range from 1971 to 2020.
 
+        |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+
         Parameters
         ----------
         sz : int
             The length of the generated array.
         to_tz : str, default 'NYC'
-            The timezone for display. For valid timezone options, see
-            :py:attr:`.TimeZone.valid_timezones`.
+            The timezone for display.
         from_tz : str, default 'NYC'
-            The timezone of origin. For valid timezone options, see
-            :py:attr:`.TimeZone.valid_timezones`.
+            The timezone of origin.
         inv : array of bool, optional
             Where True, an invalid `DateTimeNano` is in the returned array.
         start : int, optional
@@ -6047,16 +5833,16 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         If `start` and `end` are not provided, years for valid `DateTimeNano`
         values range from 1971 to 2020.
 
+        |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+
         Parameters
         ----------
         sz : int
             The length of the generated array.
         to_tz : str, default 'NYC'
-            The timezone for display. For valid timezone options, see
-            :py:attr:`.TimeZone.valid_timezones`.
+            The timezone for display.
         from_tz : str, default 'NYC'
-            The timezone of origin. For valid timezone options, see
-            :py:attr:`.TimeZone.valid_timezones`.
+            The timezone of origin.
         start : int, optional
             The start year for the range. If no end year is provided, all times
             are within the start year.

@@ -245,3 +245,53 @@ class TestWhere:
             err_msg=f"array elements greater than the minimum {min}",
         )
         assert dtype == rt_gt_min[0].dtype, "expected dtype of the original type"
+
+
+class TestArange:
+    @pytest.mark.parametrize(
+        "args, kwargs",
+        [
+            pytest.param((3,), {}, id="stop"),
+            pytest.param((10, 13), {}, id="start,stop"),
+            pytest.param((21, 24, 2), {}, id="start,stop,step"),
+            pytest.param((33,), dict(dtype=float), id="stop,dtypeF"),
+            pytest.param((43,), dict(dtype=rt.Date), id="stop,dtypeD"),
+            pytest.param((51, 3), dict(like=np.array([])), id="start,stop,like=np"),
+            pytest.param(
+                (1, 3),
+                dict(like=rt.FA([])),
+                id="start,stop,like=FA",
+                marks=pytest.mark.xfail(strict=True, reason="#310"),
+            ),
+            pytest.param((1, 3), dict(like=np.array([]), dtype=np.uint64), id="start,stop,like=np,dtypeU"),
+            pytest.param((9,), dict(stop=11), id="start,kw_stop"),
+            pytest.param((8,), dict(stop=21, step=4), id="start,kw_stop,kw_step"),
+            pytest.param((), dict(start=7, stop=19, step=3), id="kw_start,kw_stop,kw_step"),
+            pytest.param((), dict(stop=123), id="kw_stop"),
+        ],
+    )
+    def test_arange(self, args, kwargs):
+        na = np.arange(*args, **kwargs)
+        fa = rt.arange(*args, **kwargs)
+        assert_array_equal(na, fa)
+
+    @pytest.mark.parametrize(
+        "args, kwargs, ex",
+        [
+            pytest.param((), {}, TypeError, id="empty"),
+            pytest.param(
+                (),
+                dict(start=123),
+                TypeError,
+                id="start_only",
+                marks=pytest.mark.xfail(reason="Cannot distinguish start= from stop", strict=True),
+            ),
+            pytest.param((), dict(step=123), TypeError, id="step_only"),
+            pytest.param((88,), dict(start=87), TypeError, id="kw_start,stop"),
+        ],
+    )
+    def test_bad_arange(self, args, kwargs, ex):
+        with pytest.raises(ex):
+            np.arange(*args, **kwargs)
+        with pytest.raises(ex):
+            rt.arange(*args, **kwargs)
