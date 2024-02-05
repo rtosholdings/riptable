@@ -22,7 +22,7 @@ jobs:
         python-version: [3.9, "3.10", "3.11"]
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # Set fetch-depth to 0 so all history is retrieved; this is needed so we get the git tags
           # which we use for setting the package version (via setuptools-scm).
@@ -30,7 +30,7 @@ jobs:
       - name: Setup Miniconda
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: "flake8_env"
           python-version: ${{ matrix.python-version }}
@@ -64,11 +64,11 @@ jobs:
       ANACONDA_USER: rtosholdings
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
@@ -97,7 +97,7 @@ jobs:
           mkdir conda_pkgs_output
           conda mambabuild conda_recipe --override-channels -c ${ANACONDA_USER} -c conda-forge -c defaults --output-folder ./conda_pkgs_output --no-test
       - name: Publish artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: conda-build-artifacts
           path: conda_pkgs_output/*/riptable-*.conda
@@ -113,7 +113,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # Set fetch-depth to 0 so all history is retrieved; this is needed so we get the git tags
           # which we use for setting the package version (via setuptools-scm).
@@ -131,7 +131,7 @@ jobs:
           set -ex
           python -m build --sdist
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: dist/
@@ -153,12 +153,12 @@ jobs:
       BUILD_VERSION: ${{needs.conda_build.outputs.build_version}}
     steps:
       - name: Checkout repo (sparse)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           sparse-checkout: dev_tools
           sparse-checkout-cone-mode: false
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
@@ -171,7 +171,7 @@ jobs:
           channel-priority: flexible
           show-channel-urls: true
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: conda-build-artifacts
           path: conda_pkgs_output/
@@ -214,14 +214,14 @@ jobs:
         numpy-version: [1.23, 1.24]
     steps:
       - name: Checkout repo (sparse)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           sparse-checkout: dev_tools
           sparse-checkout-cone-mode: false
       - name: Setup Miniconda
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: "pypi_test"
           python-version: ${{ matrix.python-version }}
@@ -232,7 +232,7 @@ jobs:
           channel-priority: flexible
           show-channel-urls: true
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: dist/
@@ -272,7 +272,7 @@ jobs:
       #    pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
 
   conda_deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
+    #NOPE#if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
     needs: [conda_build, conda_test, pypi_test]
     runs-on: ubuntu-latest
     env:
@@ -282,7 +282,7 @@ jobs:
       ANACONDA_TOKEN: ${{ secrets.anaconda_token }}
     steps:
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
         with:
@@ -299,7 +299,7 @@ jobs:
         run: |
           mamba install anaconda-client -q -y
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: conda-build-artifacts
           path: conda_pkgs_output/
@@ -307,10 +307,10 @@ jobs:
         shell: bash -l {0}
         run: |
           set -ex
-          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.conda
+          echo _NOPE_anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.conda
 
   pypi_deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
+    #NOPE#if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
     # since riptable is all python source code, only a source build is required from one os
     needs: [pypi_build, pypi_test, conda_test]
     runs-on: ubuntu-latest
@@ -324,7 +324,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install setuptools wheel twine
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: dist/
@@ -334,4 +334,4 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
           set -ex
-          twine upload dist/* --verbose
+          echo _NOPE_twine upload dist/* --verbose
