@@ -119,7 +119,7 @@ jobs:
           # which we use for setting the package version (via setuptools-scm).
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
       - name: Install dependencies
@@ -272,7 +272,7 @@ jobs:
       #    pytest --hypothesis-show-statistics -k test_ -m 'not xfail' riptable/hypothesis_tests
 
   conda_deploy:
-    #NOPE#if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
     needs: [conda_build, conda_test, pypi_test]
     runs-on: ubuntu-latest
     env:
@@ -307,16 +307,16 @@ jobs:
         shell: bash -l {0}
         run: |
           set -ex
-          echo _NOPE_anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.conda
+          anaconda --token "${ANACONDA_TOKEN}" upload --label main --user ${ANACONDA_USER} ./conda_pkgs_output/*/riptable-*.conda
 
   pypi_deploy:
-    #NOPE#if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' }}
     # since riptable is all python source code, only a source build is required from one os
     needs: [pypi_build, pypi_test, conda_test]
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
       - name: Install dependencies
@@ -334,4 +334,4 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
           set -ex
-          echo _NOPE_twine upload dist/* --verbose
+          twine upload dist/* --verbose
