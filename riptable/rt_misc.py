@@ -257,7 +257,7 @@ def output_cache_setsize(cache_size=100):
             ipython.displayhook.do_full_cache = True
         # note: consider setting cull_fraction or cache_size
     except:
-        warnings.warn("Failed to set output_cache_setsize.", CacheWarning)
+        warnings.warn("Failed to set output_cache_setsize.", CacheWarning, stacklevel=2)
 
 
 # ------------------------------------------------------------------------
@@ -325,7 +325,7 @@ def output_cache_flush():
         ipython.displayhook.do_full_cache = tempcache
 
     except:
-        warnings.warn("Failed to set output_cache_flush.", CacheWarning)
+        warnings.warn("Failed to set output_cache_flush.", CacheWarning, stacklevel=2)
 
 
 # ------------------------------------------------------------------------

@@ -114,14 +114,17 @@ def hstack_any(
                         continue
                     if key in d:
                         # maybe raise a value error?
-                        warnings.warn(f"Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.")
+                        warnings.warn(
+                            f"Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.",
+                            stacklevel=2,
+                        )
 
                 # add to list of items for that type
                 alldicts[dname][key].append(item)
 
         # warn on missing items
         if len(newitems) > 0:
-            warnings.warn(f"These items were not found in every container: {newitems}")
+            warnings.warn(f"These items were not found in every container: {newitems}", stacklevel=2)
 
         # array will fix subclass
         for k, v in alldicts["Array"].items():
@@ -334,7 +337,9 @@ def _hstack_struct(struct_list, destroy: bool = False):
                 if dkey == dname:
                     continue
                 if key in d:
-                    warnings.warn(f"Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.")
+                    warnings.warn(
+                        f"Found conflicting types for item {key} {dkey} vs. {dname}. Data will be lost.", stacklevel=2
+                    )
 
             data_dict = alldicts[dname]
 
@@ -344,7 +349,7 @@ def _hstack_struct(struct_list, destroy: bool = False):
             data_dict[key] = data_list
 
     if len(new_items) > 0:
-        warnings.warn(f"These items were not found in every struct: {new_items}")
+        warnings.warn(f"These items were not found in every struct: {new_items}", stacklevel=2)
 
     final_dict = {}
     for name, fa_list in alldicts["Array"].items():
@@ -449,7 +454,10 @@ def _hstack_dataset(ds_list: Union[list, tuple], destroy: bool = False):
                     safe = all([t.char in "US" for t in types[name]])
                 # if conflicting warn the user
                 if not safe:
-                    warnings.warn(f"Mixing numeric with string types in column {name}. Unexpected results may occur.")
+                    warnings.warn(
+                        f"Mixing numeric with string types in column {name}. Unexpected results may occur.",
+                        stacklevel=2,
+                    )
             # possibly a binned class
             except Exception:
                 raise TypeError(

@@ -1,3 +1,4 @@
+import itertools
 import unittest
 
 import pandas as pd
@@ -252,6 +253,37 @@ class Accum2_Test(unittest.TestCase):
         for i in range(7):
             s_mean = ds[ds.data == i, :].time.mean()
             self.assertEqual(totalcol[i], s_mean)
+
+    def test_accum2_count(filter: bool) -> None:
+        rng = np.random.default_rng(seed=42)
+
+        ds = rt.Dataset()
+
+        N = 100
+        symbols = ["A", "B", "C"]
+        exchanges = ["X", "Y", "Z"]
+        ds.Symbol = rt.FA(rng.choice(symbols, N), unicode=True).set_name("Symbol")
+        ds.Exchange = rt.FA(rng.choice(exchanges, N), unicode=True).set_name("Exchange")
+        ds.SymEx = rt.Categorical([ds.Symbol, ds.Exchange])
+
+        def _validate(acc: rt.Accum2, count_filter: rt.FA = None, ref_filter: rt.FA = None) -> None:
+            ref_count = ds.SymEx.count(filter=ref_filter)
+            acc_count = acc.count(filter=count_filter)
+
+            expected = {(sym, ex): cnt for sym, ex, cnt in zip(ref_count.Symbol, ref_count.Exchange, ref_count.Count)}
+            for col in exchanges:
+                for ri, row in enumerate(symbols):
+                    assert expected[(row, col)] == acc_count[col][ri]
+
+        a_only = ds.Symbol == "A"
+        x_only = ds.Exchange == "X"
+
+        normal_accum = rt.Accum2(ds.Symbol, ds.Exchange)
+        filtered_accum = rt.Accum2(ds.Symbol, ds.Exchange, filter=x_only)
+
+        _validate(normal_accum, None, None)
+        _validate(normal_accum, a_only, a_only)
+        _validate(filtered_accum, a_only, x_only & a_only)
 
     def test_accum2_median(self):
         ds = Dataset({"time": arange(200.0)})

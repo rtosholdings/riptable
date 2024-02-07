@@ -325,7 +325,8 @@ class Struct:
         if len(invalid) > 0:
             if self.__class__.WarnOnInvalidNames:
                 warnings.warn(
-                    f"Invalid column name(s) {invalid} --- please rename the column(s) or the class will lose this method."
+                    f"Invalid column name(s) {invalid} --- please rename the column(s) or the class will lose this method.",
+                    stacklevel=2,
                 )
             else:
                 raise ValueError("Invalid column names passed: {}".format(", ".join(invalid)))
@@ -551,7 +552,7 @@ class Struct:
             obj = getattr(self, name, _default_getattr_placeholder)
             if callable(obj):
                 # special protect certain names which would ruin class
-                warnings.warn(f"The method {name} is readonly and cannot be assigned.")
+                warnings.warn(f"The method {name} is readonly and cannot be assigned.", stacklevel=2)
                 return AttributeError(f"The method {name} is readonly and cannot be assigned.")
             elif obj is _default_getattr_placeholder:
                 self._addnewitem(name, value)
@@ -1096,7 +1097,9 @@ class Struct:
                     # might need to copy strided data
                     if item.ndim == 1:
                         if item.strides[0] != item.itemsize:
-                            warnings.warn(f"array named {itemname} had bad 1d strides")
+                            warnings.warn(
+                                f"PerfWarning: array named {k} had bad 1d strides; copying to contiguous storage"
+                            )
                             item = item.copy()
 
                     itemflag += SDSFlag.Stackable
@@ -1121,7 +1124,9 @@ class Struct:
                 item = np.asarray([item])
                 # if scalar created an object array, flip to string and warn
                 if item.dtype.char == "O":
-                    warnings.warn(f"Item {item[0]} was not a supported scalar type. Saving as bytestring.")
+                    warnings.warn(
+                        f"Item {item[0]} was not a supported scalar type. Saving as bytestring.", stacklevel=2
+                    )
                     item = item.astype("S")
                 itemdict[itemname] = item
                 itemflag = SDSFlag.Scalar + SDSFlag.OriginalContainer
@@ -1219,7 +1224,9 @@ class Struct:
                     additem = item
                     if item.ndim == 1:
                         if item.strides[0] != item.itemsize:
-                            warnings.warn(f"array named {k} had bad 1d strides")
+                            warnings.warn(
+                                f"PerfWarning: array named {k} had bad 1d strides; copying to contiguous storage"
+                            )
                             additem = item.copy()
 
                     items.append(additem)
@@ -1963,7 +1970,9 @@ class Struct:
                             trimmed_name = pname[len(prefix) :]
                             try:
                                 self.col_remove(trimmed_name)
-                                warnings.warn(f"Replaced column {trimmed_name} with categorical from matlab.")
+                                warnings.warn(
+                                    f"Replaced column {trimmed_name} with categorical from matlab.", stacklevel=2
+                                )
                             except:
                                 pass
 
@@ -1981,8 +1990,8 @@ class Struct:
 
                         # help recycler
                         del newcategory
-                    except:
-                        raise TypeError(f"Cannot convert {pname} as a Categorical")
+                    except BaseException as e:
+                        raise TypeError(f"Cannot convert {pname} as a Categorical") from e
 
                 # help recycler
                 del pArray
@@ -2139,7 +2148,10 @@ class Struct:
                 # might need to copy strided data
                 if item.ndim == 1:
                     if item.strides[0] != item.itemsize:
-                        warnings.warn(f"array named {itemname} had bad 1d strides")
+                        warnings.warn(
+                            f"PerfWarning: array named {itemname} had bad 1d strides; copying to contiguous storage",
+                            stacklevel=3,
+                        )
                         item = item.copy()
 
                 itemdict[itemname] = item
@@ -2150,7 +2162,7 @@ class Struct:
             item = np.asarray([item])
             # if scalar created an object array, flip to string and warn
             if item.dtype.char == "O":
-                warnings.warn(f"Item {item[0]} was not a supported scalar type. Saving as bytestring.")
+                warnings.warn(f"Item {item[0]} was not a supported scalar type. Saving as bytestring.", stacklevel=3)
                 item = item.astype("S")
             itemdict[itemname] = item
             itemflags.append(SDSFlag.Scalar + SDSFlag.OriginalContainer)
@@ -2610,16 +2622,20 @@ class Struct:
         if not Struct.AllNames and not self.is_valid_colname(name):
             if self.__class__.WarnOnInvalidNames:
                 warnings.warn(
-                    f"Invalid column name {name!r} --- please rename the column or the class may lose this method."
+                    f"Invalid column name {name!r} --- please rename the column or the class may lose this method.",
+                    stacklevel=2,
                 )
             else:
                 if str.islower(name[0]):
-                    warnings.warn(f"Invalid column name {name!r} --- column auto capitalized to {name.capitalize()!r}.")
+                    warnings.warn(
+                        f"Invalid column name {name!r} --- column auto capitalized to {name.capitalize()!r}.",
+                        stacklevel=2,
+                    )
                     name = name.capitalize()
                     self.col_set_value(name, value)
 
                 else:
-                    warnings.warn(f"Adding column with invalid name {name!r}.")
+                    warnings.warn(f"Adding column with invalid name {name!r}.", stacklevel=2)
                     # raise ValueError(f'Invalid column name {name!r}')
 
         # all columns are set here
@@ -2777,7 +2793,8 @@ class Struct:
                     )
                 if on_missing == "warn":
                     warnings.warn(
-                        f"UserWarning: Unknown column{'s' if len(missing) > 1 else ''} {', '.join(missing)} do{'' if len(missing) > 1 else 'es'} not exist, and will be ignored in operation {calling_func}."
+                        f"UserWarning: Unknown column{'s' if len(missing) > 1 else ''} {', '.join(missing)} do{'' if len(missing) > 1 else 'es'} not exist, and will be ignored in operation {calling_func}.",
+                        stacklevel=3,
                     )
 
         like_match = [key for key in self.keys() if like in key] if like else []

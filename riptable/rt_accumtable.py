@@ -1271,6 +1271,7 @@ def accum_ratiop(
             warnings.warn(
                 'Kwarg "filt" is being deprecated for "filter" to align with common syntax. "filt" will be removed in a future version',
                 FutureWarning,
+                stacklevel=2,
             )
             filter = filt
         else:

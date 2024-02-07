@@ -819,7 +819,9 @@ class GroupByOps(ABC):
                     # so we want to remove the constant arrays
                     alreadyexists = name in final_dict
                     if alreadyexists:
-                        warnings.warn(f"Found conflicting items for name {name}. Using item from arguments.")
+                        warnings.warn(
+                            f"Found conflicting items for name {name}. Using item from arguments.", stacklevel=2
+                        )
                     final_dict[name] = col
         else:
             # extra data only, already a dict

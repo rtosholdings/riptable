@@ -593,7 +593,7 @@ def rt_element_strategy(
         elements_strategy = complex_numbers(allow_nan=True, allow_infinity=True)
     else:
         # TODO handle invalids for np.sctypes["others"] [bool, object, bytes, str, numpy.void]
-        warnings.warn(f"unhandled dtype '{dtype}'")
+        warnings.warn(f"unhandled dtype '{dtype}'", stacklevel=2)
         return None
     return elements_strategy
 

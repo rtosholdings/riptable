@@ -364,7 +364,7 @@ class GroupByKeys:
         when GroupByKeys were constructed.
         """
         if self._pre_sorted:
-            warnings.warn("Groupby keys were naturally sorted.")
+            warnings.warn("Groupby keys were naturally sorted.", stacklevel=2)
         elif self._sort_applied:
             raise ValueError("Groupby keys were already sorted. Data mis-match will occur.")
         self._sort_display = False

@@ -71,6 +71,7 @@ runtime_reqs = [
     "pandas>=1.0,<3.0",
     "python-dateutil",
     _TBB_REQ,
+    "typing-extensions>=4.9.0",
 ]
 
 # Optional runtime requirements for riptable and riptide_cpp.

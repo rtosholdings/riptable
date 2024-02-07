@@ -1038,7 +1038,7 @@ class Grouping:
                 newdtype = req_dtype
             else:
                 # need warning here
-                warnings.warn(f"A type of {dtype} was too small, upcasting.")
+                warnings.warn(f"A type of {dtype} was too small, upcasting.", stacklevel=2)
 
         return arr.astype(newdtype, copy=False)
 
@@ -3584,7 +3584,7 @@ class Grouping:
         """
         # need to vet base index, enum mode, number of columns, etc.
         if not _trusted:
-            warnings.warn(f"still implementing grouping hstack validation")
+            warnings.warn(f"still implementing grouping hstack validation", stacklevel=2)
 
             # TODO: add more tests for single vs. multikey (without unnecessary calculation of uniquedict)
             for grp in glist:
@@ -3919,17 +3919,17 @@ class GroupingEnum:
                 if isinstance(k, bytes):
                     k = k.decode()
                 if k in str_to_int_dict:
-                    warnings.warn(f"{k} already found in dict. problems may occur.")
+                    warnings.warn(f"{k} already found in dict. problems may occur.", stacklevel=2)
                 str_to_int_dict[k] = v
                 if v in int_to_str_dict:
-                    warnings.warn(f"{k} already found in dict. problems may occur.")
+                    warnings.warn(f"{k} already found in dict. problems may occur.", stacklevel=2)
                 int_to_str_dict[v] = k
             else:
                 invalid.append(k)
 
         # warn with list of entries that weren't added
         if len(invalid) > 0:
-            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}")
+            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}", stacklevel=2)
 
         return str_to_int_dict, int_to_str_dict
 
@@ -3945,15 +3945,15 @@ class GroupingEnum:
             int_v = v.value
             if True:
                 if k in str_to_int_dict:
-                    warnings.warn(f"{k} already found in dict. problems may occur.")
+                    warnings.warn(f"{k} already found in dict. problems may occur.", stacklevel=2)
                 str_to_int_dict[k] = int_v
                 if int_v in int_to_str_dict:
-                    warnings.warn(f"{int_v} already found in dict. problems may occur.")
+                    warnings.warn(f"{int_v} already found in dict. problems may occur.", stacklevel=2)
                 int_to_str_dict[int_v] = k
             else:
                 invalid.append(k)
         if len(invalid) > 0:
-            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}")
+            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}", stacklevel=2)
         return str_to_int_dict, int_to_str_dict
 
     # ------------------------------------------------------------

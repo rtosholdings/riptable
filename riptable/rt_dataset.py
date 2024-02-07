@@ -12,6 +12,7 @@ import warnings
 from collections import Counter, abc, namedtuple
 from typing import (
     TYPE_CHECKING,
+    overload,
     Any,
     Callable,
     Iterable,
@@ -24,6 +25,10 @@ from typing import (
     Union,
     Literal,
 )
+
+# Once targeting py3.11 and newer (only), import this from
+# the built-in 'typing' module instead.
+from typing_extensions import Self
 
 import numpy as np
 import numpy.typing as npt
@@ -796,7 +801,7 @@ class Dataset(Struct):
         return f"Dataset{self.shape}"
 
     # --------------------------------------------------------
-    def copy(self, deep=True):
+    def copy(self, deep: bool = True) -> Self:
         """
         Make a copy of the :py:class:`~.rt_dataset.Dataset`.
 
@@ -851,7 +856,7 @@ class Dataset(Struct):
         return self._copy(deep)
 
     # --------------------------------------------------------
-    def filter(self, rowfilter: npt.ArrayLike, inplace: bool = False) -> "Dataset":
+    def filter(self, rowfilter: npt.ArrayLike[bool] | npt.ArrayLike[np.integer], inplace: bool = False) -> Self:
         """
         Return a copy of the :py:class:`~.rt_dataset.Dataset` containing only the rows
         that meet the specified condition.
@@ -1036,7 +1041,7 @@ class Dataset(Struct):
         bandsize: Optional[int] = None,
         append: Optional[str] = None,
         complevel: Optional[int] = None,
-    ):
+    ) -> None:
         """
         Save a dataset to a single .sds file or shared memory.
 
@@ -1114,7 +1119,7 @@ class Dataset(Struct):
         filter: Optional[np.ndarray] = None,
         sections: Optional[Sequence[str]] = None,
         threads: Optional[int] = None,
-    ):
+    ) -> Self:
         """
         Load dataset from .sds file or shared memory.
 
@@ -1164,8 +1169,14 @@ class Dataset(Struct):
         3    0.41    0.60    0.05
         4    0.53    0.23    0.71
         """
-        return load_sds(
+        result = load_sds(
             path, share=share, info=info, include=include, filter=filter, sections=sections, threads=threads
+        )
+        if isinstance(result, cls):
+            return result
+
+        raise TypeError(
+            f"The object loaded from SDS was an instance of '{type(result).__qualname__}', but expected a '{cls.__qualname__}'."
         )
 
     # -------------------------------------------------------
@@ -1360,6 +1371,55 @@ class Dataset(Struct):
         return
 
     # -------------------------------------------------------
+
+    @overload
+    def __getitem__(self, index: str | bytes) -> FastArray:
+        ...
+
+    @overload
+    def __getitem__(
+        self,
+        index: (
+            list[str]
+            | list[bytes]
+            | npt.ArrayLike[str]
+            | npt.ArrayLike[bytes]
+            | slice
+            | int
+            | np.integer
+            | npt.ArrayLike[np.integer]
+            | npt.ArrayLike[bool]
+        ),
+    ) -> Self:
+        ...
+
+    @overload
+    def __getitem__(
+        self,
+        index: tuple[
+            npt.ArrayLike[bool] | npt.ArrayLike[np.integer] | int | np.integer | slice, str | bytes | int | np.integer
+        ],
+    ) -> FastArray:
+        ...
+
+    @overload
+    def __getitem__(
+        self,
+        index: tuple[
+            npt.ArrayLike[bool] | npt.ArrayLike[np.integer] | int | np.integer | slice,
+            list[str]
+            | list[bytes]
+            | npt.ArrayLike[str]
+            | npt.ArrayLike[bytes]
+            | slice
+            | int
+            | np.integer
+            | npt.ArrayLike[np.integer]
+            | npt.ArrayLike[bool],
+        ],
+    ) -> Self:
+        ...
+
     def __getitem__(self, index):
         """
         Parameters
@@ -1407,7 +1467,7 @@ class Dataset(Struct):
         return self._copy(deep=False, rows=row_idx, cols=col_idx)
 
     # ------------------------------------------------------------
-    def _dataset_compare_check(self, func_name, lhs):
+    def _dataset_compare_check(self, func_name, lhs) -> Self:
         # comparison function will be called by an array the size of the indexes, either
         # interperetted as integers, or as categorical strings
         # if compared to string, make sure the string matches the string type in categories
@@ -1466,7 +1526,7 @@ class Dataset(Struct):
         return rows
 
     # ------------------------------------------------------------
-    def putmask(self, mask, values):
+    def putmask(self, mask: npt.NDArray[bool], values: Dataset | npt.NDArray) -> None:
         """
         Call riptable ``putmask`` routine which is faster than ``__setitem__`` with bracket indexing.
 
@@ -1652,7 +1712,7 @@ class Dataset(Struct):
                 yield rownum, temp_struct
 
     # ------------------------------------------------------------
-    def isin(self, values):
+    def isin(self, values) -> Self:
         """
         Call :meth:`~rt.rt_fastarray.FastArray.isin` for each column in the `Dataset`.
 
@@ -2090,7 +2150,7 @@ class Dataset(Struct):
     # -------------------------------------------------------
     def fillna(
         self, value=None, method: Optional[str] = None, inplace: bool = False, limit: Optional[int] = None
-    ) -> Optional["Dataset"]:
+    ) -> Self:
         """
         Replace NaN and invalid values with a specified value or nearby data.
 
@@ -2247,7 +2307,7 @@ class Dataset(Struct):
     # Arithmetic functions.
     def apply_cols(
         self, func_or_method_name, *args, fill_value=None, unary: bool = False, labels: bool = False, **kwargs
-    ) -> Optional["Dataset"]:
+    ) -> Self:
         """
         Apply function (or named method) on each column.
         If results are all None (``*=``, ``+=``, for example), None is returned;
@@ -2655,7 +2715,7 @@ class Dataset(Struct):
     def __invert__(self):
         return self.apply_cols("__invert__", unary=True)
 
-    def abs(self) -> "Dataset":
+    def abs(self) -> Self:
         """
         Return a dataset where all elements are replaced, as appropriate, by their absolute value.
 
@@ -2708,7 +2768,7 @@ class Dataset(Struct):
         """
         return {colname: getattr(self, colname).dtype for colname in self.keys()}
 
-    def astype(self, new_type, ignore_non_computable: bool = True):
+    def astype(self, new_type, ignore_non_computable: bool = True) -> Self:
         """
         Return a new :py:class:`~.rt_dataset.Dataset` with values converted to the
         specified data type.
@@ -2904,7 +2964,7 @@ class Dataset(Struct):
 
         self.col_remove(cat_cols)
 
-    def head(self, n: int = 20) -> "Dataset":
+    def head(self, n: int = 20) -> Self:
         """
         Return the first ``n`` rows.
 
@@ -2937,7 +2997,7 @@ class Dataset(Struct):
         rows = min(self._nrows, n)
         return self[:rows, :]
 
-    def tail(self, n: int = 20) -> "Dataset":
+    def tail(self, n: int = 20) -> Self:
         """
         Return the last ``n`` rows.
 
@@ -3057,7 +3117,8 @@ class Dataset(Struct):
         """
         if self.size > 10_000:
             warnings.warn(
-                f"Dataset has {self.size} elements. Performance will suffer when converting values to python lists."
+                f"Dataset has {self.size} elements. Performance will suffer when converting values to python lists.",
+                stacklevel=2,
             )
 
         # TJD this code is slow and needs review
@@ -3131,7 +3192,7 @@ class Dataset(Struct):
         return self.to_pandas()
 
     @classmethod
-    def from_pandas(cls, df: "pd.DataFrame", tz: str = "UTC", preserve_index: Optional[bool] = False) -> "Dataset":
+    def from_pandas(cls, df: "pd.DataFrame", tz: str = "UTC", preserve_index: Optional[bool] = False) -> Self:
         """
         Creates a riptable Dataset from a pandas DataFrame. Pandas categoricals
         and datetime arrays are converted to their riptable counterparts.
@@ -3184,7 +3245,7 @@ class Dataset(Struct):
         writable: bool = False,
         auto_widen: bool = False,
         fill_value: Optional[Mapping[str, Any]] = None,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Convert a pyarrow `Table` to a riptable `Dataset`.
 
@@ -3555,7 +3616,7 @@ class Dataset(Struct):
         return result
 
     # -------------------------------------------------------------
-    def drop_duplicates(self, subset=None, keep: Union[bool, str] = "first", inplace: bool = False) -> "Dataset":
+    def drop_duplicates(self, subset=None, keep: Union[bool, str] = "first", inplace: bool = False) -> Self:
         """
         Return Dataset with duplicate rows removed, optionally only
         considering certain columns
@@ -3892,7 +3953,7 @@ class Dataset(Struct):
         :return: None
         """
         if self._col_sortlist is None:
-            warnings.warn(f"sort_view was not called first.  Display sorting will remain off.")
+            warnings.warn(f"sort_view was not called first.  Display sorting will remain off.", stacklevel=2)
             return
 
         self._sort_display = True
@@ -4159,7 +4220,7 @@ class Dataset(Struct):
         ascending: Union[bool, List[bool], np.ndarray, FastArray] = True,
         kind: str = "mergesort",
         na_position: str = "last",
-    ) -> "Dataset":
+    ) -> Self:
         """
         Return a :py:class:`~.rt_dataset.Dataset` with the specified columns sorted in
         place.
@@ -4253,7 +4314,7 @@ class Dataset(Struct):
         ascending: Union[bool, List[bool], np.ndarray, FastArray] = True,
         kind: str = "mergesort",
         na_position: str = "last",
-    ) -> "Dataset":
+    ) -> Self:
         """
         Return a copy of the :py:class:`~.rt_dataset.Dataset` that's sorted by the
         specified columns.
@@ -4422,7 +4483,7 @@ class Dataset(Struct):
 
     # -------------------------------------------------------
     @property
-    def crc(self) -> "Dataset":
+    def crc(self) -> Self:
         """
         Returns a new dataset with the 64 bit CRC value of every column.
 
@@ -5315,7 +5376,7 @@ class Dataset(Struct):
                 labels = [labels]
             final_labels = [fname for fname in labels if fname in self.footers]
             if len(final_labels) == 0:
-                warnings.warn(f"No footers found for names {labels}.")
+                warnings.warn(f"No footers found for names {labels}.", stacklevel=2)
                 return
         return final_labels
 
@@ -5811,7 +5872,7 @@ class Dataset(Struct):
         arr = arr.T
         for idx, name in enumerate(names):
             if name in self:
-                warnings.warn(f"Overwriting column named {name}.")
+                warnings.warn(f"Overwriting column named {name}.", stacklevel=2)
             setattr(self, name, arr[idx])
 
     # -------------------------------------------------------
@@ -5907,7 +5968,7 @@ class Dataset(Struct):
         N: int = 10,
         filter: Optional[np.ndarray] = None,
         seed: Optional[Union[int, Sequence[int], np.random.SeedSequence, np.random.Generator]] = None,
-    ) -> "Dataset":
+    ) -> Self:
         """
         Return a given number of randomly selected :py:class:`~.rt_dataset.Dataset` rows.
 
@@ -6307,12 +6368,12 @@ class Dataset(Struct):
         return GroupBy(self, by, **kwargs)
 
     # -------------------------------------------------------
-    def gb(self, by, **kwargs):
+    def gb(self, by, **kwargs) -> GroupBy:
         """Equivalent to :meth:`~rt.rt_dataset.Dataset.groupby`"""
         return self.groupby(by, **kwargs)
 
     # -------------------------------------------------------
-    def gbu(self, by, **kwargs):
+    def gbu(self, by, **kwargs) -> GroupBy:
         """Equivalent to :meth:`~rt.rt_dataset.Dataset.groupby` with sort=False"""
         kwargs["sort_display"] = False
         return self.groupby(by, **kwargs)
@@ -7058,7 +7119,7 @@ class Dataset(Struct):
         if on_mismatch != "ignore":
             if len(dups) > 0:
                 if on_mismatch == "warn":
-                    warnings.warn(f"concat_columns() duplicate column mismatch: {dups!r}")
+                    warnings.warn(f"concat_columns() duplicate column mismatch: {dups!r}", stacklevel=2)
                 if on_mismatch == "raise":
                     raise RuntimeError(f"concat_columns() duplicate column mismatch: {dups!r}")
 
@@ -7134,7 +7195,7 @@ class Dataset(Struct):
             return out_array
 
     # -------------------------------------------------------------------
-    def as_recordarray(self, allow_conversions=False):
+    def as_recordarray(self, allow_conversions: bool = False) -> npt.NDArray[np.void]:
         """
         Convert Dataset to one array (record array).
 
@@ -7184,7 +7245,7 @@ class Dataset(Struct):
             elif allow_conversions and isinstance(obj, TimeSpan):
                 return np.dtype("timedelta64[ns]")
             elif type(obj) is not FastArray and issubclass(type(obj), FastArray):
-                warnings.warn(f"Wrapper type {type(obj)} will be represented as FastArray of {dfl_dtype}")
+                warnings.warn(f"Wrapper type {type(obj)} will be represented as FastArray of {dfl_dtype}", stacklevel=2)
             return dfl_dtype
 
         vals = self.values()
@@ -7247,7 +7308,7 @@ class Dataset(Struct):
         return result
 
     # -------------------------------------------------------------------
-    def apply_rows_numba(self, *args, otype=None, myfunc="myfunc"):
+    def apply_rows_numba(self, *args, otype=None, myfunc="myfunc") -> None:
         """
         Prints to screen an example numba signature for the apply function.
         You can then copy this example to build your own numba function.
@@ -7318,7 +7379,7 @@ class Dataset(Struct):
         # return exec
 
     # -------------------------------------------------------------------
-    def apply(self, funcs, *args, check_op: bool = True, **kwargs):
+    def apply(self, funcs: Callable | Sequence[Callable], *args, check_op: bool = True, **kwargs) -> Self | "Multiset":
         """
         The apply method returns a Dataset the same size
         as the current dataset. The transform function is applied
@@ -7402,7 +7463,7 @@ class Dataset(Struct):
 
     # -------------------------------------------------------------------
     @classmethod
-    def from_tagged_rows(cls, rows_iter):
+    def from_tagged_rows(cls, rows_iter) -> Self:
         """
         Create a Dataset from an iterable of 'rows', each to be a dict, Struct, or named_tuple of
         scalar values.
@@ -7461,7 +7522,7 @@ class Dataset(Struct):
         return cls(retval)
 
     @classmethod
-    def from_rows(cls, rows_iter, column_names):
+    def from_rows(cls, rows_iter, column_names: Sequence[str]) -> Self:
         """
         Create a Dataset from an iterable of 'rows', each to be an iterable of scalar values,
         all having the same length, that being the length of column_names.
@@ -7498,7 +7559,7 @@ class Dataset(Struct):
         return cls(dict(zip(column_names, cols)))
 
     @classmethod
-    def from_jagged_rows(cls, rows, column_name_base="C", fill_value=None):
+    def from_jagged_rows(cls, rows, column_name_base="C", fill_value=None) -> Self:
         """
         Returns a Dataset from rows of different lengths. All columns in Dataset will be bytes or unicode. Bytes will be used if possible.
 
@@ -7585,7 +7646,7 @@ class Dataset(Struct):
         return cls(final)
 
     @classmethod
-    def from_jagged_dict(cls, dct, fill_value=None, stacked=False):
+    def from_jagged_dict(cls, dct, fill_value=None, stacked=False) -> Self:
         """
         Creates a Dataset from a dict where each key represents a column name base and each value
         an iterable of 'rows'. Each row in the values iterable is, in turn, a scalar or an

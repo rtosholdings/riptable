@@ -2762,7 +2762,7 @@ class DateSpan(DateBase):
         >>> ds.strftime('%D')
         array(['02/01/70', '06/19/70', '04/08/71'], dtype=object)
         """
-        warnings.warn("DateSpan.strftime will be removed in the future.", DeprecationWarning)
+        warnings.warn("DateSpan.strftime will be removed in the future.", DeprecationWarning, stacklevel=2)
         return self._strftime(format, dtype=dtype)
 
     # ------------------------------------------------------------
@@ -4421,7 +4421,10 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
                     if isinstance(arr[0], dt):
                         # warn if it will take more than 1 second
                         if len(arr) > 750_000:
-                            warnings.warn(f"Python is converting {len(arr)} datetime objects. Performance may suffer.")
+                            warnings.warn(
+                                f"Python is converting {len(arr)} datetime objects. Performance may suffer.",
+                                stacklevel=2,
+                            )
                         arr = np.array([t.isoformat() for t in arr], dtype="datetime64[ns]")
 
                 # string
@@ -5349,7 +5352,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         if isinstance(other, (DateTimeNano, DateTimeNanoScalar)):
             if other._timezone._to_tz != self._timezone._to_tz:
                 warnings.warn(
-                    f"DateTimeNano objects are being displayed in different timezones. Results may not appear to be correct for {funcname}"
+                    f"DateTimeNano objects are being displayed in different timezones. Results may not appear to be correct for {funcname}",
+                    stacklevel=2,
                 )
 
         elif isinstance(other, (Date, DateScalar)):
@@ -5527,7 +5531,9 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
     # -------------------------------------------------------------
     def __isub__(self, other):
-        warnings.warn(f"Currently allowing inplace operation __isub__ on DateTimeNano. May change in the future.")
+        warnings.warn(
+            f"Currently allowing inplace operation __isub__ on DateTimeNano. May change in the future.", stacklevel=2
+        )
         return self.__sub__(other, inplace=True)
 
     # -------------------------------------------------------------

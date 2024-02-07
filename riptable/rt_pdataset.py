@@ -710,7 +710,7 @@ class PDataset(Dataset):
         append=None,
         complevel=None,
     ):
-        warnings.warn(f"To be implemented. PDataset will currently be saved / loaded as a Dataset.")
+        warnings.warn(f"To be implemented. PDataset will currently be saved / loaded as a Dataset.", stacklevel=2)
         super().save(
             path=path,
             share=share,

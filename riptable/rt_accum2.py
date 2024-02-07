@@ -3,6 +3,7 @@ __all__ = ["Accum2"]
 import warnings
 
 import numpy as np
+import riptide_cpp as rc
 
 from .rt_categorical import Categorical
 from .rt_enum import (
@@ -1024,7 +1025,7 @@ class Accum2(GroupByOps, FastArray):
                     f"Data did not have the same length has categoricals in Accum2 object, {len(test_col.view(FastArray))} vs. {len(self._cat_rows._fa)}"
                 )
         else:
-            warnings.warn(f"Accum2: No data was calculated")
+            warnings.warn("Accum2: No data was calculated", stacklevel=2)
             return
 
         accum_dict = self.grouping._calculate_all(
@@ -1179,7 +1180,14 @@ class Accum2(GroupByOps, FastArray):
         """Compute count of group"""
         kwargs["showfilter"] = kwargs.get("showfilter", self._showfilter)
         # print("count array", self.ncountgroup)
-        result = self._stack_dataset(self.ncountgroup, self.ncountkey, GB_FUNC_COUNT, **kwargs)
+
+        ncountgroup = self.ncountgroup
+        if (filter := kwargs.pop("filter", None)) is not None:
+            # re-calc with filter
+            ikey = where(filter, self.ikey, 0)
+            ncountgroup = rc.BinCount(ikey, self.grouping.unique_count + 1)
+
+        result = self._stack_dataset(ncountgroup, ncountgroup[1:], GB_FUNC_COUNT, **kwargs)
         if self._totals:
             result = result.imatrix_totals()
         return result

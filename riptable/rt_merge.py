@@ -2218,7 +2218,7 @@ def merge_indices(
         actual_errors: List[Exception] = []
         for err in key_compat_errs:
             if isinstance(err, Warning):
-                warnings.warn(err)
+                warnings.warn(err, stacklevel=2)
             else:
                 actual_errors.append(err)
 
@@ -3080,7 +3080,7 @@ def merge(
         actual_errors: List[Exception] = []
         for err in key_compat_errs:
             if isinstance(err, Warning):
-                warnings.warn(err)
+                warnings.warn(err, stacklevel=2)
             else:
                 actual_errors.append(err)
 
@@ -3872,6 +3872,7 @@ def merge_asof(
             "`check_sorted` kwarg is now deprecated and ignored. Sortedness for `on` columns is *always* checked now. "
             + "Use `action_on_unsorted` kwarg to control an action if `on` column(s) is(are) unsorted.",
             DeprecationWarning,
+            stacklevel=2,
         )
 
     remaining_kwargs = {k: v for k, v in kwargs.items() if k != "check_sorted"}
@@ -3885,7 +3886,9 @@ def merge_asof(
         # Emit warning about 'left_index' and 'right_index' deprecation. They were previously
         # only present for compatibility with the pandas merge signature and didn't actually
         # do anything in riptable since our  indexing is external (not internal) to Datasets.
-        warnings.warn("The 'left_index' and 'right_index' parameters are deprecated since Riptable 1.10.0.")
+        warnings.warn(
+            "The 'left_index' and 'right_index' parameters are deprecated since Riptable 1.10.0.", stacklevel=2
+        )
 
     #
     # TODO: Validate the 'direction' -- needs to be in {'forward', 'backward', 'nearest'};
@@ -3983,7 +3986,7 @@ def merge_asof(
         actual_errors: List[Exception] = []
         for err in key_compat_errs:
             if isinstance(err, Warning):
-                warnings.warn(err)
+                warnings.warn(err, stacklevel=2)
             else:
                 actual_errors.append(err)
 
@@ -3997,7 +4000,8 @@ def merge_asof(
             )  # N.B. this is because it's disallowed to use backslashes inside f-string curly braces
             # TEMP: Until riptable 1.5, make this a warning instead of an error for backwards-compatibility with existing code -- users need time to fix any type mismatches.
             warnings.warn(
-                f"Found one or more compatibility issues with the specified 'on' keys (these will become errors in a future major release):\n{flat_errs}"
+                f"Found one or more compatibility issues with the specified 'on' keys (these will become errors in a future major release):\n{flat_errs}",
+                stacklevel=2,
             )
             # raise ValueError(f"Found one or more compatibility errors with the specified 'on' keys:\n{flat_errs}")
 
@@ -4051,7 +4055,9 @@ class _AsOfMerge:
     ) -> "Dataset":
         # TEMP: Emit a warning if `tolerance` is specified until we actually implement it.
         if tolerance is not None:
-            warnings.warn("merge_asof: The `tolerance` parameter is not implemented yet and will have no effect.")
+            warnings.warn(
+                "merge_asof: The `tolerance` parameter is not implemented yet and will have no effect.", stacklevel=2
+            )
 
         # FastArray._ROFF()  # temporary hack to protect against data corruption
         datasetclass = type(left)

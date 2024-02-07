@@ -79,7 +79,8 @@ def load_h5(
         have no effect. You can see the usage in `hdf5.load` docstring.
         Default: None, no filtering.
     nthreads : int or None
-        The number of threads to use. Set to None if want to use the single-thread reference HDF5 library. Default: 16.
+        The number of threads to use. Set to a number to use the multi-threaded library (see Notes).
+        Set to None if want to use the single-thread reference HDF5 library. Default: 16.
     format : hdf5.Format
         The `format` parameter for `hdf5.load`. You should not need to set it. Default: hdf5.Format.NDARRAY.
     fixblocks : bool
@@ -104,6 +105,9 @@ def load_h5(
 
     axis0 appears to be all column names - not sure what to do with this
     also what is axis1? should it get added like the other columns?
+
+    The multi-threaded loader is considerably faster but may not support all features.
+    In those cases, the load is retried with the single-threaded loader.
     """
     import hdf5
 
@@ -114,16 +118,28 @@ def load_h5(
         print(f"starting h5 load {filepath}")
     # TEMP: Until hdf5.load() implements support for path-like objects, force conversion to str.
     filepath = os.fspath(filepath)
-    ws = hdf5.load(
-        filepath,
-        name=name,
-        columns=columns,
-        condition=condition,
-        format=format,
-        nthreads=nthreads,
-        to_columnar=True,
-        **kwargs,
-    )
+
+    def try_load(nth: Optional[int]):
+        return hdf5.load(
+            filepath,
+            name=name,
+            columns=columns,
+            condition=condition,
+            format=format,
+            nthreads=nth,
+            to_columnar=True,
+            **kwargs,
+        )
+
+    try:
+        ws = try_load(nthreads)
+    except Exception as ex:
+        if verbose > 0:
+            warnings.warn(
+                f"load_h5: failed initial h5 load {filepath} (\"{ex}\"); retrying with single-threaded loader",
+                stacklevel=2,
+            )
+        ws = try_load(None)
     if verbose > 0:
         print(f"finished h5 load {filepath}")
 
@@ -158,7 +174,7 @@ def load_h5(
             if len(v) == maxrow:
                 final_dict[k] = v
             else:
-                warnings.warn(f"load_h5: drop_short, dropping col {k!r} with len {len(v)} vs {maxrow}")
+                warnings.warn(f"load_h5: drop_short, dropping col {k!r} with len {len(v)} vs {maxrow}", stacklevel=2)
 
         ws = TypeRegister.Dataset(final_dict)
 
@@ -207,12 +223,12 @@ def _possibly_escape_colname(parent_name, container, name):
         name = name + "_"
         while name in container:
             name = name + "_"
-        warnings.warn(f"changed name {old} to {name} in {parent_name}")
+        warnings.warn(f"changed name {old} to {name} in {parent_name}", stacklevel=3)
     # capitalize names of existing attributes in dataset
     elif name in dir(TypeRegister.Dataset):
         old = name
         name = name.capitalize()
-        warnings.warn(f"changed name {old} to {name} in {parent_name}")
+        warnings.warn(f"changed name {old} to {name} in {parent_name}", stacklevel=3)
 
     return name
 

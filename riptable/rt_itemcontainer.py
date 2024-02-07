@@ -481,7 +481,7 @@ class ItemContainer:
             if cn in self._items:
                 new_all_items[cn] = self._items[cn]
             else:
-                warnings.warn(f"Column {cn} not found. Could not move to front.")
+                warnings.warn(f"Column {cn} not found. Could not move to front.", stacklevel=2)
         for cn in self._items:
             if cn not in new_all_items:
                 new_all_items[cn] = self[cn]
@@ -503,7 +503,7 @@ class ItemContainer:
             if cn in all_names:
                 all_names[cn] = all_names.pop(cn)
             else:
-                warnings.warn(f"Column {cn} not found. Could not move to back.")
+                warnings.warn(f"Column {cn} not found. Could not move to back.", stacklevel=2)
 
     # -------------------------------------------------------
     def item_add_prefix(self, prefix):

@@ -1651,7 +1651,7 @@ def cat2keys(
         if not isinstance(key1, Cat):
             key1 = Cat(key1, ordered=ordered, sort_gb=sort_gb)
     except Exception as e:
-        warnings.warn(f"cat2keys: Got exception {e}", RuntimeWarning)
+        warnings.warn(f"cat2keys: Got exception {e}", RuntimeWarning, stacklevel=2)
 
     if not isinstance(key1, Cat):
         raise TypeError(
@@ -1662,7 +1662,7 @@ def cat2keys(
         if not isinstance(key2, Cat):
             key2 = Cat(key2, ordered=ordered, sort_gb=sort_gb)
     except Exception as e:
-        warnings.warn(f"cat2keys: Got exception {e}", RuntimeWarning)
+        warnings.warn(f"cat2keys: Got exception {e}", RuntimeWarning, stacklevel=2)
 
     if not isinstance(key2, Cat):
         raise TypeError(
@@ -1678,7 +1678,9 @@ def cat2keys(
     # have to check for ==0 first
     if not invalid:
         if np.sum(group_row.ikey == 0) > 0 or np.sum(group_col.ikey == 0) > 0:
-            warnings.warn(f"catmatrix: Invalid found in key array, please use invalid=True to avoid this warning.")
+            warnings.warn(
+                "catmatrix: Invalid found in key array, please use invalid=True to avoid this warning.", stacklevel=2
+            )
             invalid = True
         else:
             # now we can remove the invalid and reassign
@@ -3486,7 +3488,7 @@ def max(*args, **kwargs):
                 # assuming they want length of string
                 return builtins.max([item for item in args[0]], **kwargs)
             else:
-                warnings.warn("Getting the max of two objects or string arrays is not currently allowed")
+                warnings.warn("Getting the max of two objects or string arrays is not currently allowed", stacklevel=2)
                 return None
     return builtins.max(*args, **kwargs)
 
@@ -3506,7 +3508,7 @@ def min(*args, **kwargs):
                 # assuming they want length of string
                 return builtins.min([item for item in args[0]], **kwargs)
             else:
-                warnings.warn("Getting the max of two objects or string arrays is not currently allowed")
+                warnings.warn("Getting the max of two objects or string arrays is not currently allowed", stacklevel=2)
                 return None
     return builtins.min(*args, **kwargs)
 
@@ -4754,7 +4756,7 @@ def vstack(arrlist, dtype=None, order="C"):
             else:
                 return h.reshape((numcols, numrows), order="C")
     except Exception:
-        warnings.warn(f"vstack with order={order!r} failed, calling np.vstack")
+        warnings.warn(f"vstack with order={order!r} failed, calling np.vstack", stacklevel=2)
 
     return np.vstack(arrlist)
 
@@ -5348,7 +5350,7 @@ def interp(x, xp, fp):
 
     # check for float32
     if x.dtype.num == 11 and (xp.dtype.num != 11 or fp.dtype.num != 11):
-        warnings.warn("rt.interp is downcasting to a float32 to match first array")
+        warnings.warn("rt.interp is downcasting to a float32 to match first array", stacklevel=2)
         xp = xp.astype(np.float32)
         fp = fp.astype(np.float32)
     return rc.InterpExtrap2d(x, xp, fp, 1)
