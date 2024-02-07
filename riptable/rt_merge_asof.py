@@ -1,6 +1,7 @@
 """
 Time/ordering-based merge implementations.
 """
+
 __all__ = ["merge_asof2"]
 
 from datetime import timedelta
@@ -1467,7 +1468,8 @@ def merge_asof2(
         # with the pandas merge signature. They don't actually do anything in riptable since our
         # indexing is external (not internal) to Datasets.
         warnings.warn(
-            "The 'left_index' and 'right_index' parameters are only present for pandas compatibility. They are not applicable for riptable and will have no effect."
+            "The 'left_index' and 'right_index' parameters are only present for pandas compatibility. They are not applicable for riptable and will have no effect.",
+            stacklevel=2,
         )
 
     # Validate the 'direction' argument.
@@ -1568,7 +1570,7 @@ def merge_asof2(
         actual_errors: List[Exception] = []
         for err in key_compat_errs:
             if isinstance(err, Warning):
-                warnings.warn(err)
+                warnings.warn(err, stacklevel=2)
             else:
                 actual_errors.append(err)
 

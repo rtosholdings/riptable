@@ -14,6 +14,7 @@ import riptable as rt
 from riptable import FA, Cat, arange, stack_rows
 from riptable.rt_utils import normalize_keys
 from riptable.testing.array_assert import assert_array_or_cat_equal
+from riptable.tests.utils import get_rc_version, parse_version
 
 # TODO: Implement test for merge2 that uses collections.Counter to check the gbkeys in the 'on' cols of the output Dataset
 #       have the correct multiplicity. Use np.nditer(keycol) for iterating over the key column array (to pass to the Counter constructor)?
@@ -6858,6 +6859,40 @@ def test_merge_lookup_empty_input(empty_flag: tuple[bool, bool]):
     if empty_flag[1]:
         right_ds = right_ds[:0, :]
     actual_ds = rt.merge_lookup(left_ds, right_ds, on="a")
+    assert actual_ds.keys() == expected_ds.keys()
+    for name, actual_array in actual_ds.items():
+        expected_array = expected_ds[name]
+        assert actual_array.dtype == expected_array.dtype, name
+        assert_array_equal(actual_array, expected_array, err_msg=name)
+
+
+@pytest.mark.parametrize(
+    "empty_flag",
+    [
+        pytest.param((True, False), id="left"),
+        pytest.param((False, True), id="right"),
+        pytest.param((True, True), id="both"),
+    ],
+)
+@pytest.mark.parametrize(
+    "high_card",
+    [
+        pytest.param(
+            True,
+            id="high",
+            marks=pytest.mark.skipif(
+                get_rc_version() < parse_version("1.16.4a"),
+                reason="GroupFromLexSort empty array fix needed",
+            ),
+        ),
+        pytest.param(False, id="not-high"),
+    ],
+)
+def test_merge_lookup_empty_input2(empty_flag: tuple[bool, bool], high_card: bool):
+    left_ds = rt.Dataset({"a": rt.FA([] if empty_flag[0] else [1, 2], dtype=rt.int8)})
+    right_ds = rt.Dataset({"a": rt.FA([] if empty_flag[1] else [11, 12], dtype=rt.int8)})
+    expected_ds = rt.Dataset({"a": rt.FA([] if empty_flag[0] else [1, 2], dtype=rt.int8)})
+    actual_ds = left_ds.merge_lookup(right_ds, on="a", high_card=high_card)
     assert actual_ds.keys() == expected_ds.keys()
     for name, actual_array in actual_ds.items():
         expected_array = expected_ds[name]

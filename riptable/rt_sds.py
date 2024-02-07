@@ -437,7 +437,9 @@ def sds_flatten(rootpath: AnyPath) -> None:
                 skip = True
                 break
         if skip:
-            warnings.warn(f"{dirpath} contained items that were not .sds files or directories. Could not flatten")
+            warnings.warn(
+                f"{dirpath} contained items that were not .sds files or directories. Could not flatten", stacklevel=2
+            )
             flatten_fail.append(dirpath)
             continue
 
@@ -450,7 +452,9 @@ def sds_flatten(rootpath: AnyPath) -> None:
 
             # BUG: get the final root path here, or before final save
             if sds_exists(newroot):
-                warnings.warn(f"temp file {newroot} already in root container, could not flatten {dirpath}.")
+                warnings.warn(
+                    f"temp file {newroot} already in root container, could not flatten {dirpath}.", stacklevel=2
+                )
                 skip = True
             else:
                 # add to final moving list
@@ -471,7 +475,7 @@ def sds_flatten(rootpath: AnyPath) -> None:
             old = dirpath + os.sep + fname
             new = prefix + fname
             if sds_exists(new):
-                warnings.warn("{new} was already found in base directory. Could not flatten {dirpath}.")
+                warnings.warn("{new} was already found in base directory. Could not flatten {dirpath}.", stacklevel=2)
                 skip = True
                 break
             else:
@@ -1089,7 +1093,7 @@ def _sds_dir_from_file_list(filenames: Sequence[AnyPath], share: Optional[AnyStr
                 if mustexist is True:
                     raise ValueError(f"Could not find file named {f} and mustexist is True.")
                 else:
-                    warnings.warn(f"Could not find file named {f}")
+                    warnings.warn(f"Could not find file named {f}", stacklevel=2)
 
     # names is list of [ None, None, path, None ]
     # where None is a single file
@@ -1196,7 +1200,8 @@ def _multistack_categoricals(spec_name, meta_list, indices, listcats, idx_cutoff
         invalidsum = np.sum(firstindex == invalid)
         if invalidsum > 0 or indices[0] == invalid:
             warnings.warn(
-                f"!! {invalidsum} Bad indices in categorical {spec_name}.  May have been gap filled.  Setting invalids to bin 0."
+                f"!! {invalidsum} Bad indices in categorical {spec_name}.  May have been gap filled.  Setting invalids to bin 0.",
+                stacklevel=2,
             )
             finvalidmask = indices == invalid
             indices[finvalidmask] = 0
@@ -1390,7 +1395,7 @@ def _stacked(filenames, result, folders):
     found, _ = ismember(filenames, loadedpaths)
     if sum(found) != len(found):
         badlist = [filenames[idx] for idx, f in enumerate(found) if not f]
-        warnings.warn(f"Error loading files: {badlist}")
+        warnings.warn(f"Error loading files: {badlist}", stacklevel=2)
 
     # fix special array subclasses and create a partitioned dataset
     if SDSVerbose:
@@ -2211,7 +2216,7 @@ def decompress_dataset_internal(
         if len(mask) == 0:
             # special handling of zero filters
             zerofilter = True
-            warnings.warn(f"Zero length filter for sds detected.")
+            warnings.warn(f"Zero length filter for sds detected.", stacklevel=2)
 
     savethreads = None if threads is None else rc.SetThreadWakeUp(threads)
     if sharename is None:
@@ -2480,7 +2485,7 @@ def _rebuild_rootfile(path: AnyPath, sharename=None, compress=True, bandsize=Non
             bandsize=bandsize,
         )
     except:
-        warnings.warn(f"Could not add {dsname} to {rootpath}.")
+        warnings.warn(f"Could not add {dsname} to {rootpath}.", stacklevel=2)
 
 
 # ------------------------------------------------------------------------------------
@@ -2684,7 +2689,9 @@ def _include_extra_sds_files(schema, final_sort, include_all_sds=False, include=
             include_extra = True
         else:
             # Change for Blair April 2019
-            warnings.warn(f"Found extra .sds information for items {extra_items}.  They will not be included")
+            warnings.warn(
+                f"Found extra .sds information for items {extra_items}.  They will not be included", stacklevel=2
+            )
             # prompt = f"Found extra .sds information for items {extra_items}. Would you like to include any? (y/n/a) "
             # while(True):
             #    choice = input(prompt)
@@ -2781,7 +2788,7 @@ def _build_schema_shared(
 
                 dirlist.append(filename)
             except:
-                warnings.warn(f"Could not find {filename} in sharename {sharename}.")
+                warnings.warn(f"Could not find {filename} in sharename {sharename}.", stacklevel=2)
 
     return schema, dirlist
 
@@ -3171,7 +3178,9 @@ def _load_sds(
                     if rm_item not in include:
                         warn_missing = False
                 if warn_missing:
-                    warnings.warn(f"Could not load data for item {item}, file for this item may be missing.")
+                    warnings.warn(
+                        f"Could not load data for item {item}, file for this item may be missing.", stacklevel=2
+                    )
                 missing.append(item)
         for item in missing:
             final_sort.remove(item)

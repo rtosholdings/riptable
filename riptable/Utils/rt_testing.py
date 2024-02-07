@@ -164,7 +164,8 @@ def assert_categorical_equal(
             )
         else:  # TODO implement category_mode checks for MultiKey, Dict, and IntEnum.
             warnings.warn(
-                f"{fn}: category_array checks not implemented for {repr(rt.rt_enum.CategoryMode(expected.category_mode))} "
+                f"{fn}: category_array checks not implemented for {repr(rt.rt_enum.CategoryMode(expected.category_mode))} ",
+                stacklevel=2,
             )
 
         # check underlying FastArray

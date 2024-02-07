@@ -22,6 +22,7 @@ requirements:
     - python
     - python-dateutil
     - riptide_cpp >=1.16.3,<2 # run with any (compatible) version in this range
+    - typing-extensions >=4.9.0
 
 about:
   home: https://github.com/rtosholdings/riptable

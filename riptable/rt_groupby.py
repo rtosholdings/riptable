@@ -663,7 +663,9 @@ class GroupBy(GroupByOps):
         -------
         >>> ds.groupby(['side', 'venue']).transform.sum()
         """
-        warnings.warn("Deprecation warning: Use kwarg transform=True instead of transform.")
+        warnings.warn(
+            "Deprecation warning: Use kwarg transform=True instead of transform.", DeprecationWarning, stacklevel=2
+        )
         self._transform = True
         return self
 

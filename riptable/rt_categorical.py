@@ -347,7 +347,8 @@ class Categories:
                         if not np.isreal(invalid_category):
                             self._invalid_category = INVALID_DICT[self._list.dtype.num]
                             warnings.warn(
-                                f"invalid_category was set to {invalid_category} - non-numeric/real value. Using sentinel {self._invalid_category} instead."
+                                f"invalid_category was set to {invalid_category} - non-numeric/real value. Using sentinel {self._invalid_category} instead.",
+                                stacklevel=2,
                             )
                         else:
                             self._invalid_category = invalid_category
@@ -1239,17 +1240,17 @@ class Categories:
                 if isinstance(k, bytes):
                     k = k.decode()
                 if k in str_to_int_dict:
-                    warnings.warn(f"{k} already found in dict. problems may occur.")
+                    warnings.warn(f"{k} already found in dict. problems may occur.", stacklevel=2)
                 str_to_int_dict[k] = v
                 if v in int_to_str_dict:
-                    warnings.warn(f"{k} already found in dict. problems may occur.")
+                    warnings.warn(f"{k} already found in dict. problems may occur.", stacklevel=2)
                 int_to_str_dict[v] = k
             else:
                 invalid.append(k)
 
         # warn with list of entries that weren't added
         if len(invalid) > 0:
-            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}")
+            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}", stacklevel=2)
 
         return str_to_int_dict, int_to_str_dict
 
@@ -1266,15 +1267,15 @@ class Categories:
             int_v = v.value
             if True:
                 if k in str_to_int_dict:
-                    warnings.warn(f"{k} already found in dict. problems may occur.")
+                    warnings.warn(f"{k} already found in dict. problems may occur.", stacklevel=2)
                 str_to_int_dict[k] = int_v
                 if int_v in int_to_str_dict:
-                    warnings.warn(f"{int_v} already found in dict. problems may occur.")
+                    warnings.warn(f"{int_v} already found in dict. problems may occur.", stacklevel=2)
                 int_to_str_dict[int_v] = k
             else:
                 invalid.append(k)
         if len(invalid) > 0:
-            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}")
+            warnings.warn(f"The following items had a code < 0 and were not added: {invalid}", stacklevel=2)
         return str_to_int_dict, int_to_str_dict
 
 
@@ -1739,7 +1740,7 @@ class Categorical(GroupByOps, FastArray):
                         grouping = _from_categorical.grouping.copy(deep=False)
                     else:
                         if cls.DebugMode:
-                            warnings.warn(f"This Categories object did not a have a a grouping object.")
+                            warnings.warn(f"This Categories object did not a have a a grouping object.", stacklevel=2)
                         # this path will be removed if grouping is always attached
                         # will raise an error instead
                         if _from_categorical.mode in Categories.dict_modes:
@@ -2051,7 +2052,8 @@ class Categorical(GroupByOps, FastArray):
                                 else:
                                     if invalid_category is not None:
                                         warnings.warn(
-                                            f"Invalid category was set to {invalid_category}. If not in provided categories, will also appear as filtered. For example: print(Categorical(['a','a','b'], ['b'], filter=FA([True, True, False]), invalid='a')) -> Filtered, Filtered, Filtered"
+                                            f"Invalid category was set to {invalid_category}. If not in provided categories, will also appear as filtered. For example: print(Categorical(['a','a','b'], ['b'], filter=FA([True, True, False]), invalid='a')) -> Filtered, Filtered, Filtered",
+                                            stacklevel=2,
                                         )
                             return cls(grouping, invalid=invalid_category)
 
@@ -3205,7 +3207,7 @@ class Categorical(GroupByOps, FastArray):
         }
         for k, v in warn_kwargs.items():
             if v is not None:
-                warnings.warn(f"Setting keyword {k} not supported. Using original instead.")
+                warnings.warn(f"Setting keyword {k} not supported. Using original instead.", stacklevel=2)
 
         # categories object will be copied within filtered routine
         if filter is not None:
@@ -3289,7 +3291,7 @@ class Categorical(GroupByOps, FastArray):
         else:
             newgroup = self.grouping.regroup(filter=filter, ikey=self._fa)
             if self.base_index == 0:
-                warnings.warn(f"Base index was 0, returned categorical will use 1-based indexing.")
+                warnings.warn(f"Base index was 0, returned categorical will use 1-based indexing.", stacklevel=2)
             result = Categorical(newgroup)
 
         self._copy_extra(result)
@@ -3786,7 +3788,7 @@ class Categorical(GroupByOps, FastArray):
             self._auto_add_categories = True
             self._categories_wrap._auto_add_categories = True
         else:
-            warnings.warn(f"Categorical is locked and cannot automatically add categories.")
+            warnings.warn("Categorical is locked and cannot automatically add categories.", stacklevel=2)
 
     # -------------------------------------------------------
     def auto_add_off(self):
@@ -4768,7 +4770,8 @@ class Categorical(GroupByOps, FastArray):
             if isinstance(first_item, (str, bytes)):
                 if len(other) == len(self):
                     warnings.warn(
-                        f"Comparing categorical to string array of the same array differs from regular numpy string array comparisons. Compare two categoricals to match behavior."
+                        f"Comparing categorical to string array of the same array differs from regular numpy string array comparisons. Compare two categoricals to match behavior.",
+                        stacklevel=2,
                     )
 
                 # TODO: merge this with something similar to .isin()
@@ -5031,7 +5034,7 @@ class Categorical(GroupByOps, FastArray):
         >>> c = rt.Categorical(ds.symbol)
         >>> c.transform.sum(ds.TradeSize)
         """
-        warnings.warn("Deprecation warning: Use kwarg transform=True instead of transform.")
+        warnings.warn("Deprecation warning: Use kwarg transform=True instead of transform.", stacklevel=2)
         self._transform = True
         return self
 
@@ -5760,7 +5763,7 @@ class Categorical(GroupByOps, FastArray):
             return pa.DictionaryArray.from_arrays(
                 pa_indices,
                 self.category_array,
-                ordered=self.grouping.isordered
+                ordered=self.grouping.isordered,
                 # DON'T set safe=False here. It is possible to create Categoricals in riptable
                 # in ways where we end up with category indices (in the .grouping.ikey) that don't
                 # reference a known label. That's a rare case which is supported in riptable but
@@ -6087,7 +6090,7 @@ class Categorical(GroupByOps, FastArray):
                                       3,                    1])
         """
         if len(self) > 100_000:
-            warnings.warn(f"Performance warning: re-expanding categorical of {len(self)} items.")
+            warnings.warn(f"Performance warning: re-expanding categorical of {len(self)} items.", stacklevel=2)
 
         # enums return integer instance array
         if self.isenum:
@@ -6131,7 +6134,7 @@ class Categorical(GroupByOps, FastArray):
          'key_1': FastArray([0, 1, 2, 3, 4])}
         """
         if len(self) > 100_000:
-            warnings.warn(f"Performance warning: re-expanding categorical of {len(self)} items.")
+            warnings.warn(f"Performance warning: re-expanding categorical of {len(self)} items.", stacklevel=2)
 
         if self.isenum:
             xdict = {"codes": self._fa}
@@ -6516,7 +6519,9 @@ class Categorical(GroupByOps, FastArray):
 
         else:
             if transform:
-                warnings.warn("Transform set to True when userfunc already returned np.array", UserWarning)
+                warnings.warn(
+                    "Transform set to True when userfunc already returned np.array", UserWarning, stacklevel=2
+                )
 
             res = self._array_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args)
             return TypeRegister.Dataset({column_name(args[0]): res})

@@ -194,7 +194,8 @@ def fastarray_to_pandas_series(
             old_category_mode = arr.category_mode
             arr = arr.as_singlekey()
             warnings.warn(
-                f"Series  converted from {repr(CategoryMode(old_category_mode))} to {repr(CategoryMode(arr.category_mode))}."
+                f"Series  converted from {repr(CategoryMode(old_category_mode))} to {repr(CategoryMode(arr.category_mode))}.",
+                stacklevel=2,
             )
         else:
             raise NotImplementedError(

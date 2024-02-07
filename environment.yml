@@ -3,7 +3,8 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python>=3.7
+  - python>=3.11
+  - typing-extensions>=4.9.0
   - numpy
   - scipy
   - numba
@@ -12,6 +13,6 @@ dependencies:
   - pre-commit
   - black
   - flake8
-  - pytest
+  - pytest>=7.0.0
   - coverage
   - pyarrow>=4.0.0

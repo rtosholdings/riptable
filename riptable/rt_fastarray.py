@@ -767,7 +767,7 @@ class FastArray(np.ndarray):
         if cls.WarningLevel == 0:
             return False
         if cls.WarningLevel == 1:
-            warnings.warn(warning_string)
+            warnings.warn(warning_string, stacklevel=2)
             return True
         raise TypeError(warning_string)
 
@@ -5187,7 +5187,7 @@ class FastArray(np.ndarray):
         # When numpy does not support the ufunc+inputs either, we won't reach this point (as of numpy 1.17.x),
         # since numpy will raise a UFuncTypeError earlier (before this point) rather than after we return NotImplemented.
         if results is NotImplemented:
-            warnings.warn(f"***ufunc {ufunc} {args} {kwargs} is not implemented")
+            warnings.warn(f"***ufunc {ufunc} {args} {kwargs} is not implemented", stacklevel=2)
             return NotImplemented
 
         # Ufuncs also have a fifth method that allows in place operations to be performed using fancy indexing.

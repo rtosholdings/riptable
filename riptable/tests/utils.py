@@ -130,7 +130,8 @@ def new_array_function(kls: type):
 
 
 def parse_version(version_str):
-    return version.parse(version_str)
+    # for testing, assume "always most recent" if "DEV" (local build)
+    return version.parse("99.99.dev0" if version_str == "DEV" else version_str)
 
 
 def get_rc_version():
