@@ -122,6 +122,36 @@ class AccumTable_Test(unittest.TestCase):
         accum_expected.footer_set_values("Total", {"Symb": "Total", "X": 6.0, "Z": 6.0, "Total": 12.0})
         self.assertTrue((accum == accum_expected).all(axis=None))
 
+    def test_accum_ratiop_multikey(self):
+        num_rows = 12
+        data = rt.Dataset(
+            {
+                "Symb": rt.Cat(["A", "B"] * int(num_rows / 2)),
+                "Exch": rt.Cat(["X", "Y", "Y", "X"] * int(num_rows / 4)),
+                "Count": rt.full(num_rows, 1.0),
+                "PlusMinus": [1.0, -1.0] * int(num_rows / 2),
+            }
+        )
+        data.MultiKeyCat = rt.Cat([data.Symb, data.Exch])
+        accum = rt.accum_ratiop(data.MultiKeyCat, data.Exch, data.Count)
+
+        accum_expected = rt.Dataset(
+            {
+                'Symb': rt.Cat(['A', 'B', 'A', 'B']),
+                'Exch': rt.Cat(['X', 'Y', 'Y', 'X']),
+                'X': rt.FA([25.0, 0.0, 0.0, 25.0]),
+                'Y': rt.FA([0.0, 25.0, 25.0, 0.0]),
+                'TotalRatio': rt.FA([25.0, 25.0, 25.0, 25.0]),
+                'Total': rt.FA([3.0, 3.0, 3.0, 3.0]),
+            }
+        )
+        accum_expected.footer_set_values(
+            "TotalRatio", {"Exch": "TotalRatio", "X": 50.0, "Y": 50.0, "TotalRatio": 100.0}
+        )
+        accum_expected.footer_set_values("Total", {"Exch": "Total", "X": 6.0, "Y": 6.0, "Total": 12.0})
+
+        self.assertTrue((accum == accum_expected).all(axis=None))
+
 
 if __name__ == "__main__":
     tester = unittest.main()

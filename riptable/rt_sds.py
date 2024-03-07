@@ -726,35 +726,53 @@ def save_sds(
     append: Optional[str] = None,
     complevel: Optional[int] = None,
 ) -> None:
-    r"""
-    Datasets and arrays will be saved into a single .sds file.
-    Structs will create a directory of ``.sds`` files for potential nested structures.
+    """
+    Save a :py:class:`~.rt_struct.Struct`, :py:class:`~.rt_dataset.Dataset`, or :py:class:`~.rt_fastarray.FastArray`.
+
+    A :py:class:`~.rt_struct.Struct` is saved in a directory of ``.sds`` files that holds
+    any nested structures. A :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_fastarray.FastArray`
+    is saved to a single ``.sds`` file.
 
     Parameters
     ----------
     filepath : str or bytes or os.PathLike
-        Path to directory for Struct, path to ``.sds`` file for Dataset/array (extension will be added if necessary).
-    item : FastArray or Dataset or Struct
-        Struct, dataset, array, or array subclass
-    share : shared memory name, optional
-        If the shared memory name is set, `item` will be saved to shared memory and NOT to disk. When shared memory
-        is specified, a filename must be included in path. Only this will be used, the rest of the path will be discarded.
-        For Windows make sure SE_CREATE_GLOBAL_NAME flag is set.
-    compress : bool, default True
-        Use compression when saving the file (shared memory is always saved uncompressed)
-    overwrite : bool, default False
-        If ``True``, do not prompt the user when overwriting an existing ``.sds`` file (mainly useful for ``Struct.save()``,
-        which may call ``Dataset.save()`` multiple times)
+        For a :py:class:`~.rt_struct.Struct`, the path to the directory to save the ``.sds``
+        files in. For a :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_fastarray.FastArray`,
+        the path to the ``.sds`` file (the ``.sds`` extension is added if necessary). Directories
+        that don’t exist are created.
+    item : :py:class:`~.rt_struct.Struct` or :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_fastarray.FastArray`
+        The item to save.
+    share : str, optional
+        **Not recommended.** If specified, ``item`` is saved to shared memory (NOT to disk)
+        with the name specified by the string, and information from ``filepath`` is discarded.
+        When shared memory is used, data is not compressed. Note that shared memory functions are
+        not supported on Windows.
+    compress : bool, default `True`
+        Use compression when saving the file. Note that if shared memory is used, the data
+        is always saved uncompressed.
+    overwrite : bool, default `True`
+        When `True` (the default), the user is not prompted to specify whether or not to
+        overwrite an existing ``.sds`` file. When set to `False`, a prompt is displayed.
     name : str, optional
-        Name of the sds file.
-    onefile : bool, default False
-        If True will flatten() a nested struct before saving to make it one file.
+        When saving a :py:class:`~.rt_struct.Struct`, use ``name`` to give the
+        :py:class:`~.rt_struct.Struct` a name in the file system. This is useful if you
+        save multiple Riptable objects to the same directory; you can use the ``name``
+        argument of :py:func:`~.rt_sds.load_sds` to load one :py:class:`~.rt_struct.Struct`
+        and its contents.
+    onefile : bool, default `False`
+        If set to `True`, a :py:class:`~.rt_struct.Struct` is flattened into one ``.sds``
+        file before saving. Include the file name in ``filepath`` -- for example,
+        ``filepath="mydir/StructName.sds"``.
     bandsize : int, optional
-        If set to an integer greater than 10000 it will compress column datas every `bandsize` rows.
+        If set to an integer greater than 10,000, every ``bandsize`` number of rows is
+        compressed.
     append : str, optional
-        If set to a string it will append to the file with the section name
+        **Nonfunctional**. Append a :py:class:`~.rt_dataset.Dataset` to a saved file. The
+        :py:class:`~.rt_dataset.Dataset` can be loaded using the ``sections`` parameter
+        of :py:func:`~.rt_sds.load_sds`.
     complevel : int, optional
-        Compression level from 0 to 9. 2 (default) is average. 1 is faster, less compressed, 3 is slower, more compressed.
+        Compression level from 0 to 9. The default, 2, is average. 1 is faster and less
+        compressed; 3 is slower and more compressed.
 
     Returns
     -------
@@ -764,66 +782,109 @@ def save_sds(
     Raises
     ------
     TypeError
-        If `item` type cannot be saved
+        If the ``item`` is a type that can't be saved using this function.
 
-    Notes
-    -----
-    ``save()`` can also be called from a ``Struct`` or ``Dataset`` object.
+    See Also
+    --------
+    :py:meth:`.rt_struct.Struct.save`
+    :py:meth:`.rt_dataset.Dataset.save`
+    :py:meth:`.rt_fastarray.FastArray.save`
+    :py:func:`.rt_sds.load_sds`
 
     Examples
     --------
     Setup for examples:
 
     >>> import os
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(seed=0)
 
-    Saving a Struct:
+    Create a :py:class:`~.rt_struct.Struct` that contains two nested :py:class:`~.rt_struct.Struct`
+    objects, which each contain two nested objects:
 
     >>> st = rt.Struct({
-    ...     'a': rt.Struct({
-    ...         'arr' : rt.arange(10),
-    ...         'a2'  : rt.Dataset({ 'col1': rt.arange(5) })
+    ...     "S1": rt.Struct({
+    ...         "fa": rt.arange(10),
+    ...         "ds": rt.Dataset({"col1": rt.arange(5)})
     ...     }),
-    ...     'b': rt.Struct({
-    ...         'ds1' : rt.Dataset({ 'ds1col': rt.arange(6) }),
-    ...         'ds2' : rt.Dataset({ 'ds2col' : rt.arange(7) })
+    ...     "S2": rt.Struct({
+    ...         "ds1": rt.Dataset({"ds1col": rt.arange(6)}),
+    ...         "ds2": rt.Dataset({"ds2col": rt.arange(7)})
     ...     }),
     ... })
 
+    Show its structure:
+
     >>> st.tree()
     Struct
-        ├──── a (Struct)
-        │     ├──── arr int64 (10,) 8
-        │     └──── a2 (Dataset)
-        │           └──── col1 int64 (5,) 8
-        └──── b (Struct)
-            ├──── ds1 (Dataset)
-            │     └──── ds1col int64 (6,) 8
-            └──── ds2 (Dataset)
-                    └──── ds2col int64 (7,) 8
+    ├──── S1 (Struct)
+    │     ├──── fa int64 (10,) 8
+    │     └──── ds (Dataset)
+    │           └──── col1 int64 (5,) 8
+    └──── S2 (Struct)
+        ├──── ds1 (Dataset)
+        │     └──── ds1col int64 (6,) 8
+        └──── ds2 (Dataset)
+                └──── ds2col int64 (7,) 8
 
-    >>> rt.save_sds('tempdir/ex1/nested', st)
-    >>> os.listdir('tempdir/ex1/nested')
-    ['_root.sds', 'a!a2.sds', 'a.sds', 'b!ds1.sds', 'b!ds2.sds']
+    Save the :py:class:`~.rt_struct.Struct` to a nested directory:
 
-    Saving a Dataset:
+    >>> rt.save_sds("tempdir/ex1/nested", st)
+    >>> os.listdir("tempdir/ex1/nested")  # Show the directory contents.
+    ['S1!ds.sds', 'S1.sds', 'S2!ds1.sds', 'S2!ds2.sds', '_root.sds']
 
-    >>> ds = rt.Dataset({'col_'+str(i): rt.arange(5) for i in range(5)})
-    >>> rt.save_sds('tempdir/ex2/test', ds)
-    >>> os.listdir('tempdir/ex2')
+    Save the :py:class:`~.rt_struct.Struct` with a ``name``. The ``name`` string is
+    prepended to the nested objects' ``.sds`` files, and it replaces the name of the
+    ``_root.sds`` file:
+
+    >>> rt.save_sds("tempdir/ex2/nested", st, name="mystruct")
+    >>> os.listdir("tempdir/ex2/nested")  # Show the directory contents.
+    ['mystruct!S1!ds.sds',
+     'mystruct!S1.sds',
+     'mystruct!S2!ds1.sds',
+     'mystruct!S2!ds2.sds',
+     'mystruct.sds']
+
+    The ``name`` is used for a container :py:class:`~.rt_struct.Struct` that holds the
+    :py:class:`~.rt_struct.Struct` being saved. You can load the container's contents
+    using the ``name`` parameter of :py:func:`~.rt_sds.load_sds`:
+
+    >>> rt.load_sds("tempdir/ex2/nested", name="mystruct")
+    #   Name   Type     Size   0     1     2
+    -   ----   ------   ----   ---   ---   -
+    0   S1     Struct   2      fa    ds
+    1   S2     Struct   2      ds1   ds2
+    <BLANKLINE>
+    [2 columns]
+
+    Create and save a :py:class:`~.rt_dataset.Dataset`:
+
+    >>> ds = rt.Dataset({f"col_{i}": rt.arange(5) for i in range(5)})
+    >>> rt.save_sds("tempdir/ex3/test", ds)
+    >>> os.listdir("tempdir/ex3")
     ['test.sds']
 
-    Saving an Array:
+    Note that if ``name`` is provided, ``filepath`` is treated as a path to a directory,
+    (even if ``filepath`` has no trailing slash), and ``name`` is used as the name for the
+    ``.sds`` file (the ``.sds`` extension is added if necessary):
+
+    >>> rt.save_sds("tempdir/ex4/test", ds, name="myds")
+    >>> os.listdir("tempdir/ex4/test")
+    ['myds.sds']
+
+    Create and save a :py:class:`~.rt_fastarray.FastArray`:
 
     >>> a = rt.arange(100)
-    >>> rt.save_sds('tempdir/ex3/test_arr', a)
-    >>> os.listdir('tempdir/ex3')
+    >>> rt.save_sds("tempdir/ex5/test_arr", a)
+    >>> os.listdir("tempdir/ex5")
     ['test_arr.sds']
 
-    Saving an Array Subclass:
+    Create and save a :py:class:`~.rt_categorical.Categorical`, which is a
+    :py:class:`~.rt_fastarray.FastArray` subclass:
 
-    >>> c = rt.Categorical(np.random.choice(['a','b','c'],500))
-    >>> rt.save_sds('tempdir/ex4/cat', c)
-    >>> os.listdir('tempdir/ex4')
+    >>> c = rt.Categorical(rng.choice(["a", "b", "c"], 500))
+    >>> rt.save_sds("tempdir/ex6/cat", c)
+    >>> os.listdir("tempdir/ex6")
     ['cat.sds']
     """
     # Convert path-like objects to str/bytes here.

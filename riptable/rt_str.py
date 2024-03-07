@@ -47,7 +47,7 @@ class FAStrDispatchPair(NamedTuple):
 
 def _warn_deprecated_naming(old_func, new_func):
     warnings.warn(
-        f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=2
+        f"`{old_func}` is now deprecated and has been renamed to `{new_func}`", DeprecationWarning, stacklevel=3
     )
 
 

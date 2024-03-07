@@ -18,7 +18,7 @@ class TestBitCount(unittest.TestCase):
         l = [0xFD2, 0xFD27]
         expected = rt.FastArray([8, 11], dtype="i1")
         for dtype in ["i2", "u2"]:
-            data = rt.FastArray(l, dtype=dtype)
+            data = rt.FastArray(l).astype(dtype)
             counts = rt.bitcount(data)
             assert_array_equal(counts, expected)
 

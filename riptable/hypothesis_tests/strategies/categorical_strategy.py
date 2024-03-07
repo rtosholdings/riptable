@@ -302,7 +302,7 @@ def categorical_numericarray(draw) -> Categorical:
 
 class CategoricalStrategy(st.SearchStrategy):
     """
-    A strategy for generating `Categoricals` across the `CategoryMode` \s using a
+    A strategy for generating `Categoricals` across the `CategoryMode` using a
     hypothesis `SearchStrategy` for generating the values and categories.
 
     Parameters

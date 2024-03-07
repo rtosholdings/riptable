@@ -486,3 +486,15 @@ class TestPyarrowConvertFixedSizeBinary:
         result_pa_array = result_fa_array.to_arrow(type=pa.binary(3), preserve_fixed_bytes=True)
 
         assert pa_arr == result_pa_array
+
+
+class TestPyarrowLargeString:
+    def test_from_large_string(self):
+        pa_array = pa.array(["a", "b"], type=pa.large_string())
+        fa_array = rt.FA.from_arrow(pa_array, zero_copy_only=False)
+        assert_array_or_cat_equal(fa_array, rt.FA([b"a", b"b"]))
+
+    def test_dictionary_large_string(self):
+        pa_array = pa.DictionaryArray.from_arrays([0, 1], pa.array(["a", "b"], type=pa.large_string()), ordered=True)
+        fa_array = rt.Cat.from_arrow(pa_array, zero_copy_only=False)
+        assert_array_or_cat_equal(fa_array, rt.Cat(["a", "b"]))

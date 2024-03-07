@@ -1290,10 +1290,11 @@ def accum_ratiop(
         accum["Total"] = func(val, filter=filter)
 
     accumr = accum.gen("TotalRatio", remove_blanks=remove_blanks)
-    if include_total:
-        keys = accumr.keys()[1:-1]
-    else:
-        keys = accumr.keys()[1:]
+    keys = [
+        key
+        for key in accumr.keys()
+        if key not in set(accumr.label_get_names() + accumr.summary_get_names()) - set(['TotalRatio'])
+    ]
 
     if norm_by.upper() == "T":
         total = accumr.footer_get_dict()["TotalRatio"]["TotalRatio"]

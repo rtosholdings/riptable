@@ -179,12 +179,12 @@ jobs:
         run: |
           set -ex
           ls -lF
-          mamba install -q -y --override-channels -c conda-forge -c defaults conda-build
+          mamba install -q -y --override-channels -c conda-forge -c defaults conda-index
           mamba list
       - name: Init testing package
         run: |
           set -ex
-          conda index --no-progress ./conda_pkgs_output
+          python -m conda_index ./conda_pkgs_output
           mamba create -q -y -n conda_test --override-channels -c ./conda_pkgs_output -c ${ANACONDA_USER} -c conda-forge -c defaults python=${{ matrix.python-version }} numpy=${{ matrix.numpy-version }} "riptable==${BUILD_VERSION}"
           mamba list
           python -c 'import riptable; print(riptable, riptable.__version__); print(riptable.rc, riptable.rc.__version__)'
