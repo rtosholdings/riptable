@@ -12,8 +12,8 @@ dependencies = [
     "numpy >=1.23",
     "pandas >=1.0,<3.0",
     "python-dateutil",
-    "riptide_cpp >=1.16.3,<2",
-    "typing-extensions >=4.9.0"
+    "riptide_cpp >=1.17.0,<2",
+    "typing-extensions >=4.9.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -38,7 +38,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 version_scheme = "post-release"
-local_scheme = "node-and-timestamp"
 write_to = "riptable/_version.py"
 write_to_template = "__version__ = '{version}'"
 
@@ -83,6 +82,7 @@ profile = "black"
 
 [tool.pytest.ini_options]
 xfail_strict = true
+filterwarnings = ["error::DeprecationWarning", "error:FutureWarning"]
 
 [tool.pydocstyle]
 convention = "numpy"
@@ -154,10 +154,10 @@ ignore = [
     # Temporarily-disabled rules.
     # Fix these issues and un-ignore these rules as soon as feasible.
     #####
-    "D101",   # missing docstring in public class
-    "D102",   # missing docstring in public method
-    "D202",   # No blank lines allowed after function docstring
-    "D205",   # 1 blank line required between summary line and description
+    "D101", # missing docstring in public class
+    "D102", # missing docstring in public method
+    "D202", # No blank lines allowed after function docstring
+    "D205", # 1 blank line required between summary line and description
 
     #####
     # Rules we really want to disable (now and maybe forever).
@@ -169,7 +169,7 @@ ignore = [
     "E712", # Comparison to `False` should be `cond is False`
     # Q000 uses `flake8-quotes.inline-quotes` and seems to prefer double quote. But in our black
     # configuration above we preserve single quotes (skip-string-normalization = true).
-    "Q000",   # Single quotes found but double quotes preferred
+    "Q000", # Single quotes found but double quotes preferred
 ]
 
 # Group output by file. This format is typically most useful for development;

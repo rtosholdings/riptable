@@ -1,4 +1,5 @@
 import datetime
+import io
 import os
 import tempfile
 import unittest
@@ -16,6 +17,7 @@ from riptable.rt_datetime import (
     NANOS_PER_YEAR,
 )
 from riptable.rt_sds import SDSMakeDirsOn
+from riptable.tests.utils import redirectStdoutCtx
 
 # change to true since we write into /tests directory
 SDSMakeDirsOn()
@@ -2060,6 +2062,27 @@ class DateTime_Test(unittest.TestCase):
         result = dtn.hour
         self.assertTrue(bool(np.all(correct == result)))
 
+    def test_info(self):
+        expected = [
+            ('America/New_York', '+05:00'),
+            ('Europe/Dublin', '+00:00'),
+            ('UTC', '+00:00'),
+            ('GMT', '+00:00'),
+            ('Australia/Sydney', '-10:00'),
+            ('Asia/Tokyo', '-09:00'),
+            ('Asia/Seoul', '-09:00'),
+            ('Asia/Kolkata', '-05:30'),
+        ]
+        for exp_tz_name, exp_offset in expected:
+            dtn = DateTimeNano(['2024/02/29 05:20:00'], from_tz='GMT', to_tz=exp_tz_name)
+            out = io.StringIO()
+            with redirectStdoutCtx(out):
+                dtn.info()
+            out_map = dict(map(str.strip, line.split(":", 1)) for line in out.getvalue().split("\n") if ':' in line)
+            assert out_map['Origin'] == 'GMT'
+            assert out_map['Offset'] == exp_offset
+            assert out_map['Displaying in timezone'] == exp_tz_name
+
     def test_invalid_constructor_str(self):
         dtn = DateTimeNano(["2018-02-01 12:34", "inv"], from_tz="NYC", format="%Y-%m-%d %H:%M")
         self.assertEqual(dtn[1], DateTimeNano.NAN_TIME)
@@ -2956,11 +2979,11 @@ class DateTime_Test(unittest.TestCase):
         # make sure a string was returned
         self.assertTrue(isinstance(ret, str))
         ret = Date("2038-01-19")[0].strftime("%Y%m%d")
-        self.assertEquals("20380119", ret)
+        self.assertEqual("20380119", ret)
         ret = Date("2038-01-20")[0].strftime("%Y%m%d")
-        self.assertEquals("20380120", ret)
+        self.assertEqual("20380120", ret)
         ret = Date("2099-12-31")[0].strftime("%Y%m%d")
-        self.assertEquals("20991231", ret)
+        self.assertEqual("20991231", ret)
 
     def test_datescalars_strftime(self):
         ret = Date("2038-01-19").strftime("%Y%m%d")

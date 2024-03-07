@@ -1,4 +1,5 @@
 import unittest
+import pytest
 
 from riptable import *
 from riptable.rt_datetime import NANOS_PER_DAY, YDAY_SPLITS, YDAY_SPLITS_LEAP
@@ -497,6 +498,27 @@ class Date_Test(unittest.TestCase):
         d = Date(["20200507", "20200508", "20991231"])
         d2 = Date(["20200501", "20200501", "20991201"])
         self.assertTrue((d.start_of_month == d2).all())
+
+
+@pytest.mark.parametrize(
+    "input, expected_year, expected_month, expected_day",
+    [
+        ("20380119", 2038, 1, 19),
+        ("20380120", 2038, 1, 20),
+        ("20991231", 2099, 12, 31),
+    ],
+)
+def test_display_big_date(input: str, expected_year: int, expected_month: int, expected_day: int):
+    d = Date([input])
+    assert d.year == expected_year
+    assert d.month == expected_month
+    assert d.day_of_month == expected_day
+    s = str(d)
+    expected_str = f"'{expected_year:04d}-{expected_month:02d}-{expected_day:02d}'"
+    assert s == expected_str
+    s = repr(d)
+    expected_str = f"Date(['{expected_year:04d}-{expected_month:02d}-{expected_day:02d}'])"
+    assert s == expected_str
 
 
 if __name__ == "__main__":

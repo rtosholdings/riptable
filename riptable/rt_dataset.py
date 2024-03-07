@@ -1382,13 +1382,13 @@ class Dataset(Struct):
         index: (
             list[str]
             | list[bytes]
-            | npt.ArrayLike[str]
-            | npt.ArrayLike[bytes]
+            | npt.NDArray[np.str_]
+            | npt.NDArray[np.bytes_]
             | slice
             | int
             | np.integer
-            | npt.ArrayLike[np.integer]
-            | npt.ArrayLike[bool]
+            | npt.NDArray[np.int_]
+            | npt.NDArray[np.bool_]
         ),
     ) -> Self:
         ...
@@ -1397,7 +1397,7 @@ class Dataset(Struct):
     def __getitem__(
         self,
         index: tuple[
-            npt.ArrayLike[bool] | npt.ArrayLike[np.integer] | int | np.integer | slice, str | bytes | int | np.integer
+            npt.NDArray[np.bool_] | npt.NDArray[np.int_] | int | np.integer | slice, str | bytes | int | np.integer
         ],
     ) -> FastArray:
         ...
@@ -1406,16 +1406,16 @@ class Dataset(Struct):
     def __getitem__(
         self,
         index: tuple[
-            npt.ArrayLike[bool] | npt.ArrayLike[np.integer] | int | np.integer | slice,
+            npt.NDArray[np.bool_] | npt.NDArray[np.int_] | int | np.integer | slice,
             list[str]
             | list[bytes]
-            | npt.ArrayLike[str]
-            | npt.ArrayLike[bytes]
+            | npt.NDArray[np.str_]
+            | npt.NDArray[np.bytes_]
+            | npt.NDArray[np.int_]
+            | npt.NDArray[np.bool_]
             | slice
             | int
-            | np.integer
-            | npt.ArrayLike[np.integer]
-            | npt.ArrayLike[bool],
+            | np.integer,
         ],
     ) -> Self:
         ...
@@ -1526,7 +1526,7 @@ class Dataset(Struct):
         return rows
 
     # ------------------------------------------------------------
-    def putmask(self, mask: npt.NDArray[bool], values: Dataset | npt.NDArray) -> None:
+    def putmask(self, mask: npt.NDArray[np.bool_], values: Dataset | npt.NDArray) -> None:
         """
         Call riptable ``putmask`` routine which is faster than ``__setitem__`` with bracket indexing.
 
@@ -1998,7 +1998,7 @@ class Dataset(Struct):
     # -------------------------------------------------------
     # 2d arithmetic functions.
     def imatrix_y(
-        self, func: Union[callable, str, List[Union[callable, str]]], name: Optional[Union[str, List[str]]] = None
+        self, func: Union[Callable, str, List[Union[Callable, str]]], name: Optional[Union[str, List[str]]] = None
     ) -> "Dataset":
         """
         Parameters
@@ -2046,7 +2046,7 @@ class Dataset(Struct):
     # 2d arithmetic functions.
     def _imatrix_y_internal(
         self, func, name: Optional[str] = None, showfilter: bool = True
-    ) -> Optional[Tuple[Any, str, callable]]:
+    ) -> Optional[Tuple[Any, str, Callable]]:
         """
         Parameters
         ----------
@@ -2093,7 +2093,7 @@ class Dataset(Struct):
     # -------------------------------------------------------
     # 2d arithmetic functions.
     def imatrix_xy(
-        self, func: Union[callable, str], name: Optional[str] = None, showfilter: bool = True
+        self, func: Union[Callable, str], name: Optional[str] = None, showfilter: bool = True
     ) -> Tuple[Optional["Dataset"], Optional["Dataset"], Optional[str]]:
         """
         Parameters

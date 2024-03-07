@@ -216,27 +216,29 @@ class Struct:
         """
         Check whether a string is a valid column name.
 
-        Python keywords and `Struct` or `.Dataset` class method names are not
-        valid column names.
+        Python keywords and :py:class:`~.rt_struct.Struct` or
+        :py:class:`~.rt_dataset.Dataset` class method names are not valid column names.
 
-        To see a list of invalid column names, use `get_restricted_names`.
+        To see a list of invalid column names, use
+        :py:meth:`~.rt_struct.Struct.get_restricted_names`.
 
         Parameters
         ----------
-        name: str
+        name : str
             The string to be checked.
 
         Returns
         -------
         bool
-            True if `name` is valid, otherwise False.
+            `True` if ``name`` is valid, otherwise `False`.
 
         See Also
         --------
-        get_restricted_names : Get a list of invalid column names.
+        :py:meth:`.rt_struct.Struct.get_restricted_names` : Get a list of invalid column names.
 
         Examples
         --------
+        >>> ds = rt.Dataset()
         >>> ds.is_valid_colname('yield')  # Python keyword
         False
         >>> ds.is_valid_colname('sample')  # Dataset method
@@ -271,8 +273,8 @@ class Struct:
         """
         Return a list of invalid column names.
 
-        Invalid column names are Python keywords and `Struct` or `.Dataset`
-        class method names.
+        Invalid column names are Python keywords and :py:class:`~.rt_struct.Struct` or
+        :py:class:`~.rt_dataset.Dataset` class method names.
 
         This method generates the result only once. Afterward, it is stored as
         a class variable.
@@ -284,20 +286,15 @@ class Struct:
 
         See Also
         --------
-        is_valid_colname : Check whether a string is a valid column name.
+        :py:meth:`.rt_struct.Struct.is_valid_colname` :
+            Check whether a string is a valid column name.
 
         Examples
         --------
+        >>> ds = rt.Dataset()
         >>> # Limit and format the output.
-        >>> print("Some of the restricted names include: ")
-        >>> print(", ".join(list(ds.get_restricted_names())[::10]))
-        Some of the restricted names include: mask_or_isinf, __reduce_ex__,
-        imatrix_xy, __weakref__, dtypes, _get_columns, from_arrow, elif,
-        __imul__, _deleteitem, __rsub__, _index_from_row_labels, as_matrix,
-        putmask, _as_meta_data, shape, cat, __invert__, try, _init_columns_as_dict,
-        label_as_dict, col_str_replace, _replaceitem, label_set_names, __contains__,
-        __floordiv__, _row_numbers, filter, __init__, sorts_on, flatten_undo,
-        col_str_match, __dict__, size, __rand__, info, col_remove, as, or
+        >>> print(", ".join(list(ds.get_restricted_names())[:10]))  # doctest: +SKIP
+        tolist, size, __ipow__, _unlock, sort_view, break, __radd__, continue, __add__, __repr__
         """
         try:
             rnames = self.__class__._restricted_names[self.__class__.__name__]
@@ -2455,9 +2452,9 @@ class Struct:
 
         See Also
         --------
-        riptable.reshape
+        :py:func:`.rt_numpy.reshape` :
             Return an array containing the same data with a new shape.
-        FastArray.reshape
+        :py:meth:`.rt_fastarray.FastArray.reshape` :
             Return an array containing the same data with a new shape.
 
         Examples
@@ -2469,6 +2466,8 @@ class Struct:
         0     0     0
         1     1     1
         2     2     0
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         >>> ds.shape
         (3, 2)
         """
@@ -2479,7 +2478,7 @@ class Struct:
     # -------------------------------------------------------
     def get_nrows(self):
         """
-        Retunrs 0, as a Struct has no rows.
+        Returns 0, as a Struct has no rows.
 
         Returns
         -------
@@ -2819,8 +2818,8 @@ class Struct:
         """
         Return the columns specified by indices or matches on column names.
 
-        Note that this method doesn't filter a `.Dataset` or `Struct` on
-        its contents, only on the column index or name.
+        Note that this method doesn't filter a :py:class:`~.rt_dataset.Dataset` or
+        :py:class:`~.rt_struct.Struct` on its contents, only on the column index or name.
 
         At least one of ``items``, ``like``, or ``regex`` must be specified.
 
@@ -2836,19 +2835,14 @@ class Struct:
         on_missing : {"raise", "warn", "ignore"}, default "raise"
             Governs how to handle a column in ``items`` that doesn't exist:
 
-              - "raise" (default): Raises an IndexError. Nothing is returned.
+              - "raise" (default): Raises an :py:exc:`IndexError`. Nothing is returned.
               - "warn": Issues a warning. Any columns in ``items`` that do exist are returned.
               - "ignore": No error or warning. Any columns in ``items`` that do exist are returned.
 
         Returns
         -------
-        `.Dataset` or `Struct`
+        :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`
             Same type as the input object.
-
-        See Also
-        --------
-        Struct.__getitem__
-        .Dataset.__getitem__
 
         Examples
         --------
@@ -2861,6 +2855,8 @@ class Struct:
         0     0     0       0
         1     1     1       1
         2     2     0       2
+        <BLANKLINE>
+        [3 rows x 3 columns] total bytes: 72.0 B
 
         >>> ds.col_filter(items=["one", "three"])
         #   one   three
@@ -2868,6 +2864,8 @@ class Struct:
         0     0       0
         1     1       1
         2     2       2
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
 
         Select columns by index:
 
@@ -2877,6 +2875,8 @@ class Struct:
         0     0     0
         1     1     1
         2     2     0
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
 
         Select columns by substring:
 
@@ -2886,6 +2886,8 @@ class Struct:
         0       0
         1       1
         2       2
+        <BLANKLINE>
+        [3 rows x 1 columns] total bytes: 24.0 B
 
         Select columns by regular expression:
 
@@ -2895,8 +2897,11 @@ class Struct:
         0     0       0
         1     1       1
         2     2       2
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
 
-        Select `.Dataset` and `.FastArray` objects from a `Struct`:
+        Select :py:class:`~.rt_dataset.Dataset` and :py:class:`~.rt_fastarray.FastArray`
+        objects from a :py:class:`~.rt_struct.Struct`:
 
         >>> ds2 = rt.Dataset({"four": rt.arange(3), "five": rt.arange(3) % 2})
         >>> fa = rt.FastArray([1, 2, 3])
@@ -2908,10 +2913,14 @@ class Struct:
         #   Name   Type      Size              0   1   2
         -   ----   -------   ---------------   -   -   -
         0   ds     Dataset   3 rows x 3 cols
+        <BLANKLINE>
+        [1 columns]
         >>> s.col_filter("fa")
         #   Name   Type    Size   0   1   2
         -   ----   -----   ----   -   -   -
-        0   fa     int32   3      1   2   3
+        0     fa   int64      3   1   2   3
+        <BLANKLINE>
+        [1 columns]
         """
         newlist = self._aggregate_column_matches(
             items=items,
@@ -3414,14 +3423,16 @@ class Struct:
         Rename a single column.
 
         The new name must be a valid column name; that is, it must not be a
-        Python keyword or a `Struct` or `.Dataset` class method name.
+        Python keyword or a :py:class:`~.rt_struct.Struct` or
+        :py:class:`~.rt_dataset.Dataset` class method name.
 
-        To check whether a name is valid, use `is_valid_colname`. To see a list
-        of invalid column names, use `get_restricted_names`.
+        To check whether a name is valid, use
+        :py:meth:`~.rt_struct.Struct.is_valid_colname`. To see a list
+        of invalid column names, use :py:meth:`~.rt_struct.Struct.get_restricted_names`.
 
         Note that column names that don't meet Python's rules for well-formed
         variable names can't be accessed using attribute access. For example,
-        a column named 'my-column' can't be accessed with ``ds.my-column``, but
+        a column named ``my-column`` can't be accessed with ``ds.my-column``, but
         can be accessed with ``ds['my-column']``.
 
         Parameters
@@ -3433,29 +3444,37 @@ class Struct:
 
         Returns
         -------
-        None
+        `None`
+            Returns nothing.
 
         See Also
         --------
-        is_valid_colname : Check whether a string is a valid column name.
-        get_restricted_names : Get a list of invalid column names.
+        :py:meth:`.rt_struct.Struct.is_valid_colname` :
+            Check whether a string is a valid column name.
+        :py:meth:`.rt_struct.Struct.get_restricted_names` :
+            Get a list of invalid column names.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': [1, 2, 3]), 'b': [4.0, 5.0, 6.0]})
+        >>> ds = rt.Dataset({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
         >>> ds
         #   a      b
         -   -   ----
         0   1   4.00
         1   2   5.00
         2   3   6.00
-        >>> ds.col_rename('a', 'new_a')
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
+
+        >>> ds.col_rename("a", "new_a")
         >>> ds
         #   new_a      b
         -   -----   ----
         0       1   4.00
         1       2   5.00
         2       3   6.00
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 48.0 B
         """
         if old == new:
             return
@@ -3525,7 +3544,8 @@ class Struct:
 
         Returns
         -------
-        None
+        `None`
+            Returns nothing.
 
         Examples
         --------

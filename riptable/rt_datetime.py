@@ -1338,13 +1338,14 @@ class Date(DateBase, TimeStampBase):
     # Date
     def strftime(self, format, dtype="O"):
         """
-        Convert each `Date` element to a formatted string representation.
+        Convert each :py:class:`~.rt_datetime.Date` element to a formatted string
+        representation.
 
         Parameters
         ----------
         format : str
             One or more format codes supported by the
-            :py:meth:`datetime.date.strftime` function of the standard
+            :py:meth:`~datetime.date.strftime` method of the standard
             Python distribution. For codes, see
             :ref:`python:strftime-strptime-behavior`.
         dtype : {"O", "S", "U"}, default "O"
@@ -1356,18 +1357,22 @@ class Date(DateBase, TimeStampBase):
 
         Returns
         -------
-        `ndarray`
-            An `ndarray` of strings.
+        :py:class:`~numpy.ndarray`
+            An :py:class:`~numpy.ndarray` of strings.
 
         See Also
         --------
-        DateScalar.strftime, DateTimeNano.strftime, DateTimeNanoScalar.strftime,
-        TimeSpan.strftime, TimeSpanScalar.strftime
+        :py:meth:`.rt_datetime.DateScalar.strftime`
+        :py:meth:`.rt_datetime.DateTimeNano.strftime`
+        :py:meth:`.rt_datetime.DateTimeNanoScalar.strftime`
+        :py:meth:`.rt_datetime.TimeSpan.strftime`
+        :py:meth:`.rt_datetime.TimeSpanScalar.strftime`
 
         Notes
         -----
-        This routine has not been sped up yet. It's also not NaN-aware: NaNs
-        are converted to the timestamp of the epoch (01-01-1970), then formatted.
+        This routine has not been sped up yet. It's also not aware of ``NaN`` values:
+        ``NaN`` values are converted to the timestamp of the epoch (``01-01-1970``),
+        then formatted.
 
         Examples
         --------
@@ -1447,7 +1452,7 @@ class Date(DateBase, TimeStampBase):
         format_str = Date._parse_item_format(itemformat)
         localzone = tz.gettz("GMT")
         try:
-            timestr = dt.fromtimestamp((date_num * SECONDS_PER_DAY), timezone.utc)
+            timestr = dt.fromtimestamp((int(date_num) * SECONDS_PER_DAY), timezone.utc)
             timestr = timestr.astimezone(localzone)
             timestr = timestr.strftime(format_str)
         except:
@@ -1469,122 +1474,163 @@ class Date(DateBase, TimeStampBase):
     # ------------------------------------------------------------
     def isnan(self):
         """
-        Return a boolean array that's True for each `Date` element that's
-        a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `True` for each invalid date, `False` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
-        considered to be NaN.
+        ``0`` and ``NaN`` values are treated as invalid dates.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each NaN element, False
-            otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            invalid date, `False` otherwise.
 
         See Also
         --------
-        Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that
-            contains at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.Date.isnotnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains at least one ``NaN``.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains only ``NaN`` values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable currently treats ``0`` as an invalid date for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in
+        :py:class:`~.rt_datetime.DateTimeBase`.
 
         Examples
         --------
-        >>> d = rt.Date.range('20190201', days = 3, step = 2)
-        >>> d[0] = 0
-        >>> d[1] = d.inv
-        >>> d
-        Date(['Inv', 'Inv', '2019-02-05'])
+        Create a :py:class:`~.rt_datetime.Date` array with two valid dates and one
+        invalid date before the UNIX epoch:
+
+        >>> d = rt.Date(["2024-01-01", "2010-09-24", "1962-03-17"])
         >>> d.isnan()
-        FastArray([ True,  True, False])
+        FastArray([False, False,  True])
+
+        Create a :py:class:`~.rt_datetime.Date` array with ``0`` and the sentinel value
+        for :py:class:`~.rt_numpy.int32` (-MAXINT):
+
+        >>> nan_date = rt.Date([0, -2147483648])
+        >>> nan_date.isnan()
+        FastArray([ True,  True])
         """
         return self._fa.isnanorzero()
 
     # ------------------------------------------------------------
     def isnotnan(self):
         """
-        Return a boolean array that's True for each `Date` element that's
-        not a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `False` for each invalid date, `True` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
-        considered to be NaN.
+        ``0`` and ``NaN`` values are treated as invalid dates.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each non-NaN element,
-            False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `False` for each
+            invalid date, `True` otherwise.
 
         See Also
         --------
-        Date.isnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that
-            contains at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.Date.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains at least one ``NaN``.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains only ``NaN`` values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable currently treats ``0`` as an invalid date for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in
+        :py:class:`~.rt_datetime.DateTimeBase`.
 
         Examples
         --------
-        >>> d = rt.Date.range('20190201', days = 3, step = 2)
-        >>> d[0] = 0
-        >>> d[1] = d.inv
-        >>> d
-        Date(['Inv', 'Inv', '2019-02-05'])
+        Create a :py:class:`~.rt_datetime.Date` array with two valid dates and one
+        invalid date before the UNIX epoch:
+
+        >>> d = rt.Date(["2024-01-01", "2010-09-24", "1962-03-17"])
         >>> d.isnotnan()
-        FastArray([False, False,  True])
+        FastArray([ True,  True, False])
+
+        Create a :py:class:`~.rt_datetime.Date` array with ``0`` and the sentinel value
+        for :py:class:`~.rt_numpy.int32` (-MAXINT):
+
+        >>> nan_date = rt.Date([0, -2147483648])
+        >>> nan_date.isnotnan()
+        FastArray([False, False])
         """
         return ~self.isnan()
 
     # ------------------------------------------------------------
     def isfinite(self):
         """
-        Return a boolean array that's True for each `Date` element that's
-        not a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_datetime.Date`
+        element that's not a NaN (Not a Number), `False` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
-        considered to be NaN.
+        Both the :py:class:`~.rt_datetime.Date` ``NaN`` (``0``) and Riptable's
+        :py:class:`~.rt_numpy.int32` sentinel value are considered to be ``NaN``.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each non-NaN element,
-            False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            element that isn't ``NaN``, `False` otherwise.
 
         See Also
         --------
-        Date.isnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that
-            contains at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.Date.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains at least one ``NaN``.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains only ``NaN`` values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable currently uses ``0`` to represent ``NaN`` values for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in the
+        :py:class:`~.rt_datetime.DateTimeBase` class.
 
         Examples
         --------
@@ -1601,34 +1647,45 @@ class Date(DateBase, TimeStampBase):
     # ------------------------------------------------------------
     def isnotfinite(self):
         """
-        Return a boolean array that's True for each `Date` element that's
-        a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_datetime.Date`
+        element that's a ``NaN`` (Not a Number), `False` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int32 sentinel value are
-        considered to be NaN.
+        Both the :py:class:`~.rt_datetime.Date` ``NaN`` (``0``) and Riptable's
+        :py:class:`~.rt_numpy.int32` sentinel value are considered to be ``NaN``.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each NaN element, False
-            otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            ``NaN`` element, `False` otherwise.
 
         See Also
         --------
-        Date.isnotnan, DateTimeNano.isnan, DateTimeNano.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that
-            contains at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.Date.isnotnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each
+            :py:class:`~.rt_dataset.Dataset` row that contains at least one ``NaN``.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains only ``NaN`` values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable currently uses ``0`` to represent ``NaN`` values for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in the
+        :py:class:`~.rt_datetime.DateTimeBase` class.
 
         Examples
         --------
@@ -1669,36 +1726,37 @@ class Date(DateBase, TimeStampBase):
     @property
     def year(self):
         """
-        The year of each `Date` element.
+        The year of each :py:class:`~.rt_datetime.Date` element.
 
         Years are currently limited to 1970-2099. To expand the range, add
-        to the UTC_1970_DAY_SPLITS table.
-
-        NaN or invalid `Date` values return Riptable's int32 sentinel value
-        (-MAXINT).
+        to the ``UTC_1970_DAY_SPLITS`` table.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of integers representing the year of each `Date` element.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of integers representing the year of
+            each :py:class:`~.rt_datetime.Date` element.
 
         See Also
         --------
-        Date.month, Date.monthyear, Date.day_of_year, Date.day_of_month,
-        Date.day_of_week
+        :py:meth:`.rt_datetime.Date.month`
+        :py:meth:`.rt_datetime.Date.monthyear`
+        :py:meth:`.rt_datetime.Date.day_of_year`
+        :py:meth:`.rt_datetime.Date.day_of_month`
+        :py:meth:`.rt_datetime.Date.day_of_week`
 
         Examples
         --------
         >>> d = rt.Date(['2016-02-01', '2017-02-01', '2018-02-01'])
         >>> d.year
-        FastArray([2016, 2017, 2018])
+        FastArray([2016, 2017, 2018], dtype=int32)
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
         >>> d.year
-        FastArray([-2147483648, -2147483648,        2018])
+        FastArray([-2147483648, -2147483648,        2018], dtype=int32)
         """
         year = self._year(self._fa, fix_dst=False)
         return _apply_inv_mask(self, year)
@@ -1707,36 +1765,36 @@ class Date(DateBase, TimeStampBase):
     @property
     def month(self, arr=None):
         """
-        The month of each `Date` element.
+        The month of each :py:class:`~.rt_datetime.Date` element.
 
         Months are represented as integers: 1 = Jan, 2 = Feb, etc.
 
-        NaN or invalid `Date` values return Riptable's int32 sentinel value
-        (-MAXINT).
-
         Returns
         -------
-        `FastArray`
-            A `FastArray` of integers representing the month of each `Date`
-            element.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of integers representing the month of
+            each :py:class:`~.rt_datetime.Date` element.
 
         See Also
         --------
-        Date.monthyear, Date.year, Date.day_of_year, Date.day_of_month,
-        Date.day_of_week
+        :py:meth:`.rt_datetime.Date.monthyear`
+        :py:meth:`.rt_datetime.Date.year`
+        :py:meth:`.rt_datetime.Date.day_of_year`
+        :py:meth:`.rt_datetime.Date.day_of_month`
+        :py:meth:`.rt_datetime.Date.day_of_week`
 
         Examples
         --------
         >>> d = rt.Date(['2016-02-01', '2017-03-01', '2018-04-01'])
         >>> d.month
-        FastArray([2, 3, 4])
+        FastArray([2, 3, 4], dtype=int32)
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
         >>> d.month
-        FastArray([-2147483648, -2147483648,           4])
+        FastArray([-2147483648, -2147483648,           4], dtype=int32)
         """
         return _apply_inv_mask(self, self._month())
 
@@ -1744,24 +1802,24 @@ class Date(DateBase, TimeStampBase):
     @property
     def monthyear(self, arr=None):
         """
-        The month and year of each `Date` element.
+        The month and year of each :py:class:`~.rt_datetime.Date` element.
 
-        Each month-year value is a byte string with a three-letter month
+        Each month-year value is a string with a three-letter month
         abbreviation concatenated with a four-digit year.
-
-        NaN or invalid `Date` values return Riptable's int32 sentinel value
-        (-MAXINT) as a byte string.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of byte strings containing the month and year of
-            each `Date` element.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of strings containing the month
+            and year of each :py:class:`~.rt_datetime.Date` element.
 
         See Also
         --------
-        Date.year, Date.month, Date.day_of_year, Date.day_of_month,
-        Date.day_of_week
+        :py:meth:`.rt_datetime.Date.year`
+        :py:meth:`.rt_datetime.Date.month`
+        :py:meth:`.rt_datetime.Date.day_of_year`
+        :py:meth:`.rt_datetime.Date.day_of_month`
+        :py:meth:`.rt_datetime.Date.day_of_week`
 
         Examples
         --------
@@ -1769,7 +1827,7 @@ class Date(DateBase, TimeStampBase):
         >>> d.monthyear
         FastArray([b'Feb2000', b'Dec2018', b'Mar2019'], dtype='|S14')
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
@@ -1784,20 +1842,22 @@ class Date(DateBase, TimeStampBase):
     @property
     def is_leapyear(self):
         """
-        Return a boolean array that's True for each `Date` element that's
-        in a leap year, False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_datetime.Date`
+        element that's in a leap year, `False` otherwise.
 
-        NaN or invalid `Date` values return False.
+        ``NaN`` or invalid :py:class:`~.rt_datetime.Date` values return `False`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each `Date` element
-            that's in a leap year, False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            :py:class:`~.rt_datetime.Date` element that's in a leap year, `False`
+            otherwise.
 
         See Also
         --------
-        Date.is_weekend, Date.is_weekday
+        :py:meth:`.rt_datetime.Date.is_weekend`
+        :py:meth:`.rt_datetime.Date.is_weekday`
 
         Examples
         --------
@@ -1805,7 +1865,7 @@ class Date(DateBase, TimeStampBase):
         >>> d.is_leapyear
         FastArray([ True,  True,  True, False])
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
@@ -1821,36 +1881,37 @@ class Date(DateBase, TimeStampBase):
     @property
     def day_of_year(self):
         """
-        The day of the year of each `Date` element.
+        The day of the year of each :py:class:`~.rt_datetime.Date` element.
 
-        Days are represented as integers: 1 = Jan 1, 32 = Feb 1, etc.
-
-        NaN or invalid `Date` values return Riptable's int32 sentinel value
-        (-MAXINT).
+        Days are represented as integers: ``1`` = Jan 1, ``32`` = Feb 1, etc.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of integers representing the day of the year of
-            each `Date` element.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of integers representing the day of
+            the year of each :py:class:`~.rt_datetime.Date` element.
 
         See Also
         --------
-        Date.day_of_month, Date.day_of_week, Date.year, Date.month,
-        Date.monthyear
+        :py:meth:`.rt_datetime.Date.day_of_month`
+        :py:meth:`.rt_datetime.Date.day_of_week`
+        :py:meth:`.rt_datetime.Date.year`
+        :py:meth:`.rt_datetime.Date.month`
+        :py:meth:`.rt_datetime.Date.monthyear`
 
         Examples
         --------
         >>> d = rt.Date(['2019-01-01', '2020-02-29', '2021-12-31'])
         >>> d.day_of_year
-        FastArray([  1,  60, 365])
+        FastArray([  1,  60, 365], dtype=int64)
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
         >>> d.day_of_year
-        FastArray([-2147483648, -2147483648,         365])
+        FastArray([-9223372036854775808, -9223372036854775808,
+                                    365], dtype=int64)
         """
         year = self._year(self._fa, fix_dst=False)
         arr = self._fa - self._year_splits[year - 1970]
@@ -1861,36 +1922,37 @@ class Date(DateBase, TimeStampBase):
     @property
     def day_of_month(self):
         """
-        The day of the month of each `Date` element.
+        The day of the month of each :py:class:`~.rt_datetime.Date` element.
 
-        Days are represented as integers: 1 = Jan 1, 31 = Jan 31, etc.
-
-        NaN or invalid `Date` values return Riptable's int32 sentinel value
-        (-MAXINT).
+        Days are represented as integers: ``1`` = Jan 1, ``31`` = Jan 31, etc.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of integers representing the day of the month of
-            each `Date` element.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of integers representing the day of
+            the month of each :py:class:`~.rt_datetime.Date` element.
 
         See Also
         --------
-        Date.day_of_year, Date.day_of_week, Date.year, Date.month,
-        Date.monthyear
+        :py:meth:`.rt_datetime.Date.day_of_year`
+        :py:meth:`.rt_datetime.Date.day_of_week`
+        :py:meth:`.rt_datetime.Date.year`
+        :py:meth:`.rt_datetime.Date.month`
+        :py:meth:`.rt_datetime.Date.monthyear`
 
         Examples
         --------
         >>> d = rt.Date(['2019-01-01', '2020-02-29', '2021-12-31'])
         >>> d.day_of_month
-        FastArray([ 1, 29, 31])
+        FastArray([ 1, 29, 31], dtype=int64)
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
         >>> d.day_of_month
-        FastArray([-2147483648, -2147483648,          31])
+        FastArray([-9223372036854775808, -9223372036854775808,
+                                     31], dtype=int64)
         """
         year = self._year(self._fa, fix_dst=False)
 
@@ -1915,39 +1977,39 @@ class Date(DateBase, TimeStampBase):
     @property
     def day_of_week(self):
         """
-        The day of the week of each `Date` element.
+        The day of the week of each :py:class:`~.rt_datetime.Date` element.
 
         Days are represented as integers: 0 = Monday, 1 = Tuesday, ...,
         6 = Sunday.
 
-        NaN or invalid `Date` values return Riptable's int32 sentinel value
-        (-MAXINT).
-
         Returns
         -------
-        `FastArray`
-            A `FastArray` of integers representing the day of the week of
-            each `Date` element.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of integers representing the day of
+            the week of each :py:class:`~.rt_datetime.Date` element.
 
         See Also
         --------
-        Date.day_of_year, Date.day_of_month, Date.year, Date.month,
-        Date.monthyear
+        :py:meth:`.rt_datetime.Date.day_of_year`
+        :py:meth:`.rt_datetime.Date.day_of_month`
+        :py:meth:`.rt_datetime.Date.year`
+        :py:meth:`.rt_datetime.Date.month`
+        :py:meth:`.rt_datetime.Date.monthyear`
 
         Examples
         --------
         >>> d = rt.Date(['2019-02-11', '2019-02-12', '2019-02-13',
         ...              '2019-02-14', '2019-02-15', '2019-02-16', '2019-02-17'])
         >>> d.day_of_week
-        FastArray([0, 1, 2, 3, 4, 5, 6])
+        FastArray([0, 1, 2, 3, 4, 5, 6], dtype=int32)
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
         >>> d.day_of_week
         FastArray([-2147483648, -2147483648,           2,           3,
-                     4,           5,           6])
+                             4,           5,           6], dtype=int32)
         """
         arr = (self._fa + EPOCH_DAY_OF_WEEK) % 7
         return _apply_inv_mask(self, arr)
@@ -1956,20 +2018,22 @@ class Date(DateBase, TimeStampBase):
     @property
     def is_weekend(self):
         """
-        Return a boolean array that's True for each `Date` element that's
-        a Saturday or Sunday, False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_datetime.Date`
+        element that's a Saturday or Sunday, `False` otherwise.
 
-        NaN or invalid `Date` values return False.
+        ``NaN`` or invalid :py:class:`~.rt_datetime.Date` values return `False`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each `Date` element
-            that's a Saturday or Sunday, False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            :py:class:`~.rt_datetime.Date` element that's a Saturday or Sunday, `False`
+            otherwise.
 
         See Also
         --------
-        Date.is_weekday, Date.is_leapyear
+        :py:meth:`.rt_datetime.Date.is_weekday`
+        :py:meth:`.rt_datetime.Date.is_leapyear`
 
         Examples
         --------
@@ -1978,7 +2042,7 @@ class Date(DateBase, TimeStampBase):
         >>> d.is_weekend
         FastArray([ True,  True, False, False, False, False, False,  True,  True])
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
@@ -1991,20 +2055,21 @@ class Date(DateBase, TimeStampBase):
     @property
     def is_weekday(self):
         """
-        Return a boolean array that's True for each `Date` element that's
-        a weekday (Monday-Friday), False otherwise.
+        Return a boolean array that's `True` for each :py:class:`~.rt_datetime.Date`
+        element that's a weekday (Monday-Friday), `False` otherwise.
 
-        NaN or invalid `Date` values return False.
+        ``NaN`` or invalid :py:class:`~.rt_datetime.Date` values return `False`.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each `Date` element
-            that's a weekday, False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            :py:class:`~.rt_datetime.Date` element that's a weekday, `False` otherwise.
 
         See Also
         --------
-        Date.is_weekend, Date.is_leapyear
+        :py:meth:`.rt_datetime.Date.is_weekend`
+        :py:meth:`.rt_datetime.Date.is_leapyear`
 
         Examples
         --------
@@ -2013,7 +2078,7 @@ class Date(DateBase, TimeStampBase):
         >>> d.is_weekday
         FastArray([ True,  True,  True,  True,  True, False, False])
 
-        With NaN and invalid values:
+        With ``NaN`` and invalid values:
 
         >>> d[0] = 0
         >>> d[1] = d.inv
@@ -2056,72 +2121,73 @@ class Date(DateBase, TimeStampBase):
     @classmethod
     def range(cls, start, end=None, days=None, step=1, format=None, closed=None):
         """
-        Return a `Date` object of dates within a given interval, spaced
-        by `step`.
+        Return a :py:class:`~.rt_datetime.Date` object of dates within a given interval,
+        spaced by ``step``.
 
-        Note: Either `end` or `days` must be provided, but providing both
-        results in unexpected behavior. In future versions, an error will be
-        raised.
+        Note that either ``end`` or ``days`` must be provided, but providing both
+        results in unexpected behavior. In future versions, an error will be raised.
 
         Parameters
         ----------
         start : int or str
             Start date as an integer (YYYYMMDD) or string. If the string is not
-            in 'YYYYMMDD' format, `format` is required.
+            in 'YYYYMMDD' format, ``format`` is required.
         end : int or str, optional
             End date as an integer (YYYYMMDD) or string. If the string is not
-            in 'YYYYMMDD' format, `format` is required. If `end` is not
+            in 'YYYYMMDD' format, ``format`` is required. If ``end`` is not
             provided, the number of dates to generate must be specified
-            with `days`.
+            with ``days``.
         days : int, optional
-            Instead of using `end`, use `days` to specify the number of
-            dates to generate. Required if `end` isn't provided. Providing
-            both `end` and `days` results in unexpected behavior.
+            Instead of using ``end``, use ``days`` to specify the number of
+            dates to generate. Required if ``end`` isn't provided. Providing
+            both ``end`` and ``days`` results in unexpected behavior.
         step : int, default 1
             The number of days between generated dates.
         format : str, optional
-            For a string `start` or `end` value, one or more format codes
-            supported by the :py:meth:`datetime.strptime` function of the
+            For a string ``start`` or ``end`` value, one or more format codes
+            supported by the :py:meth:`~datetime.datetime.strptime` method of the
             standard Python distribution. For codes, see
             :ref:`python:strftime-strptime-behavior`. The format code is used
-            to parse the string representation and convert it to a `Date`
-            element.
-        closed : {None, 'left', 'right'}, default None
-            Determines whether the `start` and `end` dates are included in the
-            result. Applies only when `start` and `end` are specified and ``step=1``.
+            to parse the string representation and convert it to a
+            :py:class:`~.rt_datetime.Date` element.
+        closed : {None, "left", "right"}, default `None`
+            Determines whether the ``start`` and ``end`` dates are included in the
+            result. Applies only when ``start`` and ``end`` are specified and ``step=1``.
 
-              - `left`: Start date is included, end date is excluded.
-              - `right`: End date is included, start date is excluded.
-              - None (the default): Both the start and end dates are included.
+              - ``"left"``: Start date is included, end date is excluded.
+              - ``"right"``: End date is included, start date is excluded.
+              - `None` (the default): Both the start and end dates are included.
 
         Returns
         -------
-        `Date`
-            A `Date` object of dates within a given interval, spaced by `step`.
+        :py:class:`~.rt_datetime.Date`
+            A :py:class:`~.rt_datetime.Date` object of dates within a given interval, spaced by ``step``.
 
         See Also
         --------
-        DateTimeNano.random : Return an array of randomly generated `DateTimeNano` values.
-        .riptable.arange : Return an array of evenly spaced values within a specified interval.
+        :py:meth:`.rt_datetime.DateTimeNano.random` :
+            Return an array of randomly generated :py:class:`~.rt_datetime.DateTimeNano` values.
+        :py:func:`.rt_numpy.arange` :
+            Return an array of evenly spaced values within a specified interval.
 
         Examples
         --------
-        With integer `start` and `end` dates:
+        With integer ``start`` and ``end`` dates:
 
         >>> rt.Date.range(20230101, 20230105)
         Date(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'])
 
-        With string `start` and `end` dates, and a format code:
+        With string ``start`` and ``end`` dates, and a format code:
 
         >>> rt.Date.range('01 January, 2023', '05 January, 2023', format='%d %B, %Y')
         Date(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'])
 
-        If `end` isn't specified, `days` is required:
+        If ``end`` isn't specified, ``days`` is required:
 
         >>> rt.Date.range(20230101, days=5)
         Date(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'])
 
-        Changing the `step`:
+        Changing the ``step``:
 
         >>> rt.Date.range(20230101, 20230105, step=2)
         Date(['2023-01-01', '2023-01-03'])
@@ -2525,7 +2591,9 @@ class Date(DateBase, TimeStampBase):
 
     @staticmethod
     def _from_arrow(
-        arr: Union["pa.Array", "pa.ChunkedArray"], zero_copy_only: bool = True, writable: bool = False
+        arr: Union["pa.Array", "pa.ChunkedArray"],
+        zero_copy_only: bool = True,
+        writable: bool = False,
     ) -> "Date":
         """
         Create a `Date` instance from a "date32" or "date64"-typed `pyarrow.Array`.
@@ -4115,20 +4183,19 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     """
     Date and timezone-aware time information, stored to nanosecond precision.
 
-    `DateTimeNano` arrays have an underlying `~riptable.int64` array representing the
-    number of nanoseconds since the Unix epoch (00:00:00 UTC on 01-01-1970). Dates
-    before the Unix epoch are invalid.
+    :py:class:`~.rt_datetime.DateTimeNano` arrays have an underlying
+    :py:obj:`~.rt_numpy.int64` array representing the number of nanoseconds since the
+    Unix epoch (00:00:00 UTC on 01-01-1970). Dates before the Unix epoch are invalid.
 
-    In most cases, `DateTimeNano` objects default to display in Eastern/NYC time,
-    accounting for Daylight Saving Time. The exception is when `arr` is an array of
-    `Date` objects, in which case the default display timezone is UTC.
-
-    |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+    In most cases, :py:class:`~.rt_datetime.DateTimeNano` objects default to display in
+    Eastern/NYC time, accounting for Daylight Saving Time. The exception is when ``arr``
+    is an array of :py:class:`~.rt_datetime.Date` objects, in which case the default
+    display timezone is UTC.
 
     Parameters
     ----------
-    arr : array of `int`, `str`, `Date`, `TimeSpan`, :py:class:`~datetime.datetime`, `numpy.datetime64`
-          Datetimes to store in the `DateTimeNano` array.
+    arr : array of `int`, `str`, :py:class:`~.rt_datetime.Date`, :py:class:`~.rt_datetime.TimeSpan`, :py:class:`datetime.datetime`, :py:class:`numpy.datetime64`
+          Datetimes to store in the :py:class:`~.rt_datetime.DateTimeNano` array.
 
         - Integers represent nanoseconds since the Unix epoch (00:00:00 UTC on
           01-01-1970).
@@ -4138,57 +4205,80 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
           format are supported. If your strings are in another format (for example,
           MMDDYY), specify it with ``format``. Other notes for string input:
 
-          - `from_tz` is required.
+          - ``from_tz`` is required.
 
-          - If `start_date` is provided, strings are parsed as `TimeSpan`
-            objects before `start_date` is applied. See how this affects output in the
+          - If ``start_date`` is provided, strings are parsed as :py:class:`~.rt_datetime.TimeSpan`
+            objects before ``start_date`` is applied. See how this affects output in the
             Examples section below.
 
           - For NumPy vs. Riptable string parsing differences, see the Notes section
             below.
 
-        - For `Date` objects, both `from_tz` and `to_tz` are "UTC" by
-          default.
-        - For `TimeSpan` objects, `start_date` needs to be specified.
-        - Using the `DateTimeNano` constructor is recommended for
-          `Date` + `TimeSpan` operations.
-        - `numpy.datetime64` values are converted to nanoseconds.
+        - For :py:class:`~.rt_datetime.Date` objects, both ``from_tz`` and ``to_tz`` are
+          "UTC" by default.
+        - For :py:class:`~.rt_datetime.TimeSpan` objects, ``start_date`` needs to be specified.
+        - Using the :py:class:`~.rt_datetime.DateTimeNano` constructor is recommended for
+          :py:class:`~.rt_datetime.Date` + :py:class:`~.rt_datetime.TimeSpan` operations.
+        - :py:obj:`numpy.datetime64` values are converted to nanoseconds.
 
-    from_tz : str
-        The timezone the data in `arr` is stored in. Required if the `DateTimeNano` is
-        created from strings, and recommended in other cases to ensure expected results.
-        The default `from_tz` is "UTC" for all `arr` types except strings, for which a
-        `from_tz` must be specified.
-    to_tz : str
-        The timezone the data is displayed in. If `arr` is `Date` objects, the default
-        `to_tz` is "UTC". For other `arr` types, the default `to_tz` is "NYC".
-    from_matlab : bool, default False
-        When set to `True`, indicates that `arr` contains Matlab datenums (the number
+    from_tz : str, optional
+        The timezone the data in ``arr`` is stored in. Required if the
+        :py:class:`~.rt_datetime.DateTimeNano` is created from strings, and recommended
+        in other cases to ensure expected results. The default ``from_tz`` is "UTC" for
+        all ``arr`` types except strings, for which a ``from_tz`` must be specified.
+
+        |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
+    to_tz : str, optional
+        The timezone the data is displayed in. If ``arr`` is
+        :py:class:`~.rt_datetime.Date` objects, the default ``to_tz`` is "UTC". For other
+        ``arr`` types, the default ``to_tz`` is "NYC".
+    from_matlab : bool, default `False`
+        When set to `True`, indicates that ``arr`` contains Matlab datenums (the number
         of days since 0-Jan-0000). Because Matlab datenums may also include a fraction
-        of a day, be sure to specify `from_tz` for accurate time data.
-    format : str
-        Specify a format for string `arr` input. For format codes, see the `Python
+        of a day, be sure to specify ``from_tz`` for accurate time data.
+    format : str, optional
+        Specify a format for string ``arr`` input. For format codes, see the `Python
         strptime cheatsheet <https://strftime.org/>`_. This parameter is ignored for
-        non-string `arr` input.
-    start_date : `str` or array of `Date`
-        - Required if constructing a `DateTimeNano` from a `TimeSpan`.
-        - If `arr` is strings, the values in `arr` are parsed as `TimeSpan` objects
-          before `start_date` is applied. See how this affects output in the Examples
-          section below. Otherwise, `start_date` is added (as nanos) to dates in `arr`.
-        - If `start_date` is a string, use YYYYMMDD format.
-        - If `start_date` is a `Date` array, it is broadcast to `arr` if possible;
-          otherwise an error is raised.
-        - A `start_date` before the Unix epoch is converted to the Unix epoch.
+        non-string ``arr`` input.
+    start_date : `str` or array of :py:class:`~.rt_datetime.Date`, optional
+        - Required if constructing a :py:class:`~.rt_datetime.DateTimeNano` from a
+          :py:class:`~.rt_datetime.TimeSpan`.
+        - If ``arr`` is strings, the values in ``arr`` are parsed as
+          :py:class:`~.rt_datetime.TimeSpan` objects before ``start_date`` is applied.
+          See how this affects output in the Examples section below. Otherwise,
+          ``start_date`` is added (as nanos) to dates in ``arr``.
+        - If ``start_date`` is a string, use YYYYMMDD format.
+        - If ``start_date`` is a :py:class:`~.rt_datetime.Date` array, it is broadcast
+          to ``arr`` if possible; otherwise an error is raised.
+        - A ``start_date`` before the Unix epoch is converted to the Unix epoch.
+    gmt : None, optional
+        This parameter is deprecated and will be removed in the future.
+
+        .. deprecated:: 1.14.5
+
+    See Also
+    --------
+    :py:meth:`.rt_datetime.DateTimeNano.info` :
+        See timezone info for a :py:class:`~.rt_datetime.DateTimeNano` object.
+    :py:class:`.rt_datetime.Date` :
+        Riptable's :py:class:`~.rt_datetime.Date` class.
+    :py:class:`.rt_datetime.DateSpan` :
+        Riptable's :py:class:`~.rt_datetime.DateSpan` class.
+    :py:class:`.rt_datetime.TimeSpan` :
+        Riptable's :py:class:`~.rt_datetime.TimeSpan` class.
+    :py:class:`.rt_timezone.TimeZone` :
+        Riptable's :py:class:`~.rt_timezone.TimeZone` class.
 
     Notes
     -----
-     - The constructor does not attempt to preserve NaN times from Python
-       :py:class:`~datetime.datetime` objects.
-     - If the integer data in a `DateTimeNano` object is extracted, it is in the
-       `from_tz` timezone. To initialize another `DateTimeNano` with the same underlying
-       array, use the same `from_tz`.
-     - `DateTimeNano` objects have no knowledge of timezones. All timezone operations
-       are handled by the `TimeZone` class.
+     - The constructor does not attempt to preserve ``NaN`` times from Python
+       :py:class:`datetime.datetime` objects.
+     - If the integer data in a :py:class:`~.rt_datetime.DateTimeNano` object is
+       extracted, it is in the ``from_tz`` timezone. To initialize another
+       :py:class:`~.rt_datetime.DateTimeNano` with the same underlying array, use the
+       same ``from_tz``.
+     - :py:class:`~.rt_datetime.DateTimeNano` objects have no knowledge of timezones.
+       All timezone operations are handled by the :py:class:`~.rt_timezone.TimeZone` class.
 
 
     Math Operations
@@ -4213,36 +4303,34 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
     String Parsing Differences Between NumPy and Riptable
 
-    - Riptable `DateTimeNano` string parsing is generally more forgiving than NumPy's
-      `numpy.datetime64` array parsing.
+    - Riptable :py:class:`~.rt_datetime.DateTimeNano` string parsing is generally more
+      forgiving than NumPy's :py:obj:`~numpy.datetime64` array parsing.
     - In some cases where NumPy raises an error, Riptable returns an object.
-    - The lower limit for `DateTimeNano` string parsing is Unix epoch time.
+    - The lower limit for :py:class:`~.rt_datetime.DateTimeNano` string parsing is Unix
+      epoch time.
     - You can always guarantee that Riptable and NumPy get the same results by using
       the full `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ datetime format
       (YYYY-MM-DDTHH:MM:SS.fffffffff).
 
     Riptable parses strings without leading zeros:
 
-    >>> import numpy as np
     >>> rt.DateTimeNano(["2018-1-1"], from_tz="NYC")
-    DateTimeNano(['20180101 00:00:00.000000000'], to_tz='NYC')
-    >>> np.array(["2018-1-1"], dtype="datetime64[ns]")
+    DateTimeNano(['20180101 00:00:00.000000000'], to_tz='America/New_York')
+    >>> np.array(["2018-1-1"], dtype="datetime64[ns]") # doctest: +SKIP
     ValueError: Error parsing datetime string "2018-1-1" at position 5
 
     Riptable handles extra trailing spaces; NumPy incorrectly treats them as a
     timezone whose parsing will be deprecated soon:
 
     >>> rt.DateTimeNano(["2018-10-11 10:11:00.123           "], from_tz="NYC")
-    DateTimeNano(['20181011 10:11:00.123000000'], to_tz='NYC')
+    DateTimeNano(['20181011 10:11:00.123000000'], to_tz='America/New_York')
     >>> np.array(["2018-10-11 10:11:00.123           "], dtype="datetime64[ns]")
-    DeprecationWarning: parsing timezone aware datetimes is deprecated; this will
-    raise an error in the future
     array(['2018-10-11T10:11:00.123000000'], dtype='datetime64[ns]')
 
     Riptable correctly parses dates without delimiters:
 
     >>> rt.DateTimeNano(["20181231"], from_tz="NYC")
-    DateTimeNano(['20181231 00:00:00.000000000'], to_tz='NYC')
+    DateTimeNano(['20181231 00:00:00.000000000'], to_tz='America/New_York')
     >>> np.array(["20181231"], dtype="datetime64[ns]")
     array(['1840-08-31T19:51:12.568664064'], dtype='datetime64[ns]')
 
@@ -4250,50 +4338,44 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ datetime format:
 
     >>> rt.DateTimeNano(["2018-12-31T12:34:56.789123456"], from_tz="NYC")
-    DateTimeNano(['20181231 12:34:56.789123456'], to_tz='NYC')
+    DateTimeNano(['20181231 12:34:56.789123456'], to_tz='America/New_York')
     >>> np.array(["2018-12-31T12:34:56.789123456"], dtype="datetime64[ns]")
     array(['2018-12-31T12:34:56.789123456'], dtype='datetime64[ns]')
 
-    See Also
-    --------
-    DateTimeNano.info : See timezone info for a `DateTimeNano` object.
-    Date : Riptable's `Date` class.
-    DateSpan : Riptable's `DateSpan` class.
-    TimeSpan : Riptable's `TimeSpan` class.
-    .TimeZone : Riptable's `.TimeZone` class.
-
     Examples
     --------
-    Create a `DateTimeNano` from an integer representing the nanoseconds since 00:00:00
-    UTC on 01-01-1970:
+    Create a :py:class:`~.rt_datetime.DateTimeNano` from an integer representing the
+    nanoseconds since 00:00:00 UTC on 01-01-1970:
 
     >>> rt.DateTimeNano([1514828730123456000], from_tz="UTC")
-    DateTimeNano(['20180101 12:45:30.123456000'], to_tz='NYC')
+    DateTimeNano(['20180101 12:45:30.123456000'], to_tz='America/New_York')
 
     From a datetime string in NYC time:
 
     >>> rt.DateTimeNano(["2018-01-01 12:45:30.123456000"], from_tz="NYC")
-    DateTimeNano(['20180101 12:45:30.123456000'], to_tz='NYC')
+    DateTimeNano(['20180101 12:45:30.123456000'], to_tz='America/New_York')
 
-    From `numpy.datetime64` array (note that NumPy has less precision):
+    From :py:obj:`numpy.datetime64` array (note that NumPy has less precision):
 
     >>> dt = np.array(["2018-11-02 09:30:00.002201", "2018-11-02 09:30:00.004212"], dtype="datetime64[ns]")
     >>> rt.DateTimeNano(dt, from_tz="NYC")
-    DateTimeNano(['20181102 09:30:00.002201000', '20181102 09:30:00.004212000'], to_tz='NYC')
+    DateTimeNano(['20181102 09:30:00.002201000', '20181102 09:30:00.004212000'], to_tz='America/New_York')
 
     If your datetime strings are nonstandard, specify the format using ``format`` with
     `Python strptime codes <https://strftime.org/>`_.
 
     >>> rt.DateTimeNano(["12/31/19 08:05:01", "6/30/19 14:20:35"], format="%m/%d/%y %H:%M:%S", from_tz="NYC")
-    DateTimeNano(['20191231 08:05:01.000000000', '20190630 14:20:35.000000000'], to_tz='NYC')
+    DateTimeNano(['20191231 08:05:01.000000000', '20190630 14:20:35.000000000'], to_tz='America/New_York')
 
     Convert Matlab datenums:
 
     >>> rt.DateTimeNano([737426, 738251.75], from_matlab=True, from_tz="NYC")
-    DateTimeNano(['20190101 00:00:00.000000000', '20210405 18:00:00.000000000'], to_tz='NYC')
+    DateTimeNano(['20190101 00:00:00.000000000', '20210405 18:00:00.000000000'], to_tz='America/New_York')
 
-    Note that if you create a `DateTimeNano` by adding a `Date` and a `TimeSpan` without
-    using the `DateTimeNano` constructor, `from_tz` and `to_tz` will be "GMT":
+    Note that if you create a :py:class:`~.rt_datetime.DateTimeNano` by adding a
+    :py:class:`~.rt_datetime.Date` and a :py:class:`~.rt_datetime.TimeSpan` without
+    using the :py:class:`~.rt_datetime.DateTimeNano` constructor, ``from_tz`` and
+    ``to_tz`` are ``"GMT"``:
 
     >>> d = rt.Date("20230305")
     >>> ts = rt.TimeSpan("05:00")
@@ -4302,31 +4384,29 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     DateTimeNano(['20230305 05:00:00.000000000'], to_tz='GMT')
     Displaying in timezone: GMT
     Origin: GMT
-    Offset: 0 hours
+    Offset: +00:00
 
-    Create a `DateTimeNano` from a list of Python :py:class:`~datetime.datetime`
-    objects:
+    Create a :py:class:`~.rt_datetime.DateTimeNano` from a list of Python
+    :py:class:`~datetime.datetime` objects:
 
     >>> from datetime import datetime as dt
     >>> pdt = [dt(2018, 7, 2, 14, 30), dt(2019, 6, 8, 8, 30)]
     >>> rt.DateTimeNano(pdt)
-    UserWarning: FastArray contains an unsupported type 'object'.  Problems may occur.
-    Consider categoricals.
-      warnings.warn(warning_string)
-    DateTimeNano(['20180702 10:30:00.000000000', '20190608 04:30:00.000000000', to_tz='NYC')
+    DateTimeNano(['20180702 10:30:00.000000000', '20190608 04:30:00.000000000'], to_tz='America/New_York')
 
-    If you specify a `start_date` with an `arr` of strings, the strings are parsed as
-    `TimeSpan` objects before `start_date` is applied. Note the first two examples in
-    ``arr`` result in NaN TimeSpans, which are silently treated as zeros:
+    If you specify a ``start_date`` with an ``arr`` of strings, the strings are parsed as
+    :py:class:`~.rt_datetime.TimeSpan` objects before ``start_date`` is applied. Note
+    the first two examples in ``arr`` result in ``NaN`` :py:class:`~.rt_datetime.TimeSpan`
+    objects, which are silently treated as zeros:
 
     >>> arr = ["20180205", "20180205 14:30", "14:30"]
     >>> rt.DateTimeNano(arr, from_tz="UTC", to_tz="UTC", start_date="20230601")
     DateTimeNano(['20230601 00:00:00.000000000', '20230601 00:00:00.000000000', '20230601 14:30:00.000000000'], to_tz='UTC')
 
-    `.GetNanoTime` gets the current Unix epoch time:
+    :py:func:`~.rt_timers.GetNanoTime` gets the current Unix epoch time:
 
-    >>> rt.DateTimeNano([rt.GetNanoTime()], from_tz="UTC")
-    DateTimeNano(['20230615 18:36:58.378020700'], to_tz='NYC')
+    >>> rt.DateTimeNano([rt.GetNanoTime()], from_tz="UTC") # doctest: +SKIP
+    DateTimeNano(['20240115 08:40:32.037226522'], to_tz='America/New_York')
     """
 
     MetaVersion = 0
@@ -4490,7 +4570,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # DateTimeNano
     def strftime(self, format, dtype="O"):
         """
-        Convert each `DateTimeNano` element to a formatted string representation.
+        Convert each :py:class:`~.rt_datetime.DateTimeNano` element to a formatted
+        string representation.
 
         Parameters
         ----------
@@ -4502,29 +4583,32 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         dtype : {"O", "S", "U"}, default "O"
             The data type of the returned array:
 
-            - "O": object string
-            - "S": byte string
-            - "U": unicode string
+                - "O": object string
+                - "S": byte string
+                - "U": unicode string
 
         Returns
         -------
-        `ndarray`
-            An `ndarray` of strings.
+        :py:class:`~numpy.ndarray`
+            An :py:class:`~numpy.ndarray` of strings.
 
         See Also
         --------
-        DateTimeNanoScalar.strftime, Date.strftime, DateScalar.strftime,
-        TimeSpan.strftime, TimeSpanScalar.strftime
+        :py:meth:`.rt_datetime.DateTimeNanoScalar.strftime`
+        :py:meth:`.rt_datetime.Date.strftime`
+        :py:meth:`.rt_datetime.DateScalar.strftime`
+        :py:meth:`.rt_datetime.TimeSpan.strftime`
+        :py:meth:`.rt_datetime.TimeSpanScalar.strftime`
 
         Notes
         -----
-        This routine has not been sped up yet. It also raises an error on NaNs.
+        This routine has not been sped up yet. It also raises an error on ``NaN`` values.
 
         Examples
         --------
         >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'], from_tz='NYC')
         >>> dtn
-        DateTimeNano(['20210101 09:31:15.000000000', '20210519 05:21:17.000000000'], to_tz='NYC')
+        DateTimeNano(['20210101 09:31:15.000000000', '20210519 05:21:17.000000000'], to_tz='America/New_York')
         >>> dtn.strftime('%c')
         array(['Fri Jan  1 09:31:15 2021', 'Wed May 19 05:21:17 2021'], dtype=object)
         """
@@ -4580,85 +4664,133 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # ------------------------------------------------------------
     def set_timezone(self, tz):
         """
-        Changes the timezone that the times are displayed in.
-        Different lookup array will be used for daylight savings fixups.
-        Does not modify the underlying array.
+        Change the :py:class:`~.rt_timezone.TimeZone` for the :py:class:`~.rt_datetime.DateTimeNano` object.
+
+        This method does not modify the underlying integer array.
 
         |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
 
         Parameters
         ----------
         tz : str
-            Abbreviated name of desired timezone.
+            Name of the desired display timezone.
+
+        Returns
+        -------
+        `None`
+            Returns nothing.
 
         Examples
         --------
-        Normal:
-        >>> dtn = DateTimeNano(['2019-01-07 10:36'], from_tz='NYC', to_tz='NYC')
-        >>> dtn
-        DateTimeNano([20190107 10:36:00.000000000])
-        >>> dtn.set_timezone('DUBLIN')
-        >>> dtn
-        DateTimeNano([20190107 15:36:00.000000000])
+        Create a :py:class:`~.rt_datetime.DateTimeNano` in the ``"NYC"`` timezone,
+        and use :py:meth:`~.rt_datetime.DateTimeNano.set_timezone` to change the
+        displayed timezone to ``"DUBLIN"``:
 
-        NYC is in daylight savings time, Dublin is not:
-        >>> dtn = DateTimeNano(['2019-03-15 10:36'], from_tz='NYC', to_tz='NYC')
+        >>> dtn = rt.DateTimeNano(["2019-01-07 10:36", "2019-03-15 10:36"], from_tz="NYC", to_tz="NYC")
         >>> dtn
-        DateTimeNano([20190315 10:36:00.000000000])
-        >>> dtn.set_timezone('DUBLIN')
+        DateTimeNano(['20190107 10:36:00.000000000', '20190315 10:36:00.000000000'], to_tz='America/New_York')
+        >>> dtn.set_timezone("DUBLIN")
         >>> dtn
-        DateTimeNano([20190315 14:36:00.000000000])
+        DateTimeNano(['20190107 15:36:00.000000000', '20190315 14:36:00.000000000'], to_tz='Europe/Dublin')
+
+        Note that the first element has a five-hour offset from the original, while the
+        second datetime has a four-hour offset. This is because on March 15th, ``"NYC"``
+        is in daylight saving time whereas ``"DUBLIN"`` is not.
+
+        When constructing :py:class:`~.rt_datetime.DateTimeNano` objects by adding
+        :py:class:`~.rt_datetime.Date` and :py:class:`~.rt_datetime.TimeSpan` objects,
+        use :py:meth:`~.rt_datetime.DateTimeNano.set_timezone` to set the
+        :py:class:`~.rt_timezone.TimeZone` for the resulting
+        :py:class:`~.rt_datetime.DateTimeNano` object.
+
+        >>> d = rt.Date("2021-08-25")
+        >>> ts = rt.TimeSpan("12:34")
+        >>> dtn = (d + ts)
+        >>> dtn.set_timezone("DUBLIN")
+        >>> dtn
+        DateTimeNano(['20210825 13:34:00.000000000'], to_tz='Europe/Dublin')
         """
         self._timezone._set_timezone(tz)
 
     # ------------------------------------------------------------
     def astimezone(self, tz):
         """
-        Returns a new DateTimeNano object in a different displayed timezone.
+        Return a copy of the :py:class:`~.rt_datetime.DateTimeNano` object with a different
+        :py:class:`~.rt_timezone.TimeZone`.
 
-        The new object holds a reference to the same underlying array.
+        The new object holds a reference to the same underlying integer array as the
+        original :py:class:`~.rt_datetime.DateTimeNano`.
 
         |To see supported timezones, use ``rt.TimeZone.valid_timezones``.|
 
         Parameters
         ----------
         tz : str
-            Abbreviated name of desired timezone.
+            Name of desired display timezone.
 
         Returns
         -------
-        obj:`DateTimeNano`
+        :py:class:`~.rt_datetime.DateTimeNano`
+            A new :py:class:`~.rt_datetime.DateTimeNano` with the datetimes displayed in
+            the ``tz`` timezone.
 
         Notes
         -----
-        Unlike Python's datetime.datetime.astimezone(), accepts strings, not timezone objects.
+        Unlike Python's :py:meth:`datetime.datetime.astimezone`, this method accepts
+        strings for ``tz`` and doesn't accept timezone objects.
+
+        Examples
+        --------
+        Create a :py:class:`~.rt_datetime.DateTimeNano` in the ``"NYC"`` timezone,
+        and use :py:meth:`~.rt_datetime.DateTimeNano.astimezone` to create a new
+        :py:class:`~.rt_datetime.DateTimeNano` with the same datetimes in the
+        ``"DUBLIN"`` timezone:
+
+        >>> dtn = rt.DateTimeNano(["2019-01-07 10:36", "2019-03-15 10:36"], from_tz="NYC", to_tz="NYC")
+        >>> dtn.info()
+        DateTimeNano(['20190107 10:36:00.000000000', '20190315 10:36:00.000000000'], to_tz='America/New_York')
+        Displaying in timezone: America/New_York
+        Origin: America/New_York
+        Offset: +05:00
+        >>> dtn2 = dtn.astimezone("DUBLIN")
+        >>> dtn2.info()
+        DateTimeNano(['20190107 15:36:00.000000000', '20190315 14:36:00.000000000'], to_tz='Europe/Dublin')
+        Displaying in timezone: Europe/Dublin
+        Origin: GMT
+        Offset: +00:00
         """
         return DateTimeNano(self._fa, from_tz="GMT", to_tz=tz)
 
     # ------------------------------------------------------------
     def to_iso(self):
         """
-        Generates a FastArray of ISO-8601 timestamp bytestrings.
-        The string will match the time +/- timezone offset displayed in the output of the DateTimeNano object.
+        Return a :py:class:`~.rt_fastarray.FastArray` of the
+        :py:class:`~.rt_datetime.DateTimeNano` values in the ISO-8601 timestamp format.
 
-        Examples
-        --------
-        >>> dtn = DateTimeNano(['2019-01-22 12:34'],from_tz='NYC')
-        >>> dtn
-        DateTimeNano([20190122 12:34:00.000000000])
-        >>> dtn.to_iso()
-        FastArray([b'2019-01-22T12:34:00.000000000'], dtype='|S48')
+        The returned datetime strings are displayed in the same timezone as the
+        :py:class:`~.rt_datetime.DateTimeNano` object.
 
-        >>> dtn = DateTimeNano(['2019-01-22'],from_tz='GMT',to_tz='NYC')
-        >>> dtn
-        DateTimeNano([20190121 19:00:00.000000000])
-        >>> dtn.to_iso()
-        FastArray([b'2019-01-21T19:00:00.000000000'], dtype='|S48')
+        The returned :py:class:`~.rt_fastarray.FastArray` doesn't hold a reference to
+        the :py:class:`~.rt_datetime.DateTimeNano` object or the underlying integer array.
 
         Returns
         -------
-        obj:`FastArray`
+        :py:class:`~.rt_fastarray.FastArray`
+            :py:class:`~.rt_fastarray.FastArray` of datetime strings in the ISO-8601 timestamp format.
 
+        Examples
+        --------
+        >>> dtn = rt.DateTimeNano(["2019-01-22 12:34"], from_tz="NYC")
+        >>> dtn
+        DateTimeNano(['20190122 12:34:00.000000000'], to_tz='America/New_York')
+        >>> dtn.to_iso()
+        FastArray([b'2019-01-22T12:34:00.000000000'], dtype='|S48')
+
+        >>> dtn = rt.DateTimeNano(["2019-01-22"], from_tz="GMT", to_tz="NYC")
+        >>> dtn
+        DateTimeNano(['20190121 19:00:00.000000000'], to_tz='America/New_York')
+        >>> dtn.to_iso()
+        FastArray([b'2019-01-21T19:00:00.000000000'], dtype='|S48')
         """
         inv_mask = self.isnan()
         arr = self._timezone.fix_dst(self._fa)
@@ -4967,7 +5099,12 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
         repr_strings.append(f"Displaying in timezone: {self._timezone._timezone_str}")
         repr_strings.append(f"Origin: {self._timezone._from_tz}")
-        repr_strings.append(f"Offset: {self._timezone._offset} hours")
+        offset = self._timezone._offset
+        sign = "+" if offset >= 0 else "-"
+        offset = abs(offset)
+        repr_strings.append(
+            f"Offset: {sign}{int(offset / NANOS_PER_HOUR):02d}:{int((offset % NANOS_PER_HOUR) / NANOS_PER_MINUTE):02d}"
+        )
         return "\n".join(repr_strings)
 
     # ------------------------------------------------------------
@@ -5168,90 +5305,126 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def isnan(self):
         """
-        Return a boolean array that's True for each `DateTimeNano` element
-        that's a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `True` for each invalid
+        :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
-        considered to be NaN.
+        ``0`` and ``NaN`` values are treated as invalid
+        :py:class:`~.rt_datetime.DateTimeNano` elements.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each NaN element, False
-            otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            invalid :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
         See Also
         --------
-        DateTimeNano.isnotnan, Date.isnan, Date.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that contains
-            at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
+        :py:meth:`.rt_datetime.Date.isnan`
+        :py:meth:`.rt_datetime.Date.isnotnan`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains at least one ``NaN``.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains only ``NaN`` values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable currently treats ``0`` as an invalid date for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in
+        :py:class:`~.rt_datetime.DateTimeBase`.
 
         Examples
         --------
-        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
-        ...                        '20210713 02:44:19'], from_tz = 'NYC')
-        >>> dtn[0] = 0
-        >>> dtn[1] = dtn.inv
-        >>> dtn
-        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        Create a :py:class:`~.rt_datetime.DateTimeNano` array with two valid dates and
+        one invalid date before the UNIX epoch:
+
+        >>> dtn = rt.DateTimeNano(["2024-01-01 12:00:00.000000000",
+        ...                        "2010-09-24 12:00:00.000000000",
+        ...                        "1962-03-17 12:00:00.000000000"], from_tz="NYC")
         >>> dtn.isnan()
-        FastArray([ True,  True, False])
+        FastArray([False, False,  True])
+
+        Create a :py:class:`~.rt_datetime.DateTimeNano` array with ``0`` and the
+        sentinel value for :py:class:`~.rt_numpy.int64` (-MAXINT):
+
+        >>> nan_dtn = rt.DateTimeNano([0, -9223372036854775808])
+        >>> nan_dtn.isnan()
+        FastArray([ True,  True])
         """
         return self._fa.isnanorzero()
 
     # -------------------------------------------------------------
     def isnotnan(self):
         """
-        Return a boolean array that's True for each `DateTimeNano` element
-        that's not a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `True` for each valid
+        :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
-        considered to be NaN.
+        ``0`` and ``NaN`` values are treated as invalid
+        :py:class:`~.rt_datetime.DateTimeNano` elements.
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each non-NaN element,
-            False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            valid :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
         See Also
         --------
-        DateTimeNano.isnan, Date.isnan, Date.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that
-            contains at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.DateTimeNano.isnan`
+        :py:meth:`.rt_datetime.Date.isnan`
+        :py:meth:`.rt_datetime.Date.isnotnan`
+        :py:func:`.rt_numpy.isnan`
+        :py:func:`.rt_numpy.isnotnan`
+        :py:func:`.rt_numpy.isnanorzero`
+        :py:meth:`.rt_fastarray.FastArray.isnan`
+        :py:meth:`.rt_fastarray.FastArray.isnotnan`
+        :py:meth:`.rt_fastarray.FastArray.notna`
+        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
+        :py:meth:`.rt_categorical.Categorical.isnan`
+        :py:meth:`.rt_categorical.Categorical.isnotnan`
+        :py:meth:`.rt_categorical.Categorical.notna`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains at least one ``NaN``.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains only ``NaN`` values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable currently treats ``0`` as an invalid date for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in
+        :py:class:`~.rt_datetime.DateTimeBase`.
 
         Examples
         --------
-        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
-        ...                        '20210713 02:44:19'], from_tz = 'NYC')
-        >>> dtn[0] = 0
-        >>> dtn[1] = dtn.inv
-        >>> dtn
-        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        Create a :py:class:`~.rt_datetime.DateTimeNano` array with two valid dates and
+        one invalid date before the UNIX epoch:
+
+        >>> dtn = rt.DateTimeNano(["2024-01-01 12:00:00.000000000",
+        ...                        "2010-09-24 12:00:00.000000000",
+        ...                        "1962-03-17 12:00:00.000000000"], from_tz="NYC")
         >>> dtn.isnotnan()
-        FastArray([False, False,  True])
+        FastArray([ True,  True, False])
+
+        Create a :py:class:`~.rt_datetime.DateTimeNano` array with ``0`` and the
+        sentinel value for :py:class:`~.rt_numpy.int64` (-MAXINT):
+
+        >>> nan_dtn = rt.DateTimeNano([0, -9223372036854775808])
+        >>> nan_dtn.isnotnan()
+        FastArray([False, False])
         """
         return ~self.isnan()
 

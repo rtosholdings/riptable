@@ -767,7 +767,7 @@ class FastArray(np.ndarray):
         if cls.WarningLevel == 0:
             return False
         if cls.WarningLevel == 1:
-            warnings.warn(warning_string, stacklevel=2)
+            warnings.warn(warning_string, stacklevel=3)
             return True
         raise TypeError(warning_string)
 
@@ -5637,6 +5637,7 @@ class FastArray(np.ndarray):
             or pat.is_integer(pa_arr_type)
             or pat.is_floating(pa_arr_type)
             or pat.is_string(pa_arr_type)
+            or pat.is_large_string(pa_arr_type)
             or pat.is_binary(pa_arr_type)
             or pat.is_fixed_size_binary(pa_arr_type)
         ):

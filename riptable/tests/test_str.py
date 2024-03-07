@@ -160,6 +160,7 @@ class TestFAString:
             ("AAPL", [True] + [False] * 4),
         ],
     )
+    @pytest.mark.filterwarnings("ignore:`strstrb` is now deprecated")
     def test_strstrb(self, str2, expected):
         result = FAString(SYMBOLS).strstrb(str2)
         assert_array_equal(result, expected)
@@ -234,10 +235,6 @@ class TestFAString:
         result = FAString(NB_PARALLEL_SYMBOLS).index(str2)
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
-        # test old alias
-        result = FAString(SYMBOLS).strstr(str2)
-        assert_array_equal(result, expected)
-
     def test_index_cat(self):
         result = self.cat_symbol.str.index("A")
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
@@ -251,11 +248,6 @@ class TestFAString:
 
         result = FAString(NB_PARALLEL_SYMBOLS).index_any_of("PZG")
         expected = rt.FA([2, 2, -1, 0, -1] * PARALLEL_MULTIPLIER)
-        assert_array_equal(result, expected)
-
-        # test old alias
-        result = FAString(SYMBOLS).strpbrk("PZG")
-        expected = rt.FA([2, 2, -1, 0, -1])
         assert_array_equal(result, expected)
 
     def test_index_any_of_cat(self):
@@ -298,11 +290,11 @@ class TestFAString:
     regex_replace_test_cases = parametrize(
         "regex, repl",
         [
-            (".", "A"),
-            ("\w+", "A"),
-            ("\d+", "0"),
-            ("[A|B|C]", "C"),
-            ("B$", ""),
+            (r".", "A"),
+            (r"\w+", "A"),
+            (r"\d+", "0"),
+            (r"[A|B|C]", "C"),
+            (r"B$", ""),
         ],
     )
 
@@ -447,6 +439,7 @@ class TestFAString:
         expected = rt.FA([4, 4, 2, 4, 3], dtype=result.dtype).tile(PARALLEL_MULTIPLIER)
         assert_array_equal(result, expected)
 
+    @pytest.mark.filterwarnings("ignore:`strpbrk` is now deprecated")
     def test_strpbrk_cat(self):
         result = self.cat_symbol.str.strpbrk("PZG")
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
@@ -464,6 +457,7 @@ class TestFAString:
             ("B", [-1, -1, 1, -1, 1]),
         ],
     )
+    @pytest.mark.filterwarnings("ignore:`strstr` is now deprecated")
     def test_strstr(self, str2, expected):
         result = FAString(SYMBOLS).strstr(str2)
         assert_array_equal(result, expected)
@@ -471,6 +465,7 @@ class TestFAString:
         result = FAString(NB_PARALLEL_SYMBOLS).strstr(str2)
         assert_array_equal(result, expected * PARALLEL_MULTIPLIER)
 
+    @pytest.mark.filterwarnings("ignore:`strstr` is now deprecated")
     def test_strstr_cat(self):
         result = self.cat_symbol.str.strstr("A")
         inv = rt.INVALID_DICT[np.dtype(result.dtype).num]
@@ -600,12 +595,12 @@ class TestExtract:
     dataset_out_test_cases = parametrize(
         "pattern, expected",
         [
-            ("(\w+).* (\d{2}/\d{2}/\d{2})", dict(group_0=roots, group_1=expirations)),
-            ("(?P<root>\w+).*(\d{2}/\d{2}/\d{2})", dict(root=roots, group_1=expirations)),
-            ("(?P<root>\w+).*(?P<expiration>\d{2}/\d{2}/\d{2})", dict(root=roots, expiration=expirations)),
-            (" [C|P](?P<strike>\d+)$", dict(strike=strikes)),
+            (r"(\w+).* (\d{2}/\d{2}/\d{2})", dict(group_0=roots, group_1=expirations)),
+            (r"(?P<root>\w+).*(\d{2}/\d{2}/\d{2})", dict(root=roots, group_1=expirations)),
+            (r"(?P<root>\w+).*(?P<expiration>\d{2}/\d{2}/\d{2})", dict(root=roots, expiration=expirations)),
+            (r" [C|P](?P<strike>\d+)$", dict(strike=strikes)),
             (
-                "(?P<root>\w+W).*(?P<expiration>\d{2}/\d{2}/\d{2})",
+                r"(?P<root>\w+W).*(?P<expiration>\d{2}/\d{2}/\d{2})",
                 dict(
                     root=[root if b"W" in s else "" for s, root in zip(osi, roots)],
                     expiration=[exp if b"W" in s else "" for s, exp in zip(osi, expirations)],
@@ -630,7 +625,7 @@ class TestExtract:
 
     @parametrize("apply_unique", [True, False])
     def test_extract_dataset_detected_names(self, apply_unique):
-        pattern = " [C|P](?P<strike>\d+)$"
+        pattern = r" [C|P](?P<strike>\d+)$"
         expected = dict(strike=self.strikes)
         result = self.osi.str.extract(pattern, apply_unique=apply_unique)
         assert result.keys() == list(expected)
@@ -645,8 +640,8 @@ class TestExtract:
     array_out_test_cases = parametrize(
         "pattern, expected",
         [
-            (" [C|P](\d+)", strikes),
-            ("\w{2}", [s[:2] for s in roots]),
+            (r" [C|P](\d+)", strikes),
+            (r"\w{2}", [s[:2] for s in roots]),
         ],
         ids=["group", "no-group"],
     )

@@ -316,8 +316,8 @@ def test_ismember_diff_itemsize():
     bl, idx = ismember(a, b)
     correctbool = [True, True, True, False, True, True, True]
     correctidx = FA([1, 0, 0, int8.inv, 2, 0, 1], dtype=np.int8)
-    boolmatch = bool(np.all(bl == [False, True, True]))
-    idxmatch = bool(np.all(idx == [int8.inv, 1, 2]))
+    boolmatch = bool(np.all(bl == correctbool))
+    idxmatch = bool(np.all(idx == correctidx))
 
 
 @pytest.mark.skip("RIP-364: This test is empty and needs to be implemented.")

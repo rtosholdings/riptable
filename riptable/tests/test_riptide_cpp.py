@@ -150,7 +150,7 @@ class TestCRC:
         for i in range(len(results)):
             # Calculate the CRC32C or CRC64 of the array.
             crc_result = rc.CalculateCRC(bytes[i:])
-            results[i] = crc_result
+            results[i] = np.array(crc_result).astype(results.dtype)
 
         # What's the average hash value? It should be roughly half the range of a uint32.
         avg_hash = results.mean()
