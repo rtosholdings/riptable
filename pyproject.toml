@@ -4,7 +4,7 @@ description = "Python Package for riptable studies framework"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "RTOS Holdings", email = "rtosholdings-bot@sig.com" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
     "ansi2html >=1.5.2",
@@ -18,7 +18,6 @@ dependencies = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: BSD License",
