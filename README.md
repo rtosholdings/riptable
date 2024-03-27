@@ -3,7 +3,7 @@
 ![](https://riptable.readthedocs.io/en/stable/_static/riptable_logo.PNG)
 
 An open-source, 64-bit Python analytics engine for high-performance data analysis with
-multithreading support. Riptable supports Python 3.9 through 3.11 on 64-bit Linux and
+multithreading support. Riptable supports Python 3.10 through 3.11 on 64-bit Linux and
 Windows.
 
 Similar to Pandas and based on NumPy, Riptable optimizes analyzing large volumes of data
@@ -147,5 +147,3 @@ functionality, please consider reaching out to the team.
 
 See the [contributing guide](https://github.com/rtosholdings/riptable/blob/master/docs/CONTRIBUTING.md)
 for more information.
-
-

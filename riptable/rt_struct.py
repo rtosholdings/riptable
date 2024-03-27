@@ -4176,7 +4176,8 @@ class Struct:
     @property
     def _T(self):
         """
-        Display a transposed view of the `.Dataset` or `Struct`.
+        Display a transposed view of the :py:class:`~.rt_dataset.Dataset` or
+        :py:class:`~.rt_struct.Struct`.
 
         All columns are shown as rows and vice-versa. Strings up to 32
         characters are fully displayed.
@@ -4184,30 +4185,40 @@ class Struct:
         Returns
         -------
         DisplayString
-            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+            A wrapper for display operations that don't return a :py:class:`~.rt_dataset.Dataset`
+            or :py:class:`~.rt_struct.Struct`.
 
         See Also
         --------
-        Struct.dtranspose : Called by this method.
-        Struct._V : Show all rows of a `.Dataset` or `Struct`.
-        Struct._H : Show all columns and long strings of a `.Dataset` or `Struct`.
-        Struct._A : Show all columns, rows, and long strings of a `.Dataset` or `Struct`.
-        Struct._G : Show all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
+        :py:meth:`.rt_struct.Struct.dtranspose` :
+            Called by this method.
+        :py:meth:`.rt_struct.Struct._V` :
+            Show all rows of a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
+        :py:meth:`.rt_struct.Struct._H` :
+            Show all columns and long strings of a :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:meth:`.rt_struct.Struct._A` :
+            Show all columns, rows, and long strings of a :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:meth:`.rt_struct.Struct._G` :
+            Show all columns of a :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`, wrapping the table as needed.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'a': [1, 2, 3], 'b' : ['longstring_longstring_longstring_longstring',
-        ...                  'fish', 'david']})
+        >>> ds = rt.Dataset({"a": [1, 2, 3], "b": ["longstring_longstring_longstring_longstring",
+        ...                  "fish", "david"]})
         >>> ds
         #   a   b
         -   -   ---------------
         0   1   longstring_long
         1   2   fish
         2   3   david
+        <BLANKLINE>
+        [3 rows x 2 columns] total bytes: 153.0 B
         >>> ds._T
-        Fields:                                0     1      2
-              a                                1     2      3
-              b  longstring_longstring_lonstring  fish  david
+        Fields:                                  0      1       2
+        -------   --------------------------------   ----   -----
+              a                                  1      2       3
+              b   longstring_longstring_longstring   fish   david
         """
         oldmaxwidth = TypeRegister.DisplayOptions.MAX_STRING_WIDTH
         if oldmaxwidth < 32:

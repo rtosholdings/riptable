@@ -5562,31 +5562,38 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def min(self, **kwargs):
         """
-        The earliest `DateTimeNano` in an array.
+        The earliest element in a :py:class:`~.rt_datetime.DateTimeNano` object.
 
-        Note that until a reported bug is fixed, this method is not NaN-aware.
+        Note that until a reported bug is fixed, this method might not return
+        ``Inv`` for :py:class:`~.rt_datetime.DateTimeNano` objects with invalid elements.
+
+        Parameters
+        ----------
+        **kwargs :
+           Not implemented.
 
         Returns
         -------
-        `DateTimeNano`
-            A `DateTimeNano` array containing the earliest `DateTimeNano`
-            from the input array.
+        :py:class:`~.rt_datetime.DateTimeNano`
+            A :py:class:`~.rt_datetime.DateTimeNano` array containing the earliest
+            :py:class:`~.rt_datetime.DateTimeNano` from the input array.
 
         See Also
         --------
-        DateTimeNano.max, Date.min, Date.max, DateSpan.min, Datespan.max
+        :py:meth:`.rt_datetime.DateTimeNano.max`
+        :py:meth:`.rt_fastarray.FastArray.min`
+        :py:meth:`.rt_fastarray.FastArray.max`
 
         Notes
         -----
-        This returns an array, not a scalar. However, broadcasting rules will
-        apply to operations with it.
+        This returns an array, not a scalar. However, broadcasting rules apply to
+        operations with it.
 
         Examples
         --------
-        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'],
-        ...                        from_tz='NYC', to_tz='NYC')
+        >>> dtn = rt.DateTimeNano(["20190101 09:31:15", "20210519 05:21:17"], from_tz="NYC")
         >>> dtn.min()
-        DateTimeNano(['20210101 09:31:15.000000000'], to_tz='NYC')
+        DateTimeNano(['20190101 09:31:15.000000000'], to_tz='America/New_York')
         """
         return DateTimeNano([self._fa.min()], from_tz="GMT", to_tz=self._timezone._to_tz)
         # return DateTimeNanoScalar(self._fa.min(), timezone=self._timezone)
@@ -5594,29 +5601,38 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def max(self, **kwargs):
         """
-        The latest `DateTimeNano` in an array.
+        The latest element in a :py:class:`~.rt_datetime.DateTimeNano` object.
+
+        Note that until a reported bug is fixed, this method might not return
+        ``Inv`` for :py:class:`~.rt_datetime.DateTimeNano` objects with invalid elements.
+
+        Parameters
+        ----------
+        **kwargs :
+            Not implemented.
 
         Returns
         -------
-        `DateTimeNano`
-            A `DateTimeNano` array containing the latest `DateTimeNano`
-            from the input array.
+        :py:class:`~.rt_datetime.DateTimeNano`
+            A :py:class:`~.rt_datetime.DateTimeNano` array containing the latest
+            :py:class:`~.rt_datetime.DateTimeNano` from the input array.
 
         See Also
         --------
-        DateTimeNano.min, Date.min, Date.max, DateSpan.min, Datespan.max
+        :py:meth:`.rt_datetime.DateTimeNano.min`
+        :py:meth:`.rt_fastarray.FastArray.min`
+        :py:meth:`.rt_fastarray.FastArray.max`
 
         Notes
         -----
-        This returns an array, not a scalar. However, broadcasting rules will
-        apply to operations with it.
+        This returns an array, not a scalar. However, broadcasting rules apply to
+        operations with it.
 
         Examples
         --------
-        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17'],
-        ...                        from_tz='NYC', to_tz='NYC')
+        >>> dtn = rt.DateTimeNano(["20190101 09:31:15", "20210519 05:21:17"], from_tz="NYC")
         >>> dtn.max()
-        DateTimeNano(['20210101 09:31:15.000000000'], to_tz='NYC')
+        DateTimeNano(['20210519 05:21:17.000000000'], to_tz='America/New_York')
         """
         return DateTimeNano([self._fa.max()], from_tz="GMT", to_tz=self._timezone._to_tz)
         # return DateTimeNanoScalar(self._fa.max(), timezone=self._timezone)

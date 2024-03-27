@@ -573,7 +573,9 @@ class Dataset(Struct):
                 raise TypeError(f"Cannot create Dataset column {name!r} out of tuples or sets {value!r}.")
 
             # extract the length of the value, if it's an array-like
-            rowlen: Optional[int] = len(value) if isinstance(value, Sized) else None
+            rowlen: Optional[int] = (
+                len(value) if not isinstance(value, (str, bytes)) and isinstance(value, Sized) else None
+            )
 
             # if empty dataset, set compatible length from value
             if self._nrows is None:

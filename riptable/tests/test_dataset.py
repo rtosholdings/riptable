@@ -573,6 +573,12 @@ class TestDataset(unittest.TestCase):
         self.assertEqual(ds.shape, (2, 2))
         self.assertTrue((ds.key_0 == [1, 2]).all())
 
+    def test_assign_empty(self):
+        for sc in ['abc', b'abc', 5, True, 2.0]:
+            ds = rt.Dataset()
+            ds['a'] = sc
+            self.assertEqual(len(ds), 1)
+
     def test_broadcast(self):
         ds = Dataset({"test": arange(10)})
         ds.x = [1]

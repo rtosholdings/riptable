@@ -1400,27 +1400,13 @@ def test_sds_stack_with_categorical(container_type, data, stack, stack_count, tm
                 reason="RIP-483 - Raises 'ValueError: SDS stacking only implemented for Datasets. Must provide folders list if loading from multiple Struct directories.'"
             ),
         ),
+        None,
         False,
-        pytest.param(
-            None,
-            marks=pytest.mark.xfail(
-                reason="RIP-482 - Saving a Struct that contains a Categorical with stacking set to `None` and `stack_count=1` modifies the publically accessible category_dict by modifying the key from `CAT` to `categorical_bytes`. To reproduce, remove this `pytest.mark.xfail`."
-            ),
-        ),
     ],
 )
 @pytest.mark.parametrize(
     "stack_count",
-    [
-        1,
-        pytest.param(0, marks=pytest.mark.xfail(reason="Same as reason for param `2` below")),
-        pytest.param(
-            2,
-            marks=pytest.mark.xfail(
-                reason="RIP-482 - Saving a Struct that contains a Categorical with stacking set to `False` and `stack_count=2` modifies the publically accessible category_dict by modifying the key from `CAT` to `categorical_bytes`. To reproduce, remove this `pytest.mark.xfail`."
-            ),
-        ),
-    ],
+    [0, 1, 2],
 )
 @pytest.mark.parametrize("data", [load_test_data()])
 def test_sds_stack(data, stack, stack_count, tmpdir):
