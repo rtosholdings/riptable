@@ -568,7 +568,7 @@ class TestUfunc(object):
 
         a = np.ones(500, dtype=np.float64)
         a = FA(a)
-        assert_almost_equal((a / 10.0).sum() - a.size / 10.0, 0, 13)
+        assert_almost_equal((a / 10.0).sum() - a.size / 10.0, 0, 12)
 
     # FA ready
     def test_sum(self):

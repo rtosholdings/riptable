@@ -281,8 +281,6 @@ riptable.rt_datetime.DateTimeNano.hstack
 riptable.rt_datetime.DateTimeNano.info
 riptable.rt_datetime.DateTimeNano.isfinite
 riptable.rt_datetime.DateTimeNano.isnotfinite
-riptable.rt_datetime.DateTimeNano.max
-riptable.rt_datetime.DateTimeNano.min
 riptable.rt_datetime.DateTimeNano.newclassfrominstance
 riptable.rt_datetime.DateTimeNano.random
 riptable.rt_datetime.DateTimeNano.random_invalid
@@ -776,7 +774,6 @@ riptable.rt_struct.Struct
 riptable.rt_struct.Struct._A
 riptable.rt_struct.Struct._G
 riptable.rt_struct.Struct._H
-riptable.rt_struct.Struct._T
 riptable.rt_struct.Struct._V
 riptable.rt_struct.Struct.all
 riptable.rt_struct.Struct.any

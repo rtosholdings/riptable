@@ -1781,13 +1781,12 @@ class Grouping:
 
     @property
     def uniquelist(self):
-        """See Grouping.uniquedict
-        Sets FastArray names as key names.
         """
-        ulist = [*self.uniquedict.values()]
-        for i, k in enumerate(self.uniquedict):
-            ulist[i].set_name(k)
-        return ulist
+        See Grouping.uniquedict.
+
+        Returns list of unique categories for each key.
+        """
+        return list(self.uniquedict.values())
 
     # ---------------------------------------------------------------
     @property
