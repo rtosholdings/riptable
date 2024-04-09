@@ -23,6 +23,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Tuple,
     Union,
 )
@@ -6355,7 +6356,7 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     @classmethod
     def categories_equal(
-        cls, cats: List[Union["Categorical", np.ndarray, Tuple[np.ndarray, ...]]]
+        cls, cats: Sequence[Union["Categorical", np.ndarray, Tuple[np.ndarray, ...]]]
     ) -> Tuple[bool, List["Categorical"]]:
         """
         Check if every `Categorical` or array has the same categories (same unique values in the same order).

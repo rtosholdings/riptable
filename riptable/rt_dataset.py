@@ -1469,7 +1469,7 @@ class Dataset(Struct):
         return self._copy(deep=False, rows=row_idx, cols=col_idx)
 
     # ------------------------------------------------------------
-    def _dataset_compare_check(self, func_name, lhs) -> Self:
+    def _dataset_compare_check(self, func_name: str, lhs: Dataset, include_label_columns: bool = True) -> Self:
         # comparison function will be called by an array the size of the indexes, either
         # interperetted as integers, or as categorical strings
         # if compared to string, make sure the string matches the string type in categories
@@ -1481,18 +1481,28 @@ class Dataset(Struct):
                 raise ValueError("The two Datasets have different lengths and cannot be compared")
             else:
                 # returns a new dataset
+
+                label_cols = self.label_get_names()
+                lhs_label_cols = lhs.label_get_names()
                 newds = {}
                 # for all columns that match
                 for colname in self.keys():
-                    # if the lhs dataset has the same column name, compare
-                    if hasattr(lhs, colname):
-                        # get the function reference for the comparison operator
-                        func = getattr(self[colname], func_name)
-                        # add the boolean array to the new dataset
-                        newds[colname] = func(lhs[colname])
-                    else:
+                    if not include_label_columns and colname in label_cols:
+                        continue
+
+                    if not (hasattr(lhs, colname)) or not include_label_columns and colname in lhs_label_cols:
                         newds[colname] = np.array([False] * nrows)
+                        continue
+
+                    # if the lhs dataset has the same column name, compare
+                    # get the function reference for the comparison operator
+                    func = getattr(self[colname], func_name)
+                    # add the boolean array to the new dataset
+                    newds[colname] = func(lhs[colname])
+
                 for colname in lhs:
+                    if not include_label_columns and colname in lhs_label_cols:
+                        continue
                     if colname not in newds:
                         newds[colname] = np.array([False] * nrows)
                 return type(self)(newds)
@@ -2000,7 +2010,7 @@ class Dataset(Struct):
     # -------------------------------------------------------
     # 2d arithmetic functions.
     def imatrix_y(
-        self, func: Union[Callable, str, List[Union[Callable, str]]], name: Optional[Union[str, List[str]]] = None
+        self, func: Union[Callable, str, Sequence[Union[Callable, str]]], name: Optional[Union[str, List[str]]] = None
     ) -> "Dataset":
         """
         Parameters
@@ -2047,7 +2057,7 @@ class Dataset(Struct):
     # -------------------------------------------------------
     # 2d arithmetic functions.
     def _imatrix_y_internal(
-        self, func, name: Optional[str] = None, showfilter: bool = True
+        self, func: Union[Callable, str], name: Optional[str] = None, showfilter: bool = True
     ) -> Optional[Tuple[Any, str, Callable]]:
         """
         Parameters
@@ -4842,7 +4852,7 @@ class Dataset(Struct):
     def merge2(
         self,
         right: "Dataset",
-        on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+        on: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
         left_on: Optional[Union[str, List[str]]] = None,
         right_on: Optional[Union[str, List[str]]] = None,
         how: str = "left",
@@ -4882,7 +4892,7 @@ class Dataset(Struct):
         on: Optional[Union[str, Tuple[str, str]]] = None,
         left_on: Optional[str] = None,
         right_on: Optional[str] = None,
-        by: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+        by: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
         left_by: Optional[Union[str, List[str]]] = None,
         right_by: Optional[Union[str, List[str]]] = None,
         suffixes: Optional[Tuple[str, str]] = None,
@@ -4923,7 +4933,7 @@ class Dataset(Struct):
     def merge_lookup(
         self,
         right: "Dataset",
-        on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+        on: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
         left_on: Optional[Union[str, List[str]]] = None,
         right_on: Optional[Union[str, List[str]]] = None,
         require_match: bool = False,
@@ -8134,7 +8144,7 @@ class Dataset(Struct):
         return ms
 
     # -------------------------------------------------------
-    def equals(self, other, axis: Optional[int] = None, labels: bool = False, exact: bool = False):
+    def equals(self, other, axis: Optional[int] = None, labels: bool = True, exact: bool = False):
         """
         Test whether two Datasets contain the same elements in each column.
         NaNs in the same location are considered equal.
@@ -8246,8 +8256,27 @@ class Dataset(Struct):
 
         else:
             try:
-                result = self.apply_cols(isnan, labels=labels) & other.apply_cols(isnan, labels=labels)
-                result |= self == other
+                compare_result = self._dataset_compare_check("__eq__", other, include_label_columns=labels)
+                if len(compare_result) == 0:
+                    # Empty result: could be either DS({}).equals(DS({})) or DS({'a': []}).equals({'b': []})
+                    cols = set(self.keys())
+                    other_cols = set(other.keys())
+
+                    if not labels:
+                        cols = cols.difference(self.label_get_names())
+                        other_cols = other_cols.difference(other.label_get_names())
+
+                    return cols == other_cols if axis != 1 else result
+
+                fill_false = lambda col: zeros(len(col), dtype=bool)
+                self_nans = self.apply_cols(isnan, fill_value=fill_false, labels=labels)
+                other_nans = other.apply_cols(isnan, fill_value=fill_false, labels=labels)
+                nan_result = (
+                    (self_nans & other_nans) if len(self.values()) > len(other.values()) else (other_nans & self_nans)
+                )
+                result = Dataset({})
+                for colname in compare_result:
+                    result[colname] = nan_result[colname] | compare_result[colname]
             except:
                 result = False
                 if axis != 1:

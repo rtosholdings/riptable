@@ -1807,6 +1807,7 @@ def test_new_array_function_matches_old_array_function(np_callable, fast_array):
 
 @pytest.mark.parametrize("np_callable", NP_ARRAY_FUNCTION_PARAMS + list(gUnaryUFuncs.keys()) + [np.around, np.round_])
 @pytest.mark.parametrize("fast_array", [rt.FastArray([1, 2, 3])])
+@pytest.mark.filterwarnings("ignore:`round_` is deprecated")
 def test_new_array_function_matches_ufunc(np_callable, fast_array):
     # test equivalence between our array function implementation against our ufunc implementation
     with new_array_function(FastArray):

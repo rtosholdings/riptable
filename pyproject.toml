@@ -81,7 +81,13 @@ profile = "black"
 
 [tool.pytest.ini_options]
 xfail_strict = true
-filterwarnings = ["error::DeprecationWarning", "error:FutureWarning"]
+filterwarnings = [
+    "error::DeprecationWarning",
+    "error:FutureWarning",
+    # FastArray converts all scalars into 1-dim arrays; big change required
+    "ignore:Conversion of an array with ndim > 0 to a scalar is deprecated:DeprecationWarning",
+    "ignore:np.find_common_type is deprecated.:DeprecationWarning",
+]
 
 [tool.pydocstyle]
 convention = "numpy"

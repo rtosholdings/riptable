@@ -7031,6 +7031,19 @@ class MergeAsofTest(unittest.TestCase):
         assert_array_equal(ds.time, ds1.time)
         assert_array_equal(ds.value, rt.FA([0.6, 3.6, 1.6, 9.6, 14.6, 17.6]))
 
+        # merge asof with 2d column and Invalid indices
+        ds1 = rt.Dataset()
+        ds1.time = rt.FA([0.5, 1.5, 2.5], dtype=float)
+        ds2 = rt.Dataset()
+        ds2.time = rt.FA([0.6, 1.6, 2.6], dtype=float)
+        ds2.A = rt.FastArray([0.9, 0.2, 0.3], dtype=rt.float32)
+        ds2.B = rt.FastArray([[0, 0], [2, 3], [4, 5]], dtype=rt.int32)
+        ds = rt.merge_asof(ds1, ds2, on="time")
+        assert_array_equal(ds.time, ds1.time)
+        assert_array_equal(ds.A, rt.FastArray([rt.nan, 0.9, 0.2], dtype=rt.float32))
+        inv = ds2.B.inv
+        assert_array_equal(ds.B, rt.FastArray([[inv, inv], [0, 0], [2, 3]], dtype=rt.int32))
+
         # ds = rt.Dataset.merge_asof(ds1, ds2, left_on='A', right_on='X', left_by='left_grp',
         #                            right_by='right_grp', direction='nearest')
         # check_merge_asof(ds, ds1, ds2)

@@ -29,7 +29,7 @@ class AccumTable_Test(unittest.TestCase):
             }
         )
 
-        accum = rt.accum_cols(data.Symb, [[data.Count, data.PlusMinus]], ["Rezult"])
+        accum = rt.accum_cols(data.Symb, [(data.Count, data.PlusMinus)], ["Rezult"])
         accum_expected = rt.Dataset({"Symb": ["A", "B"], "Rezult": [8.0, -4.0]})
         accum_expected.footer_set_values("Total", {"Symb": "Total", "Rezult": -16.0})
         self.assertTrue((accum == accum_expected).all(axis=None))

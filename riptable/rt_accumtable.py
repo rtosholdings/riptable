@@ -1346,8 +1346,8 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
     val_list : array or list of arrays
         Array or list of arrays that ``func_list`` is applied to.
         :py:func:`~.rt_accumtable.accum_cols` returns an array for each element in
-        ``val_list``. If an element of ``val_list`` is itself a two-element list of two
-        arrays, :py:func:`~.rt_accumtable.accum_cols` calculates a ratio between the
+        ``val_list``. If an element of ``val_list`` is itself a two-element list or tuple of
+        two arrays, :py:func:`~.rt_accumtable.accum_cols` calculates a ratio between the
         values calculated by a reducing function for the two arrays.
         :py:func:`~.rt_accumtable.accum_ratio` performs this calculation using ``cat``,
         the two arrays, the respective filter, and the respective reducing function as
@@ -1628,7 +1628,7 @@ def accum_cols(cat, val_list, name_list=None, filt_list=None, func_list="nansum"
     for val, name, filt, func in zip(val_list, name_list, filt_list, func_list):
         func_name = func
         func = getattr(accum, func_name)
-        if isinstance(val, list):  # Special cases
+        if isinstance(val, (list, tuple)):  # Special cases
             if isinstance(val[1], str):  # Named cases
                 if val[1] in "pP":  # accum_ratiop type
                     curr_data = accum_ratiop(cat, temp_cat, val[0], filt, func_name, "T", False, False)
