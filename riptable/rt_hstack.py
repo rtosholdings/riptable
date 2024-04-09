@@ -582,7 +582,7 @@ def _possibly_add_concat_gap(coldim: int, inv_count, col, column_list, types):
         if inv_count[0] > 0:
             dtype = None
             if len(types) > 1:
-                common = np.find_common_type(types, [])
+                common = np.result_type(*types)
                 # numeric, supported, ensure final vstack result dtype - strings will be automatic
                 if common.num <= 13:
                     # future optimization: store this for performance, reduce types list to final type

@@ -869,6 +869,24 @@ class TestDataset(unittest.TestCase):
         with self.assertRaises(ValueError):
             ds1[:, ["a", "b"]] = FastArray([1, 2, 3])
 
+    def test_indexing_10(self):
+        # 1d fancy indexing with Invalids on 1d and 2d columns
+        ds = rt.Dataset(
+            {
+                'A': rt.FastArray([0.9, 0.2, 0.3], dtype=rt.float32),
+                'B': rt.FastArray([[1, 1], [2, 3], [4, 5]], dtype=rt.int32),
+            }
+        )
+        inv_fancy = rt.FastArray([2, 0, 1], dtype=rt.int32)
+        inv = inv_fancy.inv
+        inv_fancy[1] = inv
+
+        out1 = rt.FastArray([[4, 5], [inv, inv], [2, 3]], dtype=rt.int32)
+        out2 = rt.FastArray([0.3, rt.nan, 0.2], dtype=rt.float32)
+
+        self.assertTrue((ds.B[inv_fancy] == out1).all())
+        self.assertTrue(np.array_equal(ds.A[inv_fancy], out2, equal_nan=True))
+
     # def test_row_indexing(self):
     #    strings = FastArray(['c', 'a', 'b', 'b', 'a', 'b', 'c', 'b', 'a', 'a', 'c', 'c', 'b', 'c', 'a'])
     #    int1    = FastArray([2, 1, 2, 1, 2, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1])
@@ -2242,10 +2260,49 @@ class TestDataset(unittest.TestCase):
         self.assertEqual(ds2.col_get_len(), 0)
 
     def test_equals(self):
-        ds = Dataset({"a": [True, True, False, True], "b": [False, False, True, False]})
-        ds2 = Dataset({"a": [True, True, True, True], "b": [False, False, False, False]})
-        self.assertTrue(ds.equals(ds))
-        self.assertTrue(ds.equals(ds2) == False)
+        self.assertTrue(Dataset({'x': ['A']}).equals(Dataset({'x': ['A']})))
+        self.assertTrue(Dataset({'x': []}).equals(Dataset({'x': []})))
+        self.assertTrue(Dataset({'x': [], 'y': []}).equals(Dataset({'x': [], 'y': []})))
+        self.assertTrue(Dataset({'x': [1, 2, 3]}).equals(Dataset({'x': [1, 2, 3]})))
+        self.assertTrue(Dataset({'x': [1], 'y': ['A']}).equals(Dataset({'x': [1], 'y': ['A']})))
+
+        self.assertFalse(Dataset({'x': ['A']}).equals(Dataset({'y': ['A']})))
+        self.assertFalse(Dataset({'x': []}).equals(Dataset({'y': []})))
+        self.assertFalse(Dataset({'x': [], 'y': []}).equals(Dataset({'x': []})))
+        self.assertFalse(Dataset({'x': [1, 2, 3]}).equals(Dataset({'x': [1, 2]})))
+        self.assertFalse(Dataset({'x': [1], 'y': ['A']}).equals(Dataset({'x': [1]})))
+        self.assertFalse(Dataset({'x': [1]}).equals(Dataset({'x': [1], 'y': ['A']})))
+
+        self.assertTrue(Dataset().equals(Dataset()))
+        self.assertTrue(Dataset({'a': ''}).equals(Dataset({'a': ''})))
+
+        self.assertTrue(Dataset({'a': [rt.nan, 1, rt.nan]}).equals(Dataset({'a': [rt.nan, 1, rt.nan]})))
+        self.assertFalse(Dataset({'a': [rt.nan, 1, 2]}).equals(Dataset({'a': [rt.nan, 1, rt.nan]})))
+
+    def test_equals_axis(self):
+        ds1 = Dataset({'x': [1, 2, 3], 'y': [4, 5, 6]})
+        ds2 = Dataset({'x': [1, 2, 3], 'y': [7, 5, 9]})
+
+        equals = ds1.equals(ds2, axis=1)
+        self.assertTrue((equals['x'] == FastArray([True, True, True])).all())
+        self.assertTrue((equals['y'] == FastArray([False, True, False])).all())
+
+    def test_equals_labels(self):
+        ds1 = Dataset({'x': [1, 2], 'y': [3, 4]})
+        ds1.label_set_names(['x'])
+        ds2 = Dataset({'z': [1, 2], 'y': [3, 4]})
+        ds2.label_set_names(['z'])
+
+        self.assertFalse(ds1.equals(ds2, labels=True))
+        self.assertTrue(ds1.equals(ds2, labels=False))
+
+    def test_equals_exact(self):
+        ds1 = Dataset({'x': [1, 2], 'y': [3, 4]})
+        ds2 = Dataset({'y': [3, 4], 'x': [1, 2]})
+        ds3 = Dataset({'a': [1, 2], 'b': [3, 4]})
+        self.assertTrue(ds1.equals(ds2, exact=False))
+        self.assertFalse(ds1.equals(ds2, exact=True))
+        self.assertTrue(ds1.equals(ds3, exact=True))
 
     def test_pivot2(self):
         ds2 = Dataset(

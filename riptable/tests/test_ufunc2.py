@@ -4,6 +4,9 @@ from __future__ import absolute_import, division, print_function
 
 import itertools
 import warnings
+import os
+
+os.environ["NUMPY_EXPERIMENTAL_DTYPE_API"] = '1'  # needed for numpy.core._umath_tests in numpy>=1.26
 
 import numpy as np
 import numpy.core._operand_flag_tests as opflag_tests
@@ -1694,7 +1697,11 @@ class TestUfunc(object):
         a = np.array([1, 2, 3], dtype=int)
         a = FA(a)
         # Non-in-place addition is fine
-        assert_array_equal(assert_no_warnings(np.add, a, 1.1), [2.1, 3.1, 4.1])
+        if _numpy_version < (1, 25):
+            assert_array_equal(assert_no_warnings(np.add, a, 1.1), [2.1, 3.1, 4.1])
+        else:
+            # Avoid np.find_common_type() deprecation warning in NumPy 1.25+
+            assert_array_equal(np.add(a, 1.1), [2.1, 3.1, 4.1])
         # TODO: FA should raise TypeError?
         a = np.array([1, 2, 3], dtype=int)
         assert_raises(TypeError, np.add, a, 1.1, out=a)

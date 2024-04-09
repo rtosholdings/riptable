@@ -7,7 +7,7 @@ __all__ = ["merge_asof2"]
 from datetime import timedelta
 import logging
 from time import perf_counter_ns
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 import warnings
 
 import numpy as np
@@ -1254,7 +1254,7 @@ def merge_asof2(
     on: Optional[Union[str, Tuple[str, str]]] = None,
     left_on: Optional[str] = None,
     right_on: Optional[str] = None,
-    by: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+    by: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
     left_by: Optional[Union[str, List[str]]] = None,
     right_by: Optional[Union[str, List[str]]] = None,
     suffixes: Optional[Tuple[str, str]] = None,

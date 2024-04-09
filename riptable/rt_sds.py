@@ -324,7 +324,9 @@ def sds_listdir(path: AnyPath) -> List[str]:
     return sds_os(os.listdir, path)
 
 
-def sds_endswith(path: Union[bytes, str, List[Union[bytes, str]]], add: bool = False) -> Union[bool, str, List[str]]:
+def sds_endswith(
+    path: Union[bytes, str, Sequence[Union[bytes, str]]], add: bool = False
+) -> Union[bool, str, List[str]]:
     """
     Returns true if the pathname ends with SDS extension, ``.sds``, unless `add` is enabled then it returns
     the SDS pathname.

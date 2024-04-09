@@ -2610,7 +2610,7 @@ class TestCategorical(unittest.TestCase):
         mcat = rt.Cat([c1, c2])
         res = mcat.numba_apply(nb_vector, np.arange(3000))
 
-        assert res.equals(mcat.apply(nb_vector, np.arange(3000))), "Failed check 4"
+        assert res.equals(mcat.apply(nb_vector, np.arange(3000)), labels=False), "Failed check 4"
 
         with pytest.raises(NotImplementedError):
             mcat.numba_apply(nb_sum, np.arange(3000), keyword="keyword")

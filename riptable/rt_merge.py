@@ -21,6 +21,7 @@ from typing import (
     List,
     NamedTuple,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Union,
@@ -1645,7 +1646,7 @@ def _normalize_keep(
 
 
 def _extract_on_columns(
-    on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]],
+    on: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]],
     side_on: Optional[Union[str, List[str]]],
     for_left: bool,
     on_param_name: str,
@@ -2080,7 +2081,7 @@ def merge_indices(
     left: "Dataset",
     right: "Dataset",
     *,
-    on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+    on: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
     how: str = "left",
     # TODO: Consider changing this to require_unique: Union[bool, Tuple[bool, bool]] -- the semantics would be clearer to users
     validate: Optional[str] = None,
@@ -2292,7 +2293,7 @@ def merge_indices(
 def merge2(
     left: "Dataset",
     right: "Dataset",
-    on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+    on: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
     left_on: Optional[Union[str, List[str]]] = None,
     right_on: Optional[Union[str, List[str]]] = None,
     how: str = "left",
@@ -3228,7 +3229,7 @@ def merge(
 def merge_lookup(
     left: "Dataset",
     right: "Dataset",
-    on: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+    on: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
     left_on: Optional[Union[str, List[str]]] = None,
     right_on: Optional[Union[str, List[str]]] = None,
     require_match: bool = False,
@@ -3574,7 +3575,7 @@ def merge_asof(
     on: Optional[Union[str, Tuple[str, str]]] = None,
     left_on: Optional[str] = None,
     right_on: Optional[str] = None,
-    by: Optional[Union[str, Tuple[str, str], List[Union[str, Tuple[str, str]]]]] = None,
+    by: Optional[Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]] = None,
     left_by: Optional[Union[str, List[str]]] = None,
     right_by: Optional[Union[str, List[str]]] = None,
     suffixes: Optional[Tuple[str, str]] = None,

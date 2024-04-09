@@ -577,9 +577,15 @@ def _mbget_2dims(arr, idx):
     ncols = arr.shape[1]
     final_shape = (nrows, ncols)
 
-    # expand index array
-    # possible optimization: multiply on the smaller one first?
-    expanded_idx = np.repeat(idx, ncols) * ncols
+    # upcast to int64 so expanding does not go out of range of dtype
+    idx = idx.astype(np.int64)
+
+    # expand index array, safely keeping Invalids if given a FastArray
+    if isinstance(idx, TypeRegister.FastArray):
+        idx = np.where(idx.isna(), idx, idx * ncols)
+    else:
+        idx = idx * ncols
+    expanded_idx = np.repeat(idx, ncols)
     expanded_idx += tile(arange(ncols), nrows)
 
     # in as fortran

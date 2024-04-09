@@ -1325,6 +1325,19 @@ class FastArray(np.ndarray):
                     if len(self.shape) == 1:
                         return TypeRegister.MathLedger._MBGET(self, fld)
 
+            # Workaround for indexing a 2d FastArray with invalid indices (eg produced by merge functions)
+            # At each invalid index, give a row of NaN's / Inv's
+            if isinstance(fld, FastArray) and self.ndim == 2 and fld.ndim == 1:
+                f_inv = fld.isna()
+                if f_inv.any():
+                    # Temporarily remove invalid indices and get item
+                    fld = fld.fillna(0)
+                    result = TypeRegister.MathLedger._GETITEM(super(FastArray, self), fld)
+                    # Add back in null row where invalid indices were
+                    null_row = np.ndarray.__getitem__(self, 0).copy_invalid()
+                    result.__setitem__(f_inv, null_row)
+                    return result.view(FastArray)
+
             result = TypeRegister.MathLedger._GETITEM(super(FastArray, self), fld)
             return result.view(FastArray)
         else:
@@ -5176,6 +5189,13 @@ class FastArray(np.ndarray):
                             out_args.append(output)
                     # replace out
                     kwargs["out"] = tuple(out_args)
+
+            # NumPy 1.25 permits overriding "where" (https://numpy.org/doc/stable/release/1.25.0-notes.html#array-likes-that-define-array-ufunc-can-now-override-ufuncs-if-used-as-where)
+            # TODO: should we just unwrap all FA kwargs?
+            if "where" in kwargs:
+                kwarg_val = kwargs["where"]
+                if isinstance(kwarg_val, FastArray):
+                    kwargs["where"] = kwarg_val.view(np.ndarray)
 
             # NOTE: If the specified ufunc + inputs combination isn't supported by numpy either,
             #       as of numpy 1.17.x this call will end up raising a UFuncTypeError so the rest

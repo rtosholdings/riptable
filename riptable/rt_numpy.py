@@ -362,7 +362,7 @@ def get_common_dtype(x, y) -> np.dtype:
 
     # NOTE: find_common_type has a bug where int32 num 7 gets flipped to int32 num 5.
     if type1.num != type2.num:
-        common = np.find_common_type([type1, type2], [])
+        common = np.result_type(type1, type2)
     else:
         # for strings and unicode, pick the larger itemsize
         if type1.itemsize >= type2.itemsize:
@@ -433,7 +433,7 @@ def _find_lossless_common_type(dt1: np.dtype, dt2: np.dtype) -> Union[np.dtype, 
     """
     Finds the lossless common type, or None if not found.
     """
-    dtc = np.find_common_type([dt1, dt2], [])
+    dtc = np.result_type(dt1, dt2)
 
     if not np.issubdtype(dt1, np.number) or not np.issubdtype(dt2, np.number):
         return dtc
