@@ -2462,9 +2462,16 @@ class Categorical(GroupByOps, FastArray):
     # ------------------------------------------------------------
     def isfiltered(self) -> FastArray:
         """
-        True where bin == 0.
-        Only applies to categoricals with base index 1, otherwise returns all False.
-        Different than invalid category.
+        Returns a boolean array of whether each category value is filtered.
+
+        For base-0 categoricals, return all False.
+        For base-1 categoricals, returns True where bin == 0.
+        For dict-based categoricals, returns True for values that don't exist in the provided mapping.
+
+        Returns
+        -------
+        out: FastArray
+            FastArray of bools.
 
         See Also
         --------
@@ -2473,8 +2480,11 @@ class Categorical(GroupByOps, FastArray):
         """
         if self.base_index == 1:
             return self._fa == 0
-        else:
-            return zeros(len(self), dtype=bool)
+
+        if self.base_index is None:
+            return self._fa.isin(self._grouping._enum.code_array, invert=True)
+
+        return zeros(len(self), dtype=bool)
 
     # ------------------------------------------------------------
     def set_name(self, name) -> Categorical:
@@ -4876,29 +4886,36 @@ class Categorical(GroupByOps, FastArray):
     @property
     def unique_count(self):
         """
-        Number of unique values in the categorical.
-        It is necessary for every groupby operation.
+        Number of unique values in the :py:class:`~.rt_categorical.Categorical`.
 
-        Notes
-        -----
-        For categoricals in dict / enum mode that have generated their grouping object, this
-        will reflect the number of unique values that `occur` in the non-unique values. Empty
-        bins will not be included in the count.
+        This property is used for every groupby operation.
+
+        For :py:class:`~.rt_categorical.Categorical` objects constructed from dictionaries or
+        :py:class:`~enum.IntEnum` objects, the returned count includes unique invalid values from the
+        underlying array. Otherwise, invalid values are not counted.
+
+        See Also
+        --------
+        :py:meth:`.rt_categorical.Categorical.nunique` : Number of unique values in the :py:class:`~.rt_categorical.Categorical`.
+        :py:meth:`.rt_groupbyops.GroupByOps.count_uniques` : Count the unique values for each group.
         """
         return self.grouping.unique_count
 
     # ------------------------------------------------------------
     def nunique(self):
         """
-        Number of unique values that occur in the Categorical.
-        Does not include invalids. Not the same as the length of possible uniques.
+        Number of unique values in the :py:class:`~.rt_categorical.Categorical`.
 
-        Categoricals based on dictionary mapping / enum will return unique count including all possibly
-        invalid values from underlying array.
+        Not the same as the length of possible uniques.
+
+        For :py:class:`~.rt_categorical.Categorical` objects constructed from dictionaries or
+        :py:class:`~enum.IntEnum` objects, the returned count includes unique invalid values from the
+        underlying array. Otherwise, invalid values are not counted.
 
         See Also
         --------
-        Categorical.unique_count
+        :py:attr:`.rt_categorical.Categorical.unique_count` : Number of unique values in the :py:class:`~.rt_categorical.Categorical`.
+        :py:meth:`.rt_groupbyops.GroupByOps.count_uniques` : Count the unique values for each group.
         """
         un = unique(self._fa, sorted=False)
         count = len(un)
@@ -6330,7 +6347,7 @@ class Categorical(GroupByOps, FastArray):
         # python has trouble deleting objects with circular references
         if hasattr(self, "_categories_wrap"):
             del self._categories_wrap
-        self._grouping = None
+        del self._grouping
 
     # ------------------------------------------------------------
     @classmethod
@@ -6504,7 +6521,7 @@ class Categorical(GroupByOps, FastArray):
 
             return value
 
-        if np.isscalar(example_res) & ~transform:  # userfunc is a scalar function
+        if np.isscalar(example_res) and not transform:  # userfunc is a scalar function
             res = self._scalar_compiled_numba_apply(iGroup, iFirstGroup, nCountGroup, userfunc, args)
 
             res_ds = TypeRegister.Dataset(self.gb_keychain.gbkeys)

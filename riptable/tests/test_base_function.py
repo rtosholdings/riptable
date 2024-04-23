@@ -165,6 +165,22 @@ class TestSearchSorted:
 
         b = b.astype(np.int32)
 
+    @pytest.mark.parametrize(
+        "haystack, needle", [(rt.FA([1, 2, 3]), rt.FA([1.5, 2.5, 3.5])), (rt.FA([1.5, 2.5, 3.5]), rt.FA([1, 2, 3]))]
+    )
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_searchsorted_mismatch(self, haystack, needle, side):
+        assert_array_equal(
+            rt.searchsorted(haystack, needle, side=side), np.searchsorted(haystack._np, needle._np, side=side)
+        )
+
+    @pytest.mark.parametrize("haystack, needle", [(rt.FA(["AAPL", "AAPL", "AAPL", "AMZN"]), rt.FA(["AAPL"]))])
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_searchsorted_string(self, haystack, needle, side):
+        assert_array_equal(
+            rt.searchsorted(haystack, needle, side=side), np.searchsorted(haystack._np, needle._np, side=side)
+        )
+
 
 class TestStd:
     @pytest.mark.skip(reason="this test depends on implementation specific behavior")

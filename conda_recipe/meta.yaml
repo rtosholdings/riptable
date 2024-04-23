@@ -21,7 +21,7 @@ requirements:
     - pandas >=1.0,<3.0
     - python
     - python-dateutil
-    - riptide_cpp >=1.17.0,<2 # run with any (compatible) version in this range
+    - riptide_cpp >=1.19.0,<2 # run with any (compatible) version in this range
     - typing-extensions >=4.9.0
 
 about:

@@ -12,7 +12,7 @@ dependencies = [
     "numpy >=1.23",
     "pandas >=1.0,<3.0",
     "python-dateutil",
-    "riptide_cpp >=1.17.0,<2",
+    "riptide_cpp >=1.19.0,<2",
     "typing-extensions >=4.9.0",
 ]
 classifiers = [
@@ -20,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
 ]

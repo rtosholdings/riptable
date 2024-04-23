@@ -651,23 +651,50 @@ def empty_like(
 
 # -------------------------------------------------------
 def _searchsorted(array, v, side="left", sorter=None):
+    from .rt_utils import possibly_convert
+
+    def _punt_to_numpy(array, v, side, sorter):
+        # numpy does not like fastarrays for this routine
+        if isinstance(array, TypeRegister.FastArray):
+            array = array._np
+        if isinstance(v, TypeRegister.FastArray):
+            v = v._np
+        return LedgerFunction(np.searchsorted, array, v, side=side, sorter=sorter)
+
+    is_scalar = np.isscalar(v)
+    dtype = get_common_dtype(array, v)
+
+    if not dtype.kind in 'biuf':
+        return _punt_to_numpy(array, v, side, sorter)
+
+    if not isinstance(array, np.ndarray):
+        array = np.array(array, dtype=dtype)
+
+    if not isinstance(v, np.ndarray):
+        v = np.array(v, dtype=dtype)
+
+    array = possibly_convert(array, dtype)
+    v = possibly_convert(v, dtype)
     # we cannot handle a sorter
     if sorter is None:
         try:
+            res = None
             if side == "leftplus":
-                return rc.BinsToCutsBSearch(v, array, 0)
+                res = rc.BinsToCutsBSearch(v, array, 0)
             elif side == "left":
-                return rc.BinsToCutsBSearch(v, array, 1)
+                res = rc.BinsToCutsBSearch(v, array, 1)
             else:
-                return rc.BinsToCutsBSearch(v, array, 2)
+                res = rc.BinsToCutsBSearch(v, array, 2)
+
+            if is_scalar and not np.isscalar(res):
+                res = res[0]
+
+            return res
         except:
             # fall into numpy
             pass
 
-    # numpy does not like fastarrays for this routine
-    if isinstance(array, TypeRegister.FastArray):
-        array = array._np
-    return LedgerFunction(np.searchsorted, array, v, side=side, sorter=sorter)
+    return _punt_to_numpy(array, v, side, sorter)
 
 
 # -------------------------------------------------------

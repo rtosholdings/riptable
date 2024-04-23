@@ -94,11 +94,18 @@ class TestCategoricalFilterInvalid:
         assert c.invalid_category == c2.invalid_category
         assert c.filtered_name == c2.filtered_name
 
-    def test_isfiltered(self):
-        c = Categorical(np.random.choice(4, 100), ["a", "b", "c"])
-        flt = c.isfiltered()
-        eq_z = c._fa == 0
-        assert arr_eq(flt, eq_z)
+    @pytest.mark.parametrize(
+        "cat, exp",
+        [
+            (Cat([0, 1, 0, 2, 3], ["a", "b", "c"]), [True, False, True, False, False]),
+            (Cat([0, 1, 0, 2, 3], {1: "a", 2: "b"}), [True, False, True, False, True]),
+            (Cat([0, 1, 0, 2, 3], {"a": 1, "b": 2}), [True, False, True, False, True]),
+            (Cat([0, 1, 0, 2, 3], {"a": 1, "b": 2}, base_index=0), [True, False, True, False, True]),
+            (Cat([0, 1, 0, 2, 3], base_index=0), [False, False, False, False, False]),
+        ],
+    )
+    def test_isfiltered(self, cat, exp):
+        assert arr_eq(cat.isfiltered(), exp)
 
     def test_isnan(self):
         c = Categorical(np.random.choice(4, 100), ["a", "b", "c"], invalid="a")
