@@ -58,8 +58,8 @@ from riptable.Utils.common import cached_weakref_property
 # With template backend, matplotlib plots nothing
 matplotlib.use("template")
 
-# Apply riptable docstring configuration for examples.
-from _docstring_config import *
+# Riptable docstring configuration setup for examples.
+import _docstring_config
 
 
 ERROR_MSGS = {
@@ -99,6 +99,10 @@ PRIVATE_CLASSES = [
 IMPORT_CONTEXT = {
     "np": numpy,
     "rt": riptable,
+}
+
+ATTRIBS_CONTEXT = {
+    "setup_for_examples": _docstring_config.setup_for_examples,
 }
 
 
@@ -210,10 +214,11 @@ class RiptableDocstring(Validator):
         error_msgs = ""
         current_dir = set(os.listdir())
         tempdir = pathlib.Path("tempdir")  # special reserved directory for temporary files; will be deleted per test
-        for test in finder.find(self.raw_doc, self.name, globs=IMPORT_CONTEXT):
+        for test in finder.find(self.raw_doc, self.name, globs=dict(**IMPORT_CONTEXT, **ATTRIBS_CONTEXT)):
             tempdir.mkdir()
             f = io.StringIO()
-            failed_examples, total_examples = runner.run(test, out=f.write)
+            with _docstring_config.ScopedExampleSetup():
+                failed_examples, total_examples = runner.run(test, out=f.write)
             if failed_examples:
                 error_msgs += f.getvalue()
             shutil.rmtree(tempdir)
@@ -319,11 +324,11 @@ class RiptableDocstring(Validator):
 
 def riptable_validate(
     func_name: str,
-    errors: typing.Optional(list[str]) = None,
-    not_errors: typing.Optional(list[str]) = None,
-    flake8_errors: typing.Optional(list[str]) = None,
-    flake8_not_errors: typing.Optional(list[str]) = None,
-    xfails: typing.Optional(list[str]) = None,
+    errors: typing.Optional[list[str]] = None,
+    not_errors: typing.Optional[list[str]] = None,
+    flake8_errors: typing.Optional[list[str]] = None,
+    flake8_not_errors: typing.Optional[list[str]] = None,
+    xfails: typing.Optional[list[str]] = None,
     verbose: bool = False,
 ):
     """
@@ -513,8 +518,8 @@ def is_default_excluded(fullname: str) -> bool:
 
 def is_included(
     fullname: str,
-    includes: typing.Optional(list[str]) = None,
-    excludes: typing.Optional(list[str]) = None,
+    includes: typing.Optional[list[str]] = None,
+    excludes: typing.Optional[list[str]] = None,
 ) -> bool:
     """Indicates whether the name should be included in validation."""
 
@@ -537,14 +542,14 @@ def validate_all(
     match: str,
     not_match: str = None,
     names_from: str = NAMES_FROM_OPTS[0],
-    errors: typing.Optional(list[str]) = None,
-    not_errors: typing.Optional(list[str]) = None,
-    flake8_errors: typing.Optional(list[str]) = None,
-    flake8_not_errors: typing.Optional(list[str]) = None,
+    errors: typing.Optional[list[str]] = None,
+    not_errors: typing.Optional[list[str]] = None,
+    flake8_errors: typing.Optional[list[str]] = None,
+    flake8_not_errors: typing.Optional[list[str]] = None,
     ignore_deprecated: bool = False,
-    includes: typing.Optional(list[str]) = None,
-    excludes: typing.Optional(list[str]) = None,
-    xfails: typing.Optional(list[str]) = None,
+    includes: typing.Optional[list[str]] = None,
+    excludes: typing.Optional[list[str]] = None,
+    xfails: typing.Optional[list[str]] = None,
     verbose: int = 0,
 ) -> dict:
     """
@@ -650,17 +655,17 @@ def print_validate_all_results(
     match: str,
     not_match: str = None,
     names_from: str = NAMES_FROM_OPTS[0],
-    errors: typing.Optional(list[str]) = None,
-    not_errors: typing.Optional(list[str]) = None,
-    flake8_errors: typing.Optional(list[str]) = None,
-    flake8_not_errors: typing.Optional(list[str]) = None,
+    errors: typing.Optional[list[str]] = None,
+    not_errors: typing.Optional[list[str]] = None,
+    flake8_errors: typing.Optional[list[str]] = None,
+    flake8_not_errors: typing.Optional[list[str]] = None,
     out_format: str = OUT_FORMAT_OPTS[0],
     ignore_deprecated: bool = False,
-    includes: typing.Optional(list[str]) = None,
-    excludes: typing.Optional(list[str]) = None,
-    xfails: typing.Optional(list[str]) = None,
+    includes: typing.Optional[list[str]] = None,
+    excludes: typing.Optional[list[str]] = None,
+    xfails: typing.Optional[list[str]] = None,
     outfile: typing.IO = sys.stdout,
-    outfailsfile: typing.Optional(typing.IO) = None,
+    outfailsfile: typing.Optional[typing.IO] = None,
     verbose: int = 0,
 ):
     if out_format not in OUT_FORMAT_OPTS:
@@ -713,11 +718,11 @@ def print_validate_all_results(
 
 def print_validate_one_results(
     func_name: str,
-    errors: typing.Optional(list[str]) = None,
-    not_errors: typing.Optional(list[str]) = None,
-    flake8_errors: typing.Optional(list[str]) = None,
-    flake8_not_errors: typing.Optional(list[str]) = None,
-    xfails: typing.Optional(list[str]) = None,
+    errors: typing.Optional[list[str]] = None,
+    not_errors: typing.Optional[list[str]] = None,
+    flake8_errors: typing.Optional[list[str]] = None,
+    flake8_not_errors: typing.Optional[list[str]] = None,
+    xfails: typing.Optional[list[str]] = None,
     outfile: typing.IO = sys.stdout,
     verbose: int = 0,
 ):

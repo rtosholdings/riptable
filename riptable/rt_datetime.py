@@ -937,13 +937,13 @@ class DateBase(FastArray):
         if isinstance(self, np.ndarray):
             return np.asarray(
                 [
-                    dt.utcfromtimestamp(timestamp).strftime(format)
+                    dt.fromtimestamp(timestamp, timezone.utc).strftime(format)
                     for timestamp in self._fa.astype(np.int64) * SECONDS_PER_DAY
                 ],
                 dtype=dtype,
             )
         else:
-            return dt.strftime(dt.utcfromtimestamp(self * SECONDS_PER_DAY), format)
+            return dt.strftime(dt.fromtimestamp(self * SECONDS_PER_DAY, timezone.utc), format)
 
     # ------------------------------------------------------------
     @property
@@ -1606,29 +1606,29 @@ class Date(DateBase, TimeStampBase):
 
         See Also
         --------
-        :py:meth:`.rt_datetime.Date.isnan`
-        :py:meth:`.rt_datetime.DateTimeNano.isnan`
-        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
-        :py:func:`.rt_numpy.isnan`
-        :py:func:`.rt_numpy.isnotnan`
-        :py:func:`.rt_numpy.isnanorzero`
-        :py:meth:`.rt_fastarray.FastArray.isnan`
-        :py:meth:`.rt_fastarray.FastArray.isnotnan`
-        :py:meth:`.rt_fastarray.FastArray.notna`
-        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
-        :py:meth:`.rt_categorical.Categorical.isnan`
-        :py:meth:`.rt_categorical.Categorical.isnotnan`
-        :py:meth:`.rt_categorical.Categorical.notna`
-        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
-            Return a boolean array that's `True` for each
-            :py:class:`~.rt_dataset.Dataset` row that contains at least one ``NaN``.
-        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+        :py:meth:`.rt_datetime.Date.isnotfinite`
+        :py:meth:`.rt_datetime.DateTimeNano.isfinite`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
             Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
-            row that contains only ``NaN`` values.
+            row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one value that's positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all infinite values.
 
         Notes
         -----
-        Riptable currently uses ``0`` to represent ``NaN`` values for the classes in the
+        Riptable uses ``0`` to represent ``NaN`` values for the classes in the
         :py:mod:`.rt_datetime` module. This constant is held in the
         :py:class:`~.rt_datetime.DateTimeBase` class.
 
@@ -1661,29 +1661,29 @@ class Date(DateBase, TimeStampBase):
 
         See Also
         --------
-        :py:meth:`.rt_datetime.Date.isnotnan`
-        :py:meth:`.rt_datetime.DateTimeNano.isnan`
-        :py:meth:`.rt_datetime.DateTimeNano.isnotnan`
-        :py:func:`.rt_numpy.isnan`
-        :py:func:`.rt_numpy.isnotnan`
-        :py:func:`.rt_numpy.isnanorzero`
-        :py:meth:`.rt_fastarray.FastArray.isnan`
-        :py:meth:`.rt_fastarray.FastArray.isnotnan`
-        :py:meth:`.rt_fastarray.FastArray.notna`
-        :py:meth:`.rt_fastarray.FastArray.isnanorzero`
-        :py:meth:`.rt_categorical.Categorical.isnan`
-        :py:meth:`.rt_categorical.Categorical.isnotnan`
-        :py:meth:`.rt_categorical.Categorical.notna`
-        :py:meth:`.rt_dataset.Dataset.mask_or_isnan` :
-            Return a boolean array that's `True` for each
-            :py:class:`~.rt_dataset.Dataset` row that contains at least one ``NaN``.
-        :py:meth:`.rt_dataset.Dataset.mask_and_isnan` :
+        :py:meth:`.rt_datetime.Date.isfinite`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotfinite`
+        :py:meth:`.rt_datetime.DateTimeNano.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
             Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
-            row that contains only ``NaN`` values.
+            row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one value that's positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all infinite values.
 
         Notes
         -----
-        Riptable currently uses ``0`` to represent ``NaN`` values for the classes in the
+        Riptable uses ``0`` to represent ``NaN`` values for the classes in the
         :py:mod:`.rt_datetime` module. This constant is held in the
         :py:class:`~.rt_datetime.DateTimeBase` class.
 
@@ -4161,10 +4161,11 @@ class DateTimeCommon:
         if to_tz in ["GMT", "UTC"]:
             if isinstance(in_seconds, np.ndarray):
                 return np.asarray(
-                    [dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in in_seconds], dtype=dtype
+                    [dt.fromtimestamp(timestamp, timezone.utc).strftime(format) for timestamp in in_seconds],
+                    dtype=dtype,
                 )
             else:
-                return dt.strftime(dt.utcfromtimestamp(in_seconds), format)
+                return dt.strftime(dt.fromtimestamp(in_seconds, timezone.utc), format)
 
         else:
             # Choose timezone from to_tz
@@ -5078,16 +5079,6 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         """
         print(self.__repr__(verbose=True))
 
-    # -------------------------------------------------------
-    def diff(self, periods=1):
-        """
-        Returns
-        -------
-        TimeSpan
-        """
-        result = self._fa.diff(periods=periods)
-        return TimeSpan(result)
-
     # ------------------------------------------------------------
     def __repr__(self, verbose=False):
         repr_strings = []
@@ -5308,8 +5299,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         Return a boolean array that's `True` for each invalid
         :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
-        ``0`` and ``NaN`` values are treated as invalid
-        :py:class:`~.rt_datetime.DateTimeNano` elements.
+        ``0``, ``NaN`` values, and positive and negative infinity are
+        treated as invalid :py:class:`~.rt_datetime.DateTimeNano` elements.
 
         Returns
         -------
@@ -5371,8 +5362,8 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
         Return a boolean array that's `True` for each valid
         :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
-        ``0`` and ``NaN`` values are treated as invalid
-        :py:class:`~.rt_datetime.DateTimeNano` elements.
+        ``0``, ``NaN`` values, and positive and negative infinity are
+        treated as invalid :py:class:`~.rt_datetime.DateTimeNano` elements.
 
         Returns
         -------
@@ -5431,90 +5422,133 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def isfinite(self):
         """
-        Return a boolean array that's True for each `DateTimeNano` element
-        that's not a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `True` for each finite
+        :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
-        considered to be NaN.
+        These invalid :py:class:`~.rt_datetime.DateTimeNano` values are considered
+        non-finite:
+
+        - Positive and negative infinity
+        - ``0``
+        - ``NaN`` values (``rt.nan`` and other sentinel values)
+        - Strings representing dates before the UNIX epoch
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each non-NaN element,
-            False otherwise.
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            finite :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
         See Also
         --------
-        DateTimeNano.isnan, Date.isnan, Date.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that
-            contains at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.Date.isnotfinite`
+        :py:meth:`.rt_datetime.Date.isfinite`
+        :py:meth:`.rt_datetime.DateTimeNano.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one value that's positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all infinite values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable treats ``0`` as an invalid date for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in
+        :py:class:`~.rt_datetime.DateTimeBase`.
 
         Examples
         --------
-        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
-        ...                        '20210713 02:44:19'], from_tz = 'NYC')
-        >>> dtn[0] = 0
-        >>> dtn[1] = dtn.inv
-        >>> dtn
-        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        >>> dtn = rt.DateTimeNano([rt.inf, -rt.inf])
         >>> dtn.isfinite()
-        FastArray([False, False,  True])
+        FastArray([False, False])
+
+        >>> dtn2 = rt.DateTimeNano([0.0, rt.nan])
+        >>> dtn2.isfinite()
+        FastArray([False, False])
+
+        >>> dtn3 = rt.DateTimeNano(["2024-01-01 12:00:00.000000000",
+        ...                         "2010-09-24 12:00:00.000000000",
+        ...                         "1962-03-17 12:00:00.000000000"], from_tz="NYC")
+        >>> dtn3.isfinite()
+        FastArray([ True,  True, False])
         """
         return ~self.isnan()
 
     # -------------------------------------------------------------
     def isnotfinite(self):
         """
-        Return a boolean array that's True for each `DateTimeNano` element
-        that's a NaN (Not a Number), False otherwise.
+        Return a boolean array that's `True` for each non-finite
+        :py:class:`~.rt_datetime.DateTimeNano` element, `False` otherwise.
 
-        Both the DateTime NaN (0) and Riptable's int64 sentinel value are
-        considered to be NaN.
+        These invalid :py:class:`~.rt_datetime.DateTimeNano` values are considered
+        non-finite:
+
+        - Positive and negative infinity
+        - ``0``
+        - ``NaN`` values (``rt.nan`` and other sentinel values)
+        - Strings representing dates before the UNIX epoch
 
         Returns
         -------
-        `FastArray`
-            A `FastArray` of booleans that's True for each NaN element, False
+        :py:class:`~.rt_fastarray.FastArray`
+            A :py:class:`~.rt_fastarray.FastArray` of booleans that's `True` for each
+            non-finite :py:class:`~.rt_datetime.DateTimeNano` element, `False`
             otherwise.
 
         See Also
         --------
-        DateTimeNano.isnotnan, Date.isnan, Date.isnotnan, riptable.isnan,
-        riptable.isnotnan, riptable.isnanorzero, FastArray.isnan,
-        FastArray.isnotnan, FastArray.notna, FastArray.isnanorzero,
-        Categorical.isnan, Categorical.isnotnan, Categorical.notna
-        Dataset.mask_or_isnan :
-            Return a boolean array that's True for each `Dataset` row that contains
-            at least one NaN.
-        Dataset.mask_and_isnan :
-            Return a boolean array that's True for each all-NaN `Dataset` row.
+        :py:meth:`.rt_datetime.Date.isnotfinite`
+        :py:meth:`.rt_datetime.Date.isfinite`
+        :py:meth:`.rt_datetime.DateTimeNano.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isfinite`
+        :py:meth:`.rt_fastarray.FastArray.isnotfinite`
+        :py:meth:`.rt_fastarray.FastArray.isinf`
+        :py:meth:`.rt_fastarray.FastArray.isnotinf`
+        :py:meth:`.rt_dataset.Dataset.mask_or_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one finite value.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isfinite` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all finite values.
+        :py:meth:`.rt_dataset.Dataset.mask_or_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that has at least one value that's positive or negative infinity.
+        :py:meth:`.rt_dataset.Dataset.mask_and_isinf` :
+            Return a boolean array that's `True` for each :py:class:`~.rt_dataset.Dataset`
+            row that contains all infinite values.
 
         Notes
         -----
-        Riptable currently uses 0 for the DateTime NaN value. This constant is
-        held in the `DateTimeBase` class.
+        Riptable treats ``0`` as an invalid date for the classes in the
+        :py:mod:`.rt_datetime` module. This constant is held in
+        :py:class:`~.rt_datetime.DateTimeBase`.
 
         Examples
         --------
-        >>> dtn = rt.DateTimeNano(['20210101 09:31:15', '20210519 05:21:17',
-        ...                        '20210713 02:44:19'], from_tz = 'NYC')
-        >>> dtn[0] = 0
-        >>> dtn[1] = dtn.inv
-        >>> dtn
-        DateTimeNano(['Inv', 'Inv', '20210712 22:44:19.000000000'], to_tz='NYC')
+        >>> dtn = rt.DateTimeNano([rt.inf, -rt.inf])
         >>> dtn.isnotfinite()
-        FastArray([ True,  True, False])
+        FastArray([ True,  True])
+
+        >>> dtn2 = rt.DateTimeNano([0.0, rt.nan])
+        >>> dtn2.isnotfinite()
+        FastArray([ True,  True])
+
+        >>> dtn3 = rt.DateTimeNano(["2024-01-01 12:00:00.000000000",
+        ...                         "2010-09-24 12:00:00.000000000",
+        ...                         "1962-03-17 12:00:00.000000000"], from_tz="NYC")
+        >>> dtn3.isnotfinite()
+        FastArray([False, False,  True])
         """
         return self._fa.isnanorzero()
 
@@ -5640,17 +5674,61 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
     # -------------------------------------------------------------
     def diff(self, periods=1):
         """
-        Calculate the n-th discrete difference.
+        Calculate the differences between elements of a :py:class:`~.rt_datetime.DateTimeNano`.
+
+        Subtracts the :py:class:`~.rt_datetime.DateTimeNano` array shifted to the right
+        ``periods`` times from the original :py:class:`~.rt_datetime.DateTimeNano` array.
+
+        Spaces at either end of the returned array are filled with invalid values.
 
         Parameters
         ----------
         periods : int, optional
-            The number of times values are differenced. If zero, the input
-            is returned as-is.
+            The number of element positions to shift the :py:class:`~.rt_datetime.DateTimeNano`
+            right (if positive) or left (if negative) before subtracting it from the
+            original.
 
         Returns
         -------
-        obj:`TimeSpan`
+        :py:class:`~.rt_datetime.TimeSpan`
+            An equivalent-length :py:class:`~.rt_datetime.TimeSpan` array containing the
+            differences between :py:class:`~.rt_datetime.DateTimeNano` elements.
+
+        Examples
+        --------
+        Create a :py:class:`~.rt_datetime.DateTimeNano` for the following examples:
+
+        >>> dtn = rt.DateTimeNano(["2021-08-15 00:00",
+        ...                        "2021-08-15 00:30",
+        ...                        "2021-08-15 01:30",
+        ...                        "2021-08-16 01:30",
+        ...                        "2021-09-16 01:30",
+        ...                        "2022-09-16 01:30"],
+        ...                        from_tz="NYC")
+        >>> dtn.diff()
+        TimeSpan(['Inv', '00:30:00.000000000', '01:00:00.000000000', '1d 00:00:00.000000000', '31d 00:00:00.000000000', '365d 00:00:00.000000000'])
+
+        Calculate the difference between the original
+        :py:class:`~.rt_datetime.DateTimeNano` array and the array shifted two positions
+        to the right:
+
+        >>> dtn.diff(periods=2)
+        TimeSpan(['Inv', 'Inv', '01:30:00.000000000', '1d 01:00:00.000000000', '32d 00:00:00.000000000', '396d 00:00:00.000000000'])
+
+        Calculate the difference between the original
+        :py:class:`~.rt_datetime.DateTimeNano` array and the array shifted two positions
+        to the left:
+
+        >>> dtn.diff(periods=-2)
+        TimeSpan(['-01:30:00.000000000', '-1d 01:00:00.000000000', '-32d 00:00:00.000000000', '-396d 00:00:00.000000000', 'Inv', 'Inv'])
+
+        Calculate the difference between the original
+        :py:class:`~.rt_datetime.DateTimeNano` array and the array shifted six positions
+        to the right. Note that with only six elements in the array, the shifted array
+        is empty, resulting in a :py:class:`~.rt_datetime.TimeSpan` array of invalid values.
+
+        >>> dtn.diff(periods=6)
+        TimeSpan(['Inv', 'Inv', 'Inv', 'Inv', 'Inv', 'Inv'])
         """
         return TimeSpan(self._fa.diff(periods=periods).astype(np.float64))
 
@@ -6066,48 +6144,91 @@ class DateTimeNano(DateTimeBase, TimeStampBase, DateTimeCommon):
 
     # -------------------------------------------------------------
     def resample(self, rule: str, dropna: bool = False):
-        """Convenience method for frequency conversion and resampling of
-        DateTimeNano arrays.
+        """
+        Create a new :py:class:`~.rt_datetime.DateTimeNano` range with a specified
+        frequency, or round each element of a :py:class:`~.rt_datetime.DateTimeNano`
+        down to the nearest specified time unit.
+
+        The action performed by this method is controlled by the ``dropna`` parameter.
 
         Parameters
         ----------
-        rule : string
-            The offset string or object representing target conversion.
-            Can also begin the string with a number e.g. '3H'
-            Currently supported:
-            H       hour
-            T, min  minute
-            S       second
-            L, ms   millisecond
-            U, us   microsecond
-            N, ns   nanosecond
+        rule : str
+            The time unit specifying the frequency of the returned
+            :py:class:`~.rt_datetime.DateTimeNano` range if ``dropna`` is `False`. Or the
+            time unit to which the original :py:class:`~.rt_datetime.DateTimeNano`
+            elements are rounded if ``dropna`` is `True`.
 
-        dropna : bool, default False
-            If True, returns a DateTimeNano the same length as caller, with all values rounded to specified frequency.
-            If False, returns a DateTimeNano range from caller's min to max with values at every specified frequency.
+            Supported time units:
 
-        Examples
-        --------
-        >>> dtn = DateTimeNano(['2015-04-15 14:26:54.735321368',
-                                '2015-04-20 07:30:00.858219615',
-                                '2015-04-23 13:15:24.526871083',
-                                '2015-04-21 02:25:11.768548100',
-                                '2015-04-24 07:47:54.737776979',
-                                '2015-04-10 23:59:59.376589955'],
-                                     from_tz='UTC', to_tz='UTC')
-        >>> dtn.resample('L', dropna=True)
-        DateTimeNano(['20150415 14:26:54.735000000', '20150420 07:30:00.858000000', '20150423 13:15:24.526000000', '20150421 02:25:11.768000000', '20150424 07:47:54.737000000', '20150410 23:59:59.376000000'], to_tz='UTC')
+            - ``"H"``: Hours
+            - ``"T"`` or ``"min"``: Minutes
+            - ``"S"``: Seconds
+            - ``"L"`` or ``"ms"``: Milliseconds
+            - ``"U"`` or ``"us"``: Microseconds
+            - ``"N"`` or ``"ns"``: Nanoseconds
 
-        >>> dtn = DateTimeNano(['20190417 17:47:00.000001',
-                                '20190417 17:47:00.000003',
-                                '20190417 17:47:00.000005'],
-                                              from_tz='NYC')
-        >>> dtn.resample('1us')
-        DateTimeNano(['20190417 17:47:00.000001000', '20190417 17:47:00.000002000', '20190417 17:47:00.000003000', '20190417 17:47:00.000004000', '20190417 17:47:00.000005000'], to_tz='NYC')
+            A number can be added before the time unit to adjust the frequency.
+            For example:
+
+            - ``"3H"`` means every three hours
+            - ``"20S"`` means every twenty seconds
+            - ``"1.5us"`` means every 1.5 microseconds
+
+        dropna : bool, default `False`
+            Controls the action of the method:
+
+            - If `False`, returns a new :py:class:`~.rt_datetime.DateTimeNano`
+              range between the original min and max values, with a frequency specified
+              by ``rule``.
+            - If `True`, returns a new :py:class:`~.rt_datetime.DateTimeNano` with
+              the original elements rounded down to the nearest time unit specified by
+              ``rule``.
 
         Returns
         -------
-        dtn : `DateTimeNano`
+        :py:class:`~.rt_datetime.DateTimeNano`
+            A :py:class:`~.rt_datetime.DateTimeNano` with resampled or rounded elements.
+
+        Examples
+        --------
+        Create a new range in a :py:class:`~.rt_datetime.DateTimeNano` array with a
+        frequency of one microsecond:
+
+        >>> dtn = rt.DateTimeNano(["20190417 17:47:00.000001",
+        ...                        "20190417 17:47:00.000003",
+        ...                        "20190417 17:47:00.000005"],
+        ...                        from_tz="NYC")
+        >>> dtn.resample("us")
+        DateTimeNano(['20190417 17:47:00.000001000', '20190417 17:47:00.000002000', '20190417 17:47:00.000003000', '20190417 17:47:00.000004000', '20190417 17:47:00.000005000'], to_tz='America/New_York')
+
+        Create a new range in a :py:class:`~.rt_datetime.DateTimeNano` with a frequency
+        of three microseconds:
+
+        >>> dtn.resample("3us")
+        DateTimeNano(['20190417 17:47:00.000000000', '20190417 17:47:00.000003000'], to_tz='America/New_York')
+
+        Note that the first element in the new range is rounded down below the minimum
+        value of the original :py:class:`~.rt_datetime.DateTimeNano`. To get the first
+        element of the new range, this method rounds the minimum of the original
+        :py:class:`~.rt_datetime.DateTimeNano` down to the closest multiple of ``rule``.
+        The closest multiple is less than or equal to the original
+        minimum, including the zero value of the ``rule`` unit digit. In the previous
+        example, the method attempts to round one microsecond down to the nearest three
+        microseconds, which is 0 microseconds.
+
+        Set ``dropna`` to `True` to round the elements of a
+        :py:class:`~.rt_datetime.DateTimeNano` down to the nearest millisecond:
+
+        >>> dtn = rt.DateTimeNano(["2015-04-15 14:26:54.735321368",
+        ...                        "2015-04-20 07:30:00.858219615",
+        ...                        "2015-04-23 13:15:24.526871083",
+        ...                        "2015-04-21 02:25:11.768548100",
+        ...                        "2015-04-24 07:47:54.737776979",
+        ...                        "2015-04-10 23:59:59.376589955"],
+        ...                        from_tz="UTC", to_tz="UTC")
+        >>> dtn.resample("L", dropna=True)
+        DateTimeNano(['20150415 14:26:54.735000000', '20150420 07:30:00.858000000', '20150423 13:15:24.526000000', '20150421 02:25:11.768000000', '20150424 07:47:54.737000000', '20150410 23:59:59.376000000'], to_tz='UTC')
         """
 
         # -------------------------------------------------------
@@ -6410,7 +6531,10 @@ class TimeSpanBase:
 
         if isinstance(self, np.ndarray):
             result = np.asarray(
-                [dt.utcfromtimestamp(timestamp).strftime(format) for timestamp in self._fa.abs() / 1_000_000_000.0],
+                [
+                    dt.fromtimestamp(timestamp, timezone.utc).strftime(format)
+                    for timestamp in self._fa.abs() / 1_000_000_000.0
+                ],
                 dtype=dtype,
             )
             if isnegative.sum() > 0:
@@ -6422,7 +6546,7 @@ class TimeSpanBase:
                     negcol[isnegative] = "-"
                 result = negcol + result
         else:
-            result = dt.strftime(dt.utcfromtimestamp(abs(self) / 1_000_000_000.0), format)
+            result = dt.strftime(dt.fromtimestamp(abs(self) / 1_000_000_000.0, timezone.utc), format)
             if isnegative:
                 # check dtype 'S'
                 if dtype == "S":
@@ -7398,7 +7522,7 @@ class DateScalar(np.int32):
         >>> d[0].strftime('%D')
         '01/01/21'
         """
-        return dt.strftime(dt.utcfromtimestamp(self.astype(np.int64) * SECONDS_PER_DAY), format)
+        return dt.strftime(dt.fromtimestamp(self.astype(np.int64) * SECONDS_PER_DAY, timezone.utc), format)
 
     # ------------------------------------------------------------
     @property

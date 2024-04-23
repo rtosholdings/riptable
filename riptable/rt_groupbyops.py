@@ -1036,23 +1036,30 @@ class GroupByOps(ABC):
     # ---------------------------------------------------------------
     def count_uniques(self, *args, **kwargs):
         """
-        Compute unique count of group
+        Count the unique values for each group.
 
         Returns
         -------
-        Dataset with grouped key plus the unique count for each column by group.
+        :py:class:`~.rt_dataset.Dataset` :
+            :py:class:`~.rt_dataset.Dataset` with grouped keys and the unique count for each column by group.
+
+        See Also
+        --------
+        :py:attr:`.rt_categorical.Categorical.unique_count` : Number of unique values in the :py:class:`~.rt_categorical.Categorical`.
+        :py:meth:`.rt_categorical.Categorical.nunique` : Number of unique values in the :py:class:`~.rt_categorical.Categorical`.
 
         Examples
         --------
-        >>> N = 17; np.random.seed(1)
-        >>> ds =Dataset(
+        >>> N = 17
+        >>> np.random.seed(1)
+        >>> ds = rt.Dataset(
                 dict(
-                    Symbol = Cat(np.random.choice(['SPY','IBM'], N)),
-                    Exchange = Cat(np.random.choice(['AMEX','NYSE'], N)),
-                    TradeSize = np.random.choice([1,5,10], N),
-                    TradePrice = np.random.choice([1.1,2.2,3.3], N),
+                    Symbol=rt.Cat(np.random.choice(["SPY", "IBM"], N)),
+                    Exchange=rt.Cat(np.random.choice(["AMEX", "NYSE"], N)),
+                    TradeSize=np.random.choice([1, 5, 10], N),
+                    TradePrice=np.random.choice([1.1, 2.2, 3.3], N),
                     ))
-        >>> ds.cat(['Symbol','Exchange']).count_uniques()
+        >>> ds.cat(["Symbol", "Exchange"]).count_uniques()
         *Symbol   *Exchange   TradeSize   TradePrice
         -------   ---------   ---------   ----------
         IBM       NYSE                2            2

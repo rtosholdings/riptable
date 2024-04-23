@@ -2712,9 +2712,9 @@ class Struct:
     # -------------------------------------------------------
     def _aggregate_column_matches(
         self,
-        items: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        like: Optional[str] = None,
-        regex: Optional["re.Pattern"] = None,
+        items: str | int | Iterable[str | int] | None = None,
+        like: str | None = None,
+        regex: re.Pattern | str | None = None,
         on_missing: Literal["raise", "warn", "ignore"] = "raise",
         func: Optional[Callable] = None,
     ) -> list[str]:
@@ -2810,9 +2810,9 @@ class Struct:
     # -------------------------------------------------------
     def col_filter(
         self,
-        items: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        like: Optional[str] = None,
-        regex: Optional["re.Pattern"] = None,
+        items: str | int | Iterable[str | int] | None = None,
+        like: str | None = None,
+        regex: re.Pattern | str | None = None,
         on_missing: Literal["raise", "warn", "ignore"] = "raise",
     ):
         """
@@ -3511,9 +3511,9 @@ class Struct:
     # --------------------------------------------------------
     def col_remove(
         self,
-        items: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        like: Optional[str] = None,
-        regex: Optional["re.Pattern"] = None,
+        items: str | int | Iterable[str | int] | None = None,
+        like: str | None = None,
+        regex: re.Pattern | str | None = None,
         on_missing: Literal["raise", "warn", "ignore"] = "warn",
     ):
         """
@@ -4231,27 +4231,46 @@ class Struct:
     @property
     def _V(self):
         """
-        Display all rows (up to 10,000) of a `.Dataset` or `Struct`.
+        Display all rows (up to 10,000) returned by a :py:class:`~.rt_dataset.Dataset`
+        or :py:class:`~.rt_struct.Struct`.
 
-        Without this property, rows are elided when there are more than 30 to display.
+        Without this property, rows are elided when there are more than the sum of
+        :py:attr:`~riptable.Utils.display_options.DisplayOptions.HEAD_ROWS` (default
+        15 rows) and :py:attr:`~riptable.Utils.display_options.DisplayOptions.TAIL_ROWS`
+        (default 15 rows) and when
+        :py:attr:`~riptable.Utils.display_options.DisplayOptions.ROW_ALL` is `False`.
 
         Returns
         -------
         DisplayString
-            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+            A wrapper for display operations that don't return a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
 
         See Also
         --------
-        Struct._H : Display all columns and long strings of a `.Dataset` or `Struct`.
-        Struct._A : Display all columns, rows, and long strings of a `.Dataset` or `Struct`.
-        Struct._G : Display all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
-        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+        :py:attr:`.rt_struct.Struct._H` :
+            Display all columns and long strings returned by a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._A` :
+            Display all columns, rows, and long strings returned by a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._G` :
+            Display all columns returned by a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`, wrapping the table as needed.
+        :py:attr:`.rt_struct.Struct._T` :
+            Display a transposed view of a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
 
         Examples
         --------
+        The following examples use default display options. The following internal
+        function resets display options to their defaults:
+
+        >>> setup_for_examples("struct-display")
+
         By default, rows are elided when there are more than 30 to display.
 
-        >>> ds = rt.Dataset({'a' : rt.arange(31)})
+        >>> ds = rt.Dataset({"a": rt.arange(31)})
         >>> ds
           #     a
         ---   ---
@@ -4286,43 +4305,45 @@ class Struct:
          28    28
          29    29
          30    30
+        <BLANKLINE>
+        [31 rows x 1 columns] total bytes: 248.0 B
 
         Display all rows:
 
         >>> ds._V
-          #     a
-        ---   ---
-          0     0
-          1     1
-          2     2
-          3     3
-          4     4
-          5     5
-          6     6
-          7     7
-          8     8
-          9     9
-         10    10
-         11    11
-         12    12
-         13    13
-         14    14
-         15    15
-         16    16
-         17    17
-         18    18
-         19    19
-         20    20
-         21    21
-         22    22
-         23    23
-         24    24
-         25    25
-         26    26
-         27    27
-         28    28
-         29    29
-         30    30
+         #    a
+        --   --
+         0    0
+         1    1
+         2    2
+         3    3
+         4    4
+         5    5
+         6    6
+         7    7
+         8    8
+         9    9
+        10   10
+        11   11
+        12   12
+        13   13
+        14   14
+        15   15
+        16   16
+        17   17
+        18   18
+        19   19
+        20   20
+        21   21
+        22   22
+        23   23
+        24   24
+        25   25
+        26   26
+        27   27
+        28   28
+        29   29
+        30   30
         """
         maxrows = 10_000
         numrows = self._nrows if hasattr(self, "_nrows") else len(self)
@@ -4337,29 +4358,53 @@ class Struct:
     @property
     def _H(self):
         """
-        Display all columns and long strings of a `.Dataset` or `Struct`.
+        Display all columns and long strings returned by a
+        :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`, wrapping the
+        table as needed.
 
-        Without this property, columns are elided when the maximum display
-        width is reached, and strings are truncated after 15 characters.
+        Without this property, :py:class:`~.rt_dataset.Dataset` and
+        :py:class:`~.rt_struct.Struct` objects are displayed according to Riptable's
+        display options:
+
+        - Columns are elided when the maximum display console width is reached and
+          :py:attr:`~riptable.Utils.display_options.DisplayOptions.COL_ALL` is `False`.
+        - Strings are truncated after exceeding
+          :py:attr:`~riptable.Utils.display_options.DisplayOptions.MAX_STRING_WIDTH`
+          (default 15 characters).
 
         Returns
         -------
         DisplayString
-            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+            A wrapper for display operations that don't return a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
 
         See Also
         --------
-        Struct._V : Display all rows of a `.Dataset` or `Struct`.
-        Struct._A : Display all columns, rows, and long strings of a `.Dataset` or `Struct`.
-        Struct._G : Display all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
-        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+        :py:attr:`.rt_struct.Struct._V` :
+            Display all rows returned by a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._A` :
+            Display all columns, rows, and long strings returned by a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._G` :
+            Display all columns returned by a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`, wrapping the table as needed.
+        :py:attr:`.rt_struct.Struct._T` :
+            Display a transposed view returned by a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
 
         Examples
         --------
-        By default, columns are elided when the maximum display width is reached, and strings are truncated after 15 characters.
+        The following examples use default display options. The following internal
+        function resets display options to their defaults:
 
-        >>> ds = rt.Dataset({key : rt.FA([i, 2*i, 3*i, 4*i])%3 == 0 for i, key in enumerate('abcdefghijklm')})
-        >>> ds[0] = rt.FA('long_string_long_string')
+        >>> setup_for_examples("struct-display")
+
+        By default, columns are elided when the maximum console display width is
+        reached, and strings are truncated after 15 characters.
+
+        >>> ds = rt.Dataset({key: rt.FA([i, 2 * i, 3 * i, 4 * i]) % 3 == 0 for i, key in enumerate("abcdefghijklm")})
+        >>> ds[0] = rt.FA("long_string_long_string")
         >>> ds
         #   a                     b       c      d       e       f   ...       h       i      j       k       l      m
         -   ---------------   -----   -----   ----   -----   -----   ---   -----   -----   ----   -----   -----   ----
@@ -4367,16 +4412,25 @@ class Struct:
         1   long_string_lon   False   False   True   False   False   ...   False   False   True   False   False   True
         2   long_string_lon    True    True   True    True    True   ...    True    True   True    True    True   True
         3   long_string_lon   False   False   True   False   False   ...   False   False   True   False   False   True
+        <BLANKLINE>
+        [4 rows x 13 columns] total bytes: 140.0 B
 
-        Display all columns and long strings:
+        Display all columns and long strings, wrapping the table as needed:
 
         >>> ds._H
-        #   a                             b       c      d       e       f      g       h       i      j       k       l      m
-        -   -----------------------   -----   -----   ----   -----   -----   ----   -----   -----   ----   -----   -----   ----
-        0   long_string_long_string   False   False   True   False   False   True   False   False   True   False   False   True
-        1   long_string_long_string   False   False   True   False   False   True   False   False   True   False   False   True
-        2   long_string_long_string    True    True   True    True    True   True    True    True   True    True    True   True
-        3   long_string_long_string   False   False   True   False   False   True   False   False   True   False   False   True
+        #   a                             b       c      d       e       f      g       h       i      j       k
+        -   -----------------------   -----   -----   ----   -----   -----   ----   -----   -----   ----   -----
+        0   long_string_long_string   False   False   True   False   False   True   False   False   True   False
+        1   long_string_long_string   False   False   True   False   False   True   False   False   True   False
+        2   long_string_long_string    True    True   True    True    True   True    True    True   True    True
+        3   long_string_long_string   False   False   True   False   False   True   False   False   True   False
+        <BLANKLINE>
+        #       l      m
+        -   -----   ----
+        0   False   True
+        1   False   True
+        2    True   True
+        3   False   True
         """
         return self._temp_display(["COL_ALL", "MAX_STRING_WIDTH"], [True, 1000])
 
@@ -4384,27 +4438,46 @@ class Struct:
     @property
     def _G(self):
         """
-        Display all columns of a `.Dataset` or `Struct`, wrapping the table
-        after the maximum display width is reached.
+        Display all columns returned by a :py:class:`~.rt_dataset.Dataset` or
+        :py:class:`~.rt_struct.Struct`, wrapping the table after the maximum display
+        width is reached.
+
+        Without this property, columns are elided when the maximum display console width
+        is reached and :py:attr:`~riptable.Utils.display_options.DisplayOptions.COL_ALL`
+        is `False`.
 
         Note: The table is displayed as text, not HTML.
 
         Returns
         -------
-        None
+        `None`
+            Returns nothing.
 
         See Also
         --------
-        Struct._V : Display all rows of a `.Dataset` or `Struct`.
-        Struct._H : Display all columns and long strings of a `.Dataset` or `Struct`.
-        Struct._A : Display all columns, rows, and long strings of a `.Dataset` or `Struct`.
-        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+        :py:attr:`.rt_struct.Struct._V` :
+            Display all rows returned by a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._H` :
+            Display all columns and long strings returned by a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._A` :
+            Display all columns, rows, and long strings returned by a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._T` :
+            Display a transposed view of a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
 
         Examples
         --------
-        >>> ds = rt.Dataset(
-        ...     {key: rt.FA([i, 2 * i, 3 * i, 4 * i]) % 3 == 0 for i, key in enumerate('abcdefghijklmno')}
-        ... )
+        The following examples use default display options. The following internal
+        function resets display options to their defaults:
+
+        >>> setup_for_examples("struct-display")
+
+        Create a :py:class:`~.rt_dataset.Dataset` for the following examples:
+
+        >>> ds = rt.Dataset({key: rt.FA([i, 2 * i, 3 * i, 4 * i]) % 3 == 0 for i, key in enumerate("abcdefghijklmno")})
 
         Default behavior:
 
@@ -4415,8 +4488,10 @@ class Struct:
         1   True   False   False   True   False   False   True   ...   True   False   False   True   False   False
         2   True    True    True   True    True    True   True   ...   True    True    True   True    True    True
         3   True   False   False   True   False   False   True   ...   True   False   False   True   False   False
+        <BLANKLINE>
+        [4 rows x 15 columns] total bytes: 60.0 B
 
-        Show all rows, wrapping the table as needed:
+        Show all columns, wrapping the table as needed:
 
         >>> ds._G
         #      a       b       c      d       e       f      g       h       i      j       k       l      m
@@ -4445,29 +4520,57 @@ class Struct:
     @property
     def _A(self):
         """
-        Display all columns, all rows (up to 10,000), and long strings of a
-        `.Dataset` or `Struct`.
+        Display all columns, rows (up to 10,000), and long strings returned by a
+        :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`, wrapping the
+        table as needed.
 
-        Without this property, columns are elided when the maximum display width
-        is reached, rows are elided when there are more then 30 to display,
-        and strings are truncated after 15 characters.
+        Without this property, :py:class:`~.rt_dataset.Dataset` and
+        :py:class:`~.rt_struct.Struct` objects are displayed according to Riptable's
+        display options:
+
+        - Columns are elided when the maximum display console width is reached and
+          :py:attr:`~riptable.Utils.display_options.DisplayOptions.COL_ALL` is `False`.
+        - Rows are elided when there are more than the sum of
+          :py:attr:`~riptable.Utils.display_options.DisplayOptions.HEAD_ROWS` (default
+          15 rows) and :py:attr:`~riptable.Utils.display_options.DisplayOptions.TAIL_ROWS`
+          (default 15 rows) and when
+          :py:attr:`~riptable.Utils.display_options.DisplayOptions.ROW_ALL` is `False`.
+        - Strings are truncated after exceeding
+          :py:attr:`~riptable.Utils.display_options.DisplayOptions.MAX_STRING_WIDTH`
+          (default 15 characters).
 
         Returns
         -------
         DisplayString
-            A wrapper for display operations that don't return a `.Dataset` or `Struct`.
+            A wrapper for display operations that don't return a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
 
         See Also
         --------
-        Struct._V : Display all rows of a `.Dataset` or `Struct`.
-        Struct._H : Display all columns and long strings of a `.Dataset` or `Struct`.
-        Struct._G : Display all columns of a `.Dataset` or `Struct`, wrapping the table as needed.
-        Struct._T : Display a transposed view of a `.Dataset` or `Struct`.
+        :py:attr:`.rt_struct.Struct._V` :
+            Display all rows returned by a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._H` :
+            Display all columns and long strings returned by a
+            :py:class:`~.rt_dataset.Dataset` or :py:class:`~.rt_struct.Struct`.
+        :py:attr:`.rt_struct.Struct._G` :
+            Display all columns returned by a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`, wrapping the table as needed.
+        :py:attr:`.rt_struct.Struct._T` :
+            Display a transposed view of a :py:class:`~.rt_dataset.Dataset` or
+            :py:class:`~.rt_struct.Struct`.
 
         Examples
         --------
-        >>> ds = rt.Dataset({'col_'+str(i):rt.arange(31) for i in range(12)})
-        >>> ds[0] = 'long_string_long_string'
+        The following examples use default display options. The following internal
+        function resets display options to their defaults:
+
+        >>> setup_for_examples("struct-display")
+
+        Create a :py:class:`~.rt_dataset.Dataset` for the following examples:
+
+        >>> ds = rt.Dataset({"col_" + str(i): rt.arange(31) for i in range(12)})
+        >>> ds[0] = "long_string_long_string"
 
         By default, columns are elided when the maximum display width is
         reached, rows are elided when there are more then 30 to display, and
@@ -4507,43 +4610,80 @@ class Struct:
          28   long_string_lon      28      28      28      28      28   ...      28      28      28       28       28
          29   long_string_lon      29      29      29      29      29   ...      29      29      29       29       29
          30   long_string_lon      30      30      30      30      30   ...      30      30      30       30       30
+        <BLANKLINE>
+        [31 rows x 12 columns] total bytes: 5.4 KB
 
-        Display all columns, rows, and long strings:
+        Display all columns, rows, and long strings. Note that the columns that exceed
+        the console dimensions wrap below into another section.
 
         >>> ds._A
-          #   col_0                     col_1   col_2   col_3   col_4   col_5   col_6   col_7   col_8   col_9   col_10   col_11
-        ---   -----------------------   -----   -----   -----   -----   -----   -----   -----   -----   -----   ------   ------
-          0   long_string_long_string       0       0       0       0       0       0       0       0       0        0        0
-          1   long_string_long_string       1       1       1       1       1       1       1       1       1        1        1
-          2   long_string_long_string       2       2       2       2       2       2       2       2       2        2        2
-          3   long_string_long_string       3       3       3       3       3       3       3       3       3        3        3
-          4   long_string_long_string       4       4       4       4       4       4       4       4       4        4        4
-          5   long_string_long_string       5       5       5       5       5       5       5       5       5        5        5
-          6   long_string_long_string       6       6       6       6       6       6       6       6       6        6        6
-          7   long_string_long_string       7       7       7       7       7       7       7       7       7        7        7
-          8   long_string_long_string       8       8       8       8       8       8       8       8       8        8        8
-          9   long_string_long_string       9       9       9       9       9       9       9       9       9        9        9
-         10   long_string_long_string      10      10      10      10      10      10      10      10      10       10       10
-         11   long_string_long_string      11      11      11      11      11      11      11      11      11       11       11
-         12   long_string_long_string      12      12      12      12      12      12      12      12      12       12       12
-         13   long_string_long_string      13      13      13      13      13      13      13      13      13       13       13
-         14   long_string_long_string      14      14      14      14      14      14      14      14      14       14       14
-         15   long_string_long_string      15      15      15      15      15      15      15      15      15       15       15
-         16   long_string_long_string      16      16      16      16      16      16      16      16      16       16       16
-         17   long_string_long_string      17      17      17      17      17      17      17      17      17       17       17
-         18   long_string_long_string      18      18      18      18      18      18      18      18      18       18       18
-         19   long_string_long_string      19      19      19      19      19      19      19      19      19       19       19
-         20   long_string_long_string      20      20      20      20      20      20      20      20      20       20       20
-         21   long_string_long_string      21      21      21      21      21      21      21      21      21       21       21
-         22   long_string_long_string      22      22      22      22      22      22      22      22      22       22       22
-         23   long_string_long_string      23      23      23      23      23      23      23      23      23       23       23
-         24   long_string_long_string      24      24      24      24      24      24      24      24      24       24       24
-         25   long_string_long_string      25      25      25      25      25      25      25      25      25       25       25
-         26   long_string_long_string      26      26      26      26      26      26      26      26      26       26       26
-         27   long_string_long_string      27      27      27      27      27      27      27      27      27       27       27
-         28   long_string_long_string      28      28      28      28      28      28      28      28      28       28       28
-         29   long_string_long_string      29      29      29      29      29      29      29      29      29       29       29
-         30   long_string_long_string      30      30      30      30      30      30      30      30      30       30       30
+         #   col_0                     col_1   col_2   col_3   col_4   col_5   col_6   col_7   col_8   col_9   col_10
+        --   -----------------------   -----   -----   -----   -----   -----   -----   -----   -----   -----   ------
+         0   long_string_long_string       0       0       0       0       0       0       0       0       0        0
+         1   long_string_long_string       1       1       1       1       1       1       1       1       1        1
+         2   long_string_long_string       2       2       2       2       2       2       2       2       2        2
+         3   long_string_long_string       3       3       3       3       3       3       3       3       3        3
+         4   long_string_long_string       4       4       4       4       4       4       4       4       4        4
+         5   long_string_long_string       5       5       5       5       5       5       5       5       5        5
+         6   long_string_long_string       6       6       6       6       6       6       6       6       6        6
+         7   long_string_long_string       7       7       7       7       7       7       7       7       7        7
+         8   long_string_long_string       8       8       8       8       8       8       8       8       8        8
+         9   long_string_long_string       9       9       9       9       9       9       9       9       9        9
+        10   long_string_long_string      10      10      10      10      10      10      10      10      10       10
+        11   long_string_long_string      11      11      11      11      11      11      11      11      11       11
+        12   long_string_long_string      12      12      12      12      12      12      12      12      12       12
+        13   long_string_long_string      13      13      13      13      13      13      13      13      13       13
+        14   long_string_long_string      14      14      14      14      14      14      14      14      14       14
+        15   long_string_long_string      15      15      15      15      15      15      15      15      15       15
+        16   long_string_long_string      16      16      16      16      16      16      16      16      16       16
+        17   long_string_long_string      17      17      17      17      17      17      17      17      17       17
+        18   long_string_long_string      18      18      18      18      18      18      18      18      18       18
+        19   long_string_long_string      19      19      19      19      19      19      19      19      19       19
+        20   long_string_long_string      20      20      20      20      20      20      20      20      20       20
+        21   long_string_long_string      21      21      21      21      21      21      21      21      21       21
+        22   long_string_long_string      22      22      22      22      22      22      22      22      22       22
+        23   long_string_long_string      23      23      23      23      23      23      23      23      23       23
+        24   long_string_long_string      24      24      24      24      24      24      24      24      24       24
+        25   long_string_long_string      25      25      25      25      25      25      25      25      25       25
+        26   long_string_long_string      26      26      26      26      26      26      26      26      26       26
+        27   long_string_long_string      27      27      27      27      27      27      27      27      27       27
+        28   long_string_long_string      28      28      28      28      28      28      28      28      28       28
+        29   long_string_long_string      29      29      29      29      29      29      29      29      29       29
+        30   long_string_long_string      30      30      30      30      30      30      30      30      30       30
+        <BLANKLINE>
+         #   col_11
+        --   ------
+         0        0
+         1        1
+         2        2
+         3        3
+         4        4
+         5        5
+         6        6
+         7        7
+         8        8
+         9        9
+        10       10
+        11       11
+        12       12
+        13       13
+        14       14
+        15       15
+        16       16
+        17       17
+        18       18
+        19       19
+        20       20
+        21       21
+        22       22
+        23       23
+        24       24
+        25       25
+        26       26
+        27       27
+        28       28
+        29       29
+        30       30
         """
         maxrows = 10_000
         numrows = self._nrows if hasattr(self, "_nrows") else len(self)

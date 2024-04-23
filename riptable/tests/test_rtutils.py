@@ -3,7 +3,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import riptable as rt
-from riptable.rt_utils import crc_match
+from riptable.rt_utils import crc_match, possibly_convert
 
 
 @pytest.mark.parametrize(
@@ -155,3 +155,19 @@ def test_mbget_with_non_FA_subclass():
     # Check that the valid indices fetched the correct values.
     assert_array_equal(rt.FA([3, 28, 13, 20, 38]), result[valid_indices])
     assert type(data) == np.ndarray
+
+
+@pytest.mark.parametrize(
+    "arr, dtype, exp",
+    [
+        pytest.param(rt.FA([1, 2, 3], dtype=rt.int32), rt.int64, rt.FA([1, 2, 3], dtype=rt.int64)),
+        pytest.param(rt.FA([1.0, 2.0, 3.0], dtype=rt.float32), rt.float64, rt.FA([1.0, 2.0, 3.0], dtype=rt.float64)),
+        pytest.param(rt.FA([rt.int8.inv, 2, 3], dtype=rt.int8), rt.int32, rt.FA([rt.int32.inv, 2, 3], dtype=rt.int32)),
+        pytest.param(
+            rt.FA([rt.int32.inv, 2, 3], dtype=rt.int32), rt.float32, rt.FA([rt.float32.inv, 2.0, 3], dtype=rt.float32)
+        ),
+        pytest.param(rt.FA(["a", "b", "c"], dtype="|S1"), "|S5", rt.FA(["a", "b", "c"], dtype="|S5")),
+    ],
+)
+def test_possibly_convert(arr, dtype, exp):
+    assert_array_equal(possibly_convert(arr, dtype), exp, "Arrays were not equal")

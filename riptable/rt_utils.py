@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = [
     # misc riptable utility funcs
     "get_default_value",
@@ -15,6 +17,7 @@ __all__ = [
     "crc_match",
     # h5 -> riptable
     "load_h5",
+    "possibly_convert",
 ]
 
 import keyword
@@ -36,6 +39,7 @@ if TYPE_CHECKING:
 
     from .rt_dataset import Dataset
     from .rt_struct import Struct
+    from .rt_fastarray import FastArray
 
 
 _T = TypeVar("_T")
@@ -389,6 +393,39 @@ def merge_prebinned(key1: np.ndarray, key2: np.ndarray, val1, val2, totalUniqueS
     return rc.MergeBinnedAndSorted(key1, key2, val1, val2, totalUniqueSize)
 
 
+def possibly_convert(arr: Union[np.ndarray, FastArray], common_dtype: np.dtype | str):
+    """
+    Helper function for converting FastArray/ndarray to specified dtype.
+    This performs a safe conversion that understands riptable sentinels.
+
+    Parameters
+    ----------
+    arr: np.ndarray or FastArray
+        The array to cast.
+    dtype: str or dtype
+        The dtype to which the array is cast.
+
+    Returns
+    -------
+    arr_t: np.ndarray or FastArray
+        arr_t is a new array with specified dtype.
+    """
+    common_dtype = np.dtype(common_dtype)
+    # upcast if need to
+    if arr.dtype.num != common_dtype.num:
+        try:
+            # perform a safe conversion understanding sentinels
+            arr = TypeRegister.MathLedger._AS_FA_TYPE(arr, common_dtype.num)
+        except Exception:
+            # try numpy conversion
+            arr = arr.astype(common_dtype)
+
+    elif arr.itemsize != common_dtype.itemsize:
+        # make strings sizes the same
+        arr = arr.astype(common_dtype)
+    return arr
+
+
 # ------------------------------------------------------------------------------------------------------
 def normalize_keys(key1, key2, verbose=False):
     """
@@ -435,21 +472,6 @@ def normalize_keys(key1, key2, verbose=False):
         else:
             # extract the value in the dictlike object
             return list(key.values())
-
-    def possibly_convert(arr, common_dtype):
-        # upcast if need to
-        if arr.dtype.num != common_dtype.num:
-            try:
-                # perform a safe conversion understanding sentinels
-                arr = TypeRegister.MathLedger._AS_FA_TYPE(arr, common_dtype.num)
-            except Exception:
-                # try numpy conversion
-                arr = arr.astype(common_dtype)
-
-        elif arr.itemsize != common_dtype.itemsize:
-            # make strings sizes the same
-            arr = arr.astype(common_dtype)
-        return arr
 
     key1 = check_key(key1)
     key2 = check_key(key2)
