@@ -114,7 +114,8 @@ class SharedMemoryMeta(type):
             if size > cls.SM_LIMIT:
                 readable = cls._convert_bytes(size)
                 warnings.warn(
-                    f"!!!Shared memory is using {readable}. Consider using sm.clear() to remove.", stacklevel=2
+                    f"!!!Shared memory is using {readable}. Consider using riptable.SharedMemory.clear() to remove.",
+                    stacklevel=2,
                 )
 
     # ------------------------------------------------------------------------------------
