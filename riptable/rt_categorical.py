@@ -6347,7 +6347,8 @@ class Categorical(GroupByOps, FastArray):
         # python has trouble deleting objects with circular references
         if hasattr(self, "_categories_wrap"):
             del self._categories_wrap
-        del self._grouping
+        if hasattr(self, "_grouping"):
+            del self._grouping
 
     # ------------------------------------------------------------
     @classmethod
